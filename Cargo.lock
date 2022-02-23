@@ -2183,7 +2183,7 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "ternoa-common",
- "ternoa-primitives",
+ "ternoa-pallets-primitives",
 ]
 
 [[package]]
@@ -2205,7 +2205,7 @@ dependencies = [
  "ternoa-common",
  "ternoa-marketplace",
  "ternoa-nfts",
- "ternoa-primitives",
+ "ternoa-pallets-primitives",
 ]
 
 [[package]]
@@ -2226,7 +2226,7 @@ dependencies = [
  "sp-std",
  "ternoa-common",
  "ternoa-nfts",
- "ternoa-primitives",
+ "ternoa-pallets-primitives",
 ]
 
 [[package]]
@@ -2236,7 +2236,7 @@ dependencies = [
  "frame-support",
  "sp-runtime",
  "sp-std",
- "ternoa-primitives",
+ "ternoa-pallets-primitives",
 ]
 
 [[package]]
@@ -2257,7 +2257,7 @@ dependencies = [
  "sp-std",
  "ternoa-common",
  "ternoa-nfts",
- "ternoa-primitives",
+ "ternoa-pallets-primitives",
 ]
 
 [[package]]
@@ -2277,11 +2277,11 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "ternoa-common",
- "ternoa-primitives",
+ "ternoa-pallets-primitives",
 ]
 
 [[package]]
-name = "ternoa-primitives"
+name = "ternoa-pallets-primitives"
 version = "0.1.0"
 dependencies = [
  "parity-scale-codec",
@@ -2309,7 +2309,7 @@ dependencies = [
  "sp-std",
  "ternoa-common",
  "ternoa-nfts",
- "ternoa-primitives",
+ "ternoa-pallets-primitives",
 ]
 
 [[package]]
@@ -2330,7 +2330,7 @@ dependencies = [
  "sp-std",
  "ternoa-common",
  "ternoa-nfts",
- "ternoa-primitives",
+ "ternoa-pallets-primitives",
 ]
 
 [[package]]

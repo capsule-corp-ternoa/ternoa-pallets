@@ -25,7 +25,7 @@ scale-info = { version = "1.0", default-features = false, features = ["derive"] 
 
 # Ternoa
 ternoa-common = { default-features = false, path = "../common" }
-ternoa-primitives = { default-features = false, path = "../primitives" }
+primitives = { package = "ternoa-pallets-primitives", default-features = false, path = "../primitives" }
 
 # We needs this dependencies to run our tests
 [dev-dependencies]
@@ -44,7 +44,7 @@ std = [
     "sp-runtime/std",
     "sp-std/std",
     "ternoa-common/std",
-    "ternoa-primitives/std",
+    "primitives/std",
     "scale-info/std",
 ]
 runtime-benchmarks = [

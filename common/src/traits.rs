@@ -1,5 +1,5 @@
 use frame_support::dispatch::{DispatchErrorWithPostInfo, DispatchResult};
-use ternoa_primitives::{
+use primitives::{
 	marketplace::{MarketplaceId, MarketplaceInformation, MarketplaceType},
 	nfts::{NFTData, NFTId, NFTSeriesId},
 	TextFormat,

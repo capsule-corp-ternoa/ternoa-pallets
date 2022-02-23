@@ -13,7 +13,7 @@ use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
 };
-use ternoa_primitives::{
+use primitives::{
 	marketplace::{MarketplaceInformation, MarketplaceType},
 	nfts::{NFTData, NFTSeriesDetails},
 };

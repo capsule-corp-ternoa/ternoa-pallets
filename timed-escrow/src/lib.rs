@@ -10,7 +10,7 @@ pub use pallet::*;
 
 use frame_support::traits::LockIdentifier;
 use frame_support::weights::Weight;
-use ternoa_primitives::nfts::NFTId;
+use primitives::nfts::NFTId;
 
 /// Used for derivating scheduled tasks IDs
 const ESCROW_ID: LockIdentifier = *b"escrow  ";

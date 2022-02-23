@@ -16,12 +16,12 @@ use frame_support::{
 };
 use frame_system::Origin;
 pub use pallet::*;
-use sp_std::{vec, vec::Vec};
-use ternoa_common::traits;
-use ternoa_primitives::{
+use primitives::{
 	nfts::{NFTData, NFTId, NFTSeriesDetails, NFTSeriesId},
 	TextFormat,
 };
+use sp_std::{vec, vec::Vec};
+use ternoa_common::traits;
 pub use weights::WeightInfo;
 
 const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);

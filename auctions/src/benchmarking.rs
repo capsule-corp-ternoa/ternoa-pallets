@@ -11,7 +11,7 @@ use frame_system::{pallet_prelude::OriginFor, Pallet as System, RawOrigin};
 use sp_runtime::traits::Bounded;
 use sp_std::prelude::*;
 use ternoa_common::traits::{MarketplaceTrait, NFTTrait};
-use ternoa_primitives::{
+use primitives::{
 	marketplace::{MarketplaceId, MarketplaceType},
 	nfts::NFTId,
 };

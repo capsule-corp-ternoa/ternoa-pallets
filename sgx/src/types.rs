@@ -5,7 +5,7 @@ use codec::{Decode, Encode};
 use scale_info::TypeInfo;
 use sp_runtime::RuntimeDebug;
 use sp_std::vec::Vec;
-use ternoa_primitives::TextFormat;
+use primitives::TextFormat;
 
 pub type EnclaveId = u32;
 pub type ClusterId = u32;

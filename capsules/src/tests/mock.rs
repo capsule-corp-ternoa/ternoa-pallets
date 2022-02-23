@@ -166,7 +166,7 @@ impl ExtBuilder {
 pub mod help {
 	use super::*;
 	use frame_support::assert_ok;
-	use ternoa_primitives::{
+	use primitives::{
 		nfts::{NFTId, NFTSeriesId},
 		TextFormat,
 	};

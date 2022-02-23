@@ -5,7 +5,7 @@ use codec::{Decode, Encode};
 use scale_info::TypeInfo;
 use sp_runtime::RuntimeDebug;
 use sp_std::vec::Vec;
-use ternoa_primitives::{marketplace::MarketplaceId, nfts::NFTId};
+use primitives::{marketplace::MarketplaceId, nfts::NFTId};
 
 #[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]

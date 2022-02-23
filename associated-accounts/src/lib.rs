@@ -23,7 +23,7 @@ pub mod pallet {
 	use frame_system::pallet_prelude::*;
 	use sp_std::{vec, vec::Vec};
 	use ternoa_common::helpers::check_bounds;
-	use ternoa_primitives::TextFormat;
+	use primitives::TextFormat;
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {

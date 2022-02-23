@@ -3,8 +3,8 @@ use crate::{tests::mock, Error, MarketplaceInformation, SaleInformation};
 use frame_support::{assert_noop, assert_ok, error::BadOrigin};
 use frame_system::RawOrigin;
 use pallet_balances::Error as BalanceError;
+use primitives::{marketplace::MarketplaceType, TextFormat};
 use ternoa_common::traits::NFTTrait;
-use ternoa_primitives::{marketplace::MarketplaceType, TextFormat};
 
 type MPT = MarketplaceType;
 

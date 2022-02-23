@@ -7,7 +7,7 @@ use frame_support::traits::Currency;
 use frame_system::RawOrigin;
 use sp_runtime::traits::{Bounded, StaticLookup};
 use sp_std::prelude::*;
-use ternoa_primitives::TextFormat;
+use primitives::TextFormat;
 
 use crate::Pallet as Sgx;
 

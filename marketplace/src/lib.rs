@@ -25,13 +25,13 @@ use frame_support::{
 };
 // use frame_support::weights::Weight;
 use frame_system::Origin;
-use sp_std::vec::Vec;
-use ternoa_common::{helpers::check_bounds, traits::MarketplaceTrait};
-use ternoa_primitives::{
+use primitives::{
 	marketplace::{MarketplaceId, MarketplaceInformation, MarketplaceType},
 	nfts::NFTId,
 	TextFormat,
 };
+use sp_std::vec::Vec;
+use ternoa_common::{helpers::check_bounds, traits::MarketplaceTrait};
 
 /// The current storage version.
 const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);

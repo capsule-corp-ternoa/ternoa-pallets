@@ -30,7 +30,7 @@ pub mod pallet {
 	use frame_system::pallet_prelude::*;
 	use sp_runtime::traits::StaticLookup;
 	use ternoa_common::helpers::check_bounds;
-	use ternoa_primitives::TextFormat;
+	use primitives::TextFormat;
 
 	pub type BalanceOf<T> =
 		<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;

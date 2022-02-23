@@ -24,7 +24,7 @@ use frame_support::{
 };
 use sp_runtime::traits::AccountIdConversion;
 use sp_std::vec;
-use ternoa_primitives::{
+use primitives::{
 	nfts::{NFTId, NFTSeriesId},
 	TextFormat,
 };

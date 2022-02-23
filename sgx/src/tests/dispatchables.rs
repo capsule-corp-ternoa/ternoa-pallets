@@ -7,7 +7,7 @@ use frame_support::{assert_noop, assert_ok};
 use frame_system::RawOrigin;
 use pallet_balances::Error as BalanceError;
 use sp_runtime::traits::BadOrigin;
-use ternoa_primitives::TextFormat;
+use primitives::TextFormat;
 
 #[test]
 fn register_enclave() {

@@ -3,14 +3,14 @@ use frame_support::{
 	parameter_types,
 	traits::{ConstU32, Contains, GenesisBuild},
 };
+use primitives::{
+	marketplace::MarketplaceType,
+	nfts::{NFTData, NFTSeriesDetails},
+};
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
-};
-use ternoa_primitives::{
-	marketplace::MarketplaceType,
-	nfts::{NFTData, NFTSeriesDetails},
 };
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
@@ -244,7 +244,7 @@ pub mod help {
 
 	use super::*;
 	use frame_support::assert_ok;
-	use ternoa_primitives::{
+	use primitives::{
 		nfts::{NFTId, NFTSeriesId},
 		TextFormat,
 	};
