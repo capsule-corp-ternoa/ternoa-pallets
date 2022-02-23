@@ -27,6 +27,7 @@ scale-info = { version = "1.0", default-features = false, features = ["derive"] 
 ternoa-common = { default-features = false, path = "../common" }
 ternoa-primitives = { default-features = false, path = "../primitives" }
 
+# We needs this dependencies to run our tests
 [dev-dependencies]
 pallet-balances = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-02-03" }
 sp-core = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-02-03", default-features = false }

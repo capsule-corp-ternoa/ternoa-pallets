@@ -2284,12 +2284,9 @@ dependencies = [
 name = "ternoa-primitives"
 version = "0.1.0"
 dependencies = [
- "frame-system",
  "parity-scale-codec",
  "scale-info",
  "serde",
- "sp-application-crypto",
- "sp-core",
  "sp-runtime",
  "sp-std",
 ]
