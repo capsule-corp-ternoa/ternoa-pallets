@@ -1,0 +1,12 @@
+[workspace]
+members = [
+    'common',
+    'associated-accounts',
+    'auctions',
+    'capsules',
+    'marketplace',
+    'nfts',
+    'sgx',
+    'timed-escrow',
+    'primitives',
+]
