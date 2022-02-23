@@ -1,3 +1,5 @@
+#![cfg_attr(not(feature = "std"), no_std)]
+
 use frame_support::dispatch::{DispatchErrorWithPostInfo, DispatchResult};
 use primitives::{
 	marketplace::{MarketplaceId, MarketplaceInformation, MarketplaceType},
