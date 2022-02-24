@@ -8,14 +8,14 @@ use frame_support::{
 	traits::{ConstU32, Contains, GenesisBuild, OnFinalize, OnInitialize},
 	PalletId,
 };
+use primitives::{
+	marketplace::{MarketplaceInformation, MarketplaceType},
+	nfts::{NFTData, NFTSeriesDetails},
+};
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
-};
-use primitives::{
-	marketplace::{MarketplaceInformation, MarketplaceType},
-	nfts::{NFTData, NFTSeriesDetails},
 };
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;

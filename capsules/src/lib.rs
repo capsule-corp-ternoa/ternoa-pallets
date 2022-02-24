@@ -22,12 +22,12 @@ use frame_support::{
 	},
 	PalletId,
 };
-use sp_runtime::traits::AccountIdConversion;
-use sp_std::vec;
 use primitives::{
 	nfts::{NFTId, NFTSeriesId},
 	TextFormat,
 };
+use sp_runtime::traits::AccountIdConversion;
+use sp_std::vec;
 
 const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
 

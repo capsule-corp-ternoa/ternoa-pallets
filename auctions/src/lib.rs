@@ -21,9 +21,9 @@ use frame_support::{
 	},
 	PalletId,
 };
+use primitives::nfts::NFTId;
 use sp_runtime::traits::{AccountIdConversion, Saturating};
 use ternoa_common::traits::{MarketplaceTrait, NFTTrait};
-use primitives::nfts::NFTId;
 use types::{AuctionData, BidderList, DeadlineList};
 
 const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
@@ -33,8 +33,8 @@ pub mod pallet {
 	use super::*;
 	use frame_support::{dispatch::DispatchResultWithPostInfo, transactional};
 	use frame_system::{ensure_root, pallet_prelude::*, RawOrigin};
-	use ternoa_common::traits::{MarketplaceTrait, NFTTrait};
 	use primitives::marketplace::MarketplaceId;
+	use ternoa_common::traits::{MarketplaceTrait, NFTTrait};
 
 	pub type BalanceOf<T> =
 		<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;

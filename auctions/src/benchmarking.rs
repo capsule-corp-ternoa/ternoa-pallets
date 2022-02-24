@@ -8,13 +8,13 @@ use frame_support::{
 	traits::{Currency, OnFinalize, OnInitialize},
 };
 use frame_system::{pallet_prelude::OriginFor, Pallet as System, RawOrigin};
-use sp_runtime::traits::Bounded;
-use sp_std::prelude::*;
-use ternoa_common::traits::{MarketplaceTrait, NFTTrait};
 use primitives::{
 	marketplace::{MarketplaceId, MarketplaceType},
 	nfts::NFTId,
 };
+use sp_runtime::traits::Bounded;
+use sp_std::prelude::*;
+use ternoa_common::traits::{MarketplaceTrait, NFTTrait};
 
 pub enum AuctionState {
 	Before,

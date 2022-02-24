@@ -21,9 +21,9 @@ pub mod pallet {
 	use super::*;
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
+	use primitives::TextFormat;
 	use sp_std::{vec, vec::Vec};
 	use ternoa_common::helpers::check_bounds;
-	use primitives::TextFormat;
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {

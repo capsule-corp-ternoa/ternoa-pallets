@@ -28,9 +28,9 @@ pub mod pallet {
 		transactional,
 	};
 	use frame_system::pallet_prelude::*;
+	use primitives::TextFormat;
 	use sp_runtime::traits::StaticLookup;
 	use ternoa_common::helpers::check_bounds;
-	use primitives::TextFormat;
 
 	pub type BalanceOf<T> =
 		<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;

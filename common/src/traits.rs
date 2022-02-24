@@ -6,6 +6,7 @@ use primitives::{
 	nfts::{NFTData, NFTId, NFTSeriesId},
 	TextFormat,
 };
+use sp_std::vec::Vec;
 
 pub trait NFTTrait {
 	type AccountId: Clone;

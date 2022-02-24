@@ -2,10 +2,10 @@
 use serde::{Deserialize, Serialize};
 
 use codec::{Decode, Encode};
+use primitives::TextFormat;
 use scale_info::TypeInfo;
 use sp_runtime::RuntimeDebug;
 use sp_std::vec::Vec;
-use primitives::TextFormat;
 
 pub type EnclaveId = u32;
 pub type ClusterId = u32;

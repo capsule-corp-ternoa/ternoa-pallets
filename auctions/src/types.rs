@@ -2,10 +2,10 @@
 use serde::{Deserialize, Serialize};
 
 use codec::{Decode, Encode};
+use primitives::{marketplace::MarketplaceId, nfts::NFTId};
 use scale_info::TypeInfo;
 use sp_runtime::RuntimeDebug;
 use sp_std::vec::Vec;
-use primitives::{marketplace::MarketplaceId, nfts::NFTId};
 
 #[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]

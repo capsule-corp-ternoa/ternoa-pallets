@@ -5,9 +5,9 @@ use crate::{
 use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, whitelisted_caller};
 use frame_support::traits::Currency;
 use frame_system::RawOrigin;
+use primitives::TextFormat;
 use sp_runtime::traits::{Bounded, StaticLookup};
 use sp_std::prelude::*;
-use primitives::TextFormat;
 
 use crate::Pallet as Sgx;
 
