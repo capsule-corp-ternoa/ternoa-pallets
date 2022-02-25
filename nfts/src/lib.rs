@@ -226,8 +226,8 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		#[pallet::weight(T::WeightInfo::lend())]
-		pub fn lend(
+		#[pallet::weight(T::WeightInfo::delegate())]
+		pub fn delegate(
 			origin: OriginFor<T>,
 			nft_id: NFTId,
 			viewer: Option<T::AccountId>,
@@ -238,12 +238,12 @@ pub mod pallet {
 				let data = maybe_data.as_mut().ok_or(Error::<T>::NFTNotFound)?;
 
 				ensure!(data.owner == who, Error::<T>::NotTheNFTOwner);
-				ensure!(!data.listed_for_sale, Error::<T>::CannotLendNFTsListedForSale);
-				ensure!(!data.converted_to_capsule, Error::<T>::CannotLendCapsules);
-				ensure!(!data.in_transmission, Error::<T>::CannotLendNFTsInTransmission);
+				ensure!(!data.listed_for_sale, Error::<T>::CannotDelegateNFTsListedForSale);
+				ensure!(!data.converted_to_capsule, Error::<T>::CannotDelegateCapsules);
+				ensure!(!data.in_transmission, Error::<T>::CannotDelegateNFTsInTransmission);
 
 				if let Some(viewer) = &viewer {
-					ensure!(who != *viewer, Error::<T>::CannotLendNFTsToYourself);
+					ensure!(who != *viewer, Error::<T>::CannotDelegateNFTsToYourself);
 				}
 
 				data.viewer = viewer.clone();
@@ -288,21 +288,21 @@ pub mod pallet {
 		/// Operation not allowed because the NFT is a capsule.
 		CannotBurnCapsules,
 		/// Operation not allowed because the NFT is a capsule.
-		CannotLendCapsules,
+		CannotDelegateCapsules,
 
 		/// Operation not allowed because the NFT is listed for sale.
 		CannotTransferNFTsListedForSale,
 		/// Operation not allowed because the NFT is listed for sale.
 		CannotBurnNFTsListedForSale,
 		/// Operation not allowed because the NFT is listed for sale.
-		CannotLendNFTsListedForSale,
+		CannotDelegateNFTsListedForSale,
 
 		/// Operation not allowed because the NFT is in transmission.
 		CannotTransferNFTsInTransmission,
 		/// Operation not allowed because the NFT is in transmission.
 		CannotBurnNFTsInTransmission,
 		/// Operation not allowed because the NFT is in transmission.
-		CannotLendNFTsInTransmission,
+		CannotDelegateNFTsInTransmission,
 
 		/// Operation is not allowed because the NFT is lent.
 		CannotTransferLentNFTs,
@@ -313,8 +313,8 @@ pub mod pallet {
 		CannotTransferNFTsInUncompletedSeries,
 		/// Operation is not allowed because the NFT is inside a completed series.
 		CannotCreateNFTsWithCompletedSeries,
-		/// Cannot lends NFTs to yourself.
-		CannotLendNFTsToYourself,
+		/// Cannot delegate NFTs to yourself.
+		CannotDelegateNFTsToYourself,
 		/// Ipfs reference is too short.
 		IPFSReferenceIsTooShort,
 		/// Ipfs reference is too long.

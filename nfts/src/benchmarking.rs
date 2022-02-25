@@ -92,7 +92,7 @@ benchmarks! {
 		assert_eq!(NFTs::<T>::nft_mint_fee(), new_mint_fee.into());
 	}
 
-	lend {
+	delegate {
 		prepare_benchmarks::<T>();
 
 		let bob: T::AccountId = get_account::<T>("BOB");

@@ -43,17 +43,17 @@ mod burn {
 	}
 }
 
-mod lend {
+mod delegate {
 	use super::*;
 
 	#[test]
-	fn lend() {
+	fn delegate() {
 		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
 			let nft_id = NFTs::create_nft(ALICE, vec![0], None).unwrap();
 			let mut nft = NFTs::data(nft_id).unwrap();
 			let viewer = Some(BOB);
 
-			assert_ok!(NFTs::lend(origin(ALICE), nft_id, viewer.clone()));
+			assert_ok!(NFTs::delegate(origin(ALICE), nft_id, viewer.clone()));
 
 			// Storage
 			nft.viewer = viewer.clone();
@@ -69,7 +69,7 @@ mod lend {
 	#[test]
 	fn nft_not_found() {
 		ExtBuilder::new_build(vec![]).execute_with(|| {
-			let ok = NFTs::lend(origin(ALICE), INVALID_NFT_ID, None);
+			let ok = NFTs::delegate(origin(ALICE), INVALID_NFT_ID, None);
 			assert_noop!(ok, Error::<Test>::NFTNotFound);
 		})
 	}
@@ -79,51 +79,51 @@ mod lend {
 		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
 			let nft_id = NFTs::create_nft(ALICE, vec![0], None).unwrap();
 
-			let ok = NFTs::lend(origin(BOB), nft_id, None);
+			let ok = NFTs::delegate(origin(BOB), nft_id, None);
 			assert_noop!(ok, Error::<Test>::NotTheNFTOwner);
 		})
 	}
 
 	#[test]
-	fn cannot_lend_nfts_listed_for_sale() {
+	fn cannot_delegate_nfts_listed_for_sale() {
 		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
 			let nft_id = NFTs::create_nft(ALICE, vec![0], None).unwrap();
 			assert_ok!(NFTs::set_listed_for_sale(nft_id, true));
 
-			let ok = NFTs::lend(origin(ALICE), nft_id, None);
-			assert_noop!(ok, Error::<Test>::CannotLendNFTsListedForSale);
+			let ok = NFTs::delegate(origin(ALICE), nft_id, None);
+			assert_noop!(ok, Error::<Test>::CannotDelegateNFTsListedForSale);
 		})
 	}
 
 	#[test]
-	fn cannot_lend_capsules() {
+	fn cannot_delegate_capsules() {
 		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
 			let nft_id = NFTs::create_nft(ALICE, vec![0], None).unwrap();
 			assert_ok!(NFTs::set_converted_to_capsule(nft_id, true));
 
-			let ok = NFTs::lend(origin(ALICE), nft_id, None);
-			assert_noop!(ok, Error::<Test>::CannotLendCapsules);
+			let ok = NFTs::delegate(origin(ALICE), nft_id, None);
+			assert_noop!(ok, Error::<Test>::CannotDelegateCapsules);
 		})
 	}
 
 	#[test]
-	fn cannot_lend_nfts_in_transmission() {
+	fn cannot_delegate_nfts_in_transmission() {
 		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
 			let nft_id = NFTs::create_nft(ALICE, vec![0], None).unwrap();
 			assert_ok!(NFTs::set_in_transmission(nft_id, true));
 
-			let ok = NFTs::lend(origin(ALICE), nft_id, None);
-			assert_noop!(ok, Error::<Test>::CannotLendNFTsInTransmission);
+			let ok = NFTs::delegate(origin(ALICE), nft_id, None);
+			assert_noop!(ok, Error::<Test>::CannotDelegateNFTsInTransmission);
 		})
 	}
 
 	#[test]
-	fn cannot_lend_nfts_to_yourself() {
+	fn cannot_delegate_nfts_to_yourself() {
 		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
 			let nft_id = NFTs::create_nft(ALICE, vec![0], None).unwrap();
 
-			let ok = NFTs::lend(origin(ALICE), nft_id, Some(ALICE));
-			assert_noop!(ok, Error::<Test>::CannotLendNFTsToYourself);
+			let ok = NFTs::delegate(origin(ALICE), nft_id, Some(ALICE));
+			assert_noop!(ok, Error::<Test>::CannotDelegateNFTsToYourself);
 		})
 	}
 }

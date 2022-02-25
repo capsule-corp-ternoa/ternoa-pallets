@@ -20,7 +20,6 @@
 // --output
 // .
 
-#![cfg_attr(rustfmt, rustfmt_skip)]
 #![allow(unused_parens)]
 #![allow(unused_imports)]
 
@@ -28,14 +27,13 @@ use frame_support::{traits::Get, weights::Weight};
 use sp_std::marker::PhantomData;
 
 pub trait WeightInfo {
-    fn create() -> Weight;
-    fn transfer() -> Weight;
-    fn burn() -> Weight;
-    fn finish_series() -> Weight;
-    fn set_nft_mint_fee() -> Weight;
-    fn lend() -> Weight;
+	fn create() -> Weight;
+	fn transfer() -> Weight;
+	fn burn() -> Weight;
+	fn finish_series() -> Weight;
+	fn set_nft_mint_fee() -> Weight;
+	fn delegate() -> Weight;
 }
-
 
 /// Weight functions for `ternoa_nfts`.
 pub struct TernoaWeight<T>(PhantomData<T>);
@@ -72,11 +70,10 @@ impl<T: frame_system::Config> WeightInfo for TernoaWeight<T> {
 	}
 	// Storage: Nfts NftMintFee (r:0 w:1)
 	fn set_nft_mint_fee() -> Weight {
-		(10_100_000 as Weight)
-			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+		(10_100_000 as Weight).saturating_add(T::DbWeight::get().writes(1 as Weight))
 	}
 	// Storage: Nfts Data (r:1 w:1)
-	fn lend() -> Weight {
+	fn delegate() -> Weight {
 		(14_870_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(1 as Weight))
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))
