@@ -69,7 +69,7 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 			let to_unlookup = T::Lookup::lookup(to)?;
 
-			let nft = T::NFTs::get_nft(nft_id).ok_or(Error::<T>::UnknownNFT)?;
+			let nft = T::NFTs::get_nft(nft_id).ok_or(Error::<T>::NFTNotFound)?;
 			ensure!(nft.owner == who, Error::<T>::NotTheNFTOwner);
 			ensure!(!nft.listed_for_sale, Error::<T>::ListedForSale);
 			ensure!(!nft.in_transmission, Error::<T>::AlreadyInTransmission);
@@ -109,7 +109,7 @@ pub mod pallet {
 		pub fn cancel(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			let nft = T::NFTs::get_nft(nft_id).ok_or(Error::<T>::UnknownNFT)?;
+			let nft = T::NFTs::get_nft(nft_id).ok_or(Error::<T>::NFTNotFound)?;
 			ensure!(nft.owner == who, Error::<T>::NotTheNFTOwner);
 
 			let ok = T::Scheduler::cancel_named((ESCROW_ID, nft_id).encode()).is_ok();
@@ -166,7 +166,7 @@ pub mod pallet {
 		/// An unknown error happened which made the scheduling call fail.
 		SchedulingFailed,
 		/// Unknown NFT
-		UnknownNFT,
+		NFTNotFound,
 		/// TODO!
 		ListedForSale,
 		/// TODO!

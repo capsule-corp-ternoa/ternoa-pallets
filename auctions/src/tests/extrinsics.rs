@@ -331,7 +331,7 @@ pub mod create_auction {
 				100,
 				Some(101),
 			);
-			assert_noop!(ok, MarketError::<Test>::NotAllowedToList);
+			assert_noop!(ok, MarketError::<Test>::AccountNotAllowedToList);
 		})
 	}
 

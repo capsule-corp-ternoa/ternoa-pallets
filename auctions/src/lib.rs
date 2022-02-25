@@ -518,7 +518,7 @@ pub mod pallet {
 		/// Operation not allowed because the caller is not the owner of the auction.
 		NotTheAuctionCreator,
 		/// Unknown Marketplace found. This should never happen.
-		UnknownMarketplace,
+		MarketplaceNotFound,
 	}
 
 	#[pallet::storage]
@@ -585,7 +585,7 @@ impl<T: Config> Pallet<T> {
 	) -> DispatchResult {
 		// Handle marketplace fees
 		let marketplace = T::MarketplaceHandler::get_marketplace(auction.marketplace_id)
-			.ok_or(Error::<T>::UnknownMarketplace)?;
+			.ok_or(Error::<T>::MarketplaceNotFound)?;
 
 		let to_marketplace =
 			price.saturating_mul(marketplace.commission_fee.into()) / 100u32.into();

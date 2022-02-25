@@ -52,6 +52,10 @@ pub mod pallet {
 		type FeesCollector: OnUnbalanced<NegativeImbalanceOf<Self>>;
 
 		/// Min Ipfs len
+		//#[pallet::constant]
+		//type MinIpfsLen: Get<u16>;
+
+		/// Min Ipfs len
 		#[pallet::constant]
 		type MinIpfsLen: Get<u16>;
 

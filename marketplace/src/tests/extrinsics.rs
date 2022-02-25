@@ -56,7 +56,7 @@ fn list_unhappy() {
 
 			// Unhappy unknown NFT
 			let ok = Marketplace::list(alice.clone(), 10001, price, Some(0));
-			assert_noop!(ok, Error::<Test>::UnknownNFT);
+			assert_noop!(ok, Error::<Test>::NFTNotFound);
 
 			// Unhappy not the NFT owner
 			let nft_id = <NFTs as NFTTrait>::create_nft(BOB, vec![50], None).unwrap();
@@ -68,7 +68,7 @@ fn list_unhappy() {
 			let nft_id =
 				<NFTs as NFTTrait>::create_nft(ALICE, vec![50], Some(series_id.clone())).unwrap();
 			let ok = Marketplace::list(alice.clone(), nft_id, price, Some(0));
-			assert_noop!(ok, Error::<Test>::SeriesNotCompleted);
+			assert_noop!(ok, Error::<Test>::CannotListNFTsInUncompletedSeries);
 
 			// Unhappy nft is capsulized
 			help::finish_series(alice.clone(), series_id);
@@ -79,22 +79,22 @@ fn list_unhappy() {
 
 			// Unhappy unknown marketplace
 			let ok = Marketplace::list(alice.clone(), nft_id, price, Some(10001));
-			assert_noop!(ok, Error::<Test>::UnknownMarketplace);
+			assert_noop!(ok, Error::<Test>::MarketplaceNotFound);
 
 			// Unhappy not on the private list
 			let mkp_id = help::create_mkp(bob.clone(), MPT::Private, 0, vec![1], vec![]);
 			let ok = Marketplace::list(alice.clone(), nft_id, price, Some(mkp_id));
-			assert_noop!(ok, Error::<Test>::NotAllowedToList);
+			assert_noop!(ok, Error::<Test>::AccountNotAllowedToList);
 
 			// Unhappy on the disallow list
 			let mkp_id = help::create_mkp(bob.clone(), MPT::Public, 0, vec![1], vec![ALICE]);
 			let ok = Marketplace::list(alice.clone(), nft_id, price, Some(mkp_id));
-			assert_noop!(ok, Error::<Test>::NotAllowedToList);
+			assert_noop!(ok, Error::<Test>::AccountNotAllowedToList);
 
 			// Unhappy already listed for sale
 			<NFTs as NFTTrait>::set_listed_for_sale(nft_id, true).unwrap();
 			let ok = Marketplace::list(alice.clone(), nft_id, price, None);
-			assert_noop!(ok, Error::<Test>::AlreadyListedForSale);
+			assert_noop!(ok, Error::<Test>::CannotListNFTsThatAreAlreadyListed);
 		})
 }
 
@@ -129,7 +129,7 @@ fn unlist_unhappy() {
 		// Unhappy not listed NFT
 		let nft_id = <NFTs as NFTTrait>::create_nft(ALICE, vec![50], None).unwrap();
 		let ok = Marketplace::unlist(alice.clone(), nft_id);
-		assert_noop!(ok, Error::<Test>::NftNotForSale);
+		assert_noop!(ok, Error::<Test>::NFTNotForSale);
 	})
 }
 
@@ -198,7 +198,7 @@ fn buy_unhappy() {
 
 			// Unhappy nft not on sale
 			let ok = Marketplace::buy(bob.clone(), 1001);
-			assert_noop!(ok, Error::<Test>::NftNotForSale);
+			assert_noop!(ok, Error::<Test>::NFTNotForSale);
 
 			// Unhappy not enough caps
 			let ok = Marketplace::buy(bob.clone(), nft_id);
@@ -380,7 +380,7 @@ fn add_account_to_allow_list_unhappy() {
 
 			// Unhappy unknown marketplace
 			let ok = Marketplace::add_account_to_allow_list(bob.clone(), 1001, DAVE);
-			assert_noop!(ok, Error::<Test>::UnknownMarketplace);
+			assert_noop!(ok, Error::<Test>::MarketplaceNotFound);
 
 			// Unhappy not marketplace owner
 			let ok = Marketplace::add_account_to_allow_list(bob.clone(), 0, DAVE);
@@ -420,7 +420,7 @@ fn remove_account_from_allow_list_unhappy() {
 
 			// Unhappy unknown marketplace
 			let ok = Marketplace::remove_account_from_allow_list(bob.clone(), 1001, DAVE);
-			assert_noop!(ok, Error::<Test>::UnknownMarketplace);
+			assert_noop!(ok, Error::<Test>::MarketplaceNotFound);
 
 			// Unhappy not marketplace owner
 			let ok = Marketplace::remove_account_from_allow_list(bob.clone(), 0, DAVE);
@@ -455,7 +455,7 @@ fn set_owner_unhappy() {
 
 		// Unhappy unknown marketplace
 		let ok = Marketplace::set_owner(bob.clone(), 1001, DAVE);
-		assert_noop!(ok, Error::<Test>::UnknownMarketplace);
+		assert_noop!(ok, Error::<Test>::MarketplaceNotFound);
 
 		// Unhappy not marketplace owner
 		let ok = Marketplace::set_owner(bob.clone(), 0, DAVE);
@@ -496,7 +496,7 @@ fn set_market_type_unhappy() {
 
 		// Unhappy unknown marketplace
 		let ok = Marketplace::set_market_type(bob.clone(), 1001, kind);
-		assert_noop!(ok, Error::<Test>::UnknownMarketplace);
+		assert_noop!(ok, Error::<Test>::MarketplaceNotFound);
 
 		// Unhappy not marketplace owner
 		let ok = Marketplace::set_market_type(bob.clone(), 0, kind);
@@ -538,7 +538,7 @@ fn set_name_unhappy() {
 
 		// Unhappy unknown marketplace
 		let ok = Marketplace::set_name(bob.clone(), 1001, vec![51]);
-		assert_noop!(ok, Error::<Test>::UnknownMarketplace);
+		assert_noop!(ok, Error::<Test>::MarketplaceNotFound);
 
 		// Unhappy not marketplace owner
 		let ok = Marketplace::set_name(bob.clone(), 0, vec![51]);
@@ -598,7 +598,7 @@ fn set_commission_fee_unhappy() {
 
 		// Unhappy unknown marketplace
 		let ok = Marketplace::set_commission_fee(bob.clone(), 1001, 15);
-		assert_noop!(ok, Error::<Test>::UnknownMarketplace);
+		assert_noop!(ok, Error::<Test>::MarketplaceNotFound);
 
 		// Unhappy not marketplace owner
 		let ok = Marketplace::set_commission_fee(bob.clone(), 0, 15);
@@ -768,7 +768,7 @@ fn add_account_to_disallow_list_unhappy() {
 
 			// Unhappy unknown marketplace
 			let ok = Marketplace::add_account_to_disallow_list(bob.clone(), 1001, DAVE);
-			assert_noop!(ok, Error::<Test>::UnknownMarketplace);
+			assert_noop!(ok, Error::<Test>::MarketplaceNotFound);
 
 			// Unhappy not marketplace owner
 			let ok = Marketplace::add_account_to_disallow_list(bob.clone(), 0, DAVE);
@@ -808,7 +808,7 @@ fn remove_account_from_disallow_list_unhappy() {
 
 			// Unhappy unknown marketplace
 			let ok = Marketplace::remove_account_from_disallow_list(bob.clone(), 1001, DAVE);
-			assert_noop!(ok, Error::<Test>::UnknownMarketplace);
+			assert_noop!(ok, Error::<Test>::MarketplaceNotFound);
 
 			// Unhappy not marketplace owner
 			let ok = Marketplace::remove_account_from_disallow_list(bob.clone(), 0, DAVE);

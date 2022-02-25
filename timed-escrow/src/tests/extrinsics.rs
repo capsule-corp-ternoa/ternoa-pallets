@@ -41,7 +41,7 @@ fn create_unhappy() {
 
 			// Unhappy nft doesn't exist
 			let ok = TimedEscrow::create(alice.clone(), 1001, BOB, 10);
-			assert_noop!(ok, Error::<Test>::UnknownNFT);
+			assert_noop!(ok, Error::<Test>::NFTNotFound);
 
 			// Unhappy not nft owner
 			let nft_id = <NFTs as NFTTrait>::create_nft(BOB, vec![0], None).unwrap();
@@ -90,7 +90,7 @@ fn cancel_unhappy() {
 
 		// Unhappy nft id doesn't exists
 		let ok = TimedEscrow::cancel(alice.clone(), 1001);
-		assert_noop!(ok, Error::<Test>::UnknownNFT);
+		assert_noop!(ok, Error::<Test>::NFTNotFound);
 
 		// Unhappy not nft owner
 		let nft_id = <NFTs as NFTTrait>::create_nft(BOB, vec![0], None).unwrap();

@@ -33,7 +33,7 @@ fn lock_unhappy() {
 			assert_noop!(NFTs::lock(nft_id), Error::<Test>::Locked);
 
 			// Unhappy invalid NFT Id
-			assert_noop!(NFTs::lock(1001), Error::<Test>::UnknownNFT);
+			assert_noop!(NFTs::lock(1001), Error::<Test>::NFTNotFound);
 		})
 }
 

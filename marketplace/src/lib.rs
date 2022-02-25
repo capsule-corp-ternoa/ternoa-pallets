@@ -99,11 +99,7 @@ pub mod pallet {
 	pub struct Pallet<T>(PhantomData<T>);
 
 	#[pallet::hooks]
-	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-		/*         fn on_runtime_upgrade() -> frame_support::weights::Weight {
-			migrations::migrate::<T>()
-		} */
-	}
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
@@ -118,24 +114,24 @@ pub mod pallet {
 			let account_id = ensure_signed(origin)?;
 			let mkp_id = marketplace_id.unwrap_or(0);
 
-			let nft = T::NFTs::get_nft(nft_id).ok_or(Error::<T>::UnknownNFT)?;
+			let nft = T::NFTs::get_nft(nft_id).ok_or(Error::<T>::NFTNotFound)?;
 			ensure!(nft.owner == account_id, Error::<T>::NotTheNFTOwner);
 			ensure!(!nft.converted_to_capsule, Error::<T>::CannotListCapsules);
-			ensure!(!nft.listed_for_sale, Error::<T>::AlreadyListedForSale);
+			ensure!(!nft.listed_for_sale, Error::<T>::CannotListNFTsThatAreAlreadyListed);
 			ensure!(nft.viewer.is_none(), Error::<T>::CannotListDelegatedNFTs);
 
 			let is_nft_in_completed_series =
 				T::NFTs::is_nft_in_completed_series(nft_id) == Some(true);
-			ensure!(is_nft_in_completed_series, Error::<T>::SeriesNotCompleted);
+			ensure!(is_nft_in_completed_series, Error::<T>::CannotListNFTsInUncompletedSeries);
 
-			let market = Marketplaces::<T>::get(mkp_id).ok_or(Error::<T>::UnknownMarketplace)?;
+			let market = Marketplaces::<T>::get(mkp_id).ok_or(Error::<T>::MarketplaceNotFound)?;
 
 			if market.kind == MarketplaceType::Private {
 				let is_on_list = market.allow_list.contains(&account_id);
-				ensure!(is_on_list, Error::<T>::NotAllowedToList);
+				ensure!(is_on_list, Error::<T>::AccountNotAllowedToList);
 			} else {
 				let is_on_list = market.disallow_list.contains(&account_id);
-				ensure!(!is_on_list, Error::<T>::NotAllowedToList);
+				ensure!(!is_on_list, Error::<T>::AccountNotAllowedToList);
 			}
 
 			T::NFTs::set_listed_for_sale(nft_id, true)?;
@@ -154,7 +150,7 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 
 			ensure!(T::NFTs::owner(nft_id) == Some(who), Error::<T>::NotTheNFTOwner);
-			ensure!(NFTsForSale::<T>::contains_key(nft_id), Error::<T>::NftNotForSale);
+			ensure!(NFTsForSale::<T>::contains_key(nft_id), Error::<T>::NFTNotForSale);
 
 			T::NFTs::set_listed_for_sale(nft_id, false)?;
 			NFTsForSale::<T>::remove(nft_id);
@@ -170,12 +166,12 @@ pub mod pallet {
 		pub fn buy(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
 			let caller = ensure_signed(origin)?;
 
-			let sale = NFTsForSale::<T>::get(nft_id).ok_or(Error::<T>::NftNotForSale)?;
-			ensure!(sale.account_id != caller, Error::<T>::NftAlreadyOwned);
+			let sale = NFTsForSale::<T>::get(nft_id).ok_or(Error::<T>::NFTNotForSale)?;
+			ensure!(sale.account_id != caller, Error::<T>::CannotBuyAlreadyOwnedNFTs);
 
 			// Check if there is any commission fee.
 			let market = Marketplaces::<T>::get(sale.marketplace_id)
-				.ok_or(Error::<T>::UnknownMarketplace)?;
+				.ok_or(Error::<T>::MarketplaceNotFound)?;
 
 			let commission_fee = market.commission_fee;
 			let mut price = sale.price;
@@ -289,7 +285,7 @@ pub mod pallet {
 			let account_id = T::Lookup::lookup(account_id)?;
 
 			Marketplaces::<T>::try_mutate(marketplace_id, |x| -> DispatchResult {
-				let market_info = x.as_mut().ok_or(Error::<T>::UnknownMarketplace)?;
+				let market_info = x.as_mut().ok_or(Error::<T>::MarketplaceNotFound)?;
 				ensure!(market_info.owner == caller_id, Error::<T>::NotMarketplaceOwner);
 				ensure!(
 					market_info.kind == MarketplaceType::Private,
@@ -316,7 +312,7 @@ pub mod pallet {
 			let account_id = T::Lookup::lookup(account_id)?;
 
 			Marketplaces::<T>::try_mutate(marketplace_id, |x| -> DispatchResult {
-				let market_info = x.as_mut().ok_or(Error::<T>::UnknownMarketplace)?;
+				let market_info = x.as_mut().ok_or(Error::<T>::MarketplaceNotFound)?;
 				ensure!(market_info.owner == caller_id, Error::<T>::NotMarketplaceOwner);
 				ensure!(
 					market_info.kind == MarketplaceType::Private,
@@ -345,7 +341,7 @@ pub mod pallet {
 			let account_id = T::Lookup::lookup(account_id)?;
 
 			Marketplaces::<T>::try_mutate(marketplace_id, |x| -> DispatchResult {
-				let market_info = x.as_mut().ok_or(Error::<T>::UnknownMarketplace)?;
+				let market_info = x.as_mut().ok_or(Error::<T>::MarketplaceNotFound)?;
 				ensure!(market_info.owner == caller_id, Error::<T>::NotMarketplaceOwner);
 				ensure!(
 					market_info.kind == MarketplaceType::Public,
@@ -372,7 +368,7 @@ pub mod pallet {
 			let account_id = T::Lookup::lookup(account_id)?;
 
 			Marketplaces::<T>::try_mutate(marketplace_id, |x| -> DispatchResult {
-				let market_info = x.as_mut().ok_or(Error::<T>::UnknownMarketplace)?;
+				let market_info = x.as_mut().ok_or(Error::<T>::MarketplaceNotFound)?;
 				ensure!(market_info.owner == caller_id, Error::<T>::NotMarketplaceOwner);
 				ensure!(
 					market_info.kind == MarketplaceType::Public,
@@ -401,7 +397,7 @@ pub mod pallet {
 			let account_id = T::Lookup::lookup(account_id)?;
 
 			Marketplaces::<T>::try_mutate(marketplace_id, |x| -> DispatchResult {
-				let market_info = x.as_mut().ok_or(Error::<T>::UnknownMarketplace)?;
+				let market_info = x.as_mut().ok_or(Error::<T>::MarketplaceNotFound)?;
 				ensure!(market_info.owner == caller_id, Error::<T>::NotMarketplaceOwner);
 				market_info.owner = account_id.clone();
 				Ok(())
@@ -422,7 +418,7 @@ pub mod pallet {
 			let caller_id = ensure_signed(origin)?;
 
 			Marketplaces::<T>::try_mutate(marketplace_id, |x| -> DispatchResult {
-				let market_info = x.as_mut().ok_or(Error::<T>::UnknownMarketplace)?;
+				let market_info = x.as_mut().ok_or(Error::<T>::MarketplaceNotFound)?;
 				ensure!(market_info.owner == caller_id, Error::<T>::NotMarketplaceOwner);
 
 				market_info.kind = kind;
@@ -450,7 +446,7 @@ pub mod pallet {
 			)?;
 
 			Marketplaces::<T>::try_mutate(marketplace_id, |x| -> DispatchResult {
-				let market_info = x.as_mut().ok_or(Error::<T>::UnknownMarketplace)?;
+				let market_info = x.as_mut().ok_or(Error::<T>::MarketplaceNotFound)?;
 				ensure!(market_info.owner == caller_id, Error::<T>::NotMarketplaceOwner);
 				market_info.name = name.clone();
 				Ok(())
@@ -486,7 +482,7 @@ pub mod pallet {
 			ensure!(commission_fee <= 100, Error::<T>::InvalidCommissionFeeValue);
 
 			Marketplaces::<T>::mutate(marketplace_id, |x| -> DispatchResult {
-				let market_info = x.as_mut().ok_or(Error::<T>::UnknownMarketplace)?;
+				let market_info = x.as_mut().ok_or(Error::<T>::MarketplaceNotFound)?;
 				ensure!(market_info.owner == who, Error::<T>::NotMarketplaceOwner);
 				market_info.commission_fee = commission_fee;
 				Ok(())
@@ -514,7 +510,7 @@ pub mod pallet {
 			)?;
 
 			Marketplaces::<T>::try_mutate(marketplace_id, |x| -> DispatchResult {
-				let market_info = x.as_mut().ok_or(Error::<T>::UnknownMarketplace)?;
+				let market_info = x.as_mut().ok_or(Error::<T>::MarketplaceNotFound)?;
 				ensure!(market_info.owner == who, Error::<T>::NotMarketplaceOwner);
 				market_info.uri = Some(uri.clone());
 				Ok(())
@@ -540,7 +536,7 @@ pub mod pallet {
 			)?;
 
 			Marketplaces::<T>::try_mutate(marketplace_id, |x| -> DispatchResult {
-				let market_info = x.as_mut().ok_or(Error::<T>::UnknownMarketplace)?;
+				let market_info = x.as_mut().ok_or(Error::<T>::MarketplaceNotFound)?;
 				ensure!(market_info.owner == who, Error::<T>::NotMarketplaceOwner);
 				market_info.logo_uri = Some(logo_uri.clone());
 				Ok(())
@@ -566,7 +562,7 @@ pub mod pallet {
 			)?;
 
 			Marketplaces::<T>::try_mutate(marketplace_id, |x| -> DispatchResult {
-				let market_info = x.as_mut().ok_or(Error::<T>::UnknownMarketplace)?;
+				let market_info = x.as_mut().ok_or(Error::<T>::MarketplaceNotFound)?;
 				ensure!(market_info.owner == who, Error::<T>::NotMarketplaceOwner);
 				market_info.description = Some(description.clone());
 				Ok(())
@@ -617,21 +613,34 @@ pub mod pallet {
 
 	#[pallet::error]
 	pub enum Error<T> {
-		/// TODO!
-		CannotListDelegatedNFTs,
+		/// Account not allowed to list NFTs on that marketplace.
+		AccountNotAllowedToList,
 
+		/// Cannot list delegated NFTs.
+		CannotListDelegatedNFTs,
+		/// Cannot list capsules.
+		CannotListCapsules,
+		/// Cannot list NFTs in uncompleted series.
+		CannotListNFTsInUncompletedSeries,
+		/// Cannot list NFTs that are already listed.
+		CannotListNFTsThatAreAlreadyListed,
+		/// You cannot buy your own nft.
+		CannotBuyAlreadyOwnedNFTs,
+
+		/// Marketplace not found.
+		MarketplaceNotFound,
+		/// No NFT was found with that NFT id.
+		NFTNotFound,
 		/// This function is reserved to the owner of a nft.
 		NotTheNFTOwner,
-		/// Nft is not present on the marketplace.
-		NftNotForSale,
-		/// Yot cannot buy your own nft.
-		NftAlreadyOwned,
+		/// NFT is not present on the marketplace.
+		NFTNotForSale,
+
 		/// Used wrong currency to buy an nft.
 		WrongCurrencyUsed,
 		/// We do not have any marketplace ids left, a runtime upgrade is necessary.
 		MarketplaceIdOverflow,
-		/// No marketplace found with that Id.
-		UnknownMarketplace,
+
 		/// Commission fee cannot be more then 100.
 		InvalidCommissionFeeValue,
 		/// This function is reserved to the owner of a marketplace.
@@ -642,14 +651,10 @@ pub mod pallet {
 		AccountNotFound,
 		/// Internal math error.
 		InternalMathError,
-		/// Account not allowed to list NFTs on that marketplace.
-		NotAllowedToList,
 		/// Marketplace name is too short.
 		TooShortMarketplaceName,
 		/// Marketplace name is too long.
 		TooLongMarketplaceName,
-		/// Series is not completed.
-		SeriesNotCompleted,
 		// Marketplace uri is too long.
 		TooLongUri,
 		// Marketplace uri is too short.
@@ -658,16 +663,10 @@ pub mod pallet {
 		TooLongLogoUri,
 		// Marketplace logo uri is too short.
 		TooShortLogoUri,
-		/// Nft is capsulized.
-		CannotListCapsules,
 		/// Marketplace description in too short.
 		TooShortDescription,
 		/// Marketplace description in too long.
 		TooLongDescription,
-		/// TODO!
-		AlreadyListedForSale,
-		/// TODO!
-		UnknownNFT,
 	}
 
 	/// Nfts listed on the marketplace
@@ -740,15 +739,15 @@ impl<T: Config> MarketplaceTrait<T::AccountId> for Pallet<T> {
 		account_id: T::AccountId,
 	) -> DispatchResult {
 		let market =
-			Marketplaces::<T>::get(marketplace_id).ok_or(Error::<T>::UnknownMarketplace)?;
+			Marketplaces::<T>::get(marketplace_id).ok_or(Error::<T>::MarketplaceNotFound)?;
 
 		if market.kind == MarketplaceType::Private {
 			let is_on_list = market.allow_list.contains(&account_id);
-			ensure!(is_on_list, Error::<T>::NotAllowedToList);
+			ensure!(is_on_list, Error::<T>::AccountNotAllowedToList);
 			Ok(())
 		} else {
 			let is_on_list = market.disallow_list.contains(&account_id);
-			ensure!(!is_on_list, Error::<T>::NotAllowedToList);
+			ensure!(!is_on_list, Error::<T>::AccountNotAllowedToList);
 			Ok(())
 		}
 	}
