@@ -119,7 +119,7 @@ pub mod pallet {
 			let mkp_id = marketplace_id.unwrap_or(0);
 
 			let nft = T::NFTs::get_nft(nft_id).ok_or(Error::<T>::UnknownNFT)?;
-			ensure!(nft.owner == account_id, Error::<T>::NotNftOwner);
+			ensure!(nft.owner == account_id, Error::<T>::NotTheNFTOwner);
 			ensure!(!nft.converted_to_capsule, Error::<T>::CannotListCapsules);
 			ensure!(!nft.listed_for_sale, Error::<T>::AlreadyListedForSale);
 			ensure!(nft.viewer.is_none(), Error::<T>::CannotListDelegatedNFTs);
@@ -153,7 +153,7 @@ pub mod pallet {
 		pub fn unlist(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			ensure!(T::NFTs::owner(nft_id) == Some(who), Error::<T>::NotNftOwner);
+			ensure!(T::NFTs::owner(nft_id) == Some(who), Error::<T>::NotTheNFTOwner);
 			ensure!(NFTsForSale::<T>::contains_key(nft_id), Error::<T>::NftNotForSale);
 
 			T::NFTs::set_listed_for_sale(nft_id, false)?;
@@ -456,7 +456,7 @@ pub mod pallet {
 				Ok(())
 			})?;
 
-			let event = Event::MarketplaceNameChanged { marketplace_id, name };
+			let event = Event::MarketplaceNameUpdated { marketplace_id, name };
 			Self::deposit_event(event);
 
 			Ok(().into())
@@ -471,7 +471,7 @@ pub mod pallet {
 
 			MarketplaceMintFee::<T>::put(mint_fee);
 
-			Self::deposit_event(Event::MarketplaceMintFeeChanged { fee: mint_fee });
+			Self::deposit_event(Event::MarketplaceMintFeeUpdated { fee: mint_fee });
 
 			Ok(().into())
 		}
@@ -598,9 +598,9 @@ pub mod pallet {
 		/// Marketplace changed type.
 		MarketplaceTypeChanged { marketplace_id: MarketplaceId, kind: MarketplaceType },
 		/// Marketplace changed name.
-		MarketplaceNameChanged { marketplace_id: MarketplaceId, name: TextFormat },
+		MarketplaceNameUpdated { marketplace_id: MarketplaceId, name: TextFormat },
 		/// Marketplace mint fee changed.
-		MarketplaceMintFeeChanged { fee: BalanceOf<T> },
+		MarketplaceMintFeeUpdated { fee: BalanceOf<T> },
 		/// Marketplace mint fee changed.
 		MarketplaceCommissionFeeChanged { marketplace_id: MarketplaceId, fee: u8 },
 		/// Marketplace TextFormat updated.
@@ -621,7 +621,7 @@ pub mod pallet {
 		CannotListDelegatedNFTs,
 
 		/// This function is reserved to the owner of a nft.
-		NotNftOwner,
+		NotTheNFTOwner,
 		/// Nft is not present on the marketplace.
 		NftNotForSale,
 		/// Yot cannot buy your own nft.

@@ -105,8 +105,8 @@ pub mod pallet {
 
 			check_bounds(
 				capsule_ipfs_reference.len(),
-				(T::MinIpfsLen::get(), Error::<T>::TooShortIpfsReference),
-				(T::MaxIpfsLen::get(), Error::<T>::TooLongIpfsReference),
+				(T::MinIpfsLen::get(), Error::<T>::IPFSReferenceIsTooShort),
+				(T::MaxIpfsLen::get(), Error::<T>::IPFSReferenceIsTooLong),
 			)?;
 
 			// Reserve funds
@@ -137,19 +137,16 @@ pub mod pallet {
 
 			check_bounds(
 				ipfs_reference.len(),
-				(T::MinIpfsLen::get(), Error::<T>::TooShortIpfsReference),
-				(T::MaxIpfsLen::get(), Error::<T>::TooLongIpfsReference),
+				(T::MinIpfsLen::get(), Error::<T>::IPFSReferenceIsTooShort),
+				(T::MaxIpfsLen::get(), Error::<T>::IPFSReferenceIsTooLong),
 			)?;
 
-			let nft = T::NFTTrait::get_nft(nft_id).ok_or(Error::<T>::UnknownNFT)?;
-			ensure!(nft.owner == who, Error::<T>::NotOwner);
-			ensure!(!nft.listed_for_sale, Error::<T>::ListedForSale);
-			ensure!(!nft.in_transmission, Error::<T>::InTransmission);
-			ensure!(!nft.converted_to_capsule, Error::<T>::CapsuleAlreadyExists);
-			ensure!(nft.viewer.is_none(), Error::<T>::CannotCreateCapsuleFromDelegatedNFTs);
-
-			let exists = Capsules::<T>::contains_key(nft_id);
-			ensure!(!exists, Error::<T>::CapsuleAlreadyExists);
+			let nft = T::NFTTrait::get_nft(nft_id).ok_or(Error::<T>::NFTNotFound)?;
+			ensure!(nft.owner == who, Error::<T>::NotTheNFTOwner);
+			ensure!(!nft.listed_for_sale, Error::<T>::CannotCreateCapsulesFromNFTsListedForSale);
+			ensure!(!nft.in_transmission, Error::<T>::CannotCreateCapsulesFromNFTsInTransmission);
+			ensure!(!nft.converted_to_capsule, Error::<T>::CannotCreateCapsulesFromCapsules);
+			ensure!(nft.viewer.is_none(), Error::<T>::CannotCreateCapsulesFromDelegatedNFTs);
 
 			// Reserve funds
 			let amount = CapsuleMintFee::<T>::get();
@@ -173,10 +170,10 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 			let mut unused_funds = Default::default();
 
-			Ledgers::<T>::mutate(&who, |x| -> DispatchResult {
-				let data = x.as_mut().ok_or(Error::<T>::NotOwner)?;
+			Ledgers::<T>::try_mutate(&who, |x| -> DispatchResult {
+				let data = x.as_mut().ok_or(Error::<T>::NotTheNFTOwner)?;
 
-				let error = Error::<T>::NotOwner;
+				let error = Error::<T>::NotTheNFTOwner;
 				let index = data.iter().position(|x| x.0 == nft_id).ok_or(error)?;
 
 				unused_funds = data[index].1;
@@ -208,9 +205,9 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			Ledgers::<T>::mutate(&who, |x| -> DispatchResult {
-				let data = x.as_mut().ok_or(Error::<T>::NotOwner)?;
-				let error = Error::<T>::NotOwner;
+			Ledgers::<T>::try_mutate(&who, |x| -> DispatchResult {
+				let data = x.as_mut().ok_or(Error::<T>::NotTheNFTOwner)?;
+				let error = Error::<T>::NotTheNFTOwner;
 				let index = data.iter().position(|x| x.0 == nft_id).ok_or(error)?;
 
 				Self::send_funds(&who, &Self::account_id(), amount, KeepAlive)?;
@@ -238,19 +235,19 @@ pub mod pallet {
 
 			check_bounds(
 				ipfs_reference.len(),
-				(T::MinIpfsLen::get(), Error::<T>::TooShortIpfsReference),
-				(T::MaxIpfsLen::get(), Error::<T>::TooLongIpfsReference),
+				(T::MinIpfsLen::get(), Error::<T>::IPFSReferenceIsTooShort),
+				(T::MaxIpfsLen::get(), Error::<T>::IPFSReferenceIsTooLong),
 			)?;
 
-			Capsules::<T>::mutate(nft_id, |x| -> DispatchResult {
-				let data = x.as_mut().ok_or(Error::<T>::UnknownNFT)?;
-				ensure!(data.owner == who, Error::<T>::NotOwner);
+			Capsules::<T>::try_mutate(nft_id, |x| -> DispatchResult {
+				let data = x.as_mut().ok_or(Error::<T>::NFTNotFound)?;
+				ensure!(data.owner == who, Error::<T>::NotTheNFTOwner);
 
 				data.ipfs_reference = ipfs_reference.clone();
 				Ok(())
 			})?;
 
-			let event = Event::CapsuleIpfsReferenceChanged { nft_id, ipfs_reference };
+			let event = Event::CapsuleIpfsReferenceUpdated { nft_id, ipfs_reference };
 			Self::deposit_event(event);
 
 			Ok(().into())
@@ -266,7 +263,7 @@ pub mod pallet {
 
 			CapsuleMintFee::<T>::put(capsule_fee);
 
-			Self::deposit_event(Event::CapsuleMintFeeChanged { fee: capsule_fee });
+			Self::deposit_event(Event::CapsuleMintFeeUpdated { fee: capsule_fee });
 
 			Ok(().into())
 		}
@@ -275,16 +272,16 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		/// A capsule ipfs reference was changed.
-		CapsuleIpfsReferenceChanged { nft_id: NFTId, ipfs_reference: TextFormat },
+		/// A capsule ipfs reference was updated.
+		CapsuleIpfsReferenceUpdated { nft_id: NFTId, ipfs_reference: TextFormat },
 		/// Additional funds were added to a capsule.
 		CapsuleFundsAdded { nft_id: NFTId, balance: BalanceOf<T> },
 		/// A capsule was convert into an NFT.
 		CapsuleRemoved { nft_id: NFTId, unfrozen_balance: BalanceOf<T> },
 		/// A capsule was created.
 		CapsuleCreated { owner: T::AccountId, nft_id: NFTId, frozen_balance: BalanceOf<T> },
-		/// Capsule mint fee has been changed.
-		CapsuleMintFeeChanged { fee: BalanceOf<T> },
+		/// Capsule mint fee has been updated.
+		CapsuleMintFeeUpdated { fee: BalanceOf<T> },
 		/// Some funds have been deposited.
 		CapsuleDeposit { balance: BalanceOf<T> },
 	}
@@ -292,27 +289,25 @@ pub mod pallet {
 	#[pallet::error]
 	pub enum Error<T> {
 		/// Cannot create a capsule from a delegated NFT.
-		CannotCreateCapsuleFromDelegatedNFTs,
+		CannotCreateCapsulesFromDelegatedNFTs,
+		/// Cannot create a capsule from NFTs listed for sale.
+		CannotCreateCapsulesFromNFTsListedForSale,
+		/// Cannot create a capsule from NFTs listed for sale.
+		CannotCreateCapsulesFromNFTsInTransmission,
+		/// Cannot create a capsule from NFTs that are already capsules.
+		CannotCreateCapsulesFromCapsules,
 		/// This should never happen.
 		ArithmeticError,
-		/// Callers is not the NFT owner.
-		NotOwner,
 		/// Ipfs reference is too short.
-		TooShortIpfsReference,
+		IPFSReferenceIsTooShort,
 		/// Ipfs reference is too long.
-		TooLongIpfsReference,
-		/// Capsule already exists.
-		CapsuleAlreadyExists,
+		IPFSReferenceIsTooLong,
 		/// This should never happen.
 		InternalError,
-		/// NFT is locked.
-		ListedForSale,
-		/// TODO!
-		AlreadyACapsule,
-		/// TODO!
-		UnknownNFT,
-		/// TODO!
-		InTransmission,
+		/// No NFT was found with that NFT id.
+		NFTNotFound,
+		/// Callers is not the NFT owner.
+		NotTheNFTOwner,
 	}
 
 	/// Current capsule mint fee.

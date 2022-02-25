@@ -36,12 +36,12 @@ fn create_unhappy() {
 
 			// Unhappy too short ipfs reference
 			let ok = TernoaCapsules::create(bob.clone(), vec![], vec![], None);
-			assert_noop!(ok, Error::<Test>::TooShortIpfsReference);
+			assert_noop!(ok, Error::<Test>::IPFSReferenceIsTooShort);
 
 			// Unhappy too longs ipfs reference
 			let long = vec![1, 2, 3, 4, 5, 6, 7];
 			let ok = TernoaCapsules::create(bob.clone(), vec![], long, None);
-			assert_noop!(ok, Error::<Test>::TooLongIpfsReference);
+			assert_noop!(ok, Error::<Test>::IPFSReferenceIsTooLong);
 
 			// Unhappy not enough caps to reserve a capsule
 			let ok = TernoaCapsules::create(bob.clone(), vec![], vec![1], None);
@@ -129,36 +129,36 @@ fn create_from_nft_unhappy() {
 			// Unhappy too short ipfs reference
 			let nft_id = help::create_nft_fast(alice.clone());
 			let ok = TernoaCapsules::create_from_nft(alice.clone(), nft_id, vec![]);
-			assert_noop!(ok, Error::<Test>::TooShortIpfsReference);
+			assert_noop!(ok, Error::<Test>::IPFSReferenceIsTooShort);
 
 			// Unhappy too longs ipfs reference
 			let long = vec![1, 2, 3, 4, 5, 6, 7];
 			let ok = TernoaCapsules::create_from_nft(alice.clone(), nft_id, long);
-			assert_noop!(ok, Error::<Test>::TooLongIpfsReference);
+			assert_noop!(ok, Error::<Test>::IPFSReferenceIsTooLong);
 
 			// Unhappy not nft owner
 			let nft_id = help::create_nft_fast(bob.clone());
 			let ok = TernoaCapsules::create_from_nft(alice.clone(), nft_id, vec![25]);
-			assert_noop!(ok, Error::<Test>::NotOwner);
+			assert_noop!(ok, Error::<Test>::NotTheNFTOwner);
 
 			// Unhappy nft is listed for sale
 			let nft_id = help::create_nft_fast(alice.clone());
 			<TernoaNFTs as NFTTrait>::set_listed_for_sale(nft_id, true).unwrap();
 			let ok = TernoaCapsules::create_from_nft(alice.clone(), nft_id, vec![25]);
-			assert_noop!(ok, Error::<Test>::ListedForSale);
+			assert_noop!(ok, Error::<Test>::CannotCreateCapsulesFromNFTsListedForSale);
 
 			// Unhappy nft is in transmission
 			let nft_id = help::create_nft_fast(alice.clone());
 			<TernoaNFTs as NFTTrait>::set_in_transmission(nft_id, true).unwrap();
 			let ok = TernoaCapsules::create_from_nft(alice.clone(), nft_id, vec![25]);
-			assert_noop!(ok, Error::<Test>::InTransmission);
+			assert_noop!(ok, Error::<Test>::CannotCreateCapsulesFromNFTsInTransmission);
 
 			// Unhappy nft is already a capsule
 			let nft_id = help::create_nft_fast(alice.clone());
 			let ok = TernoaCapsules::create_from_nft(alice.clone(), nft_id, vec![25]);
 			assert_ok!(ok);
 			let ok = TernoaCapsules::create_from_nft(alice.clone(), nft_id, vec![30]);
-			assert_noop!(ok, Error::<Test>::CapsuleAlreadyExists);
+			assert_noop!(ok, Error::<Test>::CannotCreateCapsulesFromCapsules);
 
 			// Unhappy not enough caps to reserve a capsule
 			let nft_id = help::create_nft_fast(bob.clone());
@@ -222,7 +222,7 @@ fn remove_unhappy() {
 
 			// Unhappy not owner
 			let ok = TernoaCapsules::remove(alice.clone(), bob_nft_id);
-			assert_noop!(ok, Error::<Test>::NotOwner);
+			assert_noop!(ok, Error::<Test>::NotTheNFTOwner);
 
 			// Unhappy Pallet doesn't have enough caps (this should never happen)
 			let ok = Balances::set_balance(Origin::root(), pallet_id, 0, 0);
@@ -285,7 +285,7 @@ fn add_funds_unhappy() {
 
 			// Unhappy not owner
 			let ok = TernoaCapsules::add_funds(alice.clone(), bob_nft_id, add);
-			assert_noop!(ok, Error::<Test>::NotOwner);
+			assert_noop!(ok, Error::<Test>::NotTheNFTOwner);
 
 			// Unhappy caller doesn't have enough caps
 			let ok = TernoaCapsules::add_funds(alice.clone(), alice_nft_id, add);
@@ -343,17 +343,17 @@ fn set_ipfs_reference_unhappy() {
 
 			// Unhappy too short ipfs reference
 			let ok = TernoaCapsules::set_ipfs_reference(alice.clone(), nft_id, vec![]);
-			assert_noop!(ok, Error::<Test>::TooShortIpfsReference);
+			assert_noop!(ok, Error::<Test>::IPFSReferenceIsTooShort);
 
 			// Unhappy too longs ipfs reference
 			let long = vec![1, 2, 3, 4, 5, 6, 7];
 			let ok = TernoaCapsules::set_ipfs_reference(alice.clone(), nft_id, long);
-			assert_noop!(ok, Error::<Test>::TooLongIpfsReference);
+			assert_noop!(ok, Error::<Test>::IPFSReferenceIsTooLong);
 
 			// Unhappy not nft owner
 			let bob_nft_id = help::create_capsule_fast(bob.clone());
 			let ok = TernoaCapsules::set_ipfs_reference(alice.clone(), bob_nft_id, vec![1]);
-			assert_noop!(ok, Error::<Test>::NotOwner);
+			assert_noop!(ok, Error::<Test>::NotTheNFTOwner);
 		})
 }
 

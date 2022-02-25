@@ -70,7 +70,7 @@ pub mod pallet {
 			let to_unlookup = T::Lookup::lookup(to)?;
 
 			let nft = T::NFTs::get_nft(nft_id).ok_or(Error::<T>::UnknownNFT)?;
-			ensure!(nft.owner == who, Error::<T>::NotNFTOwner);
+			ensure!(nft.owner == who, Error::<T>::NotTheNFTOwner);
 			ensure!(!nft.listed_for_sale, Error::<T>::ListedForSale);
 			ensure!(!nft.in_transmission, Error::<T>::AlreadyInTransmission);
 
@@ -110,7 +110,7 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 
 			let nft = T::NFTs::get_nft(nft_id).ok_or(Error::<T>::UnknownNFT)?;
-			ensure!(nft.owner == who, Error::<T>::NotNFTOwner);
+			ensure!(nft.owner == who, Error::<T>::NotTheNFTOwner);
 
 			let ok = T::Scheduler::cancel_named((ESCROW_ID, nft_id).encode()).is_ok();
 			ensure!(ok, Error::<T>::SchedulingFailed);
@@ -162,7 +162,7 @@ pub mod pallet {
 	#[pallet::error]
 	pub enum Error<T> {
 		/// This function is reserved to the owner of a nft.
-		NotNFTOwner,
+		NotTheNFTOwner,
 		/// An unknown error happened which made the scheduling call fail.
 		SchedulingFailed,
 		/// Unknown NFT

@@ -275,7 +275,7 @@ pub mod pallet {
 		NFTBurned { nft_id: NFTId },
 		/// A series has been completed.
 		SeriesFinished { series_id: NFTSeriesId },
-		/// Nft mint fee changed.
+		/// NFT mint fee changed.
 		NFTMintFeeUpdated { fee: BalanceOf<T> },
 		/// An NFT was delegated to someone else or it was returned.
 		NFTDelegated { nft_id: NFTId, viewer: Option<T::AccountId> },
