@@ -156,7 +156,7 @@ pub mod pallet {
 			ensure!(!data.listed_for_sale, Error::<T>::CannotTransferNFTsListedForSale);
 			ensure!(!data.converted_to_capsule, Error::<T>::CannotTransferCapsules);
 			ensure!(!data.in_transmission, Error::<T>::CannotTransferNFTsInTransmission);
-			ensure!(data.viewer.is_none(), Error::<T>::CannotTransferLentNFTs);
+			ensure!(data.viewer.is_none(), Error::<T>::CannotTransferDelegatedNFTs);
 			ensure!(!series.draft, Error::<T>::CannotTransferNFTsInUncompletedSeries);
 
 			data.owner = to.clone();
@@ -181,7 +181,7 @@ pub mod pallet {
 			ensure!(!data.listed_for_sale, Error::<T>::CannotBurnNFTsListedForSale);
 			ensure!(!data.converted_to_capsule, Error::<T>::CannotBurnCapsules);
 			ensure!(!data.in_transmission, Error::<T>::CannotBurnNFTsInTransmission);
-			ensure!(data.viewer.is_none(), Error::<T>::CannotBurnLentNFTs);
+			ensure!(data.viewer.is_none(), Error::<T>::CannotBurnDelegatedNFTs);
 
 			Data::<T>::remove(id);
 			Self::deposit_event(Event::NFTBurned { nft_id: id });
@@ -251,7 +251,7 @@ pub mod pallet {
 				Ok(().into())
 			})?;
 
-			let event = Event::NFTLent { nft_id, viewer };
+			let event = Event::NFTDelegated { nft_id, viewer };
 			Self::deposit_event(event);
 
 			Ok(().into())
@@ -277,8 +277,8 @@ pub mod pallet {
 		SeriesFinished { series_id: NFTSeriesId },
 		/// Nft mint fee changed.
 		NFTMintFeeUpdated { fee: BalanceOf<T> },
-		/// An NFT was lent to someone else or it was returned.
-		NFTLent { nft_id: NFTId, viewer: Option<T::AccountId> },
+		/// An NFT was delegated to someone else or it was returned.
+		NFTDelegated { nft_id: NFTId, viewer: Option<T::AccountId> },
 	}
 
 	#[pallet::error]
@@ -304,10 +304,10 @@ pub mod pallet {
 		/// Operation not allowed because the NFT is in transmission.
 		CannotDelegateNFTsInTransmission,
 
-		/// Operation is not allowed because the NFT is lent.
-		CannotTransferLentNFTs,
-		/// Operation is not allowed because the NFT is lent.
-		CannotBurnLentNFTs,
+		/// Operation is not allowed because the NFT is delegated.
+		CannotTransferDelegatedNFTs,
+		/// Operation is not allowed because the NFT is delegated.
+		CannotBurnDelegatedNFTs,
 
 		/// Operation is not allowed because the series is in draft.
 		CannotTransferNFTsInUncompletedSeries,

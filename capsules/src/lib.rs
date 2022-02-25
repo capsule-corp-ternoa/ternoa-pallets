@@ -146,7 +146,7 @@ pub mod pallet {
 			ensure!(!nft.listed_for_sale, Error::<T>::ListedForSale);
 			ensure!(!nft.in_transmission, Error::<T>::InTransmission);
 			ensure!(!nft.converted_to_capsule, Error::<T>::CapsuleAlreadyExists);
-			ensure!(nft.viewer.is_none(), Error::<T>::CannotCreateCapsuleFromLentNFTs);
+			ensure!(nft.viewer.is_none(), Error::<T>::CannotCreateCapsuleFromDelegatedNFTs);
 
 			let exists = Capsules::<T>::contains_key(nft_id);
 			ensure!(!exists, Error::<T>::CapsuleAlreadyExists);
@@ -291,9 +291,8 @@ pub mod pallet {
 
 	#[pallet::error]
 	pub enum Error<T> {
-		/// TODO!
-		CannotCreateCapsuleFromLentNFTs,
-
+		/// Cannot create a capsule from a delegated NFT.
+		CannotCreateCapsuleFromDelegatedNFTs,
 		/// This should never happen.
 		ArithmeticError,
 		/// Callers is not the NFT owner.

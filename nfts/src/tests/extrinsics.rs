@@ -17,13 +17,13 @@ mod transfer {
 	use super::*;
 
 	#[test]
-	fn cannot_transfer_lent_nfts() {
+	fn cannot_transfer_delegated_nfts() {
 		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
 			let nft_id = NFTs::create_nft(ALICE, vec![0], None).unwrap();
 			assert_ok!(NFTs::set_viewer(nft_id, Some(BOB)));
 
 			let ok = NFTs::transfer(origin(ALICE), nft_id, BOB);
-			assert_noop!(ok, Error::<Test>::CannotTransferLentNFTs);
+			assert_noop!(ok, Error::<Test>::CannotTransferDelegatedNFTs);
 		})
 	}
 }
@@ -32,13 +32,13 @@ mod burn {
 	use super::*;
 
 	#[test]
-	fn cannot_burn_lent_nfts() {
+	fn cannot_burn_delegated_nfts() {
 		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
 			let nft_id = NFTs::create_nft(ALICE, vec![0], None).unwrap();
 			assert_ok!(NFTs::set_viewer(nft_id, Some(BOB)));
 
 			let ok = NFTs::burn(origin(ALICE), nft_id);
-			assert_noop!(ok, Error::<Test>::CannotBurnLentNFTs);
+			assert_noop!(ok, Error::<Test>::CannotBurnDelegatedNFTs);
 		})
 	}
 }
@@ -60,7 +60,7 @@ mod delegate {
 			assert_eq!(NFTs::data(nft_id), Some(nft));
 
 			// Event
-			let event = NFTsEvent::NFTLent { nft_id, viewer };
+			let event = NFTsEvent::NFTDelegated { nft_id, viewer };
 			let event = Event::NFTs(event);
 			assert_eq!(System::events().last().unwrap().event, event);
 		})

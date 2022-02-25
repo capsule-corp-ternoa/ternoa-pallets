@@ -122,7 +122,7 @@ pub mod pallet {
 			ensure!(nft.owner == account_id, Error::<T>::NotNftOwner);
 			ensure!(!nft.converted_to_capsule, Error::<T>::CannotListCapsules);
 			ensure!(!nft.listed_for_sale, Error::<T>::AlreadyListedForSale);
-			ensure!(nft.viewer.is_none(), Error::<T>::CannotListLentNFTs);
+			ensure!(nft.viewer.is_none(), Error::<T>::CannotListDelegatedNFTs);
 
 			let is_nft_in_completed_series =
 				T::NFTs::is_nft_in_completed_series(nft_id) == Some(true);
@@ -618,7 +618,7 @@ pub mod pallet {
 	#[pallet::error]
 	pub enum Error<T> {
 		/// TODO!
-		CannotListLentNFTs,
+		CannotListDelegatedNFTs,
 
 		/// This function is reserved to the owner of a nft.
 		NotNftOwner,

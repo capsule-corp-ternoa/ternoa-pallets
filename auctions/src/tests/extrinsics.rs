@@ -336,7 +336,7 @@ pub mod create_auction {
 	}
 
 	#[test]
-	fn cannot_auction_lent_nfts() {
+	fn cannot_auction_delegated_nfts() {
 		ExtBuilder::new_build(vec![], None).execute_with(|| {
 			let (nft_id, market_id) = (ALICE_NFT_ID, ALICE_MARKET_ID);
 			assert_ok!(NFTs::set_viewer(nft_id, Some(BOB)));
@@ -350,7 +350,7 @@ pub mod create_auction {
 				100,
 				Some(101),
 			);
-			assert_noop!(ok, Error::<Test>::CannotAuctionLentNFTs);
+			assert_noop!(ok, Error::<Test>::CannotAuctionDelegatedNFTs);
 		})
 	}
 }
