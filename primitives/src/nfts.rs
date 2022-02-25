@@ -10,15 +10,13 @@ use sp_std::vec::Vec;
 /// How NFT IDs are encoded.
 pub type NFTId = u32;
 
-/// How NFT IDs are encoded. In the JSON Types this should be "Text" and not "Vec<8>".
-pub type NFTSeriesId = Vec<u8>;
-
 /// Data related to an NFT, such as who is its owner.
 #[derive(Encode, Decode, Clone, PartialEq, Eq, Default, RuntimeDebug, TypeInfo)]
-pub struct NFTData<AccountId, IPFSStringLen>
+pub struct NFTData<AccountId, IPFSStringLen, SeriesStringLen>
 where
 	AccountId: Clone,
 	IPFSStringLen: Get<u32>,
+	SeriesStringLen: Get<u32>,
 {
 	// NFT owner
 	pub owner: AccountId,
@@ -27,7 +25,7 @@ where
 	// IPFS reference
 	pub ipfs_reference: StringData<IPFSStringLen>,
 	// Series ID
-	pub series_id: NFTSeriesId,
+	pub series_id: StringData<SeriesStringLen>,
 	// Is listed for sale
 	pub listed_for_sale: bool,
 	// Is being transmitted
@@ -38,16 +36,17 @@ where
 	pub viewer: Option<AccountId>,
 }
 
-impl<AccountId, IPFSStringLen> NFTData<AccountId, IPFSStringLen>
+impl<AccountId, IPFSStringLen, SeriesStringLen> NFTData<AccountId, IPFSStringLen, SeriesStringLen>
 where
 	AccountId: Clone,
 	IPFSStringLen: Get<u32>,
+	SeriesStringLen: Get<u32>,
 {
 	pub fn new(
 		owner: AccountId,
 		creator: AccountId,
 		ipfs_reference: StringData<IPFSStringLen>,
-		series_id: NFTSeriesId,
+		series_id: StringData<SeriesStringLen>,
 		listed_for_sale: bool,
 		in_transmission: bool,
 		converted_to_capsule: bool,
@@ -68,7 +67,7 @@ where
 	pub fn new_default(
 		owner: AccountId,
 		ipfs_reference: StringData<IPFSStringLen>,
-		series_id: NFTSeriesId,
+		series_id: StringData<SeriesStringLen>,
 	) -> Self {
 		Self::new(owner.clone(), owner, ipfs_reference, series_id, false, false, false, None)
 	}
@@ -93,4 +92,4 @@ impl<AccountId> NFTSeriesDetails<AccountId> {
 }
 
 // series id, owner, draft
-pub type SeriesGenesis<AccountId> = (NFTSeriesId, AccountId, bool);
+pub type SeriesGenesis<AccountId> = (Vec<u8>, AccountId, bool);

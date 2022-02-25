@@ -13,10 +13,11 @@ use frame_support::{
 	dispatch::{DispatchErrorWithPostInfo, DispatchResult},
 	pallet_prelude::ensure,
 	traits::StorageVersion,
+	BoundedVec,
 };
 use frame_system::Origin;
 use primitives::{
-	nfts::{NFTData, NFTId, NFTSeriesDetails, NFTSeriesId, NFTsGenesis, SeriesGenesis},
+	nfts::{NFTData, NFTId, NFTSeriesDetails, NFTsGenesis, SeriesGenesis},
 	StringData,
 };
 use sp_std::{vec, vec::Vec};
@@ -53,9 +54,13 @@ pub mod pallet {
 		/// What we do with additional fees
 		type FeesCollector: OnUnbalanced<NegativeImbalanceOf<Self>>;
 
-		/// Min Ipfs len
+		/// TODO!
 		#[pallet::constant]
 		type IPFSStringLen: Get<u32> + TypeInfo + MaxEncodedLen;
+
+		/// TODO!
+		#[pallet::constant]
+		type SeriesStringLen: Get<u32> + TypeInfo + MaxEncodedLen;
 
 		/// Min Ipfs len
 		#[pallet::constant]
@@ -72,6 +77,9 @@ pub mod pallet {
 		<T as frame_system::Config>::AccountId,
 	>>::NegativeImbalance;
 
+	pub type IPFSReference<T> = StringData<<T as Config>::IPFSStringLen>;
+	pub type SeriesId<T> = StringData<<T as Config>::SeriesStringLen>;
+
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
 	#[pallet::storage_version(STORAGE_VERSION)]
@@ -79,11 +87,7 @@ pub mod pallet {
 	pub struct Pallet<T>(PhantomData<T>);
 
 	#[pallet::hooks]
-	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-		/*         fn on_runtime_upgrade() -> frame_support::weights::Weight {
-			migrations::migrate::<T>()
-		} */
-	}
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
@@ -96,8 +100,8 @@ pub mod pallet {
 		#[transactional]
 		pub fn create(
 			origin: OriginFor<T>,
-			ipfs_reference: StringData<T::IPFSStringLen>,
-			series_id: Option<NFTSeriesId>,
+			ipfs_reference: IPFSReference<T>,
+			series_id: Option<SeriesId<T>>,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
@@ -200,7 +204,7 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::finish_series())]
 		pub fn finish_series(
 			origin: OriginFor<T>,
-			series_id: NFTSeriesId,
+			series_id: SeriesId<T>,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
@@ -271,8 +275,8 @@ pub mod pallet {
 		NFTCreated {
 			nft_id: NFTId,
 			owner: T::AccountId,
-			series_id: NFTSeriesId,
-			ipfs_reference: StringData<T::IPFSStringLen>,
+			series_id: SeriesId<T>,
+			ipfs_reference: IPFSReference<T>,
 			mint_fee: BalanceOf<T>,
 		},
 		/// An NFT was transferred to someone else.
@@ -280,7 +284,7 @@ pub mod pallet {
 		/// An NFT was burned.
 		NFTBurned { nft_id: NFTId },
 		/// A series has been completed.
-		SeriesFinished { series_id: NFTSeriesId },
+		SeriesFinished { series_id: SeriesId<T> },
 		/// NFT mint fee changed.
 		NFTMintFeeUpdated { fee: BalanceOf<T> },
 		/// An NFT was delegated to someone else or it was returned.
@@ -347,7 +351,7 @@ pub mod pallet {
 		_,
 		Blake2_128Concat,
 		NFTId,
-		NFTData<T::AccountId, T::IPFSStringLen>,
+		NFTData<T::AccountId, T::IPFSStringLen, T::SeriesStringLen>,
 		OptionQuery,
 	>;
 
@@ -355,7 +359,7 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn series)]
 	pub type Series<T: Config> =
-		StorageMap<_, Blake2_128Concat, NFTSeriesId, NFTSeriesDetails<T::AccountId>, OptionQuery>;
+		StorageMap<_, Blake2_128Concat, SeriesId<T>, NFTSeriesDetails<T::AccountId>, OptionQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn series_id_generator)]
@@ -388,6 +392,7 @@ pub mod pallet {
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
 			self.series.clone().into_iter().for_each(|(series_id, owner, draft)| {
+				let series_id = BoundedVec::try_from(series_id).expect("It will never happen.");
 				let series = NFTSeriesDetails::new(owner, draft);
 				Series::<T>::insert(series_id, series);
 			});
@@ -407,6 +412,8 @@ pub mod pallet {
 				)| {
 					let ipfs_reference =
 						BoundedVec::try_from(ipfs_reference).expect("It will never happen.");
+					let series_id = BoundedVec::try_from(series_id).expect("It will never happen.");
+
 					let data = NFTData::new(
 						owner,
 						creator,
@@ -437,6 +444,7 @@ pub mod pallet {
 impl<T: Config> traits::NFTTrait for Pallet<T> {
 	type AccountId = T::AccountId;
 	type IPFSStringLen = T::IPFSStringLen;
+	type SeriesStringLen = T::SeriesStringLen;
 
 	fn set_owner(id: NFTId, owner: &Self::AccountId) -> DispatchResult {
 		Data::<T>::try_mutate(id, |data| -> DispatchResult {
@@ -460,17 +468,19 @@ impl<T: Config> traits::NFTTrait for Pallet<T> {
 	fn create_nft(
 		owner: Self::AccountId,
 		ipfs_reference: StringData<Self::IPFSStringLen>,
-		series_id: Option<NFTSeriesId>,
+		series_id: Option<StringData<Self::SeriesStringLen>>,
 	) -> Result<NFTId, DispatchErrorWithPostInfo> {
 		Self::create(Origin::<T>::Signed(owner).into(), ipfs_reference, series_id)?;
 		return Ok(Self::nft_id_generator() - 1)
 	}
 
-	fn get_nft(id: NFTId) -> Option<NFTData<Self::AccountId, Self::IPFSStringLen>> {
+	fn get_nft(
+		id: NFTId,
+	) -> Option<NFTData<Self::AccountId, Self::IPFSStringLen, Self::SeriesStringLen>> {
 		Data::<T>::get(id)
 	}
 
-	fn benchmark_lock_series(series_id: NFTSeriesId) {
+	fn benchmark_lock_series(series_id: StringData<Self::SeriesStringLen>) {
 		Series::<T>::mutate(&series_id, |x| {
 			x.as_mut().unwrap().draft = false;
 		});
@@ -533,7 +543,10 @@ impl<T: Config> traits::NFTTrait for Pallet<T> {
 		return None
 	}
 
-	fn set_series_completion(series_id: &NFTSeriesId, value: bool) -> DispatchResult {
+	fn set_series_completion(
+		series_id: &StringData<Self::SeriesStringLen>,
+		value: bool,
+	) -> DispatchResult {
 		Series::<T>::try_mutate(series_id, |x| -> DispatchResult {
 			let series = x.as_mut().ok_or(Error::<T>::SeriesNotFound)?;
 			series.draft = !value;
@@ -565,10 +578,11 @@ impl<T: Config> Pallet<T> {
 		return nft_id
 	}
 
-	fn generate_series_id() -> NFTSeriesId {
+	fn generate_series_id() -> SeriesId<T> {
 		let mut id = SeriesIdGenerator::<T>::get();
 		loop {
 			let id_vec = u32_to_text(id);
+			let id_vec = BoundedVec::try_from(id_vec).expect("It will never happen.");
 			if !Series::<T>::contains_key(&id_vec) {
 				break
 			}
@@ -581,7 +595,8 @@ impl<T: Config> Pallet<T> {
 				.expect("If u32 is not enough we should crash for safety; qed."),
 		);
 
-		return u32_to_text(id)
+		let series_id = u32_to_text(id);
+		BoundedVec::try_from(series_id).expect("It will never happen.")
 	}
 }
 
