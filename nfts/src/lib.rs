@@ -15,14 +15,16 @@ use frame_support::{
 	traits::StorageVersion,
 };
 use frame_system::Origin;
-pub use pallet::*;
 use primitives::{
-	nfts::{NFTData, NFTId, NFTSeriesDetails, NFTSeriesId},
-	TextFormat,
+	nfts::{NFTData, NFTId, NFTSeriesDetails, NFTSeriesId, NFTsGenesis, SeriesGenesis},
+	StringData,
 };
 use sp_std::{vec, vec::Vec};
+use std::convert::TryFrom;
 use ternoa_common::traits;
 pub use weights::WeightInfo;
+
+pub use pallet::*;
 
 const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
 
@@ -32,7 +34,7 @@ pub mod pallet {
 	use frame_support::{
 		pallet_prelude::*,
 		traits::{Currency, ExistenceRequirement::KeepAlive, OnUnbalanced, WithdrawReasons},
-		transactional,
+		transactional, BoundedVec,
 	};
 	use frame_system::pallet_prelude::*;
 	use sp_runtime::traits::StaticLookup;
@@ -52,8 +54,8 @@ pub mod pallet {
 		type FeesCollector: OnUnbalanced<NegativeImbalanceOf<Self>>;
 
 		/// Min Ipfs len
-		//#[pallet::constant]
-		//type MinIpfsLen: Get<u16>;
+		#[pallet::constant]
+		type IPFSStringLen: Get<u32> + TypeInfo + MaxEncodedLen;
 
 		/// Min Ipfs len
 		#[pallet::constant]
@@ -94,7 +96,7 @@ pub mod pallet {
 		#[transactional]
 		pub fn create(
 			origin: OriginFor<T>,
-			ipfs_reference: TextFormat,
+			ipfs_reference: StringData<T::IPFSStringLen>,
 			series_id: Option<NFTSeriesId>,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
@@ -270,7 +272,7 @@ pub mod pallet {
 			nft_id: NFTId,
 			owner: T::AccountId,
 			series_id: NFTSeriesId,
-			ipfs_reference: TextFormat,
+			ipfs_reference: StringData<T::IPFSStringLen>,
 			mint_fee: BalanceOf<T>,
 		},
 		/// An NFT was transferred to someone else.
@@ -341,8 +343,13 @@ pub mod pallet {
 	/// Data related to NFTs.
 	#[pallet::storage]
 	#[pallet::getter(fn data)]
-	pub type Data<T: Config> =
-		StorageMap<_, Blake2_128Concat, NFTId, NFTData<T::AccountId>, OptionQuery>;
+	pub type Data<T: Config> = StorageMap<
+		_,
+		Blake2_128Concat,
+		NFTId,
+		NFTData<T::AccountId, T::IPFSStringLen>,
+		OptionQuery,
+	>;
 
 	/// Data related to NFT Series.
 	#[pallet::storage]
@@ -361,8 +368,8 @@ pub mod pallet {
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
-		pub nfts: Vec<(NFTId, NFTData<T::AccountId>)>,
-		pub series: Vec<(NFTSeriesId, NFTSeriesDetails<T::AccountId>)>,
+		pub nfts: Vec<NFTsGenesis<T::AccountId>>,
+		pub series: Vec<SeriesGenesis<T::AccountId>>,
 		pub nft_mint_fee: BalanceOf<T>,
 	}
 
@@ -380,15 +387,41 @@ pub mod pallet {
 	#[pallet::genesis_build]
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
-			self.series.clone().into_iter().for_each(|(series_id, series)| {
+			self.series.clone().into_iter().for_each(|(series_id, owner, draft)| {
+				let series = NFTSeriesDetails::new(owner, draft);
 				Series::<T>::insert(series_id, series);
 			});
 
 			let mut current_nft_id: NFTId = 0;
-			self.nfts.clone().into_iter().for_each(|(nft_id, data)| {
-				Data::<T>::insert(nft_id, data);
-				current_nft_id = current_nft_id.max(nft_id);
-			});
+			self.nfts.clone().into_iter().for_each(
+				|(
+					nft_id,
+					owner,
+					creator,
+					ipfs_reference,
+					series_id,
+					listed_for_sale,
+					in_transmission,
+					converted_to_capsule,
+					viewer,
+				)| {
+					let ipfs_reference =
+						BoundedVec::try_from(ipfs_reference).expect("It will never happen.");
+					let data = NFTData::new(
+						owner,
+						creator,
+						ipfs_reference,
+						series_id,
+						listed_for_sale,
+						in_transmission,
+						converted_to_capsule,
+						viewer,
+					);
+
+					Data::<T>::insert(nft_id, data);
+					current_nft_id = current_nft_id.max(nft_id);
+				},
+			);
 
 			if !self.nfts.is_empty() {
 				current_nft_id += 1;
@@ -403,6 +436,7 @@ pub mod pallet {
 
 impl<T: Config> traits::NFTTrait for Pallet<T> {
 	type AccountId = T::AccountId;
+	type IPFSStringLen = T::IPFSStringLen;
 
 	fn set_owner(id: NFTId, owner: &Self::AccountId) -> DispatchResult {
 		Data::<T>::try_mutate(id, |data| -> DispatchResult {
@@ -425,14 +459,14 @@ impl<T: Config> traits::NFTTrait for Pallet<T> {
 
 	fn create_nft(
 		owner: Self::AccountId,
-		ipfs_reference: TextFormat,
+		ipfs_reference: StringData<Self::IPFSStringLen>,
 		series_id: Option<NFTSeriesId>,
 	) -> Result<NFTId, DispatchErrorWithPostInfo> {
 		Self::create(Origin::<T>::Signed(owner).into(), ipfs_reference, series_id)?;
 		return Ok(Self::nft_id_generator() - 1)
 	}
 
-	fn get_nft(id: NFTId) -> Option<NFTData<Self::AccountId>> {
+	fn get_nft(id: NFTId) -> Option<NFTData<Self::AccountId, Self::IPFSStringLen>> {
 		Data::<T>::get(id)
 	}
 

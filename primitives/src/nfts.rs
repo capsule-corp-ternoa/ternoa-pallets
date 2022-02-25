@@ -1,10 +1,9 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use crate::TextFormat;
+use crate::StringData;
 use codec::{Decode, Encode};
+use frame_support::traits::Get;
 use scale_info::TypeInfo;
-#[cfg(feature = "std")]
-use serde::{Deserialize, Serialize};
 use sp_runtime::RuntimeDebug;
 use sp_std::vec::Vec;
 
@@ -16,17 +15,17 @@ pub type NFTSeriesId = Vec<u8>;
 
 /// Data related to an NFT, such as who is its owner.
 #[derive(Encode, Decode, Clone, PartialEq, Eq, Default, RuntimeDebug, TypeInfo)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub struct NFTData<AccountId>
+pub struct NFTData<AccountId, IPFSStringLen>
 where
 	AccountId: Clone,
+	IPFSStringLen: Get<u32>,
 {
 	// NFT owner
 	pub owner: AccountId,
 	// NFT creator
 	pub creator: AccountId,
 	// IPFS reference
-	pub ipfs_reference: TextFormat,
+	pub ipfs_reference: StringData<IPFSStringLen>,
 	// Series ID
 	pub series_id: NFTSeriesId,
 	// Is listed for sale
@@ -39,14 +38,15 @@ where
 	pub viewer: Option<AccountId>,
 }
 
-impl<AccountId> NFTData<AccountId>
+impl<AccountId, IPFSStringLen> NFTData<AccountId, IPFSStringLen>
 where
 	AccountId: Clone,
+	IPFSStringLen: Get<u32>,
 {
 	pub fn new(
 		owner: AccountId,
 		creator: AccountId,
-		ipfs_reference: TextFormat,
+		ipfs_reference: StringData<IPFSStringLen>,
 		series_id: NFTSeriesId,
 		listed_for_sale: bool,
 		in_transmission: bool,
@@ -67,16 +67,19 @@ where
 
 	pub fn new_default(
 		owner: AccountId,
-		ipfs_reference: TextFormat,
+		ipfs_reference: StringData<IPFSStringLen>,
 		series_id: NFTSeriesId,
 	) -> Self {
 		Self::new(owner.clone(), owner, ipfs_reference, series_id, false, false, false, None)
 	}
 }
 
+// nft_id, owner, creator, ipfs, series, for sale, in transmission, is capsule, viewer
+pub type NFTsGenesis<AccountId> =
+	(NFTId, AccountId, AccountId, Vec<u8>, Vec<u8>, bool, bool, bool, Option<AccountId>);
+
 /// Data related to an NFT Series.
 #[derive(Encode, Decode, Clone, PartialEq, Eq, Default, RuntimeDebug, TypeInfo)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct NFTSeriesDetails<AccountId> {
 	pub owner: AccountId, // Series Owner
 	pub draft: bool,      /* If Yes, the owner can add new nfts to that series but cannot list
@@ -88,3 +91,6 @@ impl<AccountId> NFTSeriesDetails<AccountId> {
 		Self { owner, draft }
 	}
 }
+
+// series id, owner, draft
+pub type SeriesGenesis<AccountId> = (NFTSeriesId, AccountId, bool);

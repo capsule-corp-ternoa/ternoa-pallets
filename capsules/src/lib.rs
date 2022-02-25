@@ -1,4 +1,4 @@
-#![cfg_attr(not(feature = "std"), no_std)]
+/* #![cfg_attr(not(feature = "std"), no_std)]
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
@@ -56,7 +56,7 @@ pub mod pallet {
 
 		/// Min Ipfs len
 		#[pallet::constant]
-		type MinIpfsLen: Get<u16>;
+		type IPFSStringLen: Get<u32>;
 
 		/// Max Uri len
 		#[pallet::constant]
@@ -396,3 +396,4 @@ impl<T: Config> Pallet<T> {
 		Ok(())
 	}
 }
+ */

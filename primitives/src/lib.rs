@@ -4,4 +4,4 @@ pub mod common;
 pub mod marketplace;
 pub mod nfts;
 
-pub use common::{IPFSString, TextFormat};
+pub use common::{StringData, TextFormat};
