@@ -12,20 +12,20 @@ pub type NFTId = u32;
 
 /// Data related to an NFT, such as who is its owner.
 #[derive(Encode, Decode, Clone, PartialEq, Eq, Default, RuntimeDebug, TypeInfo)]
-pub struct NFTData<AccountId, IPFSStringLen, SeriesStringLen>
+pub struct NFTData<AccountId, IPFSReference, SeriesId>
 where
 	AccountId: Clone,
-	IPFSStringLen: Get<u32>,
-	SeriesStringLen: Get<u32>,
+	IPFSReference: Clone,
+	SeriesId: Clone,
 {
 	// NFT owner
 	pub owner: AccountId,
 	// NFT creator
 	pub creator: AccountId,
 	// IPFS reference
-	pub ipfs_reference: StringData<IPFSStringLen>,
+	pub ipfs_reference: IPFSReference,
 	// Series ID
-	pub series_id: StringData<SeriesStringLen>,
+	pub series_id: SeriesId,
 	// Is listed for sale
 	pub listed_for_sale: bool,
 	// Is being transmitted
@@ -36,17 +36,17 @@ where
 	pub viewer: Option<AccountId>,
 }
 
-impl<AccountId, IPFSStringLen, SeriesStringLen> NFTData<AccountId, IPFSStringLen, SeriesStringLen>
+impl<AccountId, IPFSReference, SeriesId> NFTData<AccountId, IPFSReference, SeriesId>
 where
 	AccountId: Clone,
-	IPFSStringLen: Get<u32>,
-	SeriesStringLen: Get<u32>,
+	IPFSReference: Clone,
+	SeriesId: Clone,
 {
 	pub fn new(
 		owner: AccountId,
 		creator: AccountId,
-		ipfs_reference: StringData<IPFSStringLen>,
-		series_id: StringData<SeriesStringLen>,
+		ipfs_reference: IPFSReference,
+		series_id: SeriesId,
 		listed_for_sale: bool,
 		in_transmission: bool,
 		converted_to_capsule: bool,
@@ -66,8 +66,8 @@ where
 
 	pub fn new_default(
 		owner: AccountId,
-		ipfs_reference: StringData<IPFSStringLen>,
-		series_id: StringData<SeriesStringLen>,
+		ipfs_reference: IPFSReference,
+		series_id: SeriesId,
 	) -> Self {
 		Self::new(owner.clone(), owner, ipfs_reference, series_id, false, false, false, None)
 	}

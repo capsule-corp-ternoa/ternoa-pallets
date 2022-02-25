@@ -20,8 +20,7 @@ use primitives::{
 	nfts::{NFTData, NFTId, NFTSeriesDetails, NFTsGenesis, SeriesGenesis},
 	StringData,
 };
-use sp_std::{vec, vec::Vec};
-use std::convert::TryFrom;
+use sp_std::{convert::TryFrom, vec, vec::Vec};
 use ternoa_common::traits;
 pub use weights::WeightInfo;
 
@@ -56,11 +55,11 @@ pub mod pallet {
 
 		/// TODO!
 		#[pallet::constant]
-		type IPFSStringLen: Get<u32> + TypeInfo + MaxEncodedLen;
+		type IPFSStringLen: Get<u32> + TypeInfo + MaxEncodedLen + Clone;
 
 		/// TODO!
 		#[pallet::constant]
-		type SeriesStringLen: Get<u32> + TypeInfo + MaxEncodedLen;
+		type SeriesStringLen: Get<u32> + TypeInfo + MaxEncodedLen + Clone;
 
 		/// Min Ipfs len
 		#[pallet::constant]
@@ -351,7 +350,7 @@ pub mod pallet {
 		_,
 		Blake2_128Concat,
 		NFTId,
-		NFTData<T::AccountId, T::IPFSStringLen, T::SeriesStringLen>,
+		NFTData<T::AccountId, IPFSReference<T>, SeriesId<T>>,
 		OptionQuery,
 	>;
 
@@ -443,8 +442,8 @@ pub mod pallet {
 
 impl<T: Config> traits::NFTTrait for Pallet<T> {
 	type AccountId = T::AccountId;
-	type IPFSStringLen = T::IPFSStringLen;
-	type SeriesStringLen = T::SeriesStringLen;
+	type IPFSReference = IPFSReference<T>;
+	type SeriesId = SeriesId<T>;
 
 	fn set_owner(id: NFTId, owner: &Self::AccountId) -> DispatchResult {
 		Data::<T>::try_mutate(id, |data| -> DispatchResult {
@@ -467,20 +466,18 @@ impl<T: Config> traits::NFTTrait for Pallet<T> {
 
 	fn create_nft(
 		owner: Self::AccountId,
-		ipfs_reference: StringData<Self::IPFSStringLen>,
-		series_id: Option<StringData<Self::SeriesStringLen>>,
+		ipfs_reference: Self::IPFSReference,
+		series_id: Option<Self::SeriesId>,
 	) -> Result<NFTId, DispatchErrorWithPostInfo> {
 		Self::create(Origin::<T>::Signed(owner).into(), ipfs_reference, series_id)?;
 		return Ok(Self::nft_id_generator() - 1)
 	}
 
-	fn get_nft(
-		id: NFTId,
-	) -> Option<NFTData<Self::AccountId, Self::IPFSStringLen, Self::SeriesStringLen>> {
+	fn get_nft(id: NFTId) -> Option<NFTData<Self::AccountId, Self::IPFSReference, Self::SeriesId>> {
 		Data::<T>::get(id)
 	}
 
-	fn benchmark_lock_series(series_id: StringData<Self::SeriesStringLen>) {
+	fn benchmark_lock_series(series_id: Self::SeriesId) {
 		Series::<T>::mutate(&series_id, |x| {
 			x.as_mut().unwrap().draft = false;
 		});
@@ -543,10 +540,7 @@ impl<T: Config> traits::NFTTrait for Pallet<T> {
 		return None
 	}
 
-	fn set_series_completion(
-		series_id: &StringData<Self::SeriesStringLen>,
-		value: bool,
-	) -> DispatchResult {
+	fn set_series_completion(series_id: &Self::SeriesId, value: bool) -> DispatchResult {
 		Series::<T>::try_mutate(series_id, |x| -> DispatchResult {
 			let series = x.as_mut().ok_or(Error::<T>::SeriesNotFound)?;
 			series.draft = !value;

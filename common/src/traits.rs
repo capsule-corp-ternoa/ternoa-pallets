@@ -12,8 +12,8 @@ use primitives::{
 
 pub trait NFTTrait {
 	type AccountId: Clone;
-	type IPFSStringLen: Get<u32>;
-	type SeriesStringLen: Get<u32>;
+	type IPFSReference: Clone;
+	type SeriesId: Clone;
 
 	/// Change the owner of an NFT.
 	fn set_owner(id: NFTId, owner: &Self::AccountId) -> DispatchResult;
@@ -27,17 +27,15 @@ pub trait NFTTrait {
 	/// Create NFT
 	fn create_nft(
 		owner: Self::AccountId,
-		ipfs_reference: StringData<Self::IPFSStringLen>,
-		series_id: Option<StringData<Self::SeriesStringLen>>,
+		ipfs_reference: Self::IPFSReference,
+		series_id: Option<Self::SeriesId>,
 	) -> Result<NFTId, DispatchErrorWithPostInfo>;
 
 	/// Get NFT data
-	fn get_nft(
-		id: NFTId,
-	) -> Option<NFTData<Self::AccountId, Self::IPFSStringLen, Self::SeriesStringLen>>;
+	fn get_nft(id: NFTId) -> Option<NFTData<Self::AccountId, Self::IPFSReference, Self::SeriesId>>;
 
 	/// Lock series WARNING: Only for benchmark purposes!
-	fn benchmark_lock_series(series_id: StringData<Self::SeriesStringLen>);
+	fn benchmark_lock_series(series_id: Self::SeriesId);
 
 	/// TODO!
 	fn set_listed_for_sale(id: NFTId, value: bool) -> DispatchResult;
@@ -58,10 +56,7 @@ pub trait NFTTrait {
 	fn is_converted_to_capsule(id: NFTId) -> Option<bool>;
 
 	/// Set a series to be either completed or not-completed.
-	fn set_series_completion(
-		series_id: &StringData<Self::SeriesStringLen>,
-		value: bool,
-	) -> DispatchResult;
+	fn set_series_completion(series_id: &Self::SeriesId, value: bool) -> DispatchResult;
 
 	/// Set the NFT viewer to a value.
 	fn set_viewer(id: NFTId, value: Option<Self::AccountId>) -> DispatchResult;
