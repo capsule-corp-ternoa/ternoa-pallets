@@ -32,6 +32,7 @@ pub trait WeightInfo {
 	fn burn() -> Weight;
 	fn finish_series() -> Weight;
 	fn set_nft_mint_fee() -> Weight;
+	fn set_secret_nft_mint_fee() -> Weight;
 	fn delegate() -> Weight;
 }
 
@@ -72,7 +73,10 @@ impl<T: frame_system::Config> WeightInfo for TernoaWeight<T> {
 	fn set_nft_mint_fee() -> Weight {
 		(10_100_000 as Weight).saturating_add(T::DbWeight::get().writes(1 as Weight))
 	}
-	// Storage: Nfts Data (r:1 w:1)
+	// Storage: Nfts SecretNftMintFee
+	fn set_secret_nft_mint_fee() -> Weight {
+		(10_100_000 as Weight).saturating_add(T::DbWeight::get().writes(1 as Weight))
+	}
 	fn delegate() -> Weight {
 		(14_870_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(1 as Weight))

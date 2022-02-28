@@ -26,6 +26,7 @@ pub fn prepare_benchmarks<T: Config>() {
 		RawOrigin::Signed(alice.clone()).into(),
 		vec![1],
 		Some(series_id.clone()),
+		false
 	));
 }
 
@@ -44,7 +45,7 @@ benchmarks! {
 		let alice: T::AccountId = get_account::<T>("ALICE");
 		let nft_id = NFTs::<T>::nft_id_generator();
 
-	}: _(RawOrigin::Signed(alice.clone()), vec![55], None)
+	}: _(RawOrigin::Signed(alice.clone()), vec![55], None, false)
 	verify {
 		assert_eq!(NFTs::<T>::data(nft_id).unwrap().owner, alice);
 	}
@@ -90,6 +91,18 @@ benchmarks! {
 	verify {
 		assert_ne!(old_mint_fee, new_mint_fee.clone().into());
 		assert_eq!(NFTs::<T>::nft_mint_fee(), new_mint_fee.into());
+	}
+
+	set_secret_nft_mint_fee {
+		prepare_benchmarks::<T>();
+
+		let old_mint_fee = NFTs::<T>::secret_nft_mint_fee();
+		let new_mint_fee = 1000u32;
+
+	}: _(RawOrigin::Root, new_mint_fee.clone().into())
+	verify {
+		assert_ne!(old_mint_fee, new_mint_fee.clone().into());
+		assert_eq!(NFTs::<T>::secret_nft_mint_fee(), new_mint_fee.into());
 	}
 
 	delegate {

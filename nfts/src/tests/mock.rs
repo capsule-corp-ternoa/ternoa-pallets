@@ -120,6 +120,7 @@ pub const CHAD: u64 = 3;
 pub const COLLECTOR: u64 = 99;
 
 pub const NFT_MINT_FEE: Balance = 10;
+pub const SECRET_MINT_FEE: Balance = 15;
 pub const INVALID_NFT_ID: NFTId = 1001;
 
 pub struct ExtBuilder {
@@ -159,6 +160,7 @@ impl ExtBuilder {
 			nfts: Default::default(),
 			series: Default::default(),
 			nft_mint_fee: NFT_MINT_FEE,
+			secret_nft_mint_fee: SECRET_MINT_FEE,
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();

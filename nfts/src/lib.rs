@@ -35,7 +35,7 @@ pub mod pallet {
 		transactional,
 	};
 	use frame_system::pallet_prelude::*;
-	use sp_runtime::traits::StaticLookup;
+	use sp_runtime::traits::{StaticLookup, Zero};
 	use ternoa_common::helpers::check_bounds;
 
 	#[pallet::config]
@@ -96,6 +96,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			ipfs_reference: TextFormat,
 			series_id: Option<NFTSeriesId>,
+			is_secret: bool,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
@@ -106,11 +107,14 @@ pub mod pallet {
 			)?;
 
 			// Checks
-			// The Caller needs to pay the NFT Mint fee.
-			let mint_fee = NftMintFee::<T>::get();
-			let reason = WithdrawReasons::FEE;
-			let imbalance = T::Currency::withdraw(&who, mint_fee, reason, KeepAlive)?;
-			T::FeesCollector::on_unbalanced(imbalance);
+			// The caller needs to pay mint fee depending on if it's secret NFT or not.
+			let mint_fee =
+				if is_secret { NftSecretMintFee::<T>::get() } else { NftMintFee::<T>::get() };
+			if !mint_fee.is_zero() {
+				let reason = WithdrawReasons::FEE;
+				let imbalance = T::Currency::withdraw(&who, mint_fee, reason, KeepAlive)?;
+				T::FeesCollector::on_unbalanced(imbalance);
+			}
 
 			// Check if the series exists. If it exists and the caller is not the owner throw error.
 			let mut series_exists = false;
@@ -230,6 +234,20 @@ pub mod pallet {
 			Ok(().into())
 		}
 
+		#[pallet::weight(T::WeightInfo::set_secret_nft_mint_fee())]
+		pub fn set_secret_nft_mint_fee(
+			origin: OriginFor<T>,
+			mint_fee: BalanceOf<T>,
+		) -> DispatchResultWithPostInfo {
+			ensure_root(origin)?;
+
+			NftSecretMintFee::<T>::put(mint_fee);
+
+			Self::deposit_event(Event::SecretNFTMintFeeUpdated { fee: mint_fee });
+
+			Ok(().into())
+		}
+
 		#[pallet::weight(T::WeightInfo::delegate())]
 		pub fn delegate(
 			origin: OriginFor<T>,
@@ -281,6 +299,8 @@ pub mod pallet {
 		SeriesFinished { series_id: NFTSeriesId },
 		/// NFT mint fee changed.
 		NFTMintFeeUpdated { fee: BalanceOf<T> },
+		/// Secreft NFT mint fee changed.
+		SecretNFTMintFeeUpdated { fee: BalanceOf<T> },
 		/// An NFT was delegated to someone else or it was returned.
 		NFTDelegated { nft_id: NFTId, viewer: Option<T::AccountId> },
 	}
@@ -359,11 +379,17 @@ pub mod pallet {
 	#[pallet::getter(fn nft_mint_fee)]
 	pub type NftMintFee<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
 
+	/// The extra fee for minting a Secret NFT
+	#[pallet::storage]
+	#[pallet::getter(fn secret_nft_mint_fee)]
+	pub type NftSecretMintFee<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
+
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
 		pub nfts: Vec<(NFTId, NFTData<T::AccountId>)>,
 		pub series: Vec<(NFTSeriesId, NFTSeriesDetails<T::AccountId>)>,
 		pub nft_mint_fee: BalanceOf<T>,
+		pub secret_nft_mint_fee: BalanceOf<T>,
 	}
 
 	#[cfg(feature = "std")]
@@ -373,6 +399,7 @@ pub mod pallet {
 				nfts: Default::default(),
 				series: Default::default(),
 				nft_mint_fee: Default::default(),
+				secret_nft_mint_fee: Default::default(),
 			}
 		}
 	}
@@ -427,8 +454,9 @@ impl<T: Config> traits::NFTTrait for Pallet<T> {
 		owner: Self::AccountId,
 		ipfs_reference: TextFormat,
 		series_id: Option<NFTSeriesId>,
+		is_secret: bool,
 	) -> Result<NFTId, DispatchErrorWithPostInfo> {
-		Self::create(Origin::<T>::Signed(owner).into(), ipfs_reference, series_id)?;
+		Self::create(Origin::<T>::Signed(owner).into(), ipfs_reference, series_id, is_secret)?;
 		return Ok(Self::nft_id_generator() - 1)
 	}
 

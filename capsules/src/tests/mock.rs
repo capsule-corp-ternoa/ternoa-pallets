@@ -149,6 +149,7 @@ impl ExtBuilder {
 			nfts: Default::default(),
 			series: Default::default(),
 			nft_mint_fee: 10,
+			secret_nft_mint_fee: 15,
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();
@@ -186,7 +187,7 @@ pub mod help {
 		ipfs_reference: TextFormat,
 		series_id: Option<NFTSeriesId>,
 	) -> NFTId {
-		assert_ok!(TernoaNFTs::create(owner, ipfs_reference, series_id));
+		assert_ok!(TernoaNFTs::create(owner, ipfs_reference, series_id, false));
 		TernoaNFTs::nft_id_generator() - 1
 	}
 }

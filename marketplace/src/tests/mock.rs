@@ -177,6 +177,7 @@ impl ExtBuilder {
 			nfts: self.nfts,
 			series: self.series,
 			nft_mint_fee: 10,
+			secret_nft_mint_fee: 15,
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();
@@ -254,7 +255,7 @@ pub mod help {
 		ipfs_reference: TextFormat,
 		series_id: Option<NFTSeriesId>,
 	) -> NFTId {
-		assert_ok!(NFTs::create(owner, ipfs_reference, series_id));
+		assert_ok!(NFTs::create(owner, ipfs_reference, series_id, false));
 		return NFTs::nft_id_generator() - 1
 	}
 

@@ -234,9 +234,14 @@ impl ExtBuilder {
 		let nfts = vec![(ALICE_NFT_ID, alice_nft), (BOB_NFT_ID, bob_nft)];
 		let series = vec![(vec![ALICE_SERIES_ID], alice_series), (vec![BOB_SERIES_ID], bob_series)];
 
-		ternoa_nfts::GenesisConfig::<Test> { nfts, series, nft_mint_fee: 5 }
-			.assimilate_storage(t)
-			.unwrap();
+		ternoa_nfts::GenesisConfig::<Test> {
+			nfts,
+			series,
+			nft_mint_fee: 5,
+			secret_nft_mint_fee: 15,
+		}
+		.assimilate_storage(t)
+		.unwrap();
 	}
 
 	fn build_market(t: &mut sp_runtime::Storage) {

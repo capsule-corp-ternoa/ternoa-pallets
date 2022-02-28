@@ -18,7 +18,7 @@ fn create_happy() {
 		assert_eq!(TernoaCapsules::ledgers(&ALICE), None);
 
 		// Happy path
-		let ok = TernoaCapsules::create(alice.clone(), vec![50], ipfs_reference, None);
+		let ok = TernoaCapsules::create(alice.clone(), vec![50], ipfs_reference, None, false);
 		assert_ok!(ok);
 		assert_eq!(TernoaCapsules::capsules(&nft_id), Some(data));
 		assert_eq!(TernoaCapsules::ledgers(&ALICE), Some(ledger));
@@ -35,20 +35,20 @@ fn create_unhappy() {
 			let bob: mock::Origin = RawOrigin::Signed(BOB).into();
 
 			// Unhappy too short ipfs reference
-			let ok = TernoaCapsules::create(bob.clone(), vec![], vec![], None);
+			let ok = TernoaCapsules::create(bob.clone(), vec![], vec![], None, false);
 			assert_noop!(ok, Error::<Test>::IPFSReferenceIsTooShort);
 
 			// Unhappy too longs ipfs reference
 			let long = vec![1, 2, 3, 4, 5, 6, 7];
-			let ok = TernoaCapsules::create(bob.clone(), vec![], long, None);
+			let ok = TernoaCapsules::create(bob.clone(), vec![], long, None, false);
 			assert_noop!(ok, Error::<Test>::IPFSReferenceIsTooLong);
 
 			// Unhappy not enough caps to reserve a capsule
-			let ok = TernoaCapsules::create(bob.clone(), vec![], vec![1], None);
+			let ok = TernoaCapsules::create(bob.clone(), vec![], vec![1], None, false);
 			assert_noop!(ok, BalanceError::<Test>::InsufficientBalance);
 
 			// Unhappy nft creation failed
-			let ok = TernoaCapsules::create(alice.clone(), vec![], vec![1], None);
+			let ok = TernoaCapsules::create(alice.clone(), vec![], vec![1], None, false);
 			assert_noop!(ok, ternoa_nfts::Error::<Test>::IPFSReferenceIsTooShort);
 		})
 }
@@ -66,7 +66,7 @@ fn create_caps_transfer() {
 		assert_eq!(Balances::free_balance(pallet_id), 0);
 
 		// Funds are transferred
-		let ok = TernoaCapsules::create(alice.clone(), vec![50], vec![25], None);
+		let ok = TernoaCapsules::create(alice.clone(), vec![50], vec![25], None, false);
 		assert_ok!(ok);
 		assert_eq!(Balances::free_balance(ALICE), balance - capsule_fee - nft_fee);
 		assert_eq!(Balances::free_balance(pallet_id), capsule_fee);
@@ -87,7 +87,7 @@ fn create_transactional() {
 		assert!(balance < (capsule_fee + nft_fee));
 
 		// Trigger an error
-		let ok = TernoaCapsules::create(alice.clone(), vec![], vec![1], None);
+		let ok = TernoaCapsules::create(alice.clone(), vec![], vec![1], None, false);
 		assert_noop!(ok, ternoa_nfts::Error::<Test>::IPFSReferenceIsTooShort);
 
 		// She should not have lost any caps

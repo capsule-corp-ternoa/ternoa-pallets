@@ -21,7 +21,8 @@ fn list_happy() {
 			let price = 50;
 			let series_id = vec![50];
 			let nft_id =
-				<NFTs as NFTTrait>::create_nft(ALICE, vec![50], Some(series_id.clone())).unwrap();
+				<NFTs as NFTTrait>::create_nft(ALICE, vec![50], Some(series_id.clone()), false)
+					.unwrap();
 			let sale_info = SaleInformation::new(ALICE, price.clone(), 0);
 
 			help::finish_series(alice.clone(), series_id);
@@ -34,7 +35,8 @@ fn list_happy() {
 			let mkp_id = help::create_mkp(bob.clone(), MPT::Private, 0, vec![1], vec![ALICE]);
 			let sale_info = SaleInformation::new(ALICE, price.clone(), mkp_id);
 			let nft_id =
-				<NFTs as NFTTrait>::create_nft(ALICE, vec![50], Some(series_id.clone())).unwrap();
+				<NFTs as NFTTrait>::create_nft(ALICE, vec![50], Some(series_id.clone()), false)
+					.unwrap();
 
 			help::finish_series(alice.clone(), series_id);
 			let ok = Marketplace::list(alice.clone(), nft_id, price, Some(mkp_id));
@@ -59,14 +61,15 @@ fn list_unhappy() {
 			assert_noop!(ok, Error::<Test>::NFTNotFound);
 
 			// Unhappy not the NFT owner
-			let nft_id = <NFTs as NFTTrait>::create_nft(BOB, vec![50], None).unwrap();
+			let nft_id = <NFTs as NFTTrait>::create_nft(BOB, vec![50], None, false).unwrap();
 			let ok = Marketplace::list(alice.clone(), nft_id, price, Some(0));
 			assert_noop!(ok, Error::<Test>::NotTheNFTOwner);
 
 			// Unhappy series not completed
 			let series_id = vec![50];
 			let nft_id =
-				<NFTs as NFTTrait>::create_nft(ALICE, vec![50], Some(series_id.clone())).unwrap();
+				<NFTs as NFTTrait>::create_nft(ALICE, vec![50], Some(series_id.clone()), false)
+					.unwrap();
 			let ok = Marketplace::list(alice.clone(), nft_id, price, Some(0));
 			assert_noop!(ok, Error::<Test>::CannotListNFTsInUncompletedSeries);
 
@@ -106,7 +109,8 @@ fn unlist_happy() {
 		let price = 50;
 		let series_id = vec![50];
 		let nft_id =
-			<NFTs as NFTTrait>::create_nft(ALICE, vec![50], Some(series_id.clone())).unwrap();
+			<NFTs as NFTTrait>::create_nft(ALICE, vec![50], Some(series_id.clone()), false)
+				.unwrap();
 
 		// Happy path
 		help::finish_series(alice.clone(), series_id);
@@ -127,7 +131,7 @@ fn unlist_unhappy() {
 		assert_noop!(ok, Error::<Test>::NotTheNFTOwner);
 
 		// Unhappy not listed NFT
-		let nft_id = <NFTs as NFTTrait>::create_nft(ALICE, vec![50], None).unwrap();
+		let nft_id = <NFTs as NFTTrait>::create_nft(ALICE, vec![50], None, false).unwrap();
 		let ok = Marketplace::unlist(alice.clone(), nft_id);
 		assert_noop!(ok, Error::<Test>::NFTNotForSale);
 	})
