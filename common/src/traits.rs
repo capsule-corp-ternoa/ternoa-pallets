@@ -20,7 +20,7 @@ pub trait NFTTrait {
 	/// Is series completed(locked)
 	fn is_nft_in_completed_series(id: NFTId) -> Option<bool>;
 
-	/// Create NFT
+	/// Create NFT and return its NFTId
 	fn create_nft(
 		owner: Self::AccountId,
 		ipfs_reference: Vec<u8>,
