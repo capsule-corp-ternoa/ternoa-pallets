@@ -17,44 +17,121 @@ mod create {
 	use super::*;
 
 	#[test]
-	fn create_nft() {
-		ExtBuilder::default()
-			.caps(vec![(ALICE, 1000), (BOB, 1), (CHAD, 100)])
-			.build()
-			.execute_with(|| {
-				// Initial state
-				assert_eq!(NFTs::nft_id_generator(), 0);
-				assert_eq!(NFTs::series_id_generator(), 0);
+	fn create_nft_with_no_series() {
+		ExtBuilder::default().caps(vec![(ALICE, 1000)]).build().execute_with(|| {
+			// State checks
+			assert_eq!(NFTs::nft_id_generator(), 0);
+			assert_eq!(NFTs::series_id_generator(), 0);
 
-				let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
+			// Initial state
+			let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
+			let serie_id = vec![50];
+			let ipfs_reference = vec![1];
+			let data = NFTData::new_default(ALICE, ipfs_reference.clone(), serie_id.clone());
+			let alice_balance = Balances::free_balance(ALICE);
 
-				// Happy path NFT with series
-				let series = NFTSeriesDetails::new(ALICE, true);
-				let data = NFTData::new_default(ALICE, vec![1], vec![50]);
-				let alice_balance = Balances::free_balance(ALICE);
+			// Create NFT with new serie id while there is no series already registered
+			assert_ok!(NFTs::create(
+				alice.clone(),
+				data.ipfs_reference.clone(),
+				Some(data.series_id.clone()),
+			));
+			let nft_id = NFTs::nft_id_generator() - 1;
 
-				assert_ok!(NFTs::create(
-					alice.clone(),
-					data.ipfs_reference.clone(),
-					Some(data.series_id.clone()),
-				));
+			// Checking final state
+			assert_eq!(NFTs::series_id_generator(), 0);
+			assert_eq!(nft_id, 0);
+			assert_eq!(
+				NFTs::series(&data.series_id.clone()),
+				Some(NFTSeriesDetails::new(ALICE, true))
+			);
+			assert_eq!(NFTs::data(0), Some(data.clone()));
+			assert_eq!(Balances::free_balance(ALICE), alice_balance - NFTs::nft_mint_fee());
 
-				assert_eq!(NFTs::nft_id_generator(), 1);
-				assert_eq!(NFTs::series(&data.series_id), Some(series));
-				assert_eq!(NFTs::data(0), Some(data));
-				assert_eq!(NFTs::series_id_generator(), 0);
-				assert_eq!(Balances::free_balance(ALICE), alice_balance - NFTs::nft_mint_fee());
+			// Checking events
+			assert_eq!(
+				System::events().last().unwrap().event,
+				Event::NFTs(NFTsEvent::NFTCreated {
+					nft_id,
+					owner: data.owner,
+					series_id: data.series_id,
+					ipfs_reference,
+					mint_fee: NFTs::nft_mint_fee(),
+				})
+			);
+		})
+	}
 
-				// Happy path NFT without series
-				let data = NFTData::new_default(ALICE, vec![0], vec![48]);
-				let series = NFTSeriesDetails::new(ALICE, true);
+	#[test]
+	fn create_nft_associated_with_existing_serie() {
+		ExtBuilder::default().caps(vec![(ALICE, 1000)]).build().execute_with(|| {
+			// State checks
+			assert_eq!(NFTs::nft_id_generator(), 0);
+			assert_eq!(NFTs::series_id_generator(), 0);
 
-				assert_ok!(NFTs::create(alice.clone(), vec![0], None));
+			// Initial state
+			let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
+			let serie_id = vec![50];
+			let ipfs_1_reference = vec![1];
+			let ipfs_2_reference = vec![2];
+			let data_1 = NFTData::new_default(ALICE, ipfs_1_reference.clone(), serie_id.clone());
+			let data_2 = NFTData::new_default(ALICE, ipfs_2_reference.clone(), serie_id.clone());
+			let alice_balance = Balances::free_balance(ALICE);
 
-				assert_eq!(NFTs::series(&data.series_id), Some(series));
-				assert_eq!(NFTs::data(1), Some(data));
-				assert_eq!(NFTs::series_id_generator(), 1);
-			})
+			// Create NFT with new serie id while there is no series already registered
+			assert_ok!(NFTs::create(
+				alice.clone(),
+				data_1.ipfs_reference.clone(),
+				Some(data_1.series_id.clone()),
+			));
+			let nft_1_id = NFTs::nft_id_generator() - 1;
+
+			// Intermediate check of nft_id_generator state
+			assert_eq!(nft_1_id, 0);
+
+			// Checking events
+			assert_eq!(
+				System::events().last().unwrap().event,
+				Event::NFTs(NFTsEvent::NFTCreated {
+					nft_id: nft_1_id,
+					owner: data_1.owner,
+					series_id: data_1.series_id.clone(),
+					ipfs_reference: ipfs_1_reference,
+					mint_fee: NFTs::nft_mint_fee(),
+				})
+			);
+
+			// Create NFT associated with existing serie
+			assert_ok!(NFTs::create(
+				alice.clone(),
+				data_2.ipfs_reference.clone(),
+				Some(data_2.series_id.clone()),
+			));
+			let nft_2_id = NFTs::nft_id_generator() - 1;
+
+			// Intermediate check of nft_id_generator state
+			assert_eq!(nft_2_id, 1);
+
+			// Checking events
+			assert_eq!(
+				System::events().last().unwrap().event,
+				Event::NFTs(NFTsEvent::NFTCreated {
+					nft_id: nft_2_id,
+					owner: data_2.owner,
+					series_id: data_2.series_id.clone(),
+					ipfs_reference: ipfs_2_reference,
+					mint_fee: NFTs::nft_mint_fee(),
+				})
+			);
+
+			// Checking final state
+			assert_eq!(NFTs::series_id_generator(), 0);
+			assert_eq!(NFTs::series(&data_1.series_id), Some(NFTSeriesDetails::new(ALICE, true)));
+			assert_eq!(NFTs::series(&data_2.series_id), Some(NFTSeriesDetails::new(ALICE, true)));
+			assert_eq!(NFTs::data(0), Some(data_1.clone()));
+			assert_eq!(NFTs::data(1), Some(data_2.clone()));
+			assert_eq!(Balances::free_balance(ALICE), alice_balance - NFTs::nft_mint_fee() * 2);
+		})
 	}
 
 	#[test]
