@@ -116,7 +116,6 @@ impl frame_support::traits::OnUnbalanced<NegativeImbalanceOf<Test>> for MockFeeC
 // for our account id. This would mess with some tests.
 pub const ALICE: u64 = 1;
 pub const BOB: u64 = 2;
-pub const CHAD: u64 = 3;
 pub const COLLECTOR: u64 = 99;
 
 pub const NFT_MINT_FEE: Balance = 10;
