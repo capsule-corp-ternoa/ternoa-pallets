@@ -288,7 +288,10 @@ mod transfer {
 
 			// Try to transfer with an unknown nft id
 			// Should fail and storage should remain empty
-			assert_noop!(NFTs::transfer(alice.clone(), 1001, BOB), Error::<Test>::NFTNotFound);
+			assert_noop!(
+				NFTs::transfer(alice.clone(), INVALID_NFT_ID, BOB),
+				Error::<Test>::NFTNotFound
+			);
 		})
 	}
 
@@ -466,7 +469,7 @@ mod delegate {
 	use super::*;
 
 	#[test]
-	fn delegate() {
+	fn delegate_ok() {
 		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
 			let mut nft = NFTs::data(ALICE_NFT_ID).unwrap();
 			let viewer = Some(BOB);
@@ -487,7 +490,7 @@ mod delegate {
 	}
 
 	#[test]
-	fn nft_not_found() {
+	fn delegate_error_unknown_nft() {
 		ExtBuilder::new_build(vec![]).execute_with(|| {
 			// Try to delegate an unknown nft
 			// Should fail and storage should remain empty
@@ -499,7 +502,7 @@ mod delegate {
 	}
 
 	#[test]
-	fn not_the_nft_owner() {
+	fn delegate_error_not_the_nft_owner() {
 		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
 			// Try to delegate an nft but caller is not the owner
 			// Should fail and storage should remain empty
@@ -511,7 +514,7 @@ mod delegate {
 	}
 
 	#[test]
-	fn cannot_delegate_nfts_listed_for_sale() {
+	fn delegate_error_nfts_listed_for_sale() {
 		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
 			let ok = NFTs::set_listed_for_sale(ALICE_NFT_ID, true);
 			assert_ok!(ok);
@@ -526,7 +529,7 @@ mod delegate {
 	}
 
 	#[test]
-	fn cannot_delegate_capsules() {
+	fn delegate_error_converted_to_capsule() {
 		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
 			let ok = NFTs::set_converted_to_capsule(ALICE_NFT_ID, true);
 			assert_ok!(ok);
@@ -541,7 +544,7 @@ mod delegate {
 	}
 
 	#[test]
-	fn cannot_delegate_nfts_in_transmission() {
+	fn delegate_error_nft_in_transmission() {
 		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
 			let ok = NFTs::set_in_transmission(ALICE_NFT_ID, true);
 			assert_ok!(ok);
@@ -556,7 +559,7 @@ mod delegate {
 	}
 
 	#[test]
-	fn cannot_delegate_nfts_to_yourself() {
+	fn delegate_error_to_yourself() {
 		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
 			// Try to delegate an nft to yourself
 			// Should fail and storage should remain empty
