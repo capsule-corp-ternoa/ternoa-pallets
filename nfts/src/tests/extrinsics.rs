@@ -360,59 +360,95 @@ mod burn {
 	use super::*;
 
 	#[test]
-	fn burn_happy() {
+	fn burn_ok() {
 		ExtBuilder::default().caps(vec![(ALICE, 1000)]).build().execute_with(|| {
+			// Initial state
 			let alice: mock::Origin = origin(ALICE);
-
 			let nft_id = <NFTs as NFTTrait>::create_nft(ALICE, vec![1], Some(vec![2])).unwrap();
+
+			// NFT check
 			assert_eq!(NFTs::data(nft_id).is_some(), true);
 
+			// Burning the nft
 			assert_ok!(NFTs::burn(alice.clone(), nft_id));
+
+			// Events checks
+			assert_eq!(
+				System::events().last().unwrap().event,
+				Event::NFTs(NFTsEvent::NFTBurned { nft_id })
+			);
+
+			// Final state checks
 			assert_eq!(NFTs::data(nft_id).is_some(), false);
 		})
 	}
 
 	#[test]
-	fn burn_unhappy() {
-		ExtBuilder::default()
-			.caps(vec![(ALICE, 100), (BOB, 100)])
-			.build()
-			.execute_with(|| {
-				let alice: mock::Origin = origin(ALICE);
+	fn burn_error_unknown_nft() {
+		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
+			// Initial state
+			let alice: mock::Origin = origin(ALICE);
 
-				// Unhappy unknown NFT
-				let ok = NFTs::burn(alice.clone(), 10001);
-				assert_noop!(ok, Error::<Test>::NFTNotFound);
-
-				// Unhappy not the owner
-				let nft_id = <NFTs as NFTTrait>::create_nft(BOB, vec![1], Some(vec![3])).unwrap();
-				let ok = NFTs::burn(alice.clone(), nft_id);
-				assert_noop!(ok, Error::<Test>::NotTheNFTOwner);
-
-				// Unhappy listed for sale
-				let nft_id = <NFTs as NFTTrait>::create_nft(ALICE, vec![1], Some(vec![2])).unwrap();
-				<NFTs as NFTTrait>::set_listed_for_sale(nft_id, true).unwrap();
-
-				let ok = NFTs::burn(alice.clone(), nft_id);
-				assert_noop!(ok, Error::<Test>::CannotBurnNFTsListedForSale);
-
-				// Unhappy converted to capsule
-				let nft_id = <NFTs as NFTTrait>::create_nft(ALICE, vec![1], Some(vec![2])).unwrap();
-				<NFTs as NFTTrait>::set_converted_to_capsule(nft_id, true).unwrap();
-
-				let ok = NFTs::burn(alice.clone(), nft_id);
-				assert_noop!(ok, Error::<Test>::CannotBurnCapsules);
-			})
+			// Try to burn an unknown nft
+			// Should fail and storage should remain empty
+			assert_noop!(NFTs::burn(alice.clone(), 10001), Error::<Test>::NFTNotFound);
+		})
 	}
 
 	#[test]
-	fn cannot_burn_delegated_nfts() {
+	fn burn_error_not_the_owner() {
+		ExtBuilder::new_build(vec![(ALICE, 100), (BOB, 100)]).execute_with(|| {
+			// Initial state
+			let alice: mock::Origin = origin(ALICE);
+			let nft_id = <NFTs as NFTTrait>::create_nft(BOB, vec![1], Some(vec![3])).unwrap();
+
+			// Try to burn an nft but is not the owner
+			// Should fail and storage should remain empty
+			assert_noop!(NFTs::burn(alice.clone(), nft_id), Error::<Test>::NotTheNFTOwner);
+		})
+	}
+
+	#[test]
+	fn burn_error_lited_for_sale() {
 		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
+			// Initial state
+			let alice: mock::Origin = origin(ALICE);
+			let nft_id = <NFTs as NFTTrait>::create_nft(ALICE, vec![1], Some(vec![2])).unwrap();
+			<NFTs as NFTTrait>::set_listed_for_sale(nft_id, true).unwrap();
+
+			// Try to burn an nft that is listed for sale
+			// Should fail and storage should remain empty
+			assert_noop!(
+				NFTs::burn(alice.clone(), nft_id),
+				Error::<Test>::CannotBurnNFTsListedForSale
+			);
+		})
+	}
+
+	#[test]
+	fn burn_error_converted_to_capsule() {
+		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
+			// Initial state
+			let alice: mock::Origin = origin(ALICE);
+			let nft_id = <NFTs as NFTTrait>::create_nft(ALICE, vec![1], Some(vec![2])).unwrap();
+			<NFTs as NFTTrait>::set_converted_to_capsule(nft_id, true).unwrap();
+
+			// Try to burn an nft that is converted to capsule
+			// Should fail and storage should remain empty
+			assert_noop!(NFTs::burn(alice.clone(), nft_id), Error::<Test>::CannotBurnCapsules);
+		})
+	}
+
+	#[test]
+	fn burn_error_delegated_nft() {
+		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
+			// Initial state
 			let nft_id = <NFTs as NFTTrait>::create_nft(ALICE, vec![0], None).unwrap();
 			assert_ok!(NFTs::set_viewer(nft_id, Some(BOB)));
 
-			let ok = NFTs::burn(origin(ALICE), nft_id);
-			assert_noop!(ok, Error::<Test>::CannotBurnDelegatedNFTs);
+			// Try to burn a delegated nft
+			// Should fail and storage should remain empty
+			assert_noop!(NFTs::burn(origin(ALICE), nft_id), Error::<Test>::CannotBurnDelegatedNFTs);
 		})
 	}
 }
