@@ -250,20 +250,30 @@ mod transfer {
 	}
 
 	#[test]
-	fn transfer_happy() {
+	fn transfer_ok() {
 		ExtBuilder::default().caps(vec![(ALICE, 1000)]).build().execute_with(|| {
-			let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
-
-			// Happy path transfer
+			// Initial state
+			let alice: mock::Origin = origin(ALICE);
 			let series_id = vec![2];
 			let nft_id =
 				<NFTs as NFTTrait>::create_nft(ALICE, vec![1], Some(series_id.clone())).unwrap();
 			NFTs::finish_series(alice.clone(), series_id).unwrap();
 			let nft = NFTs::data(nft_id).unwrap();
+
+			// NFT owner and creator check
 			assert_eq!(nft.owner, ALICE);
 			assert_eq!(nft.creator, ALICE);
 
+			// Transfer nft ownership from ALICE to BOB
 			assert_ok!(NFTs::transfer(alice.clone(), nft_id, BOB));
+
+			// Events checks
+			assert_eq!(
+				System::events().last().unwrap().event,
+				Event::NFTs(NFTsEvent::NFTTransferred { nft_id, old_owner: ALICE, new_owner: BOB })
+			);
+
+			// Final state checks
 			let nft = NFTs::data(nft_id).unwrap();
 			assert_eq!(nft.owner, BOB);
 			assert_eq!(nft.creator, ALICE);
@@ -271,47 +281,86 @@ mod transfer {
 	}
 
 	#[test]
-	fn transfer_unhappy() {
-		ExtBuilder::default()
-			.caps(vec![(ALICE, 100), (BOB, 100)])
-			.build()
-			.execute_with(|| {
-				let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
+	fn transfer_error_unknown_nft() {
+		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
+			// Initial state
+			let alice: mock::Origin = origin(ALICE);
 
-				// Unhappy unknown NFT
-				let ok = NFTs::transfer(alice.clone(), 1001, BOB);
-				assert_noop!(ok, Error::<Test>::NFTNotFound);
-
-				// Unhappy draft(open) series
-				let nft_id = <NFTs as NFTTrait>::create_nft(ALICE, vec![0], None).unwrap();
-				let ok = NFTs::transfer(alice.clone(), nft_id, BOB);
-				assert_noop!(ok, Error::<Test>::CannotTransferNFTsInUncompletedSeries);
-
-				// Unhappy NFT is listed for sale
-				let nft_id = <NFTs as NFTTrait>::create_nft(ALICE, vec![0], None).unwrap();
-				<NFTs as NFTTrait>::set_listed_for_sale(nft_id, true).unwrap();
-
-				let ok = NFTs::transfer(alice.clone(), nft_id, BOB);
-				assert_noop!(ok, Error::<Test>::CannotTransferNFTsListedForSale);
-
-				// Unhappy NFT is converted to a capsule
-				let nft_id = <NFTs as NFTTrait>::create_nft(ALICE, vec![0], None).unwrap();
-				<NFTs as NFTTrait>::set_converted_to_capsule(nft_id, true).unwrap();
-
-				let ok = NFTs::transfer(alice.clone(), nft_id, BOB);
-				assert_noop!(ok, Error::<Test>::CannotTransferCapsules);
-
-				// Unhappy NFT is in transmission
-				let nft_id = <NFTs as NFTTrait>::create_nft(ALICE, vec![0], None).unwrap();
-				<NFTs as NFTTrait>::set_in_transmission(nft_id, true).unwrap();
-
-				let ok = NFTs::transfer(alice.clone(), nft_id, BOB);
-				assert_noop!(ok, Error::<Test>::CannotTransferNFTsInTransmission);
-			})
+			// Try to transfer with an unknown nft id
+			// Should fail and storage should remain empty
+			assert_noop!(NFTs::transfer(alice.clone(), 1001, BOB), Error::<Test>::NFTNotFound);
+		})
 	}
 
 	#[test]
-	fn cannot_transfer_delegated_nfts() {
+	fn transfer_error_uncompleted_serie() {
+		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
+			// Initial state
+			let alice: mock::Origin = origin(ALICE);
+			let nft_id = <NFTs as NFTTrait>::create_nft(ALICE, vec![0], None).unwrap();
+
+			// Try to transfer an nft that is part of an uncompleted serie
+			// Should fail and storage should remain empty
+			assert_noop!(
+				NFTs::transfer(alice.clone(), nft_id, BOB),
+				Error::<Test>::CannotTransferNFTsInUncompletedSeries
+			);
+		})
+	}
+
+	#[test]
+	fn transfer_error_listed_for_sale() {
+		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
+			// Initial state
+			let alice: mock::Origin = origin(ALICE);
+			let nft_id = <NFTs as NFTTrait>::create_nft(ALICE, vec![0], None).unwrap();
+			<NFTs as NFTTrait>::set_listed_for_sale(nft_id, true).unwrap();
+
+			// Try to transfer an nft that is listed for sale
+			// Should fail and storage should remain empty
+			assert_noop!(
+				NFTs::transfer(alice.clone(), nft_id, BOB),
+				Error::<Test>::CannotTransferNFTsListedForSale
+			);
+		})
+	}
+
+	#[test]
+	fn transfer_error_converted_to_capsule() {
+		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
+			// Initial state
+			let alice: mock::Origin = origin(ALICE);
+			let nft_id = <NFTs as NFTTrait>::create_nft(ALICE, vec![0], None).unwrap();
+			<NFTs as NFTTrait>::set_converted_to_capsule(nft_id, true).unwrap();
+
+			// Try to transfer an nft that is converted to capsule
+			// Should fail and storage should remain empty
+			assert_noop!(
+				NFTs::transfer(alice.clone(), nft_id, BOB),
+				Error::<Test>::CannotTransferCapsules
+			);
+		})
+	}
+
+	#[test]
+	fn transfer_error_in_transmission() {
+		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
+			// Initial state
+			let alice: mock::Origin = origin(ALICE);
+			let nft_id = <NFTs as NFTTrait>::create_nft(ALICE, vec![0], None).unwrap();
+			<NFTs as NFTTrait>::set_in_transmission(nft_id, true).unwrap();
+
+			// Try to transfer an nft that is in transmission
+			// Should fail and storage should remain empty
+			assert_noop!(
+				NFTs::transfer(alice.clone(), nft_id, BOB),
+				Error::<Test>::CannotTransferNFTsInTransmission
+			);
+		})
+	}
+
+	#[test]
+	fn transfer_error_delegated_nfts() {
 		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
 			let ok = NFTs::set_viewer(ALICE_NFT_ID, Some(BOB));
 			assert_ok!(ok);
