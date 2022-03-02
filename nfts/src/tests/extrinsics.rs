@@ -233,6 +233,67 @@ mod transfer {
 	use super::*;
 
 	#[test]
+	fn transfer_happy() {
+		ExtBuilder::default().caps(vec![(ALICE, 1000)]).build().execute_with(|| {
+			let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
+
+			// Happy path transfer
+			let series_id = vec![2];
+			let nft_id =
+				<NFTs as NFTTrait>::create_nft(ALICE, vec![1], Some(series_id.clone())).unwrap();
+			NFTs::finish_series(alice.clone(), series_id).unwrap();
+			let nft = NFTs::data(nft_id).unwrap();
+			assert_eq!(nft.owner, ALICE);
+			assert_eq!(nft.creator, ALICE);
+
+			assert_ok!(NFTs::transfer(alice.clone(), nft_id, BOB));
+			let nft = NFTs::data(nft_id).unwrap();
+			assert_eq!(nft.owner, BOB);
+			assert_eq!(nft.creator, ALICE);
+		})
+	}
+
+	#[test]
+	fn transfer_unhappy() {
+		ExtBuilder::default()
+			.caps(vec![(ALICE, 100), (BOB, 100)])
+			.build()
+			.execute_with(|| {
+				let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
+
+				// Unhappy unknown NFT
+				let ok = NFTs::transfer(alice.clone(), 1001, BOB);
+				assert_noop!(ok, Error::<Test>::NFTNotFound);
+
+				// Unhappy draft(open) series
+				let nft_id = <NFTs as NFTTrait>::create_nft(ALICE, vec![0], None).unwrap();
+				let ok = NFTs::transfer(alice.clone(), nft_id, BOB);
+				assert_noop!(ok, Error::<Test>::CannotTransferNFTsInUncompletedSeries);
+
+				// Unhappy NFT is listed for sale
+				let nft_id = <NFTs as NFTTrait>::create_nft(ALICE, vec![0], None).unwrap();
+				<NFTs as NFTTrait>::set_listed_for_sale(nft_id, true).unwrap();
+
+				let ok = NFTs::transfer(alice.clone(), nft_id, BOB);
+				assert_noop!(ok, Error::<Test>::CannotTransferNFTsListedForSale);
+
+				// Unhappy NFT is converted to a capsule
+				let nft_id = <NFTs as NFTTrait>::create_nft(ALICE, vec![0], None).unwrap();
+				<NFTs as NFTTrait>::set_converted_to_capsule(nft_id, true).unwrap();
+
+				let ok = NFTs::transfer(alice.clone(), nft_id, BOB);
+				assert_noop!(ok, Error::<Test>::CannotTransferCapsules);
+
+				// Unhappy NFT is in transmission
+				let nft_id = <NFTs as NFTTrait>::create_nft(ALICE, vec![0], None).unwrap();
+				<NFTs as NFTTrait>::set_in_transmission(nft_id, true).unwrap();
+
+				let ok = NFTs::transfer(alice.clone(), nft_id, BOB);
+				assert_noop!(ok, Error::<Test>::CannotTransferNFTsInTransmission);
+			})
+	}
+
+	#[test]
 	fn cannot_transfer_delegated_nfts() {
 		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
 			let nft_id = <NFTs as NFTTrait>::create_nft(ALICE, vec![0], None).unwrap();
@@ -246,6 +307,52 @@ mod transfer {
 
 mod burn {
 	use super::*;
+
+	#[test]
+	fn burn_happy() {
+		ExtBuilder::default().caps(vec![(ALICE, 1000)]).build().execute_with(|| {
+			let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
+
+			let nft_id = <NFTs as NFTTrait>::create_nft(ALICE, vec![1], Some(vec![2])).unwrap();
+			assert_eq!(NFTs::data(nft_id).is_some(), true);
+
+			assert_ok!(NFTs::burn(alice.clone(), nft_id));
+			assert_eq!(NFTs::data(nft_id).is_some(), false);
+		})
+	}
+
+	#[test]
+	fn burn_unhappy() {
+		ExtBuilder::default()
+			.caps(vec![(ALICE, 100), (BOB, 100)])
+			.build()
+			.execute_with(|| {
+				let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
+
+				// Unhappy unknown NFT
+				let ok = NFTs::burn(alice.clone(), 10001);
+				assert_noop!(ok, Error::<Test>::NFTNotFound);
+
+				// Unhappy not the owner
+				let nft_id = <NFTs as NFTTrait>::create_nft(BOB, vec![1], Some(vec![3])).unwrap();
+				let ok = NFTs::burn(alice.clone(), nft_id);
+				assert_noop!(ok, Error::<Test>::NotTheNFTOwner);
+
+				// Unhappy listed for sale
+				let nft_id = <NFTs as NFTTrait>::create_nft(ALICE, vec![1], Some(vec![2])).unwrap();
+				<NFTs as NFTTrait>::set_listed_for_sale(nft_id, true).unwrap();
+
+				let ok = NFTs::burn(alice.clone(), nft_id);
+				assert_noop!(ok, Error::<Test>::CannotBurnNFTsListedForSale);
+
+				// Unhappy converted to capsule
+				let nft_id = <NFTs as NFTTrait>::create_nft(ALICE, vec![1], Some(vec![2])).unwrap();
+				<NFTs as NFTTrait>::set_converted_to_capsule(nft_id, true).unwrap();
+
+				let ok = NFTs::burn(alice.clone(), nft_id);
+				assert_noop!(ok, Error::<Test>::CannotBurnCapsules);
+			})
+	}
 
 	#[test]
 	fn cannot_burn_delegated_nfts() {
@@ -344,174 +451,79 @@ mod delegate {
 	}
 }
 
-#[test]
-fn transfer_happy() {
-	ExtBuilder::default().caps(vec![(ALICE, 1000)]).build().execute_with(|| {
-		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
+mod finish_series {
+	use super::*;
 
-		// Happy path transfer
-		let series_id = vec![2];
-		let nft_id =
-			<NFTs as NFTTrait>::create_nft(ALICE, vec![1], Some(series_id.clone())).unwrap();
-		NFTs::finish_series(alice.clone(), series_id).unwrap();
-		let nft = NFTs::data(nft_id).unwrap();
-		assert_eq!(nft.owner, ALICE);
-		assert_eq!(nft.creator, ALICE);
-
-		assert_ok!(NFTs::transfer(alice.clone(), nft_id, BOB));
-		let nft = NFTs::data(nft_id).unwrap();
-		assert_eq!(nft.owner, BOB);
-		assert_eq!(nft.creator, ALICE);
-	})
-}
-
-#[test]
-fn transfer_unhappy() {
-	ExtBuilder::default()
-		.caps(vec![(ALICE, 100), (BOB, 100)])
-		.build()
-		.execute_with(|| {
+	#[test]
+	fn finish_series_happy() {
+		ExtBuilder::default().caps(vec![(ALICE, 1000)]).build().execute_with(|| {
 			let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
 
-			// Unhappy unknown NFT
-			let ok = NFTs::transfer(alice.clone(), 1001, BOB);
-			assert_noop!(ok, Error::<Test>::NFTNotFound);
-
-			// Unhappy draft(open) series
-			let nft_id = <NFTs as NFTTrait>::create_nft(ALICE, vec![0], None).unwrap();
-			let ok = NFTs::transfer(alice.clone(), nft_id, BOB);
-			assert_noop!(ok, Error::<Test>::CannotTransferNFTsInUncompletedSeries);
-
-			// Unhappy NFT is listed for sale
-			let nft_id = <NFTs as NFTTrait>::create_nft(ALICE, vec![0], None).unwrap();
-			<NFTs as NFTTrait>::set_listed_for_sale(nft_id, true).unwrap();
-
-			let ok = NFTs::transfer(alice.clone(), nft_id, BOB);
-			assert_noop!(ok, Error::<Test>::CannotTransferNFTsListedForSale);
-
-			// Unhappy NFT is converted to a capsule
-			let nft_id = <NFTs as NFTTrait>::create_nft(ALICE, vec![0], None).unwrap();
-			<NFTs as NFTTrait>::set_converted_to_capsule(nft_id, true).unwrap();
-
-			let ok = NFTs::transfer(alice.clone(), nft_id, BOB);
-			assert_noop!(ok, Error::<Test>::CannotTransferCapsules);
-
-			// Unhappy NFT is in transmission
-			let nft_id = <NFTs as NFTTrait>::create_nft(ALICE, vec![0], None).unwrap();
-			<NFTs as NFTTrait>::set_in_transmission(nft_id, true).unwrap();
-
-			let ok = NFTs::transfer(alice.clone(), nft_id, BOB);
-			assert_noop!(ok, Error::<Test>::CannotTransferNFTsInTransmission);
-		})
-}
-
-#[test]
-fn burn_happy() {
-	ExtBuilder::default().caps(vec![(ALICE, 1000)]).build().execute_with(|| {
-		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
-
-		// Happy path transfer
-		let nft_id = <NFTs as NFTTrait>::create_nft(ALICE, vec![1], Some(vec![2])).unwrap();
-		assert_eq!(NFTs::data(nft_id).is_some(), true);
-
-		assert_ok!(NFTs::burn(alice.clone(), nft_id));
-		assert_eq!(NFTs::data(nft_id).is_some(), false);
-	})
-}
-
-#[test]
-fn burn_unhappy() {
-	ExtBuilder::default()
-		.caps(vec![(ALICE, 100), (BOB, 100)])
-		.build()
-		.execute_with(|| {
-			let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
-
-			// Unhappy unknown NFT
-			let ok = NFTs::burn(alice.clone(), 10001);
-			assert_noop!(ok, Error::<Test>::NFTNotFound);
-
-			// Unhappy not the owner
-			let nft_id = <NFTs as NFTTrait>::create_nft(BOB, vec![1], Some(vec![3])).unwrap();
-			let ok = NFTs::burn(alice.clone(), nft_id);
-			assert_noop!(ok, Error::<Test>::NotTheNFTOwner);
-
-			// Unhappy listed for sale
-			let nft_id = <NFTs as NFTTrait>::create_nft(ALICE, vec![1], Some(vec![2])).unwrap();
-			<NFTs as NFTTrait>::set_listed_for_sale(nft_id, true).unwrap();
-
-			let ok = NFTs::burn(alice.clone(), nft_id);
-			assert_noop!(ok, Error::<Test>::CannotBurnNFTsListedForSale);
-
-			// Unhappy converted to capsule
-			let nft_id = <NFTs as NFTTrait>::create_nft(ALICE, vec![1], Some(vec![2])).unwrap();
-			<NFTs as NFTTrait>::set_converted_to_capsule(nft_id, true).unwrap();
-
-			let ok = NFTs::burn(alice.clone(), nft_id);
-			assert_noop!(ok, Error::<Test>::CannotBurnCapsules);
-		})
-}
-
-#[test]
-fn finish_series_happy() {
-	ExtBuilder::default().caps(vec![(ALICE, 1000)]).build().execute_with(|| {
-		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
-
-		// Happy path transfer
-		let series_id = vec![50];
-		assert_ok!(NFTs::create(RawOrigin::Signed(ALICE).into(), vec![1], Some(series_id.clone())));
-		assert_eq!(NFTs::series(&series_id).unwrap().draft, true);
-
-		assert_ok!(NFTs::finish_series(alice.clone(), series_id.clone()));
-		assert_eq!(NFTs::series(&series_id).unwrap().draft, false);
-	})
-}
-
-#[test]
-fn finish_series_unhappy() {
-	ExtBuilder::default()
-		.caps(vec![(ALICE, 100), (BOB, 100)])
-		.build()
-		.execute_with(|| {
-			let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
-
-			// Unhappy series id not found
-			let ok = NFTs::finish_series(alice.clone(), vec![123]);
-			assert_noop!(ok, Error::<Test>::SeriesNotFound);
-
-			// Unhappy not series owner
-			let series_id = vec![3];
+			let series_id = vec![50];
 			assert_ok!(NFTs::create(
-				RawOrigin::Signed(BOB).into(),
+				RawOrigin::Signed(ALICE).into(),
 				vec![1],
 				Some(series_id.clone())
 			));
-			let ok = NFTs::finish_series(alice.clone(), series_id);
-			assert_noop!(ok, Error::<Test>::NotTheSeriesOwner);
+			assert_eq!(NFTs::series(&series_id).unwrap().draft, true);
+
+			assert_ok!(NFTs::finish_series(alice.clone(), series_id.clone()));
+			assert_eq!(NFTs::series(&series_id).unwrap().draft, false);
 		})
+	}
+
+	#[test]
+	fn finish_series_unhappy() {
+		ExtBuilder::default()
+			.caps(vec![(ALICE, 100), (BOB, 100)])
+			.build()
+			.execute_with(|| {
+				let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
+
+				// Unhappy series id not found
+				let ok = NFTs::finish_series(alice.clone(), vec![123]);
+				assert_noop!(ok, Error::<Test>::SeriesNotFound);
+
+				// Unhappy not series owner
+				let series_id = vec![3];
+				assert_ok!(NFTs::create(
+					RawOrigin::Signed(BOB).into(),
+					vec![1],
+					Some(series_id.clone())
+				));
+				let ok = NFTs::finish_series(alice.clone(), series_id);
+				assert_noop!(ok, Error::<Test>::NotTheSeriesOwner);
+			})
+	}
 }
 
-#[test]
-fn set_nft_mint_fee_happy() {
-	ExtBuilder::default().build().execute_with(|| {
-		// Happy path
-		let old_mint_fee = NFTs::nft_mint_fee();
-		let new_mint_fee = 654u64;
-		assert_eq!(NFTs::nft_mint_fee(), old_mint_fee);
+mod set_nft_mint_fee {
+	use super::*;
 
-		let ok = NFTs::set_nft_mint_fee(mock::Origin::root(), new_mint_fee);
-		assert_ok!(ok);
-		assert_eq!(NFTs::nft_mint_fee(), new_mint_fee);
-	})
+	#[test]
+	fn set_nft_mint_fee_happy() {
+		ExtBuilder::default().build().execute_with(|| {
+			// Happy path
+			let old_mint_fee = NFTs::nft_mint_fee();
+			let new_mint_fee = 654u64;
+			assert_eq!(NFTs::nft_mint_fee(), old_mint_fee);
+	
+			let ok = NFTs::set_nft_mint_fee(mock::Origin::root(), new_mint_fee);
+			assert_ok!(ok);
+			assert_eq!(NFTs::nft_mint_fee(), new_mint_fee);
+		})
+	}
+
+	#[test]
+	fn set_nft_mint_fee_unhappy() {
+		ExtBuilder::default().caps(vec![(ALICE, 10000)]).build().execute_with(|| {
+			let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
+	
+			// Unhappy non root user tries to modify the mint fee
+			let ok = NFTs::set_nft_mint_fee(alice.clone(), 654);
+			assert_noop!(ok, BadOrigin);
+		})
+	}
 }
 
-#[test]
-fn set_nft_mint_fee_unhappy() {
-	ExtBuilder::default().caps(vec![(ALICE, 10000)]).build().execute_with(|| {
-		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
 
-		// Unhappy non root user tries to modify the mint fee
-		let ok = NFTs::set_nft_mint_fee(alice.clone(), 654);
-		assert_noop!(ok, BadOrigin);
-	})
-}
