@@ -38,27 +38,27 @@ mod create {
 			));
 			let nft_id = NFTs::nft_id_generator() - 1;
 
-			// Final state checks
-			assert_eq!(NFTs::series_id_generator(), 0);
-			assert_eq!(nft_id, 0);
-			assert_eq!(
-				NFTs::series(&data.series_id.clone()),
-				Some(NFTSeriesDetails::new(ALICE, true))
-			);
-			assert_eq!(NFTs::data(0), Some(data.clone()));
-			assert_eq!(Balances::free_balance(ALICE), alice_balance - NFTs::nft_mint_fee());
-
 			// Events checks
 			assert_eq!(
 				System::events().last().unwrap().event,
 				Event::NFTs(NFTsEvent::NFTCreated {
 					nft_id,
 					owner: data.owner,
-					series_id: data.series_id,
+					series_id: data.series_id.clone(),
 					ipfs_reference,
 					mint_fee: NFTs::nft_mint_fee(),
 				})
 			);
+
+			// Final state checks
+			assert_eq!(NFTs::series_id_generator(), 0);
+			assert_eq!(nft_id, 0);
+			assert_eq!(
+				NFTs::series(&data.series_id),
+				Some(NFTSeriesDetails::new(ALICE, true))
+			);
+			assert_eq!(NFTs::data(0), Some(data.clone()));
+			assert_eq!(Balances::free_balance(ALICE), alice_balance - NFTs::nft_mint_fee());
 		})
 	}
 
@@ -603,20 +603,17 @@ mod finish_series {
 
 	#[test]
 	fn finish_series_error_unknown_serie() {
-		ExtBuilder::default()
-			.caps(vec![(ALICE, 100), (BOB, 100)])
-			.build()
-			.execute_with(|| {
-				// Initial state
-				let alice: mock::Origin = origin(ALICE);
+		ExtBuilder::default().caps(vec![(ALICE, 100)]).build().execute_with(|| {
+			// Initial state
+			let alice: mock::Origin = origin(ALICE);
 
-				// Try to finish unknown serie
-				// Should fail and storage should remain empty
-				assert_noop!(
-					NFTs::finish_series(alice.clone(), vec![123]),
-					Error::<Test>::SeriesNotFound
-				);
-			})
+			// Try to finish unknown serie
+			// Should fail and storage should remain empty
+			assert_noop!(
+				NFTs::finish_series(alice.clone(), vec![123]),
+				Error::<Test>::SeriesNotFound
+			);
+		})
 	}
 
 	#[test]

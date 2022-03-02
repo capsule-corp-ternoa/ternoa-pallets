@@ -13,6 +13,15 @@ use sp_runtime::{
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
+// Do not use the `0` account id since this would be the default value
+// for our account id. This would mess with some tests.
+pub const ALICE: u64 = 1;
+pub const BOB: u64 = 2;
+pub const COLLECTOR: u64 = 99;
+
+pub const NFT_MINT_FEE: Balance = 10;
+pub const INVALID_NFT_ID: NFTId = 1001;
+
 frame_support::construct_runtime!(
 	pub enum Test where
 		Block = Block,
@@ -111,15 +120,6 @@ impl frame_support::traits::OnUnbalanced<NegativeImbalanceOf<Test>> for MockFeeC
 		Balances::resolve_creating(&COLLECTOR, amount);
 	}
 }
-
-// Do not use the `0` account id since this would be the default value
-// for our account id. This would mess with some tests.
-pub const ALICE: u64 = 1;
-pub const BOB: u64 = 2;
-pub const COLLECTOR: u64 = 99;
-
-pub const NFT_MINT_FEE: Balance = 10;
-pub const INVALID_NFT_ID: NFTId = 1001;
 
 pub struct ExtBuilder {
 	balances: Vec<(u64, Balance)>,
