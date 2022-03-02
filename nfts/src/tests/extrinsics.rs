@@ -447,7 +447,7 @@ mod burn {
 	}
 
 	#[test]
-	fn cannot_burn_delegated_nfts() {
+	fn burn_error_delegated_nft() {
 		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
 			let ok = NFTs::set_viewer(ALICE_NFT_ID, Some(BOB));
 			assert_ok!(ok);
