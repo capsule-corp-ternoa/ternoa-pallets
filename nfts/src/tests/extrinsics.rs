@@ -9,6 +9,10 @@ fn origin(account: u64) -> mock::Origin {
 	RawOrigin::Signed(account).into()
 }
 
+fn root() -> mock::Origin {
+	RawOrigin::Root.into()
+}
+
 mod create {
 	use super::*;
 
@@ -575,36 +579,63 @@ mod finish_series {
 	use super::*;
 
 	#[test]
-	fn finish_series_happy() {
+	fn finish_series_ok() {
 		ExtBuilder::default().caps(vec![(ALICE, 1000)]).build().execute_with(|| {
+			// Initial state
 			let alice: mock::Origin = origin(ALICE);
-
 			let series_id = vec![50];
 			assert_ok!(NFTs::create(origin(ALICE), vec![1], Some(series_id.clone())));
 			assert_eq!(NFTs::series(&series_id).unwrap().draft, true);
 
+			// Finish the serie
 			assert_ok!(NFTs::finish_series(alice.clone(), series_id.clone()));
+
+			// Events checks
+			assert_eq!(
+				System::events().last().unwrap().event,
+				Event::NFTs(NFTsEvent::SeriesFinished { series_id: series_id.clone() })
+			);
+
+			// Final state checks
 			assert_eq!(NFTs::series(&series_id).unwrap().draft, false);
 		})
 	}
 
 	#[test]
-	fn finish_series_unhappy() {
+	fn finish_series_error_unknown_serie() {
 		ExtBuilder::default()
 			.caps(vec![(ALICE, 100), (BOB, 100)])
 			.build()
 			.execute_with(|| {
+				// Initial state
 				let alice: mock::Origin = origin(ALICE);
 
-				// Unhappy series id not found
-				let ok = NFTs::finish_series(alice.clone(), vec![123]);
-				assert_noop!(ok, Error::<Test>::SeriesNotFound);
+				// Try to finish unknown serie
+				// Should fail and storage should remain empty
+				assert_noop!(
+					NFTs::finish_series(alice.clone(), vec![123]),
+					Error::<Test>::SeriesNotFound
+				);
+			})
+	}
 
-				// Unhappy not series owner
+	#[test]
+	fn finish_series_error_not_owner() {
+		ExtBuilder::default()
+			.caps(vec![(ALICE, 100), (BOB, 100)])
+			.build()
+			.execute_with(|| {
+				// Initial state
+				let alice: mock::Origin = origin(ALICE);
 				let series_id = vec![3];
 				assert_ok!(NFTs::create(origin(BOB), vec![1], Some(series_id.clone())));
-				let ok = NFTs::finish_series(alice.clone(), series_id);
-				assert_noop!(ok, Error::<Test>::NotTheSeriesOwner);
+
+				// Try to finish serie as no owner
+				// Should fail and storage should remain empty
+				assert_noop!(
+					NFTs::finish_series(alice.clone(), series_id),
+					Error::<Test>::NotTheSeriesOwner
+				);
 			})
 	}
 }
@@ -613,27 +644,36 @@ mod set_nft_mint_fee {
 	use super::*;
 
 	#[test]
-	fn set_nft_mint_fee_happy() {
+	fn set_nft_mint_fee_ok() {
 		ExtBuilder::default().build().execute_with(|| {
-			// Happy path
+			// Initial state
 			let old_mint_fee = NFTs::nft_mint_fee();
 			let new_mint_fee = 654u64;
 			assert_eq!(NFTs::nft_mint_fee(), old_mint_fee);
 
-			let ok = NFTs::set_nft_mint_fee(mock::Origin::root(), new_mint_fee);
-			assert_ok!(ok);
+			// Change the mint fee
+			assert_ok!(NFTs::set_nft_mint_fee(root(), new_mint_fee));
+
+			// Events checks
+			assert_eq!(
+				System::events().last().unwrap().event,
+				Event::NFTs(NFTsEvent::NFTMintFeeUpdated { fee: new_mint_fee })
+			);
+
+			// Final state checks
 			assert_eq!(NFTs::nft_mint_fee(), new_mint_fee);
 		})
 	}
 
 	#[test]
-	fn set_nft_mint_fee_unhappy() {
+	fn set_nft_mint_fee_error_non_root() {
 		ExtBuilder::default().caps(vec![(ALICE, 10000)]).build().execute_with(|| {
+			// Initial state
 			let alice: mock::Origin = origin(ALICE);
 
-			// Unhappy non root user tries to modify the mint fee
-			let ok = NFTs::set_nft_mint_fee(alice.clone(), 654);
-			assert_noop!(ok, BadOrigin);
+			// Try to change nft mint fee as not root
+			// Should fail and storage should remain empty
+			assert_noop!(NFTs::set_nft_mint_fee(alice.clone(), 654), BadOrigin);
 		})
 	}
 }
