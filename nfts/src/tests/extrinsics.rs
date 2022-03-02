@@ -53,10 +53,7 @@ mod create {
 			// Final state checks
 			assert_eq!(NFTs::series_id_generator(), 0);
 			assert_eq!(nft_id, 0);
-			assert_eq!(
-				NFTs::series(&data.series_id),
-				Some(NFTSeriesDetails::new(ALICE, true))
-			);
+			assert_eq!(NFTs::series(&data.series_id), Some(NFTSeriesDetails::new(ALICE, true)));
 			assert_eq!(NFTs::data(0), Some(data.clone()));
 			assert_eq!(Balances::free_balance(ALICE), alice_balance - NFTs::nft_mint_fee());
 		})
