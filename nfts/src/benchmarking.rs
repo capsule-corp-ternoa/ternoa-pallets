@@ -40,13 +40,20 @@ pub fn origin<T: Config>(name: &'static str) -> RawOrigin<T::AccountId> {
 
 benchmarks! {
 	create {
+		let e in 1..254;
+
 		prepare_benchmarks::<T>();
-		let alice: T::AccountId = get_account::<T>("ALICE");
+		let alice = origin::<T>("ALICE");
+
+		for i in 0..e {
+			NFTs::<T>::create(alice.clone().into(), vec![i as u8], None)?;
+		}
+
 		let nft_id = NFTs::<T>::nft_id_generator();
 
-	}: _(RawOrigin::Signed(alice.clone()), vec![55], None)
+	}: _(alice.clone(), vec![255], None)
 	verify {
-		assert_eq!(NFTs::<T>::data(nft_id).unwrap().owner, alice);
+		assert_eq!(NFTs::<T>::data(nft_id).unwrap().owner, get_account::<T>("ALICE"));
 	}
 
 	transfer {
