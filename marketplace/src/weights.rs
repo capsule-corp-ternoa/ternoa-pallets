@@ -1,19 +1,20 @@
 use frame_support::weights::{constants::RocksDbWeight as DbWeight, Weight};
 
 pub trait WeightInfo {
-	fn list() -> Weight;
-	fn unlist() -> Weight;
-	fn buy() -> Weight;
-	fn create() -> Weight;
+	fn list_nft() -> Weight;
+	fn unlist_nft() -> Weight;
+	fn buy_nft() -> Weight;
+	fn create_marketplace() -> Weight;
+	fn set_marketplace_owner() -> Weight;
+	fn set_marketplace_type() -> Weight;
+	fn set_marketplace_name() -> Weight;
+	fn set_marketplace_mint_fee() -> Weight;
+	fn set_marketplace_commission_fee() -> Weight;
+	fn set_marketplace_uri() -> Weight;
+	fn set_marketplace_logo_uri() -> Weight;
+	fn set_marketplace_description() -> Weight;
 	fn add_account_to_allow_list() -> Weight;
 	fn remove_account_from_allow_list() -> Weight;
-	fn set_owner() -> Weight;
-	fn set_market_type() -> Weight;
-	fn set_name() -> Weight;
-	fn set_marketplace_mint_fee() -> Weight;
-	fn set_commission_fee() -> Weight;
-	fn set_uri() -> Weight;
-	fn set_logo_uri() -> Weight;
 	fn add_account_to_disallow_list() -> Weight;
 	fn remove_account_from_disallow_list() -> Weight;
 }
@@ -24,14 +25,14 @@ impl WeightInfo for () {
 	// Storage: Capsules Capsules (r:1 w:0)
 	// Storage: Marketplace Marketplaces (r:1 w:0)
 	// Storage: Marketplace NFTsForSale (r:0 w:1)
-	fn list() -> Weight {
+	fn list_nft() -> Weight {
 		(51_580_000 as Weight)
 			.saturating_add(DbWeight::get().reads(4 as Weight))
 			.saturating_add(DbWeight::get().writes(2 as Weight))
 	}
 	// Storage: Nfts Data (r:1 w:1)
 	// Storage: Marketplace NFTsForSale (r:1 w:1)
-	fn unlist() -> Weight {
+	fn unlist_nft() -> Weight {
 		(34_760_000 as Weight)
 			.saturating_add(DbWeight::get().reads(2 as Weight))
 			.saturating_add(DbWeight::get().writes(2 as Weight))
@@ -39,7 +40,7 @@ impl WeightInfo for () {
 	// Storage: Marketplace NFTsForSale (r:1 w:1)
 	// Storage: Marketplace Marketplaces (r:1 w:0)
 	// Storage: Nfts Data (r:1 w:1)
-	fn buy() -> Weight {
+	fn buy_nft() -> Weight {
 		(43_881_000 as Weight)
 			.saturating_add(DbWeight::get().reads(3 as Weight))
 			.saturating_add(DbWeight::get().writes(2 as Weight))
@@ -48,7 +49,7 @@ impl WeightInfo for () {
 	// Storage: System Account (r:1 w:1)
 	// Storage: Marketplace MarketplaceIdGenerator (r:1 w:1)
 	// Storage: Marketplace Marketplaces (r:0 w:1)
-	fn create() -> Weight {
+	fn create_marketplace() -> Weight {
 		(66_831_000 as Weight)
 			.saturating_add(DbWeight::get().reads(3 as Weight))
 			.saturating_add(DbWeight::get().writes(3 as Weight))
@@ -66,19 +67,19 @@ impl WeightInfo for () {
 			.saturating_add(DbWeight::get().writes(1 as Weight))
 	}
 	// Storage: Marketplace Marketplaces (r:1 w:1)
-	fn set_owner() -> Weight {
+	fn set_marketplace_owner() -> Weight {
 		(26_170_000 as Weight)
 			.saturating_add(DbWeight::get().reads(1 as Weight))
 			.saturating_add(DbWeight::get().writes(1 as Weight))
 	}
 	// Storage: Marketplace Marketplaces (r:1 w:1)
-	fn set_market_type() -> Weight {
+	fn set_marketplace_type() -> Weight {
 		(25_990_000 as Weight)
 			.saturating_add(DbWeight::get().reads(1 as Weight))
 			.saturating_add(DbWeight::get().writes(1 as Weight))
 	}
 	// Storage: Marketplace Marketplaces (r:1 w:1)
-	fn set_name() -> Weight {
+	fn set_marketplace_name() -> Weight {
 		(26_481_000 as Weight)
 			.saturating_add(DbWeight::get().reads(1 as Weight))
 			.saturating_add(DbWeight::get().writes(1 as Weight))
@@ -88,19 +89,24 @@ impl WeightInfo for () {
 		(19_041_000 as Weight).saturating_add(DbWeight::get().writes(1 as Weight))
 	}
 	// Storage: Marketplace Marketplaces (r:1 w:1)
-	fn set_commission_fee() -> Weight {
+	fn set_marketplace_commission_fee() -> Weight {
 		(25_770_000 as Weight)
 			.saturating_add(DbWeight::get().reads(1 as Weight))
 			.saturating_add(DbWeight::get().writes(1 as Weight))
 	}
 	// Storage: Marketplace Marketplaces (r:1 w:1)
-	fn set_uri() -> Weight {
+	fn set_marketplace_uri() -> Weight {
 		(26_270_000 as Weight)
 			.saturating_add(DbWeight::get().reads(1 as Weight))
 			.saturating_add(DbWeight::get().writes(1 as Weight))
 	}
 	// Storage: Marketplace Marketplaces (r:1 w:1)
-	fn set_logo_uri() -> Weight {
+	fn set_marketplace_logo_uri() -> Weight {
+		(26_501_000 as Weight)
+			.saturating_add(DbWeight::get().reads(1 as Weight))
+			.saturating_add(DbWeight::get().writes(1 as Weight))
+	}
+	fn set_marketplace_description() -> Weight {
 		(26_501_000 as Weight)
 			.saturating_add(DbWeight::get().reads(1 as Weight))
 			.saturating_add(DbWeight::get().writes(1 as Weight))

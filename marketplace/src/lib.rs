@@ -104,8 +104,8 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		/// Deposit a nft and list it on the marketplace
-		#[pallet::weight(T::WeightInfo::list())]
-		pub fn list(
+		#[pallet::weight(T::WeightInfo::list_nft())]
+		pub fn list_nft(
 			origin: OriginFor<T>,
 			nft_id: NFTId,
 			price: BalanceOf<T>,
@@ -139,14 +139,14 @@ pub mod pallet {
 			let sale_info = SaleData::new(account_id, price.clone(), mkp_id);
 			NFTsForSale::<T>::insert(nft_id, sale_info);
 
-			Self::deposit_event(Event::NftListed { nft_id, price, marketplace_id: mkp_id });
+			Self::deposit_event(Event::NFTListed { nft_id, price, marketplace_id: mkp_id });
 
 			Ok(().into())
 		}
 
 		/// Owner unlist the nfts
-		#[pallet::weight(T::WeightInfo::unlist())]
-		pub fn unlist(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
+		#[pallet::weight(T::WeightInfo::unlist_nft())]
+		pub fn unlist_nft(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
 			ensure!(T::NFTs::owner(nft_id) == Some(who), Error::<T>::NotTheNFTOwner);
@@ -155,15 +155,15 @@ pub mod pallet {
 			T::NFTs::set_listed_for_sale(nft_id, false)?;
 			NFTsForSale::<T>::remove(nft_id);
 
-			Self::deposit_event(Event::NftUnlisted { nft_id });
+			Self::deposit_event(Event::NFTUnlisted { nft_id });
 
 			Ok(().into())
 		}
 
 		/// Buy a listed nft
-		#[pallet::weight(T::WeightInfo::buy())]
+		#[pallet::weight(T::WeightInfo::buy_nft())]
 		#[transactional]
-		pub fn buy(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
+		pub fn buy_nft(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
 			let caller = ensure_signed(origin)?;
 
 			let sale = NFTsForSale::<T>::get(nft_id).ok_or(Error::<T>::NFTNotForSale)?;
@@ -194,15 +194,15 @@ pub mod pallet {
 
 			NFTsForSale::<T>::remove(nft_id);
 
-			let event = Event::NftSold { nft_id, owner: caller };
+			let event = Event::NFTSold { nft_id, owner: caller };
 			Self::deposit_event(event);
 
 			Ok(().into())
 		}
 
-		#[pallet::weight(T::WeightInfo::create())]
+		#[pallet::weight(T::WeightInfo::create_marketplace())]
 		#[transactional]
-		pub fn create(
+		pub fn create_marketplace(
 			origin: OriginFor<T>,
 			kind: MarketplaceType,
 			commission_fee: u8,
@@ -387,8 +387,8 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		#[pallet::weight(T::WeightInfo::set_owner())]
-		pub fn set_owner(
+		#[pallet::weight(T::WeightInfo::set_marketplace_owner())]
+		pub fn set_marketplace_owner(
 			origin: OriginFor<T>,
 			marketplace_id: MarketplaceId,
 			account_id: <T::Lookup as StaticLookup>::Source,
@@ -403,14 +403,14 @@ pub mod pallet {
 				Ok(())
 			})?;
 
-			let event = Event::MarketplaceChangedOwner { marketplace_id, owner: account_id };
+			let event = Event::MarketplaceOwnerChanged { marketplace_id, owner: account_id };
 			Self::deposit_event(event);
 
 			Ok(().into())
 		}
 
-		#[pallet::weight(T::WeightInfo::set_market_type())]
-		pub fn set_market_type(
+		#[pallet::weight(T::WeightInfo::set_marketplace_type())]
+		pub fn set_marketplace_type(
 			origin: OriginFor<T>,
 			marketplace_id: MarketplaceId,
 			kind: MarketplaceType,
@@ -431,8 +431,8 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		#[pallet::weight(T::WeightInfo::set_name())]
-		pub fn set_name(
+		#[pallet::weight(T::WeightInfo::set_marketplace_name())]
+		pub fn set_marketplace_name(
 			origin: OriginFor<T>,
 			marketplace_id: MarketplaceId,
 			name: TextFormat,
@@ -472,8 +472,8 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		#[pallet::weight(T::WeightInfo::set_commission_fee())]
-		pub fn set_commission_fee(
+		#[pallet::weight(T::WeightInfo::set_marketplace_commission_fee())]
+		pub fn set_marketplace_commission_fee(
 			origin: OriginFor<T>,
 			marketplace_id: MarketplaceId,
 			commission_fee: u8,
@@ -489,14 +489,14 @@ pub mod pallet {
 			})?;
 
 			let event =
-				Event::MarketplaceCommissionFeeChanged { marketplace_id, fee: commission_fee };
+				Event::MarketplaceCommissionFeeUpdated { marketplace_id, fee: commission_fee };
 			Self::deposit_event(event);
 
 			Ok(().into())
 		}
 
-		#[pallet::weight(T::WeightInfo::set_uri())]
-		pub fn set_uri(
+		#[pallet::weight(T::WeightInfo::set_marketplace_uri())]
+		pub fn set_marketplace_uri(
 			origin: OriginFor<T>,
 			marketplace_id: MarketplaceId,
 			uri: TextFormat,
@@ -521,8 +521,8 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		#[pallet::weight(T::WeightInfo::set_logo_uri())]
-		pub fn set_logo_uri(
+		#[pallet::weight(T::WeightInfo::set_marketplace_logo_uri())]
+		pub fn set_marketplace_logo_uri(
 			origin: OriginFor<T>,
 			marketplace_id: MarketplaceId,
 			logo_uri: TextFormat,
@@ -547,8 +547,8 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		#[pallet::weight(T::WeightInfo::set_logo_uri())]
-		pub fn set_description(
+		#[pallet::weight(T::WeightInfo::set_marketplace_description())]
+		pub fn set_marketplace_description(
 			origin: OriginFor<T>,
 			marketplace_id: MarketplaceId,
 			description: TextFormat,
@@ -577,38 +577,38 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		/// A nft has been listed for sale.
-		NftListed { nft_id: NFTId, price: BalanceOf<T>, marketplace_id: MarketplaceId },
-		/// A nft is removed from the marketplace by its owner.
-		NftUnlisted { nft_id: NFTId },
-		/// A nft has been sold.
-		NftSold { nft_id: NFTId, owner: T::AccountId },
-		/// A marketplace has been created.
-		MarketplaceCreated { marketplace_id: MarketplaceId, owner: T::AccountId },
 		/// Account added to marketplace allow list.
 		AccountAddedToAllowList { marketplace_id: MarketplaceId, owner: T::AccountId },
 		/// Account removed from marketplace allow list.
 		AccountRemovedFromAllowList { marketplace_id: MarketplaceId, owner: T::AccountId },
-		/// Marketplace changed owner.
-		MarketplaceChangedOwner { marketplace_id: MarketplaceId, owner: T::AccountId },
-		/// Marketplace changed type.
-		MarketplaceTypeChanged { marketplace_id: MarketplaceId, kind: MarketplaceType },
-		/// Marketplace changed name.
-		MarketplaceNameUpdated { marketplace_id: MarketplaceId, name: TextFormat },
-		/// Marketplace mint fee changed.
-		MarketplaceMintFeeUpdated { fee: BalanceOf<T> },
-		/// Marketplace mint fee changed.
-		MarketplaceCommissionFeeChanged { marketplace_id: MarketplaceId, fee: u8 },
-		/// Marketplace TextFormat updated.
-		MarketplaceUriUpdated { marketplace_id: MarketplaceId, uri: TextFormat },
-		/// Marketplace Logo TextFormat updated.
-		MarketplaceLogoUriUpdated { marketplace_id: MarketplaceId, uri: TextFormat },
 		/// Account added to disallow list for a marketplace.
 		AccountAddedToDisallowList { marketplace_id: MarketplaceId, account_id: T::AccountId },
 		/// Account removed from disallow list for a marketplace.
 		AccountRemovedFromDisallowList { marketplace_id: MarketplaceId, account_id: T::AccountId },
+		/// A marketplace has been created.
+		MarketplaceCreated { marketplace_id: MarketplaceId, owner: T::AccountId },
+		/// Marketplace changed owner.
+		MarketplaceOwnerChanged { marketplace_id: MarketplaceId, owner: T::AccountId },
+		/// Marketplace changed type.
+		MarketplaceTypeChanged { marketplace_id: MarketplaceId, kind: MarketplaceType },
+		/// Marketplace updated name.
+		MarketplaceNameUpdated { marketplace_id: MarketplaceId, name: TextFormat },
+		/// Marketplace mint fee updated.
+		MarketplaceMintFeeUpdated { fee: BalanceOf<T> },
+		/// Marketplace mint fee updated.
+		MarketplaceCommissionFeeUpdated { marketplace_id: MarketplaceId, fee: u8 },
+		/// Marketplace TextFormat updated.
+		MarketplaceUriUpdated { marketplace_id: MarketplaceId, uri: TextFormat },
+		/// Marketplace Logo TextFormat updated.
+		MarketplaceLogoUriUpdated { marketplace_id: MarketplaceId, uri: TextFormat },
 		/// Marketplace description updated.
 		MarketplaceDescriptionUpdated { marketplace_id: MarketplaceId, description: TextFormat },
+		/// A nft has been listed for sale.
+		NFTListed { nft_id: NFTId, price: BalanceOf<T>, marketplace_id: MarketplaceId },
+		/// A nft is removed from the marketplace by its owner.
+		NFTUnlisted { nft_id: NFTId },
+		/// A nft has been sold.
+		NFTSold { nft_id: NFTId, owner: T::AccountId },
 	}
 
 	#[pallet::error]
@@ -764,7 +764,7 @@ impl<T: Config> MarketplaceTrait<T::AccountId> for Pallet<T> {
 		logo_uri: Option<TextFormat>,
 		description: Option<TextFormat>,
 	) -> Result<MarketplaceId, DispatchErrorWithPostInfo> {
-		Self::create(
+		Self::create_marketplace(
 			Origin::<T>::Signed(caller_id).into(),
 			kind,
 			commission_fee,

@@ -107,7 +107,7 @@ pub mod pallet {
 
 			// Checks
 			// The Caller needs to pay the NFT Mint fee.
-			let mint_fee = NftMintFee::<T>::get();
+			let mint_fee = NFTMintFee::<T>::get();
 			let reason = WithdrawReasons::FEE;
 			let imbalance = T::Currency::withdraw(&who, mint_fee, reason, KeepAlive)?;
 			T::FeesCollector::on_unbalanced(imbalance);
@@ -223,7 +223,7 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
 
-			NftMintFee::<T>::put(mint_fee);
+			NFTMintFee::<T>::put(mint_fee);
 
 			Self::deposit_event(Event::NFTMintFeeUpdated { fee: mint_fee });
 
@@ -336,7 +336,7 @@ pub mod pallet {
 	/// The number of NFTs managed by this pallet
 	#[pallet::storage]
 	#[pallet::getter(fn nft_id_generator)]
-	pub type NftIdGenerator<T: Config> = StorageValue<_, NFTId, ValueQuery>;
+	pub type NFTIdGenerator<T: Config> = StorageValue<_, NFTId, ValueQuery>;
 
 	/// Data related to NFTs.
 	#[pallet::storage]
@@ -357,7 +357,7 @@ pub mod pallet {
 	/// Host much does it cost to mint a NFT (extra fee on top of the tx fees)
 	#[pallet::storage]
 	#[pallet::getter(fn nft_mint_fee)]
-	pub type NftMintFee<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
+	pub type NFTMintFee<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
@@ -386,11 +386,6 @@ pub mod pallet {
 				Series::<T>::insert(series_id, series);
 			}
 
-			self.series.clone().into_iter().for_each(|(series_id, owner, draft)| {
-				let series = NFTSeriesDetails::new(owner, draft);
-				Series::<T>::insert(series_id, series);
-			});
-
 			let mut current_nft_id: NFTId = 0;
 			for nft in self.nfts.clone() {
 				let nft_id = nft.0;
@@ -403,9 +398,9 @@ pub mod pallet {
 				current_nft_id += 1;
 			}
 
-			NftIdGenerator::<T>::put(current_nft_id);
+			NFTIdGenerator::<T>::put(current_nft_id);
 			SeriesIdGenerator::<T>::put(0);
-			NftMintFee::<T>::put(self.nft_mint_fee);
+			NFTMintFee::<T>::put(self.nft_mint_fee);
 		}
 	}
 }
@@ -531,11 +526,11 @@ impl<T: Config> traits::NFTTrait for Pallet<T> {
 
 impl<T: Config> Pallet<T> {
 	fn generate_nft_id() -> NFTId {
-		let nft_id = NftIdGenerator::<T>::get();
+		let nft_id = NFTIdGenerator::<T>::get();
 		let next_id = nft_id
 			.checked_add(1)
 			.expect("If u32 is not enough we should crash for safety; qed.");
-		NftIdGenerator::<T>::put(next_id);
+		NFTIdGenerator::<T>::put(next_id);
 
 		return nft_id
 	}
