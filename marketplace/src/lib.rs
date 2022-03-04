@@ -104,8 +104,8 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		/// Deposit a nft and list it on the marketplace
-		#[pallet::weight(T::WeightInfo::list())]
-		pub fn list(
+		#[pallet::weight(T::WeightInfo::list_nft())]
+		pub fn list_nft(
 			origin: OriginFor<T>,
 			nft_id: NFTId,
 			price: BalanceOf<T>,
@@ -145,8 +145,8 @@ pub mod pallet {
 		}
 
 		/// Owner unlist the nfts
-		#[pallet::weight(T::WeightInfo::unlist())]
-		pub fn unlist(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
+		#[pallet::weight(T::WeightInfo::unlist_nft())]
+		pub fn unlist_nft(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
 			ensure!(T::NFTs::owner(nft_id) == Some(who), Error::<T>::NotTheNFTOwner);
@@ -161,9 +161,9 @@ pub mod pallet {
 		}
 
 		/// Buy a listed nft
-		#[pallet::weight(T::WeightInfo::buy())]
+		#[pallet::weight(T::WeightInfo::buy_nft())]
 		#[transactional]
-		pub fn buy(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
+		pub fn buy_nft(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
 			let caller = ensure_signed(origin)?;
 
 			let sale = NFTsForSale::<T>::get(nft_id).ok_or(Error::<T>::NFTNotForSale)?;
@@ -200,9 +200,9 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		#[pallet::weight(T::WeightInfo::create())]
+		#[pallet::weight(T::WeightInfo::create_marketplace())]
 		#[transactional]
-		pub fn create(
+		pub fn create_marketplace(
 			origin: OriginFor<T>,
 			kind: MarketplaceType,
 			commission_fee: u8,
@@ -387,8 +387,8 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		#[pallet::weight(T::WeightInfo::set_owner())]
-		pub fn set_owner(
+		#[pallet::weight(T::WeightInfo::set_marketplace_owner())]
+		pub fn set_marketplace_owner(
 			origin: OriginFor<T>,
 			marketplace_id: MarketplaceId,
 			account_id: <T::Lookup as StaticLookup>::Source,
@@ -409,8 +409,8 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		#[pallet::weight(T::WeightInfo::set_market_type())]
-		pub fn set_market_type(
+		#[pallet::weight(T::WeightInfo::set_marketplace_type())]
+		pub fn set_marketplace_type(
 			origin: OriginFor<T>,
 			marketplace_id: MarketplaceId,
 			kind: MarketplaceType,
@@ -431,8 +431,8 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		#[pallet::weight(T::WeightInfo::set_name())]
-		pub fn set_name(
+		#[pallet::weight(T::WeightInfo::set_marketplace_name())]
+		pub fn set_marketplace_name(
 			origin: OriginFor<T>,
 			marketplace_id: MarketplaceId,
 			name: TextFormat,
@@ -472,8 +472,8 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		#[pallet::weight(T::WeightInfo::set_commission_fee())]
-		pub fn set_commission_fee(
+		#[pallet::weight(T::WeightInfo::set_marketplace_commission_fee())]
+		pub fn set_marketplace_commission_fee(
 			origin: OriginFor<T>,
 			marketplace_id: MarketplaceId,
 			commission_fee: u8,
@@ -495,8 +495,8 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		#[pallet::weight(T::WeightInfo::set_uri())]
-		pub fn set_uri(
+		#[pallet::weight(T::WeightInfo::set_marketplace_uri())]
+		pub fn set_marketplace_uri(
 			origin: OriginFor<T>,
 			marketplace_id: MarketplaceId,
 			uri: TextFormat,
@@ -521,8 +521,8 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		#[pallet::weight(T::WeightInfo::set_logo_uri())]
-		pub fn set_logo_uri(
+		#[pallet::weight(T::WeightInfo::set_marketplace_logo_uri())]
+		pub fn set_marketplace_logo_uri(
 			origin: OriginFor<T>,
 			marketplace_id: MarketplaceId,
 			logo_uri: TextFormat,
@@ -547,8 +547,8 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		#[pallet::weight(T::WeightInfo::set_logo_uri())]
-		pub fn set_description(
+		#[pallet::weight(T::WeightInfo::set_marketplace_description())]
+		pub fn set_marketplace_description(
 			origin: OriginFor<T>,
 			marketplace_id: MarketplaceId,
 			description: TextFormat,
@@ -764,7 +764,7 @@ impl<T: Config> MarketplaceTrait<T::AccountId> for Pallet<T> {
 		logo_uri: Option<TextFormat>,
 		description: Option<TextFormat>,
 	) -> Result<MarketplaceId, DispatchErrorWithPostInfo> {
-		Self::create(
+		Self::create_marketplace(
 			Origin::<T>::Signed(caller_id).into(),
 			kind,
 			commission_fee,

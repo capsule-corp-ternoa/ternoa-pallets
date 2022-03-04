@@ -12,8 +12,8 @@ pub trait WeightInfo {
 impl WeightInfo for () {
 	// Storage: Capsules CapsuleMintFee (r:1 w:0)
 	// Storage: System Account (r:2 w:2)
-	// Storage: Nfts NftMintFee (r:1 w:0)
-	// Storage: Nfts NftIdGenerator (r:1 w:1)
+	// Storage: Nfts NFTMintFee (r:1 w:0)
+	// Storage: Nfts NFTIdGenerator (r:1 w:1)
 	// Storage: Nfts SeriesIdGenerator (r:1 w:1)
 	// Storage: Nfts Series (r:1 w:1)
 	// Storage: Capsules Ledgers (r:1 w:1)

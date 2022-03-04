@@ -244,7 +244,15 @@ pub mod help {
 		name: TextFormat,
 		list: Vec<u64>,
 	) -> MarketplaceId {
-		assert_ok!(Marketplace::create(owner.clone(), kind, fee, name, None, None, None,));
+		assert_ok!(Marketplace::create_marketplace(
+			owner.clone(),
+			kind,
+			fee,
+			name,
+			None,
+			None,
+			None,
+		));
 		let mkp_id = Marketplace::marketplace_id_generator();
 
 		for acc in list {

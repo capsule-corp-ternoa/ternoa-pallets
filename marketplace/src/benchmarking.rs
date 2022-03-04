@@ -27,7 +27,7 @@ pub fn prepare_benchmarks<T: Config>() -> (MarketplaceId, MarketplaceId, NFTId) 
 	T::NFTs::benchmark_lock_series(series_id.clone());
 
 	// Create Public Marketplace for Alice
-	assert_ok!(Marketplace::<T>::create(
+	assert_ok!(Marketplace::<T>::create_marketplace(
 		get_origin::<T>("ALICE").into(),
 		MarketplaceType::Public,
 		0,
@@ -39,7 +39,7 @@ pub fn prepare_benchmarks<T: Config>() -> (MarketplaceId, MarketplaceId, NFTId) 
 	let public_id = Marketplace::<T>::marketplace_id_generator();
 
 	// Create Private Marketplace for Alice
-	assert_ok!(Marketplace::<T>::create(
+	assert_ok!(Marketplace::<T>::create_marketplace(
 		get_origin::<T>("ALICE").into(),
 		MarketplaceType::Private,
 		0,
@@ -63,7 +63,7 @@ pub fn get_origin<T: Config>(name: &'static str) -> RawOrigin<T::AccountId> {
 }
 
 benchmarks! {
-	list {
+	list_nft {
 		let (mkp_id, _, nft_id) = prepare_benchmarks::<T>();
 
 		let alice: T::AccountId = get_account::<T>("ALICE");
@@ -75,32 +75,32 @@ benchmarks! {
 		assert_eq!(NFTsForSale::<T>::contains_key(nft_id), true);
 	}
 
-	unlist {
+	unlist_nft {
 		let (mkp_id, _, nft_id) = prepare_benchmarks::<T>();
 
 		let alice = get_origin::<T>("ALICE");
 		let price: BalanceOf<T> = 100u32.into();
-		drop(Marketplace::<T>::list(alice.clone().into(), nft_id, price, Some(mkp_id)));
+		drop(Marketplace::<T>::list_nft(alice.clone().into(), nft_id, price, Some(mkp_id)));
 
 	}: _(alice.clone(), nft_id)
 	verify {
 		assert_eq!(NFTsForSale::<T>::contains_key(nft_id), false);
 	}
 
-	buy {
+	buy_nft {
 		let (mkp_id, _, nft_id) = prepare_benchmarks::<T>();
 
 		let bob: T::AccountId = get_account::<T>("BOB");
 		let price: BalanceOf<T> = 0u32.into();
 
-		drop(Marketplace::<T>::list(get_origin::<T>("ALICE").into(), nft_id, price, Some(mkp_id)));
+		drop(Marketplace::<T>::list_nft(get_origin::<T>("ALICE").into(), nft_id, price, Some(mkp_id)));
 	}: _(RawOrigin::Signed(bob.clone().into()), nft_id)
 	verify {
 		assert_eq!(T::NFTs::owner(nft_id), Some(bob));
 		assert_eq!(NFTsForSale::<T>::contains_key(nft_id), false);
 	}
 
-	create {
+	create_marketplace {
 		prepare_benchmarks::<T>();
 
 		let alice: T::AccountId = get_account::<T>("ALICE");
@@ -136,7 +136,7 @@ benchmarks! {
 		assert_eq!(Marketplaces::<T>::get(mkp_id).unwrap().allow_list, vec![]);
 	}
 
-	set_owner {
+	set_marketplace_owner {
 		let (mkp_id, ..) = prepare_benchmarks::<T>();
 
 		let bob: T::AccountId = get_account::<T>("BOB");
@@ -147,7 +147,7 @@ benchmarks! {
 		assert_eq!(Marketplaces::<T>::get(mkp_id).unwrap().owner, bob);
 	}
 
-	set_market_type {
+	set_marketplace_type {
 		let (mkp_id, ..) = prepare_benchmarks::<T>();
 
 	}: _(get_origin::<T>("ALICE"), mkp_id, MarketplaceType::Private)
@@ -155,7 +155,7 @@ benchmarks! {
 		assert_eq!(Marketplaces::<T>::get(mkp_id).unwrap().kind, MarketplaceType::Private);
 	}
 
-	set_name {
+	set_marketplace_name {
 		let (mkp_id, ..) = prepare_benchmarks::<T>();
 
 		let new_name: Vec<u8> = "poH".into();
@@ -176,7 +176,7 @@ benchmarks! {
 		assert_eq!(Marketplace::<T>::marketplace_mint_fee(), new_mint_fee.into());
 	}
 
-	set_commission_fee {
+	set_marketplace_commission_fee {
 		let (mkp_id, ..) = prepare_benchmarks::<T>();
 
 		let commission_fee = 67;
@@ -185,7 +185,7 @@ benchmarks! {
 		assert_eq!(Marketplaces::<T>::get(mkp_id).unwrap().commission_fee, commission_fee);
 	}
 
-	set_uri {
+	set_marketplace_uri {
 		let (mkp_id, ..) = prepare_benchmarks::<T>();
 
 		let uri: TextFormat = "test".as_bytes().to_vec();
@@ -194,7 +194,7 @@ benchmarks! {
 		assert_eq!(Marketplaces::<T>::get(mkp_id).unwrap().uri, Some(uri));
 	}
 
-	set_logo_uri {
+	set_marketplace_logo_uri {
 		let (mkp_id, ..) = prepare_benchmarks::<T>();
 
 		let uri: TextFormat = "test".as_bytes().to_vec();
