@@ -17,7 +17,7 @@ use frame_support::{
 use frame_system::Origin;
 pub use pallet::*;
 use primitives::{
-	nfts::{NFTData, NFTId, NFTSeriesDetails, NFTSeriesId},
+	nfts::{NFTData, NFTId, NFTSeriesDetails, NFTSeriesId, NFTsGenesis, SeriesGenesis},
 	TextFormat,
 };
 use sp_std::{vec, vec::Vec};
@@ -361,8 +361,8 @@ pub mod pallet {
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
-		pub nfts: Vec<(NFTId, NFTData<T::AccountId>)>,
-		pub series: Vec<(NFTSeriesId, NFTSeriesDetails<T::AccountId>)>,
+		pub nfts: Vec<NFTsGenesis<T::AccountId>>,
+		pub series: Vec<SeriesGenesis<T::AccountId>>,
 		pub nft_mint_fee: BalanceOf<T>,
 	}
 
@@ -380,15 +380,39 @@ pub mod pallet {
 	#[pallet::genesis_build]
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
-			self.series.clone().into_iter().for_each(|(series_id, series)| {
+			self.series.clone().into_iter().for_each(|(series_id, owner, draft)| {
+				let series = NFTSeriesDetails::new(owner, draft);
 				Series::<T>::insert(series_id, series);
 			});
 
 			let mut current_nft_id: NFTId = 0;
-			self.nfts.clone().into_iter().for_each(|(nft_id, data)| {
-				Data::<T>::insert(nft_id, data);
-				current_nft_id = current_nft_id.max(nft_id);
-			});
+			self.nfts.clone().into_iter().for_each(
+				|(
+					nft_id,
+					owner,
+					creator,
+					ipfs_reference,
+					series_id,
+					listed_for_sale,
+					in_transmission,
+					converted_to_capsule,
+					viewer,
+				)| {
+					let data = NFTData::new(
+						owner,
+						creator,
+						ipfs_reference,
+						series_id,
+						listed_for_sale,
+						in_transmission,
+						converted_to_capsule,
+						viewer,
+					);
+
+					Data::<T>::insert(nft_id, data);
+					current_nft_id = current_nft_id.max(nft_id);
+				},
+			);
 
 			if !self.nfts.is_empty() {
 				current_nft_id += 1;

@@ -3,8 +3,6 @@
 use crate::TextFormat;
 use codec::{Decode, Encode};
 use scale_info::TypeInfo;
-#[cfg(feature = "std")]
-use serde::{Deserialize, Serialize};
 use sp_runtime::RuntimeDebug;
 use sp_std::vec::Vec;
 
@@ -16,7 +14,6 @@ pub type NFTSeriesId = Vec<u8>;
 
 /// Data related to an NFT, such as who is its owner.
 #[derive(Encode, Decode, Clone, PartialEq, Eq, Default, RuntimeDebug, TypeInfo)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct NFTData<AccountId>
 where
 	AccountId: Clone,
@@ -74,9 +71,12 @@ where
 	}
 }
 
+// nft_id, owner, creator, ipfs, series, for sale, in transmission, is capsule, viewer
+pub type NFTsGenesis<AccountId> =
+	(NFTId, AccountId, AccountId, Vec<u8>, Vec<u8>, bool, bool, bool, Option<AccountId>);
+
 /// Data related to an NFT Series.
 #[derive(Encode, Decode, Clone, PartialEq, Eq, Default, RuntimeDebug, TypeInfo)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct NFTSeriesDetails<AccountId> {
 	pub owner: AccountId, // Series Owner
 	pub draft: bool,      /* If Yes, the owner can add new nfts to that series but cannot list
@@ -88,3 +88,7 @@ impl<AccountId> NFTSeriesDetails<AccountId> {
 		Self { owner, draft }
 	}
 }
+
+/// Data related to an NFT Series.
+// series id, owner, draft
+pub type SeriesGenesis<AccountId> = (Vec<u8>, AccountId, bool);
