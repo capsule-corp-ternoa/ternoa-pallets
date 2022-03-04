@@ -6,15 +6,14 @@ mod benchmarking;
 #[cfg(test)]
 mod tests;
 
-mod default_weights;
 mod migrations;
 mod types;
+mod weights;
 
 use frame_support::dispatch::{DispatchErrorWithPostInfo, DispatchResult};
 pub use pallet::*;
 pub use types::*;
 
-use default_weights::WeightInfo;
 use frame_support::{
 	ensure,
 	pallet_prelude::DispatchResultWithPostInfo,
@@ -23,6 +22,7 @@ use frame_support::{
 		WithdrawReasons,
 	},
 };
+use weights::WeightInfo;
 // use frame_support::weights::Weight;
 use frame_system::Origin;
 use primitives::{

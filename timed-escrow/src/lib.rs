@@ -1,15 +1,14 @@
-/* #![cfg_attr(not(feature = "std"), no_std)]
+#![cfg_attr(not(feature = "std"), no_std)]
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
-mod default_weights;
 #[cfg(test)]
 mod tests;
+mod weights;
 
 pub use pallet::*;
 
-use frame_support::traits::LockIdentifier;
-use frame_support::weights::Weight;
+use frame_support::{traits::LockIdentifier, weights::Weight};
 use primitives::nfts::NFTId;
 
 /// Used for derivating scheduled tasks IDs
@@ -24,10 +23,11 @@ pub trait WeightInfo {
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use frame_support::pallet_prelude::*;
-	use frame_support::traits::schedule::{DispatchTime, Named as ScheduleNamed};
-	use frame_system::pallet_prelude::*;
-	use frame_system::RawOrigin;
+	use frame_support::{
+		pallet_prelude::*,
+		traits::schedule::{DispatchTime, Named as ScheduleNamed},
+	};
+	use frame_system::{pallet_prelude::*, RawOrigin};
 	use sp_runtime::traits::{Dispatchable, StaticLookup};
 	use ternoa_common::traits::NFTTrait;
 
@@ -85,11 +85,7 @@ pub mod pallet {
 					// upgrades and democracy calls
 					100,
 					RawOrigin::Root.into(),
-					Call::complete_transfer {
-						to: to_unlookup.clone(),
-						nft_id: nft_id
-					}
-					.into()
+					Call::complete_transfer { to: to_unlookup.clone(), nft_id }.into()
 				)
 				.is_ok(),
 				Error::<T>::SchedulingFailed
@@ -148,11 +144,7 @@ pub mod pallet {
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		/// A transfer has been scheduled.
-		TransferScheduled {
-			nft_id: NFTId,
-			destination: T::AccountId,
-			block_number: T::BlockNumber,
-		},
+		TransferScheduled { nft_id: NFTId, destination: T::AccountId, block_number: T::BlockNumber },
 		/// A transfer has been canceled.
 		TransferCanceled { nft_id: NFTId },
 		/// A transfer was executed and finalized.
@@ -173,4 +165,3 @@ pub mod pallet {
 		AlreadyInTransmission,
 	}
 }
- */

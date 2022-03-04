@@ -8,10 +8,9 @@ mod tests;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
-mod default_weights;
 mod types;
+mod weights;
 
-pub use default_weights::WeightInfo;
 use frame_support::{
 	pallet_prelude::*,
 	traits::{
@@ -25,6 +24,7 @@ use primitives::nfts::NFTId;
 use sp_runtime::traits::{AccountIdConversion, Saturating};
 use ternoa_common::traits::{MarketplaceTrait, NFTTrait};
 use types::{AuctionData, AuctionsGenesis, BidderList, DeadlineList};
+pub use weights::WeightInfo;
 
 const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
 
