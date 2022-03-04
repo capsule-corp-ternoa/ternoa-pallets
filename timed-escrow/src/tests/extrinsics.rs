@@ -1,4 +1,4 @@
-use super::mock::*;
+/* use super::mock::*;
 use crate::{tests::mock, Error};
 use frame_support::{assert_noop, assert_ok, error::BadOrigin, traits::OnInitialize};
 use frame_system::RawOrigin;
@@ -134,3 +134,4 @@ fn complete_transfer_unhappy() {
 		assert_noop!(ok, ternoa_nfts::Error::<Test>::NFTNotFound);
 	});
 }
+ */

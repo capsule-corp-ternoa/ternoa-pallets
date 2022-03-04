@@ -6,13 +6,13 @@ mod benchmarking;
 #[cfg(test)]
 mod tests;
 
-mod default_weights;
 mod types;
+mod weights;
 
-pub use default_weights::WeightInfo;
 use frame_support::dispatch::DispatchResult;
 pub use pallet::*;
 pub use types::*;
+pub use weights::WeightInfo;
 
 use frame_support::{
 	traits::{

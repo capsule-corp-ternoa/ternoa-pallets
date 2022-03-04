@@ -19,7 +19,7 @@
 
     #[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug)]
     #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-    pub struct MarketplaceInformation<T: Config> {
+    pub struct MarketplaceData<T: Config> {
         pub kind: MarketplaceType,
         pub commission_fee: u8,
         pub owner: T::AccountId,
@@ -30,7 +30,7 @@
     frame_support::generate_storage_alias!(
         Marketplace, Marketplaces<T: Config> => Map<
             (Blake2_128Concat, MarketplaceId),
-            MarketplaceInformation<T>
+            MarketplaceData<T>
         >
     );
 
@@ -43,7 +43,7 @@
         allow_list: Vec<T::AccountId>,
         name: Vec<u8>,
     ) {
-        let data = MarketplaceInformation {
+        let data = MarketplaceData {
             kind,
             commission_fee,
             owner,

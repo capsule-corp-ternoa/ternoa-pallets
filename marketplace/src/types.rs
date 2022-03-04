@@ -1,14 +1,10 @@
-#[cfg(feature = "std")]
-use serde::{Deserialize, Serialize};
-
 use codec::{Decode, Encode};
-use primitives::marketplace::MarketplaceId;
+use primitives::{marketplace::MarketplaceId, nfts::NFTId};
 use scale_info::TypeInfo;
 use sp_runtime::RuntimeDebug;
 
 #[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub struct SaleInformation<AccountId, Balance>
+pub struct SaleData<AccountId, Balance>
 where
 	Balance: Clone + Default,
 {
@@ -17,7 +13,7 @@ where
 	pub marketplace_id: MarketplaceId,
 }
 
-impl<AccountId, Balance> Default for SaleInformation<AccountId, Balance>
+impl<AccountId, Balance> Default for SaleData<AccountId, Balance>
 where
 	AccountId: Clone + Default,
 	Balance: Clone + Default,
@@ -31,7 +27,7 @@ where
 	}
 }
 
-impl<AccountId, Balance> SaleInformation<AccountId, Balance>
+impl<AccountId, Balance> SaleData<AccountId, Balance>
 where
 	Balance: Clone + Default,
 {
@@ -39,7 +35,10 @@ where
 		account_id: AccountId,
 		price: Balance,
 		marketplace_id: MarketplaceId,
-	) -> SaleInformation<AccountId, Balance> {
+	) -> SaleData<AccountId, Balance> {
 		Self { account_id, price, marketplace_id }
 	}
 }
+
+// nft_id, account id, price, market id
+pub type NFTsGenesis<AccountId, Balance> = (NFTId, AccountId, Balance, MarketplaceId);

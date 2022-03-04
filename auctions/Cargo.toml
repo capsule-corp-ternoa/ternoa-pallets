@@ -19,7 +19,6 @@ sp-std = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "t
 
 # Rest
 codec = { package = "parity-scale-codec", default-features = false, features = ["derive"], version = "2.3.1" }
-serde = { optional = true, version = "1.0.132" }
 log = { default-features = false, version = "0.4.14"}
 scale-info = { version = "1.0", default-features = false, features = ["derive"] }
 
@@ -42,7 +41,6 @@ std = [
     "frame-benchmarking/std",
     "frame-support/std",
     "frame-system/std",
-    "serde",
     "sp-runtime/std",
     "sp-std/std",
     "ternoa-common/std",

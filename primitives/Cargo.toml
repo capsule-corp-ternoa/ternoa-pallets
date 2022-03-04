@@ -8,16 +8,15 @@ license = "Apache 2.0"
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
-# Frame
+# Substrate Frame Pallets
 frame-support = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-02-03", default-features = false }
 
-# Sp
+# Substrate Primitives
 sp-runtime = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-02-03", default-features = false }
 sp-std = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-02-03", default-features = false }
 
 # Rest
 codec = { package = "parity-scale-codec", default-features = false, features = ["derive"], version = "2.3.1" }
-serde = { optional = true, version = "1.0.132" }
 scale-info = { version = "1.0", default-features = false, features = ["derive"] }
 
 [features]
@@ -30,6 +29,5 @@ std = [
     "sp-std/std",
 	# Rest
 	"codec/std",
-	"serde",
 	"scale-info/std",
 ]

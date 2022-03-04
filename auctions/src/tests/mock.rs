@@ -9,7 +9,7 @@ use frame_support::{
 	PalletId,
 };
 use primitives::{
-	marketplace::{MarketplaceInformation, MarketplaceType},
+	marketplace::{MarketplaceData, MarketplaceType},
 	nfts::{NFTData, NFTSeriesDetails},
 };
 use sp_core::H256;
@@ -231,8 +231,11 @@ impl ExtBuilder {
 		let alice_series = NFTSeriesDetails::new(ALICE, false);
 		let bob_series = NFTSeriesDetails::new(ALICE, false);
 
-		let nfts = vec![(ALICE_NFT_ID, alice_nft), (BOB_NFT_ID, bob_nft)];
-		let series = vec![(vec![ALICE_SERIES_ID], alice_series), (vec![BOB_SERIES_ID], bob_series)];
+		let nfts = vec![alice_nft.to_raw(ALICE_NFT_ID), bob_nft.to_raw(BOB_NFT_ID)];
+		let series = vec![
+			alice_series.to_raw(vec![ALICE_SERIES_ID]),
+			bob_series.to_raw(vec![BOB_SERIES_ID]),
+		];
 
 		ternoa_nfts::GenesisConfig::<Test> { nfts, series, nft_mint_fee: 5 }
 			.assimilate_storage(t)
@@ -240,7 +243,7 @@ impl ExtBuilder {
 	}
 
 	fn build_market(t: &mut sp_runtime::Storage) {
-		let alice_market = MarketplaceInformation::new(
+		let alice_market = MarketplaceData::new(
 			MarketplaceType::Public,
 			MARKETPLACE_COMMISSION_FEE,
 			ALICE,
@@ -251,10 +254,10 @@ impl ExtBuilder {
 			None,
 			None,
 		);
-		let marketplaces = vec![(ALICE_MARKET_ID, alice_market)];
+		let marketplaces = vec![alice_market.to_raw(ALICE_MARKET_ID)];
 
 		ternoa_marketplace::GenesisConfig::<Test> {
-			nfts_for_sale: vec![],
+			nfts: vec![],
 			marketplaces,
 			marketplace_mint_fee: 15,
 		}
@@ -298,6 +301,8 @@ impl ExtBuilder {
 
 			auctions = vec![(ALICE_NFT_ID, alice_data), (BOB_NFT_ID, bob_data)];
 		}
+
+		let auctions = auctions.iter().map(|x| x.1.to_raw(x.0)).collect();
 		ternoa_auctions::GenesisConfig::<Test> { auctions, bid_history_size: BID_HISTORY_SIZE }
 			.assimilate_storage(t)
 			.unwrap();

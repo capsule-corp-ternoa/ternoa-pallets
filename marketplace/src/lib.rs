@@ -6,15 +6,14 @@ mod benchmarking;
 #[cfg(test)]
 mod tests;
 
-mod default_weights;
 mod migrations;
 mod types;
+mod weights;
 
 use frame_support::dispatch::{DispatchErrorWithPostInfo, DispatchResult};
 pub use pallet::*;
 pub use types::*;
 
-use default_weights::WeightInfo;
 use frame_support::{
 	ensure,
 	pallet_prelude::DispatchResultWithPostInfo,
@@ -23,10 +22,11 @@ use frame_support::{
 		WithdrawReasons,
 	},
 };
+use weights::WeightInfo;
 // use frame_support::weights::Weight;
 use frame_system::Origin;
 use primitives::{
-	marketplace::{MarketplaceId, MarketplaceInformation, MarketplaceType},
+	marketplace::{MarketplaceData, MarketplaceId, MarketplaceType, MarketplacesGenesis},
 	nfts::NFTId,
 	TextFormat,
 };
@@ -136,7 +136,7 @@ pub mod pallet {
 
 			T::NFTs::set_listed_for_sale(nft_id, true)?;
 
-			let sale_info = SaleInformation::new(account_id, price.clone(), mkp_id);
+			let sale_info = SaleData::new(account_id, price.clone(), mkp_id);
 			NFTsForSale::<T>::insert(nft_id, sale_info);
 
 			Self::deposit_event(Event::NftListed { nft_id, price, marketplace_id: mkp_id });
@@ -253,7 +253,7 @@ pub mod pallet {
 			)?;
 			T::FeesCollector::on_unbalanced(imbalance);
 
-			let marketplace = MarketplaceInformation::new(
+			let marketplace = MarketplaceData::new(
 				kind,
 				commission_fee,
 				caller_id.clone(),
@@ -672,13 +672,8 @@ pub mod pallet {
 	/// Nfts listed on the marketplace
 	#[pallet::storage]
 	#[pallet::getter(fn nft_for_sale)]
-	pub type NFTsForSale<T: Config> = StorageMap<
-		_,
-		Blake2_128Concat,
-		NFTId,
-		SaleInformation<T::AccountId, BalanceOf<T>>,
-		OptionQuery,
-	>;
+	pub type NFTsForSale<T: Config> =
+		StorageMap<_, Blake2_128Concat, NFTId, SaleData<T::AccountId, BalanceOf<T>>, OptionQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn marketplace_id_generator)]
@@ -686,13 +681,8 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn marketplaces)]
-	pub type Marketplaces<T: Config> = StorageMap<
-		_,
-		Blake2_128Concat,
-		MarketplaceId,
-		MarketplaceInformation<T::AccountId>,
-		OptionQuery,
-	>;
+	pub type Marketplaces<T: Config> =
+		StorageMap<_, Blake2_128Concat, MarketplaceId, MarketplaceData<T::AccountId>, OptionQuery>;
 
 	/// Host much does it cost to create a marketplace.
 	#[pallet::storage]
@@ -701,8 +691,8 @@ pub mod pallet {
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
-		pub nfts_for_sale: Vec<(NFTId, SaleInformation<T::AccountId, BalanceOf<T>>)>,
-		pub marketplaces: Vec<(MarketplaceId, MarketplaceInformation<T::AccountId>)>,
+		pub nfts: Vec<NFTsGenesis<T::AccountId, BalanceOf<T>>>,
+		pub marketplaces: Vec<MarketplacesGenesis<T::AccountId>>,
 		pub marketplace_mint_fee: BalanceOf<T>,
 	}
 
@@ -710,7 +700,7 @@ pub mod pallet {
 	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self {
 			Self {
-				nfts_for_sale: Default::default(),
+				nfts: Default::default(),
 				marketplaces: Default::default(),
 				marketplace_mint_fee: Default::default(),
 			}
@@ -720,13 +710,17 @@ pub mod pallet {
 	#[pallet::genesis_build]
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
-			self.nfts_for_sale.clone().into_iter().for_each(|(nft_id, sale_information)| {
-				NFTsForSale::<T>::insert(nft_id, sale_information);
-			});
+			for nft in self.nfts.clone() {
+				let data = SaleData::new(nft.1, nft.2, nft.3);
+				NFTsForSale::<T>::insert(nft.0, data);
+			}
 
-			self.marketplaces.clone().into_iter().for_each(|(market_id, market_info)| {
-				Marketplaces::<T>::insert(market_id, market_info);
-			});
+			for market in self.marketplaces.clone() {
+				let market_id = market.0;
+				let data = MarketplaceData::from_raw(market);
+				Marketplaces::<T>::insert(market_id, data);
+			}
+
 			MarketplaceMintFee::<T>::put(self.marketplace_mint_fee);
 		}
 	}
@@ -753,9 +747,7 @@ impl<T: Config> MarketplaceTrait<T::AccountId> for Pallet<T> {
 	}
 
 	// Return the owner account and commision for marketplace with `marketplace_id`
-	fn get_marketplace(
-		marketplace_id: MarketplaceId,
-	) -> Option<MarketplaceInformation<T::AccountId>> {
+	fn get_marketplace(marketplace_id: MarketplaceId) -> Option<MarketplaceData<T::AccountId>> {
 		match Marketplaces::<T>::get(marketplace_id) {
 			Some(marketplace) => Some(marketplace),
 			None => None,

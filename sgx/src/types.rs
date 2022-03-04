@@ -1,6 +1,3 @@
-#[cfg(feature = "std")]
-use serde::{Deserialize, Serialize};
-
 use codec::{Decode, Encode};
 use primitives::TextFormat;
 use scale_info::TypeInfo;
@@ -11,7 +8,6 @@ pub type EnclaveId = u32;
 pub type ClusterId = u32;
 
 #[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct Enclave {
 	pub api_uri: TextFormat,
 }
@@ -23,7 +19,6 @@ impl Enclave {
 }
 
 #[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct Cluster {
 	pub enclaves: Vec<EnclaveId>,
 }

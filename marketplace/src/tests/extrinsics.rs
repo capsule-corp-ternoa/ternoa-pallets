@@ -1,5 +1,5 @@
 use super::mock::*;
-use crate::{tests::mock, Error, MarketplaceInformation, SaleInformation};
+use crate::{tests::mock, Error, MarketplaceData, SaleData};
 use frame_support::{assert_noop, assert_ok, error::BadOrigin};
 use frame_system::RawOrigin;
 use pallet_balances::Error as BalanceError;
@@ -22,7 +22,7 @@ fn list_happy() {
 			let series_id = vec![50];
 			let nft_id =
 				<NFTs as NFTTrait>::create_nft(ALICE, vec![50], Some(series_id.clone())).unwrap();
-			let sale_info = SaleInformation::new(ALICE, price.clone(), 0);
+			let sale_info = SaleData::new(ALICE, price.clone(), 0);
 
 			help::finish_series(alice.clone(), series_id);
 			assert_ok!(Marketplace::list(alice.clone(), nft_id, price, Some(0)));
@@ -32,7 +32,7 @@ fn list_happy() {
 			// Happy path Private marketplace
 			let series_id = vec![51];
 			let mkp_id = help::create_mkp(bob.clone(), MPT::Private, 0, vec![1], vec![ALICE]);
-			let sale_info = SaleInformation::new(ALICE, price.clone(), mkp_id);
+			let sale_info = SaleData::new(ALICE, price.clone(), mkp_id);
 			let nft_id =
 				<NFTs as NFTTrait>::create_nft(ALICE, vec![50], Some(series_id.clone())).unwrap();
 
@@ -137,7 +137,6 @@ fn unlist_unhappy() {
 fn buy_happy() {
 	ExtBuilder::default()
 		.caps(vec![(ALICE, 1000), (BOB, 1000), (DAVE, 1000)])
-		.tiime(vec![(ALICE, 1000), (BOB, 1000), (DAVE, 1000)])
 		.build()
 		.execute_with(|| {
 			let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
@@ -186,7 +185,6 @@ fn buy_happy() {
 fn buy_unhappy() {
 	ExtBuilder::default()
 		.caps(vec![(ALICE, 100), (BOB, 100)])
-		.tiime(vec![(ALICE, 100), (BOB, 100)])
 		.build()
 		.execute_with(|| {
 			let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
@@ -219,7 +217,7 @@ fn create_happy() {
 		let kind = MPT::Public;
 		let uri = Some(vec![65]);
 		let logo_uri = Some(vec![66]);
-		let info = MarketplaceInformation::new(
+		let info = MarketplaceData::new(
 			kind,
 			fee,
 			ALICE,
@@ -617,7 +615,7 @@ fn update_uri_happy() {
 		let uri = Some(vec![66]);
 		let updated_uri = Some(vec![67]);
 
-		let updated_info = MarketplaceInformation::new(
+		let updated_info = MarketplaceData::new(
 			kind,
 			fee,
 			ALICE,
@@ -684,7 +682,7 @@ fn update_logo_uri_happy() {
 		let uri = Some(vec![66]);
 		let updated_uri = Some(vec![67]);
 
-		let updated_info = MarketplaceInformation::new(
+		let updated_info = MarketplaceData::new(
 			kind,
 			fee,
 			ALICE,
@@ -833,7 +831,7 @@ fn set_description_happy() {
 		let description = Some(vec![66]);
 		let updated_description = Some(vec![67]);
 
-		let updated_info = MarketplaceInformation::new(
+		let updated_info = MarketplaceData::new(
 			kind,
 			fee,
 			ALICE,

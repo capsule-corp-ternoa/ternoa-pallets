@@ -1,6 +1,3 @@
-#[cfg(feature = "std")]
-use serde::{Deserialize, Serialize};
-
 use codec::{Decode, Encode};
 use primitives::{marketplace::MarketplaceId, nfts::NFTId};
 use scale_info::TypeInfo;
@@ -8,12 +5,12 @@ use sp_runtime::RuntimeDebug;
 use sp_std::vec::Vec;
 
 #[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug, TypeInfo)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 /// Structure to store Auction data
 pub struct AuctionData<AccountId, BlockNumber, Balance>
 where
-	AccountId: Clone,
-	Balance: Clone + Default,
+	AccountId: sp_std::cmp::Ord + Clone,
+	BlockNumber: Clone,
+	Balance: sp_std::cmp::PartialOrd + Clone + Default,
 {
 	/// The owner of the nft that has listed the item on auction
 	pub creator: AccountId,
@@ -33,11 +30,61 @@ where
 	pub is_extended: bool,
 }
 
+impl<AccountId, BlockNumber, Balance> AuctionData<AccountId, BlockNumber, Balance>
+where
+	AccountId: sp_std::cmp::Ord + Clone,
+	BlockNumber: Clone,
+	Balance: sp_std::cmp::PartialOrd + Clone + Default,
+{
+	pub fn to_raw(&self, nft_id: NFTId) -> AuctionsGenesis<AccountId, BlockNumber, Balance> {
+		(
+			nft_id,
+			self.creator.clone(),
+			self.start_block.clone(),
+			self.end_block.clone(),
+			self.start_price.clone(),
+			self.buy_it_price.clone(),
+			self.bidders.to_raw(),
+			self.marketplace_id.clone(),
+			self.is_extended.clone(),
+		)
+	}
+
+	pub fn from_raw(raw: AuctionsGenesis<AccountId, BlockNumber, Balance>) -> Self {
+		Self {
+			creator: raw.1,
+			start_block: raw.2,
+			end_block: raw.3,
+			start_price: raw.4,
+			buy_it_price: raw.5,
+			bidders: BidderList::from_raw(raw.6),
+			marketplace_id: raw.7,
+			is_extended: raw.8,
+		}
+	}
+}
+
+// nft id, creator, start_block, end_block, start_price, buy it
+pub type AuctionsGenesis<AccountId, BlockNumber, Balance> = (
+	NFTId,
+	AccountId,
+	BlockNumber,
+	BlockNumber,
+	Balance,
+	Option<Balance>,
+	(Vec<(AccountId, Balance)>, u16),
+	MarketplaceId,
+	bool,
+);
+
 #[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug, TypeInfo)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 /// wrapper type to store sorted list of all bids
 /// The wrapper exists to ensure a queue implementation of sorted bids
-pub struct BidderList<AccountId, Balance> {
+pub struct BidderList<AccountId, Balance>
+where
+	AccountId: sp_std::cmp::Ord + Clone,
+	Balance: sp_std::cmp::PartialOrd + Clone,
+{
 	pub list: Vec<(AccountId, Balance)>,
 	pub max_size: u16,
 }
@@ -45,7 +92,7 @@ pub struct BidderList<AccountId, Balance> {
 impl<AccountId, Balance> BidderList<AccountId, Balance>
 where
 	AccountId: sp_std::cmp::Ord + Clone,
-	Balance: sp_std::cmp::PartialOrd,
+	Balance: sp_std::cmp::PartialOrd + Clone,
 {
 	/// Create a new empty bidders list
 	pub fn new(max_size: u16) -> Self {
@@ -113,10 +160,17 @@ where
 		// drastically affect performance as long as max_size remains small.
 		self.list.iter().find(|&x| x.0 == account_id)
 	}
+
+	pub fn to_raw(&self) -> (Vec<(AccountId, Balance)>, u16) {
+		(self.list.clone(), self.max_size)
+	}
+
+	pub fn from_raw(raw: (Vec<(AccountId, Balance)>, u16)) -> Self {
+		Self { list: raw.0, max_size: raw.1 }
+	}
 }
 
 #[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug, TypeInfo, Default)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 /// wrapper type to store sorted list of all bids
 /// The wrapper exists to ensure a queue implementation of sorted bids
 pub struct DeadlineList<BlockNumber>(pub Vec<(NFTId, BlockNumber)>);
