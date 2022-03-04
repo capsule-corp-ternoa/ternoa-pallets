@@ -1,4 +1,4 @@
-use crate::{self as ternoa_marketplace, Config, MarketplaceInformation};
+use crate::{self as ternoa_marketplace, Config, MarketplaceData};
 use frame_support::{
 	parameter_types,
 	traits::{ConstU32, Contains, GenesisBuild},
@@ -183,7 +183,7 @@ impl ExtBuilder {
 
 		let mut marketplaces = vec![(
 			0,
-			MarketplaceInformation::new(
+			MarketplaceData::new(
 				MarketplaceType::Public,
 				0,
 				ALICE,
@@ -199,7 +199,7 @@ impl ExtBuilder {
 		for market in self.marketplaces {
 			marketplaces.push((
 				i,
-				MarketplaceInformation::new(
+				MarketplaceData::new(
 					market.1,
 					market.2,
 					market.0,

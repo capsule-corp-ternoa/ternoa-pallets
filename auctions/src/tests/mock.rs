@@ -9,7 +9,7 @@ use frame_support::{
 	PalletId,
 };
 use primitives::{
-	marketplace::{MarketplaceInformation, MarketplaceType},
+	marketplace::{MarketplaceData, MarketplaceType},
 	nfts::{NFTData, NFTSeriesDetails},
 };
 use sp_core::H256;
@@ -240,7 +240,7 @@ impl ExtBuilder {
 	}
 
 	fn build_market(t: &mut sp_runtime::Storage) {
-		let alice_market = MarketplaceInformation::new(
+		let alice_market = MarketplaceData::new(
 			MarketplaceType::Public,
 			MARKETPLACE_COMMISSION_FEE,
 			ALICE,

@@ -36,7 +36,7 @@ pub mod v7 {
 
     #[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug)]
     #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-    pub struct MarketplaceInformation<T: Config> {
+    pub struct MarketplaceData<T: Config> {
         pub kind: MarketplaceType,
         pub commission_fee: u8,
         pub owner: T::AccountId,
@@ -53,7 +53,7 @@ pub mod v7 {
     frame_support::generate_storage_alias!(
         Marketplace, Marketplaces<T: Config> => Map<
             (Blake2_128Concat, MarketplaceId),
-            MarketplaceInformation<T>,
+            MarketplaceData<T>,
             OptionQuery
         >
     );
@@ -63,11 +63,11 @@ pub mod v7 {
     );
 
     // Define helper types
-    pub type StorageMarketplaces<T> = BTreeMap<MarketplaceId, MarketplaceInformation<T>>;
+    pub type StorageMarketplaces<T> = BTreeMap<MarketplaceId, MarketplaceData<T>>;
 
     pub fn migrate_marketplaces<T: Config>() {
-        Marketplaces::<T>::translate::<v6::MarketplaceInformation<T>, _>(|_, value| {
-            return Some(MarketplaceInformation {
+        Marketplaces::<T>::translate::<v6::MarketplaceData<T>, _>(|_, value| {
+            return Some(MarketplaceData {
                 kind: value.kind.into(),
                 commission_fee: value.commission_fee,
                 owner: value.owner,

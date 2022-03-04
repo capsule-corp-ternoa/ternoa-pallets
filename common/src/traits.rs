@@ -2,7 +2,7 @@
 
 use frame_support::dispatch::{DispatchErrorWithPostInfo, DispatchResult};
 use primitives::{
-	marketplace::{MarketplaceId, MarketplaceInformation, MarketplaceType},
+	marketplace::{MarketplaceData, MarketplaceId, MarketplaceType},
 	nfts::{NFTData, NFTId, NFTSeriesId},
 	TextFormat,
 };
@@ -65,7 +65,7 @@ pub trait MarketplaceTrait<AccountId> {
 	fn is_allowed_to_list(marketplace_id: MarketplaceId, account_id: AccountId) -> DispatchResult;
 
 	/// Return marketplace
-	fn get_marketplace(marketplace_id: MarketplaceId) -> Option<MarketplaceInformation<AccountId>>;
+	fn get_marketplace(marketplace_id: MarketplaceId) -> Option<MarketplaceData<AccountId>>;
 
 	/// create a new marketplace
 	fn create(
