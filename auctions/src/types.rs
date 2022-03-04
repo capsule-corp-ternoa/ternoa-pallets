@@ -1,6 +1,3 @@
-#[cfg(feature = "std")]
-use serde::{Deserialize, Serialize};
-
 use codec::{Decode, Encode};
 use primitives::{marketplace::MarketplaceId, nfts::NFTId};
 use scale_info::TypeInfo;
@@ -8,7 +5,6 @@ use sp_runtime::RuntimeDebug;
 use sp_std::vec::Vec;
 
 #[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug, TypeInfo)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 /// Structure to store Auction data
 pub struct AuctionData<AccountId, BlockNumber, Balance>
 where
@@ -33,8 +29,20 @@ where
 	pub is_extended: bool,
 }
 
+// nft id, creator, start_block, end_block, start_price, buy it
+pub type AuctionsGenesis<AccountId, BlockNumber, Balance> = (
+	NFTId,
+	AccountId,
+	BlockNumber,
+	BlockNumber,
+	Balance,
+	Option<Balance>,
+	(Vec<(AccountId, Balance)>, u16),
+	MarketplaceId,
+	bool,
+);
+
 #[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug, TypeInfo)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 /// wrapper type to store sorted list of all bids
 /// The wrapper exists to ensure a queue implementation of sorted bids
 pub struct BidderList<AccountId, Balance> {
@@ -116,7 +124,6 @@ where
 }
 
 #[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug, TypeInfo, Default)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 /// wrapper type to store sorted list of all bids
 /// The wrapper exists to ensure a queue implementation of sorted bids
 pub struct DeadlineList<BlockNumber>(pub Vec<(NFTId, BlockNumber)>);

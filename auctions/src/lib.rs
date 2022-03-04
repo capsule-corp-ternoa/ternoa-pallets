@@ -24,7 +24,7 @@ use frame_support::{
 use primitives::nfts::NFTId;
 use sp_runtime::traits::{AccountIdConversion, Saturating};
 use ternoa_common::traits::{MarketplaceTrait, NFTTrait};
-use types::{AuctionData, BidderList, DeadlineList};
+use types::{AuctionData, AuctionsGenesis, BidderList, DeadlineList};
 
 const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
 
@@ -137,19 +137,16 @@ pub mod pallet {
 			let current_block = frame_system::Pallet::<T>::block_number();
 
 			ensure!(start_block >= current_block, Error::<T>::AuctionCannotStartInThePast);
-
 			ensure!(start_block < end_block, Error::<T>::AuctionCannotEndBeforeItHasStarted);
 
 			let duration = end_block.saturating_sub(start_block);
 			let buffer = start_block.saturating_sub(current_block);
 
 			ensure!(duration <= T::MaxAuctionDuration::get(), Error::<T>::AuctionDurationIsTooLong);
-
 			ensure!(
 				duration >= T::MinAuctionDuration::get(),
 				Error::<T>::AuctionDurationIsTooShort
 			);
-
 			ensure!(buffer <= T::MaxAuctionDelay::get(), Error::<T>::AuctionStartIsTooFarAway);
 
 			if let Some(price) = buy_it_price {
@@ -164,15 +161,10 @@ pub mod pallet {
 			let is_nft_in_completed_series = T::NFTHandler::is_nft_in_completed_series(nft_id);
 
 			ensure!(nft_data.owner == creator.clone(), Error::<T>::CannotAuctionNotOwnedNFTs);
-
 			ensure!(nft_data.listed_for_sale == false, Error::<T>::CannotAuctionNFTsListedForSale);
-
 			ensure!(nft_data.in_transmission == false, Error::<T>::CannotAuctionNFTsInTransmission);
-
 			ensure!(nft_data.converted_to_capsule == false, Error::<T>::CannotAuctionCapsules);
-
 			ensure!(nft_data.viewer.is_none(), Error::<T>::CannotAuctionDelegatedNFTs);
-
 			ensure!(
 				is_nft_in_completed_series == Some(true),
 				Error::<T>::CannotAuctionNFTsInUncompletedSeries
@@ -546,7 +538,7 @@ pub mod pallet {
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
-		pub auctions: Vec<(NFTId, AuctionData<T::AccountId, T::BlockNumber, BalanceOf<T>>)>,
+		pub auctions: Vec<AuctionsGenesis<T::AccountId, T::BlockNumber, BalanceOf<T>>>,
 		pub bid_history_size: u16,
 	}
 
@@ -560,10 +552,23 @@ pub mod pallet {
 	#[pallet::genesis_build]
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
-			self.auctions.clone().into_iter().for_each(|(nft_id, auction)| {
-				Deadlines::<T>::mutate(|x| x.insert(nft_id, auction.end_block));
-				Auctions::<T>::insert(nft_id, auction);
-			});
+			for auction in self.auctions.clone() {
+				let nft_id = auction.0;
+				Deadlines::<T>::mutate(|x| x.insert(nft_id, auction.3));
+
+				let bidders = BidderList { list: auction.6 .0, max_size: auction.6 .1 };
+				let data = AuctionData {
+					creator: auction.1,
+					start_block: auction.2,
+					end_block: auction.3,
+					start_price: auction.4,
+					buy_it_price: auction.5,
+					bidders,
+					marketplace_id: auction.7,
+					is_extended: auction.8,
+				};
+				Auctions::<T>::insert(nft_id, data);
+			}
 			BidHistorySize::<T>::set(self.bid_history_size);
 		}
 	}
