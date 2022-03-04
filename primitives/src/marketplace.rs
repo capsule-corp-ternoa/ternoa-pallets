@@ -20,17 +20,27 @@ pub enum MarketplaceType {
 }
 
 impl MarketplaceType {
-	pub fn from(num: u8) -> Result<MarketplaceType, ()> {
+	pub fn from_raw(num: u8) -> Result<MarketplaceType, ()> {
 		match num {
 			0 => Ok(MarketplaceType::Public),
 			1 => Ok(MarketplaceType::Private),
 			_ => Err(()),
 		}
 	}
+
+	pub fn to_raw(&self) -> u8 {
+		match self {
+			MarketplaceType::Public => 0,
+			MarketplaceType::Private => 1,
+		}
+	}
 }
 
 #[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo)]
-pub struct MarketplaceData<AccountId> {
+pub struct MarketplaceData<AccountId>
+where
+	AccountId: Clone,
+{
 	pub kind: MarketplaceType,
 	pub commission_fee: MarketplaceCommission,
 	pub owner: AccountId,
@@ -42,7 +52,10 @@ pub struct MarketplaceData<AccountId> {
 	pub description: Option<TextFormat>,
 }
 
-impl<AccountId> MarketplaceData<AccountId> {
+impl<AccountId> MarketplaceData<AccountId>
+where
+	AccountId: Clone,
+{
 	pub fn new(
 		kind: MarketplaceType,
 		commission_fee: MarketplaceCommission,
@@ -64,6 +77,36 @@ impl<AccountId> MarketplaceData<AccountId> {
 			uri,
 			logo_uri,
 			description,
+		}
+	}
+
+	pub fn to_raw(&self, market_id: MarketplaceId) -> MarketplacesGenesis<AccountId> {
+		(
+			market_id,
+			self.kind.to_raw(),
+			self.commission_fee,
+			self.owner.clone(),
+			self.allow_list.clone(),
+			self.disallow_list.clone(),
+			self.name.clone(),
+			self.uri.clone(),
+			self.logo_uri.clone(),
+			self.description.clone(),
+		)
+	}
+
+	pub fn from_raw(raw: MarketplacesGenesis<AccountId>) -> Self {
+		let kind = MarketplaceType::from_raw(raw.1).expect("Cannot fail.");
+		Self {
+			kind,
+			commission_fee: raw.2,
+			owner: raw.3,
+			allow_list: raw.4,
+			disallow_list: raw.5,
+			name: raw.6,
+			uri: raw.7,
+			logo_uri: raw.8,
+			description: raw.9,
 		}
 	}
 }

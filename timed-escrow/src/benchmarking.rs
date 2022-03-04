@@ -1,4 +1,4 @@
-#![cfg(feature = "runtime-benchmarks")]
+/* #![cfg(feature = "runtime-benchmarks")]
 
 use crate::{Call, Config, Pallet};
 use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite};
@@ -57,3 +57,4 @@ impl_benchmark_test_suite!(
 	crate::tests::mock::new_test_ext(),
 	crate::tests::mock::Test
 );
+ */

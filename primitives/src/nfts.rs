@@ -69,6 +69,33 @@ where
 	) -> Self {
 		Self::new(owner.clone(), owner, ipfs_reference, series_id, false, false, false, None)
 	}
+
+	pub fn to_raw(&self, nft_id: NFTId) -> NFTsGenesis<AccountId> {
+		(
+			nft_id,
+			self.owner.clone(),
+			self.creator.clone(),
+			self.ipfs_reference.clone(),
+			self.series_id.clone(),
+			self.listed_for_sale,
+			self.in_transmission,
+			self.converted_to_capsule,
+			self.viewer.clone(),
+		)
+	}
+
+	pub fn from_raw(raw: NFTsGenesis<AccountId>) -> Self {
+		Self {
+			owner: raw.1,
+			creator: raw.2,
+			ipfs_reference: raw.3,
+			series_id: raw.4,
+			listed_for_sale: raw.5,
+			in_transmission: raw.6,
+			converted_to_capsule: raw.7,
+			viewer: raw.8,
+		}
+	}
 }
 
 // nft_id, owner, creator, ipfs, series, for sale, in transmission, is capsule, viewer
@@ -77,15 +104,29 @@ pub type NFTsGenesis<AccountId> =
 
 /// Data related to an NFT Series.
 #[derive(Encode, Decode, Clone, PartialEq, Eq, Default, RuntimeDebug, TypeInfo)]
-pub struct NFTSeriesDetails<AccountId> {
+pub struct NFTSeriesDetails<AccountId>
+where
+	AccountId: Clone,
+{
 	pub owner: AccountId, // Series Owner
 	pub draft: bool,      /* If Yes, the owner can add new nfts to that series but cannot list
 	                       * that nft for sale */
 }
 
-impl<AccountId> NFTSeriesDetails<AccountId> {
+impl<AccountId> NFTSeriesDetails<AccountId>
+where
+	AccountId: Clone,
+{
 	pub fn new(owner: AccountId, draft: bool) -> Self {
 		Self { owner, draft }
+	}
+
+	pub fn to_raw(&self, series_id: NFTSeriesId) -> SeriesGenesis<AccountId> {
+		(series_id, self.owner.clone(), self.draft)
+	}
+
+	pub fn from_raw(raw: SeriesGenesis<AccountId>) -> Self {
+		Self { owner: raw.1, draft: raw.2 }
 	}
 }
 

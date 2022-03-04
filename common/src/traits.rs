@@ -60,7 +60,7 @@ pub trait NFTTrait {
 
 /// Trait that implements basic functionalities related to Ternoa Marketplace
 /// TODO: Expand trait with more useful functions
-pub trait MarketplaceTrait<AccountId> {
+pub trait MarketplaceTrait<AccountId: Clone> {
 	/// Return if an account is permitted to list on given marketplace
 	fn is_allowed_to_list(marketplace_id: MarketplaceId, account_id: AccountId) -> DispatchResult;
 

@@ -716,12 +716,9 @@ pub mod pallet {
 			}
 
 			for market in self.marketplaces.clone() {
-				let kind = MarketplaceType::from(market.1).expect("This cannot fail.");
-				let data = MarketplaceData::new(
-					kind, market.2, market.3, market.4, market.5, market.6, market.7, market.8,
-					market.9,
-				);
-				Marketplaces::<T>::insert(market.0, data);
+				let market_id = market.0;
+				let data = MarketplaceData::from_raw(market);
+				Marketplaces::<T>::insert(market_id, data);
 			}
 
 			MarketplaceMintFee::<T>::put(self.marketplace_mint_fee);

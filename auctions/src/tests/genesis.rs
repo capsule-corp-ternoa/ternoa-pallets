@@ -22,7 +22,7 @@ fn genesis() {
 	};
 
 	let deadlines = DeadlineList(vec![(ALICE_NFT_ID, auction.end_block)]);
-	let auctions = vec![(ALICE_NFT_ID, auction)];
+	let auctions = vec![auction.clone().to_raw(ALICE_NFT_ID)];
 
 	GenesisConfig::<Test> { auctions: auctions.clone(), bid_history_size }
 		.assimilate_storage(&mut t)
@@ -31,7 +31,9 @@ fn genesis() {
 	let mut ext = sp_io::TestExternalities::new(t);
 	ext.execute_with(|| {
 		for auction in auctions {
-			assert_eq!(Auctions::auctions(auction.0), Some(auction.1));
+			let nft_id = auction.0;
+			let auction = AuctionData::from_raw(auction);
+			assert_eq!(Auctions::auctions(nft_id), Some(auction));
 		}
 		assert_eq!(Auctions::bid_history_size(), bid_history_size);
 		assert_eq!(Auctions::deadlines(), deadlines);

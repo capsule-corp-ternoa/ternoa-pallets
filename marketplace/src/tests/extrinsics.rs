@@ -137,7 +137,6 @@ fn unlist_unhappy() {
 fn buy_happy() {
 	ExtBuilder::default()
 		.caps(vec![(ALICE, 1000), (BOB, 1000), (DAVE, 1000)])
-		.tiime(vec![(ALICE, 1000), (BOB, 1000), (DAVE, 1000)])
 		.build()
 		.execute_with(|| {
 			let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
@@ -186,7 +185,6 @@ fn buy_happy() {
 fn buy_unhappy() {
 	ExtBuilder::default()
 		.caps(vec![(ALICE, 100), (BOB, 100)])
-		.tiime(vec![(ALICE, 100), (BOB, 100)])
 		.build()
 		.execute_with(|| {
 			let alice: mock::Origin = RawOrigin::Signed(ALICE).into();

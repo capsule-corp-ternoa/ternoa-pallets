@@ -380,39 +380,24 @@ pub mod pallet {
 	#[pallet::genesis_build]
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
+			for series in self.series.clone() {
+				let series_id = series.0.clone();
+				let series = NFTSeriesDetails::from_raw(series);
+				Series::<T>::insert(series_id, series);
+			}
+
 			self.series.clone().into_iter().for_each(|(series_id, owner, draft)| {
 				let series = NFTSeriesDetails::new(owner, draft);
 				Series::<T>::insert(series_id, series);
 			});
 
 			let mut current_nft_id: NFTId = 0;
-			self.nfts.clone().into_iter().for_each(
-				|(
-					nft_id,
-					owner,
-					creator,
-					ipfs_reference,
-					series_id,
-					listed_for_sale,
-					in_transmission,
-					converted_to_capsule,
-					viewer,
-				)| {
-					let data = NFTData::new(
-						owner,
-						creator,
-						ipfs_reference,
-						series_id,
-						listed_for_sale,
-						in_transmission,
-						converted_to_capsule,
-						viewer,
-					);
-
-					Data::<T>::insert(nft_id, data);
-					current_nft_id = current_nft_id.max(nft_id);
-				},
-			);
+			for nft in self.nfts.clone() {
+				let nft_id = nft.0;
+				let data = NFTData::from_raw(nft);
+				Data::<T>::insert(nft_id, data);
+				current_nft_id = current_nft_id.max(nft_id);
+			}
 
 			if !self.nfts.is_empty() {
 				current_nft_id += 1;

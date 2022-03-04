@@ -1,4 +1,4 @@
-use crate::{self as ternoa_timed_escrow, Config};
+/* use crate::{self as ternoa_timed_escrow, Config};
 use frame_benchmarking::account;
 use frame_support::{
 	parameter_types,
@@ -201,3 +201,4 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 
 	t.into()
 }
+ */

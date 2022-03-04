@@ -3,10 +3,7 @@ use frame_support::{
 	parameter_types,
 	traits::{ConstU32, Contains, GenesisBuild},
 };
-use primitives::{
-	marketplace::MarketplaceType,
-	nfts::{NFTData, NFTSeriesDetails},
-};
+use primitives::marketplace::{MarketplaceType, MarketplacesGenesis};
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
@@ -132,11 +129,10 @@ impl Config for Test {
 }
 
 pub struct ExtBuilder {
-	nfts: Vec<(u32, NFTData<u64>)>,
-	series: Vec<(Vec<u8>, NFTSeriesDetails<u64>)>,
+	nfts: Vec<primitives::nfts::NFTsGenesis<u64>>,
+	series: Vec<primitives::nfts::SeriesGenesis<u64>>,
 	caps_endowed_accounts: Vec<(u64, u128)>,
-	tiime_endowed_accounts: Vec<(u64, u128)>,
-	marketplaces: Vec<(u64, MarketplaceType, u8, Vec<u8>)>,
+	marketplaces: Vec<MarketplacesGenesis<u64>>,
 }
 
 impl Default for ExtBuilder {
@@ -145,7 +141,6 @@ impl Default for ExtBuilder {
 			nfts: Vec::new(),
 			series: Vec::new(),
 			caps_endowed_accounts: Vec::new(),
-			tiime_endowed_accounts: Vec::new(),
 			marketplaces: Vec::new(),
 		}
 	}
@@ -155,13 +150,6 @@ impl ExtBuilder {
 	pub fn caps(mut self, accounts: Vec<(u64, u128)>) -> Self {
 		for account in accounts {
 			self.caps_endowed_accounts.push(account);
-		}
-		self
-	}
-
-	pub fn tiime(mut self, accounts: Vec<(u64, u128)>) -> Self {
-		for account in accounts {
-			self.tiime_endowed_accounts.push(account);
 		}
 		self
 	}
@@ -181,42 +169,22 @@ impl ExtBuilder {
 		.assimilate_storage(&mut t)
 		.unwrap();
 
-		let mut marketplaces = vec![(
+		let market = MarketplaceData::new(
+			MarketplaceType::Public,
 			0,
-			MarketplaceData::new(
-				MarketplaceType::Public,
-				0,
-				ALICE,
-				Default::default(),
-				vec![],
-				"Ternoa marketplace".into(),
-				None,
-				None,
-				None,
-			),
-		)];
-		let mut i = 1;
-		for market in self.marketplaces {
-			marketplaces.push((
-				i,
-				MarketplaceData::new(
-					market.1,
-					market.2,
-					market.0,
-					vec![],
-					vec![],
-					market.3,
-					None,
-					None,
-					None,
-				),
-			));
-
-			i += 1;
-		}
+			ALICE,
+			Default::default(),
+			vec![],
+			"Ternoa marketplace".into(),
+			None,
+			None,
+			None,
+		);
+		let mut marketplaces: Vec<MarketplacesGenesis<u64>> = vec![market.to_raw(0)];
+		marketplaces.extend(self.marketplaces);
 
 		ternoa_marketplace::GenesisConfig::<Test> {
-			nfts_for_sale: Default::default(),
+			nfts: Default::default(),
 			marketplaces,
 			marketplace_mint_fee: 250,
 		}
