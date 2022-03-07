@@ -32,8 +32,12 @@ where
 	pub in_transmission: bool,
 	// Is NFT converted to capsule
 	pub converted_to_capsule: bool,
-	// NFT Viewer
-	pub viewer: Option<AccountId>,
+	// Is secret
+	pub is_secret: bool,
+	// Delegated
+	pub is_delegated: bool,
+	// Royalties fee
+	pub royalties: u8,
 }
 
 impl<AccountId> NFTData<AccountId>
@@ -48,7 +52,9 @@ where
 		listed_for_sale: bool,
 		in_transmission: bool,
 		converted_to_capsule: bool,
-		viewer: Option<AccountId>,
+		is_secret: bool,
+		is_delegated: bool,
+		royalties: u8,
 	) -> Self {
 		Self {
 			owner,
@@ -58,7 +64,9 @@ where
 			listed_for_sale,
 			in_transmission,
 			converted_to_capsule,
-			viewer,
+			is_secret,
+			is_delegated,
+			royalties,
 		}
 	}
 
@@ -67,7 +75,7 @@ where
 		ipfs_reference: TextFormat,
 		series_id: NFTSeriesId,
 	) -> Self {
-		Self::new(owner.clone(), owner, ipfs_reference, series_id, false, false, false, None)
+		Self::new(owner.clone(), owner, ipfs_reference, series_id, false, false, false, false, false, 0)
 	}
 
 	pub fn to_raw(&self, nft_id: NFTId) -> NFTsGenesis<AccountId> {
