@@ -146,7 +146,7 @@ pub mod pallet {
 			ensure!(!nft.listed_for_sale, Error::<T>::CannotCreateCapsulesFromNFTsListedForSale);
 			ensure!(!nft.in_transmission, Error::<T>::CannotCreateCapsulesFromNFTsInTransmission);
 			ensure!(!nft.converted_to_capsule, Error::<T>::CannotCreateCapsulesFromCapsules);
-			ensure!(nft.viewer.is_none(), Error::<T>::CannotCreateCapsulesFromDelegatedNFTs);
+			ensure!(!nft.is_delegated, Error::<T>::CannotCreateCapsulesFromDelegatedNFTs);
 
 			// Reserve funds
 			let amount = CapsuleMintFee::<T>::get();
