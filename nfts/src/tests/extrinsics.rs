@@ -23,11 +23,12 @@ mod create {
 			let alice_balance = Balances::free_balance(ALICE);
 
 			// Create NFT with new serie id while there is no series already registered
-			assert_ok!(NFTs::create(
+			let ok = NFTs::create(
 				origin(ALICE),
 				data.ipfs_reference.clone(),
 				Some(data.series_id.clone()),
-			));
+			);
+			assert_ok!(ok);
 			let nft_id = NFTs::nft_id_generator() - 1;
 
 			// Final state checks
@@ -54,19 +55,17 @@ mod create {
 	fn create_ok_associated_with_existing_serie() {
 		ExtBuilder::new_build(vec![(ALICE, 1000)]).execute_with(|| {
 			let alice: mock::Origin = origin(ALICE);
-			let series_id = vec![50];
-			let ipfs_1_reference = vec![1];
-			let ipfs_2_reference = vec![2];
-			let data_1 = NFTData::new_default(ALICE, ipfs_1_reference.clone(), series_id.clone());
-			let data_2 = NFTData::new_default(ALICE, ipfs_2_reference.clone(), series_id.clone());
+			let data_1 = NFTData::new_default(ALICE, vec![1], vec![50]);
+			let data_2 = NFTData::new_default(ALICE, vec![2], vec![50]);
 			let alice_balance = Balances::free_balance(ALICE);
 
 			// Create NFT with new serie id while there is no series already registered
-			assert_ok!(NFTs::create(
+			let ok = NFTs::create(
 				alice.clone(),
 				data_1.ipfs_reference.clone(),
 				Some(data_1.series_id.clone()),
-			));
+			);
+			assert_ok!(ok);
 			let nft_1_id = NFTs::nft_id_generator() - 1;
 
 			// NFT Id check
@@ -77,18 +76,19 @@ mod create {
 				nft_id: nft_1_id,
 				owner: data_1.owner,
 				series_id: data_1.series_id.clone(),
-				ipfs_reference: ipfs_1_reference,
+				ipfs_reference: data_1.ipfs_reference.clone(),
 				mint_fee: NFTs::nft_mint_fee(),
 			};
 			let event = Event::NFTs(event);
 			assert_eq!(System::events().last().unwrap().event, event);
 
 			// Create NFT associated with existing serie
-			assert_ok!(NFTs::create(
+			let ok = NFTs::create(
 				alice.clone(),
 				data_2.ipfs_reference.clone(),
 				Some(data_2.series_id.clone()),
-			));
+			);
+			assert_ok!(ok);
 			let nft_2_id = NFTs::nft_id_generator() - 1;
 
 			// NFT Id check
@@ -96,9 +96,10 @@ mod create {
 
 			// Final state checks
 			assert_eq!(NFTs::series_id_generator(), 0);
-			assert_eq!(NFTs::series(&data_1.series_id), Some(NFTSeriesDetails::new(ALICE, true)));
-			assert_eq!(NFTs::series(&data_2.series_id), Some(NFTSeriesDetails::new(ALICE, true)));
-			assert_eq!(NFTs::data(0), Some(data_1.clone()));
+			let nft_series_details = Some(NFTSeriesDetails::new(ALICE, true));
+			assert_eq!(NFTs::series(&data_1.series_id), nft_series_details);
+			assert_eq!(NFTs::series(&data_2.series_id), nft_series_details.clone());
+			assert_eq!(NFTs::data(0), Some(data_1));
 			assert_eq!(NFTs::data(1), Some(data_2.clone()));
 			assert_eq!(Balances::free_balance(ALICE), alice_balance - NFTs::nft_mint_fee() * 2);
 
@@ -106,8 +107,8 @@ mod create {
 			let event = NFTsEvent::NFTCreated {
 				nft_id: nft_2_id,
 				owner: data_2.owner,
-				series_id: data_2.series_id.clone(),
-				ipfs_reference: ipfs_2_reference,
+				series_id: data_2.series_id,
+				ipfs_reference: data_2.ipfs_reference,
 				mint_fee: NFTs::nft_mint_fee(),
 			};
 			let event = Event::NFTs(event);
@@ -116,7 +117,7 @@ mod create {
 	}
 
 	#[test]
-	fn create_error_too_short_name() {
+	fn ipfs_reference_is_too_short() {
 		ExtBuilder::new_build(vec![(ALICE, 1)]).execute_with(|| {
 			let alice: mock::Origin = origin(ALICE);
 
@@ -127,7 +128,7 @@ mod create {
 	}
 
 	#[test]
-	fn create_error_too_long_name() {
+	fn ipfs_reference_is_too_long() {
 		ExtBuilder::new_build(vec![(ALICE, 1)]).execute_with(|| {
 			let alice: mock::Origin = origin(ALICE);
 
@@ -138,7 +139,7 @@ mod create {
 	}
 
 	#[test]
-	fn create_error_not_enough_caps_to_mint_nft() {
+	fn insufficient_balance() {
 		ExtBuilder::new_build(vec![(ALICE, 1)]).execute_with(|| {
 			let alice: mock::Origin = origin(ALICE);
 
@@ -149,12 +150,13 @@ mod create {
 	}
 
 	#[test]
-	fn create_error_not_the_owner_of_the_serie() {
+	fn not_the_series_owner() {
 		ExtBuilder::new_build(vec![(ALICE, 100), (BOB, 100)]).execute_with(|| {
 			let bob: mock::Origin = origin(BOB);
 
 			let series_id = Some(vec![50]);
-			assert_ok!(NFTs::create(origin(ALICE), vec![50], series_id.clone()));
+			let ok = NFTs::create(origin(ALICE), vec![50], series_id.clone());
+			assert_ok!(ok);
 
 			// Should fail and storage should remain empty
 			assert_noop!(
@@ -166,12 +168,13 @@ mod create {
 	}
 
 	#[test]
-	fn create_error_locked_serie() {
+	fn cannot_create_nft_with_completed_series() {
 		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
 			let alice: mock::Origin = origin(ALICE);
 
 			let series_id = Some(vec![51]);
-			assert_ok!(NFTs::create(alice.clone(), vec![50], series_id.clone()));
+			let ok = NFTs::create(alice.clone(), vec![50], series_id.clone());
+			assert_ok!(ok);
 			NFTs::finish_series(alice.clone(), series_id.clone().unwrap()).unwrap();
 
 			// Should fail and storage should remain empty
@@ -201,7 +204,8 @@ mod transfer {
 			assert_eq!(nft.creator, ALICE);
 
 			// Transfer nft ownership from ALICE to BOB
-			assert_ok!(NFTs::transfer(alice.clone(), nft_id, BOB));
+			let ok = NFTs::transfer(alice.clone(), nft_id, BOB);
+			assert_ok!(ok);
 
 			// Final state checks
 			let nft = NFTs::data(nft_id).unwrap();
@@ -216,7 +220,7 @@ mod transfer {
 	}
 
 	#[test]
-	fn transfer_error_unknown_nft() {
+	fn nft_not_found() {
 		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
 			let alice: mock::Origin = origin(ALICE);
 
@@ -230,7 +234,7 @@ mod transfer {
 	}
 
 	#[test]
-	fn transfer_error_uncompleted_serie() {
+	fn cannot_transfer_nfts_in_uncompleted_series() {
 		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
 			let alice: mock::Origin = origin(ALICE);
 			let nft_id = <NFTs as NFTTrait>::create_nft(ALICE, vec![0], None).unwrap();
@@ -245,7 +249,7 @@ mod transfer {
 	}
 
 	#[test]
-	fn transfer_error_listed_for_sale() {
+	fn cannot_transfer_nfts_listed_for_sale() {
 		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
 			let alice: mock::Origin = origin(ALICE);
 			let nft_id = <NFTs as NFTTrait>::create_nft(ALICE, vec![0], None).unwrap();
@@ -261,7 +265,7 @@ mod transfer {
 	}
 
 	#[test]
-	fn transfer_error_converted_to_capsule() {
+	fn cannot_transfer_capsules() {
 		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
 			let alice: mock::Origin = origin(ALICE);
 			let nft_id = <NFTs as NFTTrait>::create_nft(ALICE, vec![0], None).unwrap();
@@ -277,7 +281,7 @@ mod transfer {
 	}
 
 	#[test]
-	fn transfer_error_in_transmission() {
+	fn cannot_transfer_nfts_in_transmission() {
 		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
 			let alice: mock::Origin = origin(ALICE);
 			let nft_id = <NFTs as NFTTrait>::create_nft(ALICE, vec![0], None).unwrap();
@@ -293,10 +297,11 @@ mod transfer {
 	}
 
 	#[test]
-	fn transfer_error_delegated_nfts() {
+	fn cannot_transfer_delegated_nfts() {
 		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
 			let nft_id = <NFTs as NFTTrait>::create_nft(ALICE, vec![0], None).unwrap();
-			assert_ok!(NFTs::set_viewer(nft_id, Some(BOB)));
+			let ok = NFTs::set_viewer(nft_id, Some(BOB));
+			assert_ok!(ok);
 
 			// Try to transfer a delegated nft
 			// Should fail and storage should remain empty
@@ -321,7 +326,8 @@ mod burn {
 			assert_eq!(NFTs::data(nft_id).is_some(), true);
 
 			// Burning the nft
-			assert_ok!(NFTs::burn(alice.clone(), nft_id));
+			let ok = NFTs::burn(alice.clone(), nft_id);
+			assert_ok!(ok);
 
 			// Final state checks
 			assert_eq!(NFTs::data(nft_id).is_some(), false);
@@ -334,7 +340,7 @@ mod burn {
 	}
 
 	#[test]
-	fn burn_error_unknown_nft() {
+	fn nft_not_found() {
 		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
 			let alice: mock::Origin = origin(ALICE);
 
@@ -345,7 +351,7 @@ mod burn {
 	}
 
 	#[test]
-	fn burn_error_not_the_owner() {
+	fn not_the_nft_owner() {
 		ExtBuilder::new_build(vec![(ALICE, 100), (BOB, 100)]).execute_with(|| {
 			let alice: mock::Origin = origin(ALICE);
 			let nft_id = <NFTs as NFTTrait>::create_nft(BOB, vec![1], Some(vec![3])).unwrap();
@@ -357,7 +363,7 @@ mod burn {
 	}
 
 	#[test]
-	fn burn_error_lited_for_sale() {
+	fn cannot_burn_nfts_listed_for_sale() {
 		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
 			let alice: mock::Origin = origin(ALICE);
 			let nft_id = <NFTs as NFTTrait>::create_nft(ALICE, vec![1], Some(vec![2])).unwrap();
@@ -373,7 +379,7 @@ mod burn {
 	}
 
 	#[test]
-	fn burn_error_converted_to_capsule() {
+	fn cannot_burn_capsules() {
 		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
 			let alice: mock::Origin = origin(ALICE);
 			let nft_id = <NFTs as NFTTrait>::create_nft(ALICE, vec![1], Some(vec![2])).unwrap();
@@ -386,10 +392,11 @@ mod burn {
 	}
 
 	#[test]
-	fn burn_error_delegated_nft() {
+	fn cannot_burn_delegated_nfts() {
 		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
 			let nft_id = <NFTs as NFTTrait>::create_nft(ALICE, vec![0], None).unwrap();
-			assert_ok!(NFTs::set_viewer(nft_id, Some(BOB)));
+			let ok = NFTs::set_viewer(nft_id, Some(BOB));
+			assert_ok!(ok);
 
 			// Try to burn a delegated nft
 			// Should fail and storage should remain empty
@@ -409,7 +416,8 @@ mod delegate {
 			let viewer = Some(BOB);
 
 			// Delegating nft to another account
-			assert_ok!(NFTs::delegate(origin(ALICE), nft_id, viewer.clone()));
+			let ok = NFTs::delegate(origin(ALICE), nft_id, viewer.clone());
+			assert_ok!(ok);
 
 			// Final state checks
 			nft.viewer = viewer.clone();
@@ -423,7 +431,7 @@ mod delegate {
 	}
 
 	#[test]
-	fn delegate_error_unknown_nft() {
+	fn nft_not_found() {
 		ExtBuilder::new_build(vec![]).execute_with(|| {
 			let alice: mock::Origin = origin(ALICE);
 
@@ -434,7 +442,7 @@ mod delegate {
 	}
 
 	#[test]
-	fn delegate_error_not_the_nft_owner() {
+	fn not_the_nft_owner() {
 		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
 			let bob: mock::Origin = origin(BOB);
 			let nft_id = <NFTs as NFTTrait>::create_nft(ALICE, vec![0], None).unwrap();
@@ -446,10 +454,11 @@ mod delegate {
 	}
 
 	#[test]
-	fn delegate_error_nfts_listed_for_sale() {
+	fn cannot_delegate_nfts_listed_for_sale() {
 		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
 			let nft_id = <NFTs as NFTTrait>::create_nft(ALICE, vec![0], None).unwrap();
-			assert_ok!(NFTs::set_listed_for_sale(nft_id, true));
+			let ok = NFTs::set_listed_for_sale(nft_id, true);
+			assert_ok!(ok);
 
 			// Try to delegate an nft that is listed for sale
 			// Should fail and storage should remain empty
@@ -461,10 +470,11 @@ mod delegate {
 	}
 
 	#[test]
-	fn delegate_error_converted_to_capsule() {
+	fn cannot_delegate_capsules() {
 		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
 			let nft_id = <NFTs as NFTTrait>::create_nft(ALICE, vec![0], None).unwrap();
-			assert_ok!(NFTs::set_converted_to_capsule(nft_id, true));
+			let ok = NFTs::set_converted_to_capsule(nft_id, true);
+			assert_ok!(ok);
 
 			// Try to delegate an nft that has been converted to capsule
 			// Should fail and storage should remain empty
@@ -476,10 +486,11 @@ mod delegate {
 	}
 
 	#[test]
-	fn delegate_error_nft_in_transmission() {
+	fn cannot_delegate_nfts_in_transmission() {
 		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
 			let nft_id = <NFTs as NFTTrait>::create_nft(ALICE, vec![0], None).unwrap();
-			assert_ok!(NFTs::set_in_transmission(nft_id, true));
+			let ok = NFTs::set_in_transmission(nft_id, true);
+			assert_ok!(ok);
 
 			// Try to delegate an nft that is in transmission
 			// Should fail and storage should remain empty
@@ -491,7 +502,7 @@ mod delegate {
 	}
 
 	#[test]
-	fn delegate_error_to_yourself() {
+	fn cannot_delegate_nfts_to_yourself() {
 		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
 			let nft_id = <NFTs as NFTTrait>::create_nft(ALICE, vec![0], None).unwrap();
 
@@ -513,11 +524,13 @@ mod finish_series {
 		ExtBuilder::new_build(vec![(ALICE, 1000)]).execute_with(|| {
 			let alice: mock::Origin = origin(ALICE);
 			let series_id = vec![50];
-			assert_ok!(NFTs::create(origin(ALICE), vec![1], Some(series_id.clone())));
+			let ok = NFTs::create(origin(ALICE), vec![1], Some(series_id.clone()));
+			assert_ok!(ok);
 			assert_eq!(NFTs::series(&series_id).unwrap().draft, true);
 
 			// Finish the serie
-			assert_ok!(NFTs::finish_series(alice.clone(), series_id.clone()));
+			let ok = NFTs::finish_series(alice.clone(), series_id.clone());
+			assert_ok!(ok);
 
 			// Final state checks
 			assert_eq!(NFTs::series(&series_id).unwrap().draft, false);
@@ -530,7 +543,7 @@ mod finish_series {
 	}
 
 	#[test]
-	fn finish_series_error_unknown_serie() {
+	fn series_not_found() {
 		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
 			let alice: mock::Origin = origin(ALICE);
 
@@ -544,11 +557,12 @@ mod finish_series {
 	}
 
 	#[test]
-	fn finish_series_error_not_owner() {
+	fn not_the_series_owner() {
 		ExtBuilder::new_build(vec![(ALICE, 100), (BOB, 100)]).execute_with(|| {
 			let alice: mock::Origin = origin(ALICE);
 			let series_id = vec![3];
-			assert_ok!(NFTs::create(origin(BOB), vec![1], Some(series_id.clone())));
+			let ok = NFTs::create(origin(BOB), vec![1], Some(series_id.clone()));
+			assert_ok!(ok);
 
 			// Try to finish serie as no owner
 			// Should fail and storage should remain empty
@@ -571,7 +585,8 @@ mod set_nft_mint_fee {
 			assert_eq!(NFTs::nft_mint_fee(), old_mint_fee);
 
 			// Change the mint fee
-			assert_ok!(NFTs::set_nft_mint_fee(root(), new_mint_fee));
+			let ok = NFTs::set_nft_mint_fee(root(), new_mint_fee);
+			assert_ok!(ok);
 
 			// Final state checks
 			assert_eq!(NFTs::nft_mint_fee(), new_mint_fee);
@@ -584,7 +599,7 @@ mod set_nft_mint_fee {
 	}
 
 	#[test]
-	fn set_nft_mint_fee_error_non_root() {
+	fn bad_origin() {
 		ExtBuilder::new_build(vec![(ALICE, 10000)]).execute_with(|| {
 			let alice: mock::Origin = origin(ALICE);
 
