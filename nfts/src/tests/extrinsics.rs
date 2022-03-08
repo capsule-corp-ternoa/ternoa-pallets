@@ -469,7 +469,7 @@ mod delegate {
 	use super::*;
 
 	#[test]
-	fn delegate_ok() {
+	fn delegate_ok_to_a_viewer() {
 		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
 			let mut nft = NFTs::data(ALICE_NFT_ID).unwrap();
 			let viewer = Some(BOB);
@@ -486,6 +486,42 @@ mod delegate {
 			let event = NFTsEvent::NFTDelegated { nft_id: ALICE_NFT_ID, viewer };
 			let event = Event::NFTs(event);
 			assert_eq!(System::events().last().unwrap().event, event);
+		})
+	}
+
+	#[test]
+	fn delegate_ok_to_none() {
+		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
+			// Initial state
+			let alice = origin(ALICE);
+			let nft_id = <NFTs as NFTTrait>::create_nft(ALICE, vec![0], None).unwrap();
+			let viewer = Some(BOB);
+
+			// Delegating nft to another account
+			assert_ok!(NFTs::delegate(alice.clone(), nft_id, viewer));
+
+			// Events checks
+			assert_eq!(
+				System::events().last().unwrap().event,
+				Event::NFTs(NFTsEvent::NFTDelegated { nft_id, viewer })
+			);
+
+			// state checks
+			assert_eq!(NFTs::data(nft_id).as_ref().unwrap().is_delegated, true);
+			assert_eq!(NFTs::delegated_nfts(nft_id), Some(BOB));
+
+			// Delegating nft to None (canceling delegation)
+			assert_ok!(NFTs::delegate(alice, nft_id, None));
+
+			// Events checks
+			assert_eq!(
+				System::events().last().unwrap().event,
+				Event::NFTs(NFTsEvent::NFTDelegated { nft_id, viewer: None })
+			);
+
+			// Final state checks
+			assert_eq!(NFTs::data(nft_id).as_ref().unwrap().is_delegated, false);
+			assert_eq!(NFTs::delegated_nfts(nft_id), None);
 		})
 	}
 

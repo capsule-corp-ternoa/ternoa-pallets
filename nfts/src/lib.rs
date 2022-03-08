@@ -244,17 +244,17 @@ pub mod pallet {
 					ensure!(!data.listed_for_sale, Error::<T>::CannotDelegateNFTsListedForSale);
 					ensure!(!data.converted_to_capsule, Error::<T>::CannotDelegateCapsules);
 					ensure!(!data.in_transmission, Error::<T>::CannotDelegateNFTsInTransmission);
-		
+
 					if let Some(viewer) = &viewer {
 						ensure!(who != *viewer, Error::<T>::CannotDelegateNFTsToYourself);
 					}
-		
+
 					Data::<T>::try_mutate(nft_id, |maybe_data| -> DispatchResult {
 						let data = maybe_data.as_mut().ok_or(Error::<T>::NFTNotFound)?;
 						data.is_delegated = viewer.is_some();
 						Ok(().into())
 					})?;
-		
+
 					match viewer.as_ref() {
 						Some(v) => DelegatedNFTs::<T>::insert(nft_id, v),
 						None => DelegatedNFTs::<T>::remove(nft_id),
@@ -262,7 +262,6 @@ pub mod pallet {
 				},
 				None => return Err(Error::<T>::NFTNotFound)?,
 			}
-
 
 			let event = Event::NFTDelegated { nft_id, viewer };
 			Self::deposit_event(event);
@@ -352,15 +351,16 @@ pub mod pallet {
 	#[pallet::getter(fn data)]
 	pub type Data<T: Config> =
 		StorageMap<_, Blake2_128Concat, NFTId, NFTData<T::AccountId>, OptionQuery>;
-	
+
 	#[pallet::storage]
 	#[pallet::getter(fn secret_nfts)]
-	pub type SecretNFTs<T: Config> = StorageMap<_, Blake2_128Concat, NFTId, TextFormat, OptionQuery>;
-	
-	
+	pub type SecretNFTs<T: Config> =
+		StorageMap<_, Blake2_128Concat, NFTId, TextFormat, OptionQuery>;
+
 	#[pallet::storage]
 	#[pallet::getter(fn delegated_nfts)]
-	pub type DelegatedNFTs<T: Config> = StorageMap<_, Blake2_128Concat, NFTId, T::AccountId, OptionQuery>;
+	pub type DelegatedNFTs<T: Config> =
+		StorageMap<_, Blake2_128Concat, NFTId, T::AccountId, OptionQuery>;
 
 	/// Data related to NFT Series.
 	#[pallet::storage]
@@ -527,21 +527,6 @@ impl<T: Config> traits::NFTTrait for Pallet<T> {
 			series.draft = !value;
 			Ok(())
 		})?;
-
-		Ok(())
-	}
-
-	fn set_viewer(id: NFTId, value: Option<Self::AccountId>) -> DispatchResult {
-		match value.as_ref() {
-			Some(v) => {
-				DelegatedNFTs::<T>::try_mutate(id, |maybe_data| -> DispatchResult {
-					let viewer = maybe_data.as_mut().ok_or(Error::<T>::NFTNotFound)?;
-					*viewer = v.clone();
-					Ok(())
-				})?;
-			},
-			None => DelegatedNFTs::<T>::remove(id),
-		}
 
 		Ok(())
 	}

@@ -75,7 +75,18 @@ where
 		ipfs_reference: TextFormat,
 		series_id: NFTSeriesId,
 	) -> Self {
-		Self::new(owner.clone(), owner, ipfs_reference, series_id, false, false, false, false, false, 0)
+		Self::new(
+			owner.clone(),
+			owner,
+			ipfs_reference,
+			series_id,
+			false,
+			false,
+			false,
+			false,
+			false,
+			0,
+		)
 	}
 
 	pub fn to_raw(&self, nft_id: NFTId) -> NFTsGenesis<AccountId> {
