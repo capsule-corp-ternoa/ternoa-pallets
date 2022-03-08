@@ -119,10 +119,8 @@ mod create {
 	#[test]
 	fn ipfs_reference_is_too_short() {
 		ExtBuilder::new_build(vec![(ALICE, 1)]).execute_with(|| {
-			let alice: mock::Origin = origin(ALICE);
-
 			// Should fail and storage should remain empty
-			let ok = NFTs::create(alice.clone(), vec![], None);
+			let ok = NFTs::create(origin(ALICE), vec![], None);
 			assert_noop!(ok, Error::<Test>::IPFSReferenceIsTooShort);
 		})
 	}
@@ -130,10 +128,8 @@ mod create {
 	#[test]
 	fn ipfs_reference_is_too_long() {
 		ExtBuilder::new_build(vec![(ALICE, 1)]).execute_with(|| {
-			let alice: mock::Origin = origin(ALICE);
-
 			// Should fail and storage should remain empty
-			let ok = NFTs::create(alice.clone(), vec![1, 2, 3, 4, 5, 6], None);
+			let ok = NFTs::create(origin(ALICE), vec![1, 2, 3, 4, 5, 6], None);
 			assert_noop!(ok, Error::<Test>::IPFSReferenceIsTooLong);
 		})
 	}
@@ -141,10 +137,8 @@ mod create {
 	#[test]
 	fn insufficient_balance() {
 		ExtBuilder::new_build(vec![(ALICE, 1)]).execute_with(|| {
-			let alice: mock::Origin = origin(ALICE);
-
 			// Should fail and storage should remain empty
-			let ok = NFTs::create(alice.clone(), vec![1], None);
+			let ok = NFTs::create(origin(ALICE), vec![1], None);
 			assert_noop!(ok, BalanceError::<Test>::InsufficientBalance);
 		})
 	}
@@ -152,15 +146,13 @@ mod create {
 	#[test]
 	fn not_the_series_owner() {
 		ExtBuilder::new_build(vec![(ALICE, 100), (BOB, 100)]).execute_with(|| {
-			let bob: mock::Origin = origin(BOB);
-
 			let series_id = Some(vec![50]);
 			let ok = NFTs::create(origin(ALICE), vec![50], series_id.clone());
 			assert_ok!(ok);
 
 			// Should fail and storage should remain empty
 			assert_noop!(
-				NFTs::create(bob.clone(), vec![1], series_id),
+				NFTs::create(origin(BOB), vec![1], series_id),
 				Error::<Test>::NotTheSeriesOwner
 			);
 			assert_eq!(Balances::free_balance(BOB), 100);
@@ -175,7 +167,8 @@ mod create {
 			let series_id = Some(vec![51]);
 			let ok = NFTs::create(alice.clone(), vec![50], series_id.clone());
 			assert_ok!(ok);
-			NFTs::finish_series(alice.clone(), series_id.clone().unwrap()).unwrap();
+			let ok = NFTs::finish_series(alice.clone(), series_id.clone().unwrap());
+			assert_ok!(ok);
 
 			// Should fail and storage should remain empty
 			assert_noop!(
@@ -222,12 +215,10 @@ mod transfer {
 	#[test]
 	fn nft_not_found() {
 		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
-			let alice: mock::Origin = origin(ALICE);
-
 			// Try to transfer with an unknown nft id
 			// Should fail and storage should remain empty
 			assert_noop!(
-				NFTs::transfer(alice.clone(), INVALID_NFT_ID, BOB),
+				NFTs::transfer(origin(ALICE), INVALID_NFT_ID, BOB),
 				Error::<Test>::NFTNotFound
 			);
 		})
@@ -236,13 +227,12 @@ mod transfer {
 	#[test]
 	fn cannot_transfer_nfts_in_uncompleted_series() {
 		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
-			let alice: mock::Origin = origin(ALICE);
 			let nft_id = <NFTs as NFTTrait>::create_nft(ALICE, vec![0], None).unwrap();
 
 			// Try to transfer an nft that is part of an uncompleted serie
 			// Should fail and storage should remain empty
 			assert_noop!(
-				NFTs::transfer(alice.clone(), nft_id, BOB),
+				NFTs::transfer(origin(ALICE), nft_id, BOB),
 				Error::<Test>::CannotTransferNFTsInUncompletedSeries
 			);
 		})
@@ -251,14 +241,13 @@ mod transfer {
 	#[test]
 	fn cannot_transfer_nfts_listed_for_sale() {
 		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
-			let alice: mock::Origin = origin(ALICE);
 			let nft_id = <NFTs as NFTTrait>::create_nft(ALICE, vec![0], None).unwrap();
 			<NFTs as NFTTrait>::set_listed_for_sale(nft_id, true).unwrap();
 
 			// Try to transfer an nft that is listed for sale
 			// Should fail and storage should remain empty
 			assert_noop!(
-				NFTs::transfer(alice.clone(), nft_id, BOB),
+				NFTs::transfer(origin(ALICE), nft_id, BOB),
 				Error::<Test>::CannotTransferNFTsListedForSale
 			);
 		})
@@ -267,14 +256,13 @@ mod transfer {
 	#[test]
 	fn cannot_transfer_capsules() {
 		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
-			let alice: mock::Origin = origin(ALICE);
 			let nft_id = <NFTs as NFTTrait>::create_nft(ALICE, vec![0], None).unwrap();
 			<NFTs as NFTTrait>::set_converted_to_capsule(nft_id, true).unwrap();
 
 			// Try to transfer an nft that is converted to capsule
 			// Should fail and storage should remain empty
 			assert_noop!(
-				NFTs::transfer(alice.clone(), nft_id, BOB),
+				NFTs::transfer(origin(ALICE), nft_id, BOB),
 				Error::<Test>::CannotTransferCapsules
 			);
 		})
@@ -283,14 +271,13 @@ mod transfer {
 	#[test]
 	fn cannot_transfer_nfts_in_transmission() {
 		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
-			let alice: mock::Origin = origin(ALICE);
 			let nft_id = <NFTs as NFTTrait>::create_nft(ALICE, vec![0], None).unwrap();
 			<NFTs as NFTTrait>::set_in_transmission(nft_id, true).unwrap();
 
 			// Try to transfer an nft that is in transmission
 			// Should fail and storage should remain empty
 			assert_noop!(
-				NFTs::transfer(alice.clone(), nft_id, BOB),
+				NFTs::transfer(origin(ALICE), nft_id, BOB),
 				Error::<Test>::CannotTransferNFTsInTransmission
 			);
 		})
@@ -319,14 +306,13 @@ mod burn {
 	#[test]
 	fn burn_ok() {
 		ExtBuilder::new_build(vec![(ALICE, 1000)]).execute_with(|| {
-			let alice: mock::Origin = origin(ALICE);
 			let nft_id = <NFTs as NFTTrait>::create_nft(ALICE, vec![1], Some(vec![2])).unwrap();
 
 			// NFT check
 			assert_eq!(NFTs::data(nft_id).is_some(), true);
 
 			// Burning the nft
-			let ok = NFTs::burn(alice.clone(), nft_id);
+			let ok = NFTs::burn(origin(ALICE), nft_id);
 			assert_ok!(ok);
 
 			// Final state checks
@@ -342,23 +328,20 @@ mod burn {
 	#[test]
 	fn nft_not_found() {
 		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
-			let alice: mock::Origin = origin(ALICE);
-
 			// Try to burn an unknown nft
 			// Should fail and storage should remain empty
-			assert_noop!(NFTs::burn(alice.clone(), INVALID_NFT_ID), Error::<Test>::NFTNotFound);
+			assert_noop!(NFTs::burn(origin(ALICE), INVALID_NFT_ID), Error::<Test>::NFTNotFound);
 		})
 	}
 
 	#[test]
 	fn not_the_nft_owner() {
 		ExtBuilder::new_build(vec![(ALICE, 100), (BOB, 100)]).execute_with(|| {
-			let alice: mock::Origin = origin(ALICE);
 			let nft_id = <NFTs as NFTTrait>::create_nft(BOB, vec![1], Some(vec![3])).unwrap();
 
 			// Try to burn an nft but is not the owner
 			// Should fail and storage should remain empty
-			assert_noop!(NFTs::burn(alice.clone(), nft_id), Error::<Test>::NotTheNFTOwner);
+			assert_noop!(NFTs::burn(origin(ALICE), nft_id), Error::<Test>::NotTheNFTOwner);
 		})
 	}
 
@@ -381,13 +364,12 @@ mod burn {
 	#[test]
 	fn cannot_burn_capsules() {
 		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
-			let alice: mock::Origin = origin(ALICE);
 			let nft_id = <NFTs as NFTTrait>::create_nft(ALICE, vec![1], Some(vec![2])).unwrap();
 			<NFTs as NFTTrait>::set_converted_to_capsule(nft_id, true).unwrap();
 
 			// Try to burn an nft that is converted to capsule
 			// Should fail and storage should remain empty
-			assert_noop!(NFTs::burn(alice.clone(), nft_id), Error::<Test>::CannotBurnCapsules);
+			assert_noop!(NFTs::burn(origin(ALICE), nft_id), Error::<Test>::CannotBurnCapsules);
 		})
 	}
 
@@ -433,23 +415,23 @@ mod delegate {
 	#[test]
 	fn nft_not_found() {
 		ExtBuilder::new_build(vec![]).execute_with(|| {
-			let alice: mock::Origin = origin(ALICE);
-
 			// Try to delegate an unknown nft
 			// Should fail and storage should remain empty
-			assert_noop!(NFTs::delegate(alice, INVALID_NFT_ID, None), Error::<Test>::NFTNotFound);
+			assert_noop!(
+				NFTs::delegate(origin(ALICE), INVALID_NFT_ID, None),
+				Error::<Test>::NFTNotFound
+			);
 		})
 	}
 
 	#[test]
 	fn not_the_nft_owner() {
 		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
-			let bob: mock::Origin = origin(BOB);
 			let nft_id = <NFTs as NFTTrait>::create_nft(ALICE, vec![0], None).unwrap();
 
 			// Try to delegate an nft but caller is not the owner
 			// Should fail and storage should remain empty
-			assert_noop!(NFTs::delegate(bob, nft_id, None), Error::<Test>::NotTheNFTOwner);
+			assert_noop!(NFTs::delegate(origin(BOB), nft_id, None), Error::<Test>::NotTheNFTOwner);
 		})
 	}
 
@@ -524,7 +506,7 @@ mod finish_series {
 		ExtBuilder::new_build(vec![(ALICE, 1000)]).execute_with(|| {
 			let alice: mock::Origin = origin(ALICE);
 			let series_id = vec![50];
-			let ok = NFTs::create(origin(ALICE), vec![1], Some(series_id.clone()));
+			let ok = NFTs::create(alice.clone(), vec![1], Some(series_id.clone()));
 			assert_ok!(ok);
 			assert_eq!(NFTs::series(&series_id).unwrap().draft, true);
 
@@ -545,12 +527,10 @@ mod finish_series {
 	#[test]
 	fn series_not_found() {
 		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
-			let alice: mock::Origin = origin(ALICE);
-
 			// Try to finish unknown serie
 			// Should fail and storage should remain empty
 			assert_noop!(
-				NFTs::finish_series(alice.clone(), vec![123]),
+				NFTs::finish_series(origin(ALICE), vec![123]),
 				Error::<Test>::SeriesNotFound
 			);
 		})
@@ -559,7 +539,6 @@ mod finish_series {
 	#[test]
 	fn not_the_series_owner() {
 		ExtBuilder::new_build(vec![(ALICE, 100), (BOB, 100)]).execute_with(|| {
-			let alice: mock::Origin = origin(ALICE);
 			let series_id = vec![3];
 			let ok = NFTs::create(origin(BOB), vec![1], Some(series_id.clone()));
 			assert_ok!(ok);
@@ -567,7 +546,7 @@ mod finish_series {
 			// Try to finish serie as no owner
 			// Should fail and storage should remain empty
 			assert_noop!(
-				NFTs::finish_series(alice.clone(), series_id),
+				NFTs::finish_series(origin(ALICE), series_id),
 				Error::<Test>::NotTheSeriesOwner
 			);
 		})
@@ -601,11 +580,9 @@ mod set_nft_mint_fee {
 	#[test]
 	fn bad_origin() {
 		ExtBuilder::new_build(vec![(ALICE, 10000)]).execute_with(|| {
-			let alice: mock::Origin = origin(ALICE);
-
 			// Try to change nft mint fee as not root
 			// Should fail and storage should remain empty
-			assert_noop!(NFTs::set_nft_mint_fee(alice.clone(), 654), BadOrigin);
+			assert_noop!(NFTs::set_nft_mint_fee(origin(ALICE), 654), BadOrigin);
 		})
 	}
 }
