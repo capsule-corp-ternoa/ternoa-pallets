@@ -359,13 +359,15 @@ mod delegate {
 	fn delegate() {
 		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
 			let viewer = Some(BOB);
+			let mut expected_data = NFTs::data(ALICE_NFT_ID).unwrap();
+			expected_data.is_delegated = true;
 
 			// Delegating nft to another account
 			let ok = NFTs::delegate(origin(ALICE), ALICE_NFT_ID, viewer);
 			assert_ok!(ok);
 
 			// Final state checks
-			assert_eq!(NFTs::data(ALICE_NFT_ID).as_ref().unwrap().is_delegated, true);
+			assert_eq!(NFTs::data(ALICE_NFT_ID), Some(expected_data));
 			assert_eq!(NFTs::delegated_nfts(ALICE_NFT_ID), Some(BOB));
 
 			// Events checks

@@ -238,29 +238,32 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			match Self::data(nft_id) {
-				Some(data) => {
-					ensure!(data.owner == who, Error::<T>::NotTheNFTOwner);
-					ensure!(!data.listed_for_sale, Error::<T>::CannotDelegateNFTsListedForSale);
-					ensure!(!data.is_capsule, Error::<T>::CannotDelegateCapsules);
-					ensure!(!data.is_in_transmission, Error::<T>::CannotDelegateNFTsInTransmission);
+			Data::<T>::try_mutate(nft_id, |maybe_data| -> DispatchResult {
+				match maybe_data {
+					Some(data) => {
+						ensure!(data.owner == who, Error::<T>::NotTheNFTOwner);
+						ensure!(!data.listed_for_sale, Error::<T>::CannotDelegateNFTsListedForSale);
+						ensure!(!data.is_capsule, Error::<T>::CannotDelegateCapsules);
+						ensure!(
+							!data.is_in_transmission,
+							Error::<T>::CannotDelegateNFTsInTransmission
+						);
 
-					if let Some(viewer) = &viewer {
-						ensure!(who != *viewer, Error::<T>::CannotDelegateNFTsToYourself);
-					}
-
-					Data::<T>::try_mutate(nft_id, |maybe_data| -> DispatchResult {
+						if let Some(viewer) = &viewer {
+							ensure!(who != *viewer, Error::<T>::CannotDelegateNFTsToYourself);
+						}
 						let data = maybe_data.as_mut().ok_or(Error::<T>::NFTNotFound)?;
 						data.is_delegated = viewer.is_some();
-						Ok(().into())
-					})?;
 
-					match viewer.as_ref() {
-						Some(v) => DelegatedNFTs::<T>::insert(nft_id, v),
-						None => DelegatedNFTs::<T>::remove(nft_id),
-					}
-				},
-				None => return Err(Error::<T>::NFTNotFound)?,
+						Ok(().into())
+					},
+					None => return Err(Error::<T>::NFTNotFound)?,
+				}
+			})?;
+
+			match viewer.as_ref() {
+				Some(v) => DelegatedNFTs::<T>::insert(nft_id, v),
+				None => DelegatedNFTs::<T>::remove(nft_id),
 			}
 
 			let event = Event::NFTDelegated { nft_id, viewer };
@@ -538,7 +541,7 @@ impl<T: Config> traits::NFTTrait for Pallet<T> {
 			Ok(().into())
 		})?;
 
-		match value.as_ref() {
+		match value {
 			Some(v) => DelegatedNFTs::<T>::insert(id, v),
 			None => DelegatedNFTs::<T>::remove(id),
 		}

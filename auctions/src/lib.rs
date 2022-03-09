@@ -162,16 +162,12 @@ pub mod pallet {
 
 			ensure!(nft_data.owner == creator.clone(), Error::<T>::CannotAuctionNotOwnedNFTs);
 			ensure!(nft_data.listed_for_sale == false, Error::<T>::CannotAuctionNFTsListedForSale);
-
 			ensure!(
 				nft_data.is_in_transmission == false,
 				Error::<T>::CannotAuctionNFTsInTransmission
 			);
-
 			ensure!(nft_data.is_capsule == false, Error::<T>::CannotAuctionCapsules);
-
 			ensure!(!nft_data.is_delegated, Error::<T>::CannotAuctionDelegatedNFTs);
-
 			ensure!(
 				is_nft_in_completed_series == Some(true),
 				Error::<T>::CannotAuctionNFTsInUncompletedSeries
