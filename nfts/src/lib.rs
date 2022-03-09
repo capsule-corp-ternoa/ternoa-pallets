@@ -239,26 +239,20 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 
 			Data::<T>::try_mutate(nft_id, |maybe_data| -> DispatchResult {
-				match maybe_data {
-					Some(data) => {
-						ensure!(data.owner == who, Error::<T>::NotTheNFTOwner);
-						ensure!(!data.listed_for_sale, Error::<T>::CannotDelegateNFTsListedForSale);
-						ensure!(!data.is_capsule, Error::<T>::CannotDelegateCapsules);
-						ensure!(
-							!data.is_in_transmission,
-							Error::<T>::CannotDelegateNFTsInTransmission
-						);
+				let data = maybe_data.as_mut().ok_or(Error::<T>::NFTNotFound)?;
 
-						if let Some(viewer) = &viewer {
-							ensure!(who != *viewer, Error::<T>::CannotDelegateNFTsToYourself);
-						}
-						let data = maybe_data.as_mut().ok_or(Error::<T>::NFTNotFound)?;
-						data.is_delegated = viewer.is_some();
+				ensure!(data.owner == who, Error::<T>::NotTheNFTOwner);
+				ensure!(!data.listed_for_sale, Error::<T>::CannotDelegateNFTsListedForSale);
+				ensure!(!data.is_capsule, Error::<T>::CannotDelegateCapsules);
+				ensure!(!data.is_in_transmission, Error::<T>::CannotDelegateNFTsInTransmission);
 
-						Ok(().into())
-					},
-					None => return Err(Error::<T>::NFTNotFound)?,
+				if let Some(viewer) = &viewer {
+					ensure!(who != *viewer, Error::<T>::CannotDelegateNFTsToYourself);
 				}
+				let data = maybe_data.as_mut().ok_or(Error::<T>::NFTNotFound)?;
+				data.is_delegated = viewer.is_some();
+
+				Ok(().into())
 			})?;
 
 			match viewer.as_ref() {
