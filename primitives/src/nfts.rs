@@ -29,9 +29,9 @@ where
 	// Is listed for sale
 	pub listed_for_sale: bool,
 	// Is being transmitted
-	pub in_transmission: bool,
+	pub is_in_transmission: bool,
 	// Is NFT converted to capsule
-	pub converted_to_capsule: bool,
+	pub is_capsule: bool,
 	// Is secret
 	pub is_secret: bool,
 	// Delegated
@@ -50,8 +50,8 @@ where
 		ipfs_reference: TextFormat,
 		series_id: NFTSeriesId,
 		listed_for_sale: bool,
-		in_transmission: bool,
-		converted_to_capsule: bool,
+		is_in_transmission: bool,
+		is_capsule: bool,
 		is_secret: bool,
 		is_delegated: bool,
 		royalties: u8,
@@ -62,8 +62,8 @@ where
 			ipfs_reference,
 			series_id,
 			listed_for_sale,
-			in_transmission,
-			converted_to_capsule,
+			is_in_transmission,
+			is_capsule,
 			is_secret,
 			is_delegated,
 			royalties,

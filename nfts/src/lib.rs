@@ -158,8 +158,8 @@ pub mod pallet {
 
 			ensure!(data.owner == who, Error::<T>::NotTheNFTOwner);
 			ensure!(!data.listed_for_sale, Error::<T>::CannotTransferNFTsListedForSale);
-			ensure!(!data.converted_to_capsule, Error::<T>::CannotTransferCapsules);
-			ensure!(!data.in_transmission, Error::<T>::CannotTransferNFTsInTransmission);
+			ensure!(!data.is_capsule, Error::<T>::CannotTransferCapsules);
+			ensure!(!data.is_in_transmission, Error::<T>::CannotTransferNFTsInTransmission);
 			ensure!(!data.is_delegated, Error::<T>::CannotTransferDelegatedNFTs);
 			ensure!(!series.draft, Error::<T>::CannotTransferNFTsInUncompletedSeries);
 
@@ -183,8 +183,8 @@ pub mod pallet {
 
 			ensure!(data.owner == who, Error::<T>::NotTheNFTOwner);
 			ensure!(!data.listed_for_sale, Error::<T>::CannotBurnNFTsListedForSale);
-			ensure!(!data.converted_to_capsule, Error::<T>::CannotBurnCapsules);
-			ensure!(!data.in_transmission, Error::<T>::CannotBurnNFTsInTransmission);
+			ensure!(!data.is_capsule, Error::<T>::CannotBurnCapsules);
+			ensure!(!data.is_in_transmission, Error::<T>::CannotBurnNFTsInTransmission);
 			ensure!(!data.is_delegated, Error::<T>::CannotBurnDelegatedNFTs);
 
 			Data::<T>::remove(id);
@@ -242,8 +242,8 @@ pub mod pallet {
 				Some(data) => {
 					ensure!(data.owner == who, Error::<T>::NotTheNFTOwner);
 					ensure!(!data.listed_for_sale, Error::<T>::CannotDelegateNFTsListedForSale);
-					ensure!(!data.converted_to_capsule, Error::<T>::CannotDelegateCapsules);
-					ensure!(!data.in_transmission, Error::<T>::CannotDelegateNFTsInTransmission);
+					ensure!(!data.is_capsule, Error::<T>::CannotDelegateCapsules);
+					ensure!(!data.is_in_transmission, Error::<T>::CannotDelegateNFTsInTransmission);
 
 					if let Some(viewer) = &viewer {
 						ensure!(who != *viewer, Error::<T>::CannotDelegateNFTsToYourself);
@@ -486,7 +486,7 @@ impl<T: Config> traits::NFTTrait for Pallet<T> {
 	fn set_in_transmission(id: NFTId, value: bool) -> DispatchResult {
 		Data::<T>::try_mutate(id, |data| -> DispatchResult {
 			let data = data.as_mut().ok_or(Error::<T>::NFTNotFound)?;
-			data.in_transmission = value;
+			data.is_in_transmission = value;
 			Ok(())
 		})?;
 
@@ -496,7 +496,7 @@ impl<T: Config> traits::NFTTrait for Pallet<T> {
 	fn is_in_transmission(id: NFTId) -> Option<bool> {
 		let nft = Data::<T>::get(id);
 		if let Some(nft) = nft {
-			return Some(nft.in_transmission)
+			return Some(nft.is_in_transmission)
 		}
 
 		return None
@@ -505,7 +505,7 @@ impl<T: Config> traits::NFTTrait for Pallet<T> {
 	fn set_converted_to_capsule(id: NFTId, value: bool) -> DispatchResult {
 		Data::<T>::try_mutate(id, |d| -> DispatchResult {
 			let data = d.as_mut().ok_or(Error::<T>::NFTNotFound)?;
-			data.converted_to_capsule = value;
+			data.is_capsule = value;
 			Ok(())
 		})?;
 
@@ -515,7 +515,7 @@ impl<T: Config> traits::NFTTrait for Pallet<T> {
 	fn is_converted_to_capsule(id: NFTId) -> Option<bool> {
 		let nft = Data::<T>::get(id);
 		if let Some(nft) = nft {
-			return Some(nft.converted_to_capsule)
+			return Some(nft.is_capsule)
 		}
 
 		return None

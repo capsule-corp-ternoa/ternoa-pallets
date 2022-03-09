@@ -144,8 +144,11 @@ pub mod pallet {
 			let nft = T::NFTTrait::get_nft(nft_id).ok_or(Error::<T>::NFTNotFound)?;
 			ensure!(nft.owner == who, Error::<T>::NotTheNFTOwner);
 			ensure!(!nft.listed_for_sale, Error::<T>::CannotCreateCapsulesFromNFTsListedForSale);
-			ensure!(!nft.in_transmission, Error::<T>::CannotCreateCapsulesFromNFTsInTransmission);
-			ensure!(!nft.converted_to_capsule, Error::<T>::CannotCreateCapsulesFromCapsules);
+			ensure!(
+				!nft.is_in_transmission,
+				Error::<T>::CannotCreateCapsulesFromNFTsInTransmission
+			);
+			ensure!(!nft.is_capsule, Error::<T>::CannotCreateCapsulesFromCapsules);
 			ensure!(!nft.is_delegated, Error::<T>::CannotCreateCapsulesFromDelegatedNFTs);
 
 			// Reserve funds
