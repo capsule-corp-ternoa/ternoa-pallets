@@ -252,7 +252,7 @@ mod transfer {
 	#[test]
 	fn cannot_transfer_delegated_nfts() {
 		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
-			let ok = NFTs::delegate(origin(ALICE), ALICE_NFT_ID, Some(BOB));
+			let ok = NFTs::set_viewer(ALICE_NFT_ID, Some(BOB));
 			assert_ok!(ok);
 
 			// Try to transfer a delegated nft
@@ -339,7 +339,7 @@ mod burn {
 	#[test]
 	fn cannot_burn_delegated_nfts() {
 		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
-			let ok = NFTs::delegate(origin(ALICE), ALICE_NFT_ID, Some(BOB));
+			let ok = NFTs::set_viewer(ALICE_NFT_ID, Some(BOB));
 			assert_ok!(ok);
 
 			// Try to burn a delegated nft
