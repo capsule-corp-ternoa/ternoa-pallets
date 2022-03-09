@@ -17,14 +17,15 @@ mod create {
 	use super::*;
 
 	#[test]
-	fn create_ok_with_no_series() {
+	fn create() {
 		ExtBuilder::new_build(vec![(ALICE, 1000)]).execute_with(|| {
+			let alice: mock::Origin = origin(ALICE);
 			let data = NFTData::new_default(ALICE, vec![1], vec![50]);
 			let alice_balance = Balances::free_balance(ALICE);
 
 			// Create NFT with new serie id while there is no series already registered
 			let ok = NFTs::create(
-				origin(ALICE),
+				alice.clone(),
 				data.ipfs_reference.clone(),
 				Some(data.series_id.clone()),
 			);
@@ -33,8 +34,8 @@ mod create {
 
 			// Final state checks
 			assert_eq!(NFTs::series_id_generator(), 0);
-			assert_eq!(nft_id, 0);
-			assert_eq!(NFTs::series(&data.series_id), Some(NFTSeriesDetails::new(ALICE, true)));
+			let nft_series_details = Some(NFTSeriesDetails::new(ALICE, true));
+			assert_eq!(NFTs::series(&data.series_id), nft_series_details);
 			assert_eq!(NFTs::data(0), Some(data.clone()));
 			assert_eq!(Balances::free_balance(ALICE), alice_balance - NFTs::nft_mint_fee());
 
@@ -52,63 +53,30 @@ mod create {
 	}
 
 	#[test]
-	fn create_ok_associated_with_existing_serie() {
+	fn create_without_series() {
 		ExtBuilder::new_build(vec![(ALICE, 1000)]).execute_with(|| {
-			let alice: mock::Origin = origin(ALICE);
-			let data_1 = NFTData::new_default(ALICE, vec![1], vec![50]);
-			let data_2 = NFTData::new_default(ALICE, vec![2], vec![50]);
+			let owner = ALICE;
+			let ipfs_reference = vec![1];
 			let alice_balance = Balances::free_balance(ALICE);
 
 			// Create NFT with new serie id while there is no series already registered
-			let ok = NFTs::create(
-				alice.clone(),
-				data_1.ipfs_reference.clone(),
-				Some(data_1.series_id.clone()),
-			);
+			let ok = NFTs::create(origin(ALICE), ipfs_reference.clone(), None);
 			assert_ok!(ok);
-			let nft_1_id = NFTs::nft_id_generator() - 1;
-
-			// NFT Id check
-			assert_eq!(nft_1_id, 0);
-
-			// Events checks
-			let event = NFTsEvent::NFTCreated {
-				nft_id: nft_1_id,
-				owner: data_1.owner,
-				series_id: data_1.series_id.clone(),
-				ipfs_reference: data_1.ipfs_reference.clone(),
-				mint_fee: NFTs::nft_mint_fee(),
-			};
-			let event = Event::NFTs(event);
-			assert_eq!(System::events().last().unwrap().event, event);
-
-			// Create NFT associated with existing serie
-			let ok = NFTs::create(
-				alice.clone(),
-				data_2.ipfs_reference.clone(),
-				Some(data_2.series_id.clone()),
-			);
-			assert_ok!(ok);
-			let nft_2_id = NFTs::nft_id_generator() - 1;
-
-			// NFT Id check
-			assert_eq!(nft_2_id, 1);
+			let nft_id = NFTs::nft_id_generator() - 1;
 
 			// Final state checks
-			assert_eq!(NFTs::series_id_generator(), 0);
-			let nft_series_details = Some(NFTSeriesDetails::new(ALICE, true));
-			assert_eq!(NFTs::series(&data_1.series_id), nft_series_details);
-			assert_eq!(NFTs::series(&data_2.series_id), nft_series_details.clone());
-			assert_eq!(NFTs::data(0), Some(data_1));
-			assert_eq!(NFTs::data(1), Some(data_2.clone()));
-			assert_eq!(Balances::free_balance(ALICE), alice_balance - NFTs::nft_mint_fee() * 2);
+			let data = NFTs::data(0);
+			assert!(data.is_some());
+			assert_eq!(data.as_ref().unwrap().owner, owner);
+			assert_eq!(data.as_ref().unwrap().ipfs_reference, ipfs_reference);
+			assert_eq!(Balances::free_balance(ALICE), alice_balance - NFTs::nft_mint_fee());
 
 			// Events checks
 			let event = NFTsEvent::NFTCreated {
-				nft_id: nft_2_id,
-				owner: data_2.owner,
-				series_id: data_2.series_id,
-				ipfs_reference: data_2.ipfs_reference,
+				nft_id,
+				owner: data.as_ref().unwrap().owner,
+				series_id: data.as_ref().unwrap().series_id.clone(),
+				ipfs_reference: data.as_ref().unwrap().ipfs_reference.clone(),
 				mint_fee: NFTs::nft_mint_fee(),
 			};
 			let event = Event::NFTs(event);
@@ -183,7 +151,7 @@ mod transfer {
 	use super::*;
 
 	#[test]
-	fn transfer_ok() {
+	fn transfer() {
 		ExtBuilder::new_build(vec![(ALICE, 1000)]).execute_with(|| {
 			let alice: mock::Origin = origin(ALICE);
 			let series_id = vec![2];
@@ -304,7 +272,7 @@ mod burn {
 	use super::*;
 
 	#[test]
-	fn burn_ok() {
+	fn burn() {
 		ExtBuilder::new_build(vec![(ALICE, 1000)]).execute_with(|| {
 			let nft_id = <NFTs as NFTTrait>::create_nft(ALICE, vec![1], Some(vec![2])).unwrap();
 
@@ -391,7 +359,7 @@ mod delegate {
 	use super::*;
 
 	#[test]
-	fn delegate_ok() {
+	fn delegate() {
 		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
 			let nft_id = <NFTs as NFTTrait>::create_nft(ALICE, vec![0], None).unwrap();
 			let mut nft = NFTs::data(nft_id).unwrap();
@@ -502,7 +470,7 @@ mod finish_series {
 	use super::*;
 
 	#[test]
-	fn finish_series_ok() {
+	fn finish_series() {
 		ExtBuilder::new_build(vec![(ALICE, 1000)]).execute_with(|| {
 			let alice: mock::Origin = origin(ALICE);
 			let series_id = vec![50];
@@ -557,7 +525,7 @@ mod set_nft_mint_fee {
 	use super::*;
 
 	#[test]
-	fn set_nft_mint_fee_ok() {
+	fn set_nft_mint_fee() {
 		ExtBuilder::new_build(vec![]).execute_with(|| {
 			let old_mint_fee = NFTs::nft_mint_fee();
 			let new_mint_fee = 654u64;
