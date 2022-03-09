@@ -3,7 +3,7 @@ use frame_support::{
 	parameter_types,
 	traits::{ConstU32, Contains, Currency, GenesisBuild},
 };
-use primitives::nfts::NFTId;
+use primitives::nfts::{NFTData, NFTId, NFTSeriesDetails};
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
@@ -12,6 +12,21 @@ use sp_runtime::{
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
+
+// Do not use the `0` account id since this would be the default value
+// for our account id. This would mess with some tests.
+pub const ALICE: u64 = 1;
+pub const BOB: u64 = 2;
+pub const COLLECTOR: u64 = 99;
+
+pub const ALICE_NFT_ID: u32 = 1;
+pub const ALICE_SERIES_ID: u8 = 1;
+
+pub const BOB_NFT_ID: u32 = 2;
+pub const BOB_SERIES_ID: u8 = 2;
+
+pub const NFT_MINT_FEE: Balance = 10;
+pub const INVALID_NFT_ID: NFTId = 1001;
 
 frame_support::construct_runtime!(
 	pub enum Test where
@@ -112,16 +127,6 @@ impl frame_support::traits::OnUnbalanced<NegativeImbalanceOf<Test>> for MockFeeC
 	}
 }
 
-// Do not use the `0` account id since this would be the default value
-// for our account id. This would mess with some tests.
-pub const ALICE: u64 = 1;
-pub const BOB: u64 = 2;
-pub const CHAD: u64 = 3;
-pub const COLLECTOR: u64 = 99;
-
-pub const NFT_MINT_FEE: Balance = 10;
-pub const INVALID_NFT_ID: NFTId = 1001;
-
 pub struct ExtBuilder {
 	balances: Vec<(u64, Balance)>,
 }
@@ -155,17 +160,29 @@ impl ExtBuilder {
 			.assimilate_storage(&mut t)
 			.unwrap();
 
-		ternoa_nfts::GenesisConfig::<Test> {
-			nfts: Default::default(),
-			series: Default::default(),
-			nft_mint_fee: NFT_MINT_FEE,
-		}
-		.assimilate_storage(&mut t)
-		.unwrap();
+		Self::build_nfts(&mut t);
 
 		let mut ext = sp_io::TestExternalities::new(t);
 		ext.execute_with(|| System::set_block_number(1));
 		ext
+	}
+
+	fn build_nfts(t: &mut sp_runtime::Storage) {
+		let alice_nft = NFTData::new_default(ALICE, vec![100], vec![ALICE_SERIES_ID]);
+		let bob_nft = NFTData::new_default(BOB, vec![101], vec![BOB_SERIES_ID]);
+
+		let alice_series = NFTSeriesDetails::new(ALICE, true);
+		let bob_series = NFTSeriesDetails::new(BOB, true);
+
+		let nfts = vec![alice_nft.to_raw(ALICE_NFT_ID), bob_nft.to_raw(BOB_NFT_ID)];
+		let series = vec![
+			alice_series.to_raw(vec![ALICE_SERIES_ID]),
+			bob_series.to_raw(vec![BOB_SERIES_ID]),
+		];
+
+		ternoa_nfts::GenesisConfig::<Test> { nfts, series, nft_mint_fee: NFT_MINT_FEE }
+			.assimilate_storage(t)
+			.unwrap();
 	}
 }
 
