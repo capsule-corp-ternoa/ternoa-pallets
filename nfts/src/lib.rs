@@ -512,16 +512,6 @@ impl<T: Config> traits::NFTTrait for Pallet<T> {
 
 		Ok(())
 	}
-
-	fn set_viewer(id: NFTId, value: Option<Self::AccountId>) -> DispatchResult {
-		Data::<T>::try_mutate(id, |maybe_data| -> DispatchResult {
-			let data = maybe_data.as_mut().ok_or(Error::<T>::NFTNotFound)?;
-			data.viewer = value;
-			Ok(())
-		})?;
-
-		Ok(())
-	}
 }
 
 impl<T: Config> Pallet<T> {
