@@ -72,7 +72,7 @@ pub mod pallet {
 			let nft = T::NFTs::get_nft(nft_id).ok_or(Error::<T>::NFTNotFound)?;
 			ensure!(nft.owner == who, Error::<T>::NotTheNFTOwner);
 			ensure!(!nft.listed_for_sale, Error::<T>::ListedForSale);
-			ensure!(!nft.in_transmission, Error::<T>::AlreadyInTransmission);
+			ensure!(!nft.is_in_transmission, Error::<T>::AlreadyInTransmission);
 
 			T::NFTs::set_in_transmission(nft_id, true)?;
 

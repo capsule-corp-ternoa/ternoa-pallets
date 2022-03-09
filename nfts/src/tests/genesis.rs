@@ -19,9 +19,11 @@ fn register_nfts() {
 		data.ipfs_reference,
 		data.series_id,
 		data.listed_for_sale,
-		data.in_transmission,
-		data.converted_to_capsule,
-		data.viewer,
+		data.is_in_transmission,
+		data.is_capsule,
+		data.is_secret,
+		data.is_delegated,
+		data.royalties,
 	);
 
 	GenesisConfig::<Test> { nfts: vec![genesis_nfts], series: vec![], nft_mint_fee: mint_fee }

@@ -97,9 +97,11 @@ where
 			self.ipfs_reference.clone(),
 			self.series_id.clone(),
 			self.listed_for_sale,
-			self.in_transmission,
-			self.converted_to_capsule,
-			self.viewer.clone(),
+			self.is_in_transmission,
+			self.is_capsule,
+			self.is_secret,
+			self.is_delegated,
+			self.royalties,
 		)
 	}
 
@@ -110,16 +112,18 @@ where
 			ipfs_reference: raw.3,
 			series_id: raw.4,
 			listed_for_sale: raw.5,
-			in_transmission: raw.6,
-			converted_to_capsule: raw.7,
-			viewer: raw.8,
+			is_in_transmission: raw.6,
+			is_capsule: raw.7,
+			is_secret: raw.8,
+			is_delegated: raw.9,
+			royalties: raw.10,
 		}
 	}
 }
 
 // nft_id, owner, creator, ipfs, series, for sale, in transmission, is capsule, viewer
 pub type NFTsGenesis<AccountId> =
-	(NFTId, AccountId, AccountId, Vec<u8>, Vec<u8>, bool, bool, bool, Option<AccountId>);
+	(NFTId, AccountId, AccountId, Vec<u8>, Vec<u8>, bool, bool, bool, bool, bool, u8);
 
 /// Data related to an NFT Series.
 #[derive(Encode, Decode, Clone, PartialEq, Eq, Default, RuntimeDebug, TypeInfo)]
