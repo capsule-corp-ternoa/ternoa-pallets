@@ -172,21 +172,22 @@ pub mod help {
 	};
 
 	pub fn create_capsule_fast(owner: Origin) -> NFTId {
-		let nft_id = create_nft(owner.clone(), vec![50], None);
+		let nft_id = create_nft(owner.clone(), vec![50], None, 0);
 		assert_ok!(TernoaCapsules::create_from_nft(owner, nft_id, vec![60]));
 		nft_id
 	}
 
 	pub fn create_nft_fast(owner: Origin) -> NFTId {
-		create_nft(owner, vec![50], None)
+		create_nft(owner, vec![50], None, 0)
 	}
 
 	pub fn create_nft(
 		owner: Origin,
 		ipfs_reference: TextFormat,
 		series_id: Option<NFTSeriesId>,
+		royaltie_fee: u8,
 	) -> NFTId {
-		assert_ok!(TernoaNFTs::create(owner, ipfs_reference, series_id));
+		assert_ok!(TernoaNFTs::create(owner, ipfs_reference, series_id, royaltie_fee));
 		TernoaNFTs::nft_id_generator() - 1
 	}
 }

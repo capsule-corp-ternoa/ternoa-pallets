@@ -124,7 +124,7 @@ pub mod pallet {
 			}
 
 			// Check if royaltie_fee is in 0-100 range
-            ensure!(royaltie_fee <= 100, Error::<T>::InvaliRoyaltyFeeValue);
+			ensure!(royaltie_fee <= 100, Error::<T>::InvaliRoyaltyFeeValue);
 
 			// Execute
 			let nft_id = Self::generate_nft_id();
@@ -341,7 +341,7 @@ pub mod pallet {
 		/// Series not Found.
 		SeriesNotFound,
 		// Royalties ammount is invalid
-        InvaliRoyaltyFeeValue
+		InvaliRoyaltyFeeValue,
 	}
 
 	/// The number of NFTs managed by this pallet

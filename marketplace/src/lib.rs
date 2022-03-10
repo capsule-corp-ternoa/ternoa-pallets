@@ -126,7 +126,10 @@ pub mod pallet {
 
 			let market = Marketplaces::<T>::get(mkp_id).ok_or(Error::<T>::MarketplaceNotFound)?;
 
-            ensure!(market.commission_fee + nft.royaltie_fee <= 100, Error::<T>::CumulatedFeesToHigh);
+			ensure!(
+				market.commission_fee + nft.royaltie_fee <= 100,
+				Error::<T>::CumulatedFeesToHigh
+			);
 
 			if market.kind == MarketplaceType::Private {
 				let is_on_list = market.allow_list.contains(&account_id);
@@ -684,7 +687,7 @@ pub mod pallet {
 		/// Marketplace description in too long.
 		TooLongDescription,
 		/// Invalid sum for fees
-        CumulatedFeesToHigh,
+		CumulatedFeesToHigh,
 	}
 
 	/// Nfts listed on the marketplace

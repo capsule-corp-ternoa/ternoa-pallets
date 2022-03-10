@@ -28,6 +28,7 @@ mod create {
 				alice.clone(),
 				data.ipfs_reference.clone(),
 				Some(data.series_id.clone()),
+				0,
 			);
 			assert_ok!(ok);
 			let nft_id = NFTs::nft_id_generator() - 1;
@@ -60,7 +61,7 @@ mod create {
 			let alice_balance = Balances::free_balance(ALICE);
 
 			// Create NFT with new serie id while there is no series already registered
-			let ok = NFTs::create(origin(ALICE), ipfs_reference.clone(), None);
+			let ok = NFTs::create(origin(ALICE), ipfs_reference.clone(), None, 0);
 			assert_ok!(ok);
 			let nft_id = NFTs::nft_id_generator() - 1;
 
@@ -88,7 +89,7 @@ mod create {
 	fn ipfs_reference_is_too_short() {
 		ExtBuilder::new_build(vec![(ALICE, 1)]).execute_with(|| {
 			// Should fail and storage should remain empty
-			let ok = NFTs::create(origin(ALICE), vec![], None);
+			let ok = NFTs::create(origin(ALICE), vec![], None, 0);
 			assert_noop!(ok, Error::<Test>::IPFSReferenceIsTooShort);
 		})
 	}
@@ -97,7 +98,7 @@ mod create {
 	fn ipfs_reference_is_too_long() {
 		ExtBuilder::new_build(vec![(ALICE, 1)]).execute_with(|| {
 			// Should fail and storage should remain empty
-			let ok = NFTs::create(origin(ALICE), vec![1, 2, 3, 4, 5, 6], None);
+			let ok = NFTs::create(origin(ALICE), vec![1, 2, 3, 4, 5, 6], None, 0);
 			assert_noop!(ok, Error::<Test>::IPFSReferenceIsTooLong);
 		})
 	}
@@ -106,7 +107,7 @@ mod create {
 	fn insufficient_balance() {
 		ExtBuilder::new_build(vec![(ALICE, 1)]).execute_with(|| {
 			// Should fail and storage should remain empty
-			let ok = NFTs::create(origin(ALICE), vec![1], None);
+			let ok = NFTs::create(origin(ALICE), vec![1], None, 0);
 			assert_noop!(ok, BalanceError::<Test>::InsufficientBalance);
 		})
 	}
@@ -115,12 +116,12 @@ mod create {
 	fn not_the_series_owner() {
 		ExtBuilder::new_build(vec![(ALICE, 100), (BOB, 100)]).execute_with(|| {
 			let series_id = Some(vec![50]);
-			let ok = NFTs::create(origin(ALICE), vec![50], series_id.clone());
+			let ok = NFTs::create(origin(ALICE), vec![50], series_id.clone(), 0);
 			assert_ok!(ok);
 
 			// Should fail and storage should remain empty
 			assert_noop!(
-				NFTs::create(origin(BOB), vec![1], series_id),
+				NFTs::create(origin(BOB), vec![1], series_id, 0),
 				Error::<Test>::NotTheSeriesOwner
 			);
 			assert_eq!(Balances::free_balance(BOB), 100);
@@ -133,14 +134,14 @@ mod create {
 			let alice: mock::Origin = origin(ALICE);
 
 			let series_id = Some(vec![51]);
-			let ok = NFTs::create(alice.clone(), vec![50], series_id.clone());
+			let ok = NFTs::create(alice.clone(), vec![50], series_id.clone(), 0);
 			assert_ok!(ok);
 			let ok = NFTs::finish_series(alice.clone(), series_id.clone().unwrap());
 			assert_ok!(ok);
 
 			// Should fail and storage should remain empty
 			assert_noop!(
-				NFTs::create(alice, vec![1], series_id.clone()),
+				NFTs::create(alice, vec![1], series_id.clone(), 0),
 				Error::<Test>::CannotCreateNFTsWithCompletedSeries
 			);
 		})
