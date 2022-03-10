@@ -8,14 +8,18 @@ use ternoa_common::traits::NFTTrait;
 
 type MPT = MarketplaceType;
 
+fn origin(account: u64) -> mock::Origin {
+	RawOrigin::Signed(account).into()
+}
+
 #[test]
 fn list_happy() {
 	ExtBuilder::default()
 		.caps(vec![(ALICE, 1000), (BOB, 1000)])
 		.build()
 		.execute_with(|| {
-			let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
-			let bob: mock::Origin = RawOrigin::Signed(BOB).into();
+			let alice: mock::Origin = origin(ALICE);
+			let bob: mock::Origin = origin(BOB);
 
 			// Happy path Public marketplace
 			let price = 50;
@@ -50,8 +54,8 @@ fn list_unhappy() {
 		.caps(vec![(ALICE, 1000), (BOB, 1000)])
 		.build()
 		.execute_with(|| {
-			let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
-			let bob: mock::Origin = RawOrigin::Signed(BOB).into();
+			let alice: mock::Origin = origin(ALICE);
+			let bob: mock::Origin = origin(BOB);
 			let price = 50;
 
 			// Unhappy unknown NFT
@@ -101,7 +105,7 @@ fn list_unhappy() {
 #[test]
 fn unlist_happy() {
 	ExtBuilder::default().caps(vec![(ALICE, 1000)]).build().execute_with(|| {
-		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
+		let alice: mock::Origin = origin(ALICE);
 
 		let price = 50;
 		let series_id = vec![50];
@@ -120,7 +124,7 @@ fn unlist_happy() {
 #[test]
 fn unlist_unhappy() {
 	ExtBuilder::default().caps(vec![(ALICE, 1000)]).build().execute_with(|| {
-		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
+		let alice: mock::Origin = origin(ALICE);
 
 		// Unhappy not the NFT owner
 		let ok = Marketplace::unlist_nft(alice.clone(), 10001);
@@ -139,9 +143,9 @@ fn buy_happy() {
 		.caps(vec![(ALICE, 1000), (BOB, 1000), (DAVE, 1000)])
 		.build()
 		.execute_with(|| {
-			let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
-			let bob: mock::Origin = RawOrigin::Signed(BOB).into();
-			let dave: mock::Origin = RawOrigin::Signed(DAVE).into();
+			let alice: mock::Origin = origin(ALICE);
+			let bob: mock::Origin = origin(BOB);
+			let dave: mock::Origin = origin(DAVE);
 
 			let nft_id_1 = help::create_nft_and_lock_series(alice.clone(), vec![50], vec![50]);
 			let nft_id_2 = help::create_nft_and_lock_series(alice.clone(), vec![50], vec![51]);
@@ -187,8 +191,8 @@ fn buy_unhappy() {
 		.caps(vec![(ALICE, 100), (BOB, 100)])
 		.build()
 		.execute_with(|| {
-			let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
-			let bob: mock::Origin = RawOrigin::Signed(BOB).into();
+			let alice: mock::Origin = origin(ALICE);
+			let bob: mock::Origin = origin(BOB);
 
 			let price = 5000;
 			let nft_id = help::create_nft_and_lock_series(alice.clone(), vec![50], vec![50]);
@@ -207,7 +211,7 @@ fn buy_unhappy() {
 #[test]
 fn create_happy() {
 	ExtBuilder::default().caps(vec![(ALICE, 10000)]).build().execute_with(|| {
-		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
+		let alice: mock::Origin = origin(ALICE);
 
 		assert_eq!(Marketplace::marketplace_id_generator(), 0);
 		assert_eq!(Marketplace::marketplaces(1), None);
@@ -248,7 +252,7 @@ fn create_happy() {
 #[test]
 fn create_unhappy() {
 	ExtBuilder::default().caps(vec![(ALICE, 5)]).build().execute_with(|| {
-		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
+		let alice: mock::Origin = origin(ALICE);
 		let normal_uri: Option<TextFormat> = Some(vec![66]);
 		let too_short_uri: Option<TextFormat> = Some(vec![]);
 		let too_long_uri: Option<TextFormat> = Some([0; 1001].to_vec());
@@ -354,7 +358,7 @@ fn create_unhappy() {
 #[test]
 fn add_account_to_allow_list_happy() {
 	ExtBuilder::default().caps(vec![(ALICE, 1000)]).build().execute_with(|| {
-		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
+		let alice: mock::Origin = origin(ALICE);
 
 		// Happy path
 		let list = vec![];
@@ -374,7 +378,7 @@ fn add_account_to_allow_list_unhappy() {
 		.caps(vec![(BOB, 1000), (DAVE, 1000)])
 		.build()
 		.execute_with(|| {
-			let bob: mock::Origin = RawOrigin::Signed(BOB).into();
+			let bob: mock::Origin = origin(BOB);
 
 			// Unhappy unknown marketplace
 			let ok = Marketplace::add_account_to_allow_list(bob.clone(), 1001, DAVE);
@@ -394,7 +398,7 @@ fn add_account_to_allow_list_unhappy() {
 #[test]
 fn remove_account_from_allow_list_happy() {
 	ExtBuilder::default().caps(vec![(ALICE, 1000)]).build().execute_with(|| {
-		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
+		let alice: mock::Origin = origin(ALICE);
 
 		// Happy path
 		let list = vec![BOB];
@@ -414,7 +418,7 @@ fn remove_account_from_allow_list_unhappy() {
 		.caps(vec![(BOB, 1000), (DAVE, 1000)])
 		.build()
 		.execute_with(|| {
-			let bob: mock::Origin = RawOrigin::Signed(BOB).into();
+			let bob: mock::Origin = origin(BOB);
 
 			// Unhappy unknown marketplace
 			let ok = Marketplace::remove_account_from_allow_list(bob.clone(), 1001, DAVE);
@@ -437,7 +441,7 @@ fn set_owner_happy() {
 		.caps(vec![(ALICE, 1000), (BOB, 1000)])
 		.build()
 		.execute_with(|| {
-			let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
+			let alice: mock::Origin = origin(ALICE);
 
 			// Happy path
 			let mkp_id = help::create_mkp(alice.clone(), MPT::Private, 0, vec![50], vec![]);
@@ -449,7 +453,7 @@ fn set_owner_happy() {
 #[test]
 fn set_owner_unhappy() {
 	ExtBuilder::default().caps(vec![(BOB, 1000)]).build().execute_with(|| {
-		let bob: mock::Origin = RawOrigin::Signed(BOB).into();
+		let bob: mock::Origin = origin(BOB);
 
 		// Unhappy unknown marketplace
 		let ok = Marketplace::set_marketplace_owner(bob.clone(), 1001, DAVE);
@@ -467,7 +471,7 @@ fn set_market_type_happy() {
 		.caps(vec![(ALICE, 1000), (BOB, 1000)])
 		.build()
 		.execute_with(|| {
-			let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
+			let alice: mock::Origin = origin(ALICE);
 
 			let kind = MPT::Public;
 			let mkp_id = help::create_mkp(alice.clone(), MPT::Public, 0, vec![50], vec![]);
@@ -488,7 +492,7 @@ fn set_market_type_happy() {
 #[test]
 fn set_market_type_unhappy() {
 	ExtBuilder::default().caps(vec![(BOB, 1000)]).build().execute_with(|| {
-		let bob: mock::Origin = RawOrigin::Signed(BOB).into();
+		let bob: mock::Origin = origin(BOB);
 
 		let kind = MPT::Public;
 
@@ -508,7 +512,7 @@ fn set_name_happy() {
 		.caps(vec![(ALICE, 1000), (BOB, 1000)])
 		.build()
 		.execute_with(|| {
-			let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
+			let alice: mock::Origin = origin(ALICE);
 
 			// Happy path
 			let name = vec![50];
@@ -524,7 +528,7 @@ fn set_name_happy() {
 #[test]
 fn set_name_unhappy() {
 	ExtBuilder::default().caps(vec![(BOB, 1000)]).build().execute_with(|| {
-		let bob: mock::Origin = RawOrigin::Signed(BOB).into();
+		let bob: mock::Origin = origin(BOB);
 
 		// Unhappy too short name
 		let ok = Marketplace::set_marketplace_name(bob.clone(), 0, vec![]);
@@ -561,7 +565,7 @@ fn set_marketplace_mint_fee_happy() {
 #[test]
 fn set_marketplace_mint_fee_unhappy() {
 	ExtBuilder::default().caps(vec![(ALICE, 10000)]).build().execute_with(|| {
-		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
+		let alice: mock::Origin = origin(ALICE);
 
 		// Unhappy non root user tries to modify the mint fee
 		let ok = Marketplace::set_marketplace_mint_fee(alice.clone(), 654);
@@ -572,7 +576,7 @@ fn set_marketplace_mint_fee_unhappy() {
 #[test]
 fn set_commission_fee_happy() {
 	ExtBuilder::default().caps(vec![(ALICE, 1000)]).build().execute_with(|| {
-		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
+		let alice: mock::Origin = origin(ALICE);
 
 		let fee = 10;
 		let id = help::create_mkp(alice.clone(), MPT::Public, fee, vec![50], vec![]);
@@ -588,7 +592,7 @@ fn set_commission_fee_happy() {
 #[test]
 fn set_commission_fee_unhappy() {
 	ExtBuilder::default().caps(vec![(BOB, 1000)]).build().execute_with(|| {
-		let bob: mock::Origin = RawOrigin::Signed(BOB).into();
+		let bob: mock::Origin = origin(BOB);
 
 		// Unhappy commission fee is more than 100
 		let ok = Marketplace::set_marketplace_commission_fee(bob.clone(), 0, 101);
@@ -607,7 +611,7 @@ fn set_commission_fee_unhappy() {
 #[test]
 fn update_uri_happy() {
 	ExtBuilder::default().caps(vec![(ALICE, 10000)]).build().execute_with(|| {
-		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
+		let alice: mock::Origin = origin(ALICE);
 
 		let fee = 25;
 		let name = vec![50];
@@ -645,7 +649,7 @@ fn update_uri_happy() {
 #[test]
 fn update_uri_unhappy() {
 	ExtBuilder::default().caps(vec![(ALICE, 10000)]).build().execute_with(|| {
-		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
+		let alice: mock::Origin = origin(ALICE);
 
 		let fee = 25;
 		let name = vec![50];
@@ -674,7 +678,7 @@ fn update_uri_unhappy() {
 #[test]
 fn update_logo_uri_happy() {
 	ExtBuilder::default().caps(vec![(ALICE, 10000)]).build().execute_with(|| {
-		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
+		let alice: mock::Origin = origin(ALICE);
 
 		let fee = 25;
 		let name = vec![50];
@@ -713,7 +717,7 @@ fn update_logo_uri_happy() {
 #[test]
 fn update_logo_uri_unhappy() {
 	ExtBuilder::default().caps(vec![(ALICE, 10000)]).build().execute_with(|| {
-		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
+		let alice: mock::Origin = origin(ALICE);
 
 		let fee = 25;
 		let name = vec![50];
@@ -742,7 +746,7 @@ fn update_logo_uri_unhappy() {
 #[test]
 fn add_account_to_disallow_list_happy() {
 	ExtBuilder::default().caps(vec![(ALICE, 1000)]).build().execute_with(|| {
-		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
+		let alice: mock::Origin = origin(ALICE);
 
 		// Happy path
 		let list = vec![];
@@ -762,7 +766,7 @@ fn add_account_to_disallow_list_unhappy() {
 		.caps(vec![(BOB, 1000), (DAVE, 1000)])
 		.build()
 		.execute_with(|| {
-			let bob: mock::Origin = RawOrigin::Signed(BOB).into();
+			let bob: mock::Origin = origin(BOB);
 
 			// Unhappy unknown marketplace
 			let ok = Marketplace::add_account_to_disallow_list(bob.clone(), 1001, DAVE);
@@ -782,7 +786,7 @@ fn add_account_to_disallow_list_unhappy() {
 #[test]
 fn remove_account_from_disallow_list_happy() {
 	ExtBuilder::default().caps(vec![(ALICE, 1000)]).build().execute_with(|| {
-		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
+		let alice: mock::Origin = origin(ALICE);
 
 		// Happy path
 		let list = vec![BOB];
@@ -802,7 +806,7 @@ fn remove_account_from_disallow_list_unhappy() {
 		.caps(vec![(BOB, 1000), (DAVE, 1000)])
 		.build()
 		.execute_with(|| {
-			let bob: mock::Origin = RawOrigin::Signed(BOB).into();
+			let bob: mock::Origin = origin(BOB);
 
 			// Unhappy unknown marketplace
 			let ok = Marketplace::remove_account_from_disallow_list(bob.clone(), 1001, DAVE);
@@ -822,7 +826,7 @@ fn remove_account_from_disallow_list_unhappy() {
 #[test]
 fn set_description_happy() {
 	ExtBuilder::default().caps(vec![(ALICE, 10000)]).build().execute_with(|| {
-		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
+		let alice: mock::Origin = origin(ALICE);
 
 		let fee = 25;
 		let name = vec![50];
@@ -865,7 +869,7 @@ fn set_description_happy() {
 #[test]
 fn set_description_unhappy() {
 	ExtBuilder::default().caps(vec![(ALICE, 10000)]).build().execute_with(|| {
-		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
+		let alice: mock::Origin = origin(ALICE);
 
 		let fee = 25;
 		let name = vec![50];
