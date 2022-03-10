@@ -37,7 +37,7 @@ where
 	// Delegated
 	pub is_delegated: bool,
 	// Royalties fee
-	pub royalties: u8,
+	pub royaltie_fee: u8,
 }
 
 impl<AccountId> NFTData<AccountId>
@@ -54,7 +54,7 @@ where
 		is_capsule: bool,
 		is_secret: bool,
 		is_delegated: bool,
-		royalties: u8,
+		royaltie_fee: u8,
 	) -> Self {
 		Self {
 			owner,
@@ -66,7 +66,7 @@ where
 			is_capsule,
 			is_secret,
 			is_delegated,
-			royalties,
+			royaltie_fee,
 		}
 	}
 
@@ -101,7 +101,7 @@ where
 			self.is_capsule,
 			self.is_secret,
 			self.is_delegated,
-			self.royalties,
+			self.royaltie_fee,
 		)
 	}
 
@@ -116,7 +116,7 @@ where
 			is_capsule: raw.7,
 			is_secret: raw.8,
 			is_delegated: raw.9,
-			royalties: raw.10,
+			royaltie_fee: raw.10,
 		}
 	}
 }

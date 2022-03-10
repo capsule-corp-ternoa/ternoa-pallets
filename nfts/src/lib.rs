@@ -96,6 +96,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			ipfs_reference: TextFormat,
 			series_id: Option<NFTSeriesId>,
+			royaltie_fee: u8,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
@@ -121,6 +122,9 @@ pub mod pallet {
 					series_exists = true;
 				}
 			}
+
+			// Check if royaltie_fee is in 0-100 range
+            ensure!(royaltie_fee <= 100, Error::<T>::InvaliRoyaltyFeeValue);
 
 			// Execute
 			let nft_id = Self::generate_nft_id();
@@ -336,6 +340,8 @@ pub mod pallet {
 		NotTheSeriesOwner,
 		/// Series not Found.
 		SeriesNotFound,
+		// Royalties ammount is invalid
+        InvaliRoyaltyFeeValue
 	}
 
 	/// The number of NFTs managed by this pallet
@@ -446,8 +452,9 @@ impl<T: Config> traits::NFTTrait for Pallet<T> {
 		owner: Self::AccountId,
 		ipfs_reference: TextFormat,
 		series_id: Option<NFTSeriesId>,
+		royaltie_fee: u8,
 	) -> Result<NFTId, DispatchErrorWithPostInfo> {
-		Self::create(Origin::<T>::Signed(owner).into(), ipfs_reference, series_id)?;
+		Self::create(Origin::<T>::Signed(owner).into(), ipfs_reference, series_id, royaltie_fee)?;
 		return Ok(Self::nft_id_generator() - 1)
 	}
 
