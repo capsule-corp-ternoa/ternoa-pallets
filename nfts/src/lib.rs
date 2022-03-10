@@ -130,8 +130,12 @@ pub mod pallet {
 			let nft_id = Self::generate_nft_id();
 			let series_id = series_id.unwrap_or_else(|| Self::generate_series_id());
 
-			let value =
-				NFTData::new_default(who.clone(), ipfs_reference.clone(), series_id.clone());
+			let value = NFTData::new_default(
+				who.clone(),
+				ipfs_reference.clone(),
+				series_id.clone(),
+				royaltie_fee,
+			);
 
 			// Save
 			Data::<T>::insert(nft_id, value);
