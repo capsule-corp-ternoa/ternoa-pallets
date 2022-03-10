@@ -16,6 +16,7 @@ type Block = frame_system::mocking::MockBlock<Test>;
 pub const ALICE: u64 = 1;
 pub const BOB: u64 = 2;
 pub const DAVE: u64 = 3;
+pub const JACK: u64 = 4;
 
 frame_support::construct_runtime!(
 	pub enum Test where
@@ -231,8 +232,10 @@ pub mod help {
 		owner: Origin,
 		ipfs_reference: TextFormat,
 		series_id: NFTSeriesId,
+		royaltie_fee: u8,
 	) -> NFTId {
-		let nft_id = help::create_nft(owner.clone(), ipfs_reference, Some(series_id.clone()), 0);
+		let nft_id =
+			help::create_nft(owner.clone(), ipfs_reference, Some(series_id.clone()), royaltie_fee);
 		help::finish_series(owner.clone(), series_id.clone());
 
 		nft_id

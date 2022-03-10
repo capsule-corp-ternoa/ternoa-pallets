@@ -74,6 +74,7 @@ where
 		owner: AccountId,
 		ipfs_reference: TextFormat,
 		series_id: NFTSeriesId,
+		royaltie_fee: u8,
 	) -> Self {
 		Self::new(
 			owner.clone(),
@@ -85,7 +86,7 @@ where
 			false,
 			false,
 			false,
-			0,
+			royaltie_fee,
 		)
 	}
 

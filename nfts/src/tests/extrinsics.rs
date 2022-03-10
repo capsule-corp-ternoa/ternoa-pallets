@@ -20,7 +20,7 @@ mod create {
 	fn create() {
 		ExtBuilder::new_build(vec![(ALICE, 1000)]).execute_with(|| {
 			let alice: mock::Origin = origin(ALICE);
-			let data = NFTData::new_default(ALICE, vec![1], vec![50]);
+			let data = NFTData::new_default(ALICE, vec![1], vec![50], 0);
 			let alice_balance = Balances::free_balance(ALICE);
 
 			// Create NFT with new serie id while there is no series already registered
@@ -144,6 +144,15 @@ mod create {
 				NFTs::create(alice, vec![1], series_id.clone(), 0),
 				Error::<Test>::CannotCreateNFTsWithCompletedSeries
 			);
+		})
+	}
+
+	#[test]
+	fn invalid_royaltie_fee_value() {
+		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
+			// Should fail and storage should remain empty
+			let ok = NFTs::create(origin(ALICE), vec![50], None, 105);
+			assert_noop!(ok, Error::<Test>::InvaliRoyaltyFeeValue);
 		})
 	}
 }

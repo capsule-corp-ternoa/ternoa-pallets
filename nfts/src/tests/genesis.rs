@@ -9,7 +9,7 @@ fn register_nfts() {
 
 	let nft_id = 100;
 	let mint_fee = 10;
-	let data_original = NFTData::new_default(ALICE, vec![1], vec![48]);
+	let data_original = NFTData::new_default(ALICE, vec![1], vec![48], 0);
 	let data = data_original.clone();
 
 	let genesis_nfts: NFTsGenesis<u64> = (
