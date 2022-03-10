@@ -158,9 +158,9 @@ pub mod pallet {
 
 			ensure!(data.owner == who, Error::<T>::NotTheNFTOwner);
 			ensure!(!data.listed_for_sale, Error::<T>::CannotTransferNFTsListedForSale);
-			ensure!(!data.converted_to_capsule, Error::<T>::CannotTransferCapsules);
-			ensure!(!data.in_transmission, Error::<T>::CannotTransferNFTsInTransmission);
-			ensure!(data.viewer.is_none(), Error::<T>::CannotTransferDelegatedNFTs);
+			ensure!(!data.is_capsule, Error::<T>::CannotTransferCapsules);
+			ensure!(!data.is_in_transmission, Error::<T>::CannotTransferNFTsInTransmission);
+			ensure!(!data.is_delegated, Error::<T>::CannotTransferDelegatedNFTs);
 			ensure!(!series.draft, Error::<T>::CannotTransferNFTsInUncompletedSeries);
 
 			data.owner = to.clone();
@@ -183,9 +183,9 @@ pub mod pallet {
 
 			ensure!(data.owner == who, Error::<T>::NotTheNFTOwner);
 			ensure!(!data.listed_for_sale, Error::<T>::CannotBurnNFTsListedForSale);
-			ensure!(!data.converted_to_capsule, Error::<T>::CannotBurnCapsules);
-			ensure!(!data.in_transmission, Error::<T>::CannotBurnNFTsInTransmission);
-			ensure!(data.viewer.is_none(), Error::<T>::CannotBurnDelegatedNFTs);
+			ensure!(!data.is_capsule, Error::<T>::CannotBurnCapsules);
+			ensure!(!data.is_in_transmission, Error::<T>::CannotBurnNFTsInTransmission);
+			ensure!(!data.is_delegated, Error::<T>::CannotBurnDelegatedNFTs);
 
 			Data::<T>::remove(id);
 			Self::deposit_event(Event::NFTBurned { nft_id: id });
@@ -243,17 +243,22 @@ pub mod pallet {
 
 				ensure!(data.owner == who, Error::<T>::NotTheNFTOwner);
 				ensure!(!data.listed_for_sale, Error::<T>::CannotDelegateNFTsListedForSale);
-				ensure!(!data.converted_to_capsule, Error::<T>::CannotDelegateCapsules);
-				ensure!(!data.in_transmission, Error::<T>::CannotDelegateNFTsInTransmission);
+				ensure!(!data.is_capsule, Error::<T>::CannotDelegateCapsules);
+				ensure!(!data.is_in_transmission, Error::<T>::CannotDelegateNFTsInTransmission);
 
 				if let Some(viewer) = &viewer {
 					ensure!(who != *viewer, Error::<T>::CannotDelegateNFTsToYourself);
 				}
-
-				data.viewer = viewer.clone();
+				let data = maybe_data.as_mut().ok_or(Error::<T>::NFTNotFound)?;
+				data.is_delegated = viewer.is_some();
 
 				Ok(().into())
 			})?;
+
+			match viewer.as_ref() {
+				Some(v) => DelegatedNFTs::<T>::insert(nft_id, v),
+				None => DelegatedNFTs::<T>::remove(nft_id),
+			}
 
 			let event = Event::NFTDelegated { nft_id, viewer };
 			Self::deposit_event(event);
@@ -343,6 +348,16 @@ pub mod pallet {
 	#[pallet::getter(fn data)]
 	pub type Data<T: Config> =
 		StorageMap<_, Blake2_128Concat, NFTId, NFTData<T::AccountId>, OptionQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn secret_nfts)]
+	pub type SecretNFTs<T: Config> =
+		StorageMap<_, Blake2_128Concat, NFTId, TextFormat, OptionQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn delegated_nfts)]
+	pub type DelegatedNFTs<T: Config> =
+		StorageMap<_, Blake2_128Concat, NFTId, T::AccountId, OptionQuery>;
 
 	/// Data related to NFT Series.
 	#[pallet::storage]
@@ -468,7 +483,7 @@ impl<T: Config> traits::NFTTrait for Pallet<T> {
 	fn set_in_transmission(id: NFTId, value: bool) -> DispatchResult {
 		Data::<T>::try_mutate(id, |data| -> DispatchResult {
 			let data = data.as_mut().ok_or(Error::<T>::NFTNotFound)?;
-			data.in_transmission = value;
+			data.is_in_transmission = value;
 			Ok(())
 		})?;
 
@@ -478,7 +493,7 @@ impl<T: Config> traits::NFTTrait for Pallet<T> {
 	fn is_in_transmission(id: NFTId) -> Option<bool> {
 		let nft = Data::<T>::get(id);
 		if let Some(nft) = nft {
-			return Some(nft.in_transmission)
+			return Some(nft.is_in_transmission)
 		}
 
 		return None
@@ -487,7 +502,7 @@ impl<T: Config> traits::NFTTrait for Pallet<T> {
 	fn set_converted_to_capsule(id: NFTId, value: bool) -> DispatchResult {
 		Data::<T>::try_mutate(id, |d| -> DispatchResult {
 			let data = d.as_mut().ok_or(Error::<T>::NFTNotFound)?;
-			data.converted_to_capsule = value;
+			data.is_capsule = value;
 			Ok(())
 		})?;
 
@@ -497,7 +512,7 @@ impl<T: Config> traits::NFTTrait for Pallet<T> {
 	fn is_converted_to_capsule(id: NFTId) -> Option<bool> {
 		let nft = Data::<T>::get(id);
 		if let Some(nft) = nft {
-			return Some(nft.converted_to_capsule)
+			return Some(nft.is_capsule)
 		}
 
 		return None
@@ -516,9 +531,14 @@ impl<T: Config> traits::NFTTrait for Pallet<T> {
 	fn set_viewer(id: NFTId, value: Option<Self::AccountId>) -> DispatchResult {
 		Data::<T>::try_mutate(id, |maybe_data| -> DispatchResult {
 			let data = maybe_data.as_mut().ok_or(Error::<T>::NFTNotFound)?;
-			data.viewer = value;
-			Ok(())
+			data.is_delegated = value.is_some();
+			Ok(().into())
 		})?;
+
+		match value {
+			Some(v) => DelegatedNFTs::<T>::insert(id, v),
+			None => DelegatedNFTs::<T>::remove(id),
+		}
 
 		Ok(())
 	}

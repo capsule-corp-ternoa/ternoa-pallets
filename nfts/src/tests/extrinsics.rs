@@ -358,21 +358,58 @@ mod delegate {
 	#[test]
 	fn delegate() {
 		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
-			let mut nft = NFTs::data(ALICE_NFT_ID).unwrap();
 			let viewer = Some(BOB);
+			let mut expected_data = NFTs::data(ALICE_NFT_ID).unwrap();
+			expected_data.is_delegated = true;
 
 			// Delegating nft to another account
-			let ok = NFTs::delegate(origin(ALICE), ALICE_NFT_ID, viewer.clone());
+			let ok = NFTs::delegate(origin(ALICE), ALICE_NFT_ID, viewer);
 			assert_ok!(ok);
 
 			// Final state checks
-			nft.viewer = viewer.clone();
-			assert_eq!(NFTs::data(ALICE_NFT_ID), Some(nft));
+			assert_eq!(NFTs::data(ALICE_NFT_ID), Some(expected_data));
+			assert_eq!(NFTs::delegated_nfts(ALICE_NFT_ID), Some(BOB));
 
 			// Events checks
 			let event = NFTsEvent::NFTDelegated { nft_id: ALICE_NFT_ID, viewer };
 			let event = Event::NFTs(event);
 			assert_eq!(System::events().last().unwrap().event, event);
+		})
+	}
+
+	#[test]
+	fn delegate_to_none() {
+		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
+			let alice = origin(ALICE);
+			let viewer = Some(BOB);
+
+			// Delegating nft to another account
+			let ok = NFTs::delegate(alice.clone(), ALICE_NFT_ID, viewer);
+			assert_ok!(ok);
+
+			// state checks
+			assert_eq!(NFTs::data(ALICE_NFT_ID).as_ref().unwrap().is_delegated, true);
+			assert_eq!(NFTs::delegated_nfts(ALICE_NFT_ID), Some(BOB));
+
+			// Events checks
+			assert_eq!(
+				System::events().last().unwrap().event,
+				Event::NFTs(NFTsEvent::NFTDelegated { nft_id: ALICE_NFT_ID, viewer })
+			);
+
+			// Delegating nft to None (canceling delegation)
+			let ok = NFTs::delegate(alice, ALICE_NFT_ID, None);
+			assert_ok!(ok);
+
+			// Final state checks
+			assert_eq!(NFTs::data(ALICE_NFT_ID).as_ref().unwrap().is_delegated, false);
+			assert_eq!(NFTs::delegated_nfts(ALICE_NFT_ID), None);
+
+			// Events checks
+			assert_eq!(
+				System::events().last().unwrap().event,
+				Event::NFTs(NFTsEvent::NFTDelegated { nft_id: ALICE_NFT_ID, viewer: None })
+			);
 		})
 	}
 

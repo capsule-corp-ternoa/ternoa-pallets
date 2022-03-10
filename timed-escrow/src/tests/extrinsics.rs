@@ -15,7 +15,7 @@ fn create_happy() {
 		assert_ok!(TimedEscrow::create(alice.clone(), nft_id, BOB, 10));
 
 		let nft = <NFTs as NFTTrait>::get_nft(nft_id).unwrap();
-		assert_eq!(nft.in_transmission, true);
+		assert_eq!(nft.is_in_transmission, true);
 
 		// By default nothing is scheduled so checking if we have one element
 		// inside the block's agenda should be enough to confirm that a transfer
@@ -27,7 +27,7 @@ fn create_happy() {
 		Scheduler::on_initialize(10);
 		let nft = <NFTs as NFTTrait>::get_nft(nft_id).unwrap();
 		assert_eq!(nft.owner, BOB);
-		assert_eq!(nft.in_transmission, false);
+		assert_eq!(nft.is_in_transmission, false);
 	});
 }
 
@@ -112,7 +112,7 @@ fn complete_transfer_happy() {
 
 		let nft = <NFTs as NFTTrait>::get_nft(nft_id).unwrap();
 		assert_eq!(nft.owner, BOB);
-		assert_eq!(nft.in_transmission, false);
+		assert_eq!(nft.is_in_transmission, false);
 	});
 }
 

@@ -99,7 +99,8 @@ benchmarks! {
 
 	}: _(origin::<T>("ALICE"), NFT_ID, Some(bob.clone()))
 	verify {
-		assert_eq!(NFTs::<T>::data(NFT_ID).unwrap().viewer, Some(bob));
+		assert_eq!(NFTs::<T>::data(NFT_ID).unwrap().is_delegated, true);
+		assert_eq!(NFTs::<T>::delegated_nfts(NFT_ID), Some(bob));
 	}
 }
 

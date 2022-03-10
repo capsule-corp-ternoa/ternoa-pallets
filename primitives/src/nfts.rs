@@ -29,11 +29,15 @@ where
 	// Is listed for sale
 	pub listed_for_sale: bool,
 	// Is being transmitted
-	pub in_transmission: bool,
+	pub is_in_transmission: bool,
 	// Is NFT converted to capsule
-	pub converted_to_capsule: bool,
-	// NFT Viewer
-	pub viewer: Option<AccountId>,
+	pub is_capsule: bool,
+	// Is secret
+	pub is_secret: bool,
+	// Delegated
+	pub is_delegated: bool,
+	// Royalties fee
+	pub royalties: u8,
 }
 
 impl<AccountId> NFTData<AccountId>
@@ -46,9 +50,11 @@ where
 		ipfs_reference: TextFormat,
 		series_id: NFTSeriesId,
 		listed_for_sale: bool,
-		in_transmission: bool,
-		converted_to_capsule: bool,
-		viewer: Option<AccountId>,
+		is_in_transmission: bool,
+		is_capsule: bool,
+		is_secret: bool,
+		is_delegated: bool,
+		royalties: u8,
 	) -> Self {
 		Self {
 			owner,
@@ -56,9 +62,11 @@ where
 			ipfs_reference,
 			series_id,
 			listed_for_sale,
-			in_transmission,
-			converted_to_capsule,
-			viewer,
+			is_in_transmission,
+			is_capsule,
+			is_secret,
+			is_delegated,
+			royalties,
 		}
 	}
 
@@ -67,7 +75,18 @@ where
 		ipfs_reference: TextFormat,
 		series_id: NFTSeriesId,
 	) -> Self {
-		Self::new(owner.clone(), owner, ipfs_reference, series_id, false, false, false, None)
+		Self::new(
+			owner.clone(),
+			owner,
+			ipfs_reference,
+			series_id,
+			false,
+			false,
+			false,
+			false,
+			false,
+			0,
+		)
 	}
 
 	pub fn to_raw(&self, nft_id: NFTId) -> NFTsGenesis<AccountId> {
@@ -78,9 +97,11 @@ where
 			self.ipfs_reference.clone(),
 			self.series_id.clone(),
 			self.listed_for_sale,
-			self.in_transmission,
-			self.converted_to_capsule,
-			self.viewer.clone(),
+			self.is_in_transmission,
+			self.is_capsule,
+			self.is_secret,
+			self.is_delegated,
+			self.royalties,
 		)
 	}
 
@@ -91,16 +112,18 @@ where
 			ipfs_reference: raw.3,
 			series_id: raw.4,
 			listed_for_sale: raw.5,
-			in_transmission: raw.6,
-			converted_to_capsule: raw.7,
-			viewer: raw.8,
+			is_in_transmission: raw.6,
+			is_capsule: raw.7,
+			is_secret: raw.8,
+			is_delegated: raw.9,
+			royalties: raw.10,
 		}
 	}
 }
 
 // nft_id, owner, creator, ipfs, series, for sale, in transmission, is capsule, viewer
 pub type NFTsGenesis<AccountId> =
-	(NFTId, AccountId, AccountId, Vec<u8>, Vec<u8>, bool, bool, bool, Option<AccountId>);
+	(NFTId, AccountId, AccountId, Vec<u8>, Vec<u8>, bool, bool, bool, bool, bool, u8);
 
 /// Data related to an NFT Series.
 #[derive(Encode, Decode, Clone, PartialEq, Eq, Default, RuntimeDebug, TypeInfo)]
