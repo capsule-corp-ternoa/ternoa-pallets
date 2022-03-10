@@ -23,7 +23,7 @@ fn register_nfts() {
 		data.is_capsule,
 		data.is_secret,
 		data.is_delegated,
-		data.royalties,
+		data.royaltie_fee,
 	);
 
 	GenesisConfig::<Test> { nfts: vec![genesis_nfts], series: vec![], nft_mint_fee: mint_fee }

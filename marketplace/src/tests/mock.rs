@@ -221,8 +221,9 @@ pub mod help {
 		owner: Origin,
 		ipfs_reference: TextFormat,
 		series_id: Option<NFTSeriesId>,
+		royaltie_fee: u8,
 	) -> NFTId {
-		assert_ok!(NFTs::create(owner, ipfs_reference, series_id));
+		assert_ok!(NFTs::create(owner, ipfs_reference, series_id, royaltie_fee));
 		return NFTs::nft_id_generator() - 1
 	}
 
@@ -231,7 +232,7 @@ pub mod help {
 		ipfs_reference: TextFormat,
 		series_id: NFTSeriesId,
 	) -> NFTId {
-		let nft_id = help::create_nft(owner.clone(), ipfs_reference, Some(series_id.clone()));
+		let nft_id = help::create_nft(owner.clone(), ipfs_reference, Some(series_id.clone()), 0);
 		help::finish_series(owner.clone(), series_id.clone());
 
 		nft_id
