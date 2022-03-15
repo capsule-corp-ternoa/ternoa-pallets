@@ -1,0 +1,27 @@
+[package]
+name = "ternoa-mandate"
+version = "0.1.0"
+edition = "2018"
+license = "Apache 2.0"
+authors = [ "Eliott Teissonniere" ]
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+
+[dependencies]
+# Substrate Frame
+frame-support = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-02-03", default-features = false }
+frame-system = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-02-03", default-features = false }
+
+# Rest
+codec = { package = "parity-scale-codec", default-features = false, features = ["derive"], version = "2.3.1" }
+scale-info = { version = "1.0", default-features = false, features = ["derive"] }
+
+[features]
+default = ["std"]
+std = [
+    "codec/std",
+    "frame-support/std",
+    "frame-system/std",
+    "scale-info/std",
+]
