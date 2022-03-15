@@ -8,6 +8,7 @@ use frame_support::{
 	traits::StorageVersion,
 };
 use frame_system::pallet_prelude::*;
+use sp_std::prelude::*;
 
 const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
 
@@ -31,11 +32,7 @@ pub mod pallet {
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
 	#[pallet::storage_version(STORAGE_VERSION)]
-	#[pallet::without_storage_info]
 	pub struct Pallet<T>(_);
-
-	#[pallet::hooks]
-	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
