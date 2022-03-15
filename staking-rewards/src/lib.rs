@@ -1,8 +1,5 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use frame_benchmarking::Zero;
-pub use pallet::*;
-
 use frame_support::{
 	pallet_prelude::*,
 	traits::{
@@ -11,8 +8,10 @@ use frame_support::{
 	},
 	PalletId,
 };
-use sp_runtime::traits::{AccountIdConversion, Saturating};
+use sp_runtime::traits::{AccountIdConversion, Saturating, Zero};
 use sp_std::prelude::*;
+
+pub use pallet::*;
 
 const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
 

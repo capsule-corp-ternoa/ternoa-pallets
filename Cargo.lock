@@ -2484,23 +2484,15 @@ dependencies = [
 name = "ternoa-staking-rewards"
 version = "0.1.0"
 dependencies = [
- "frame-benchmarking",
  "frame-support",
  "frame-system",
  "log",
  "pallet-authorship",
- "pallet-balances",
  "pallet-staking",
  "parity-scale-codec",
  "scale-info",
- "sp-core",
- "sp-io",
  "sp-runtime",
  "sp-std",
- "ternoa-common",
- "ternoa-marketplace",
- "ternoa-nfts",
- "ternoa-pallets-primitives",
 ]
 
 [[package]]
