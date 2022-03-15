@@ -10,4 +10,5 @@ members = [
     'timed-escrow',
     'primitives',
     'mandate',
+    'staking-rewards',
 ]
