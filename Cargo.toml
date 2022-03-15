@@ -9,4 +9,5 @@ members = [
     'sgx',
     'timed-escrow',
     'primitives',
+    'mandate',
 ]
