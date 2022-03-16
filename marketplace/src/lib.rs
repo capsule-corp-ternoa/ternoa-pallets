@@ -185,7 +185,8 @@ pub mod pallet {
 			if commission_fee != 0 {
 				let tmp = 100u8.checked_div(commission_fee).ok_or(Error::<T>::InternalMathError)?;
 
-				let fee = price.checked_div(&(tmp.into())).ok_or(Error::<T>::InternalMathError)?;
+				let fee =
+					sale.price.checked_div(&(tmp.into())).ok_or(Error::<T>::InternalMathError)?;
 
 				price = price.checked_sub(&fee).ok_or(Error::<T>::InternalMathError)?;
 
@@ -199,7 +200,8 @@ pub mod pallet {
 			if royaltie_fee != 0 {
 				let tmp = 100u8.checked_div(royaltie_fee).ok_or(Error::<T>::InternalMathError)?;
 
-				let fee = price.checked_div(&(tmp.into())).ok_or(Error::<T>::InternalMathError)?;
+				let fee =
+					sale.price.checked_div(&(tmp.into())).ok_or(Error::<T>::InternalMathError)?;
 
 				price = price.checked_sub(&fee).ok_or(Error::<T>::InternalMathError)?;
 

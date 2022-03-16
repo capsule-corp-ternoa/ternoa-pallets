@@ -152,7 +152,7 @@ mod create {
 		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
 			// Should fail and storage should remain empty
 			let ok = NFTs::create(origin(ALICE), vec![50], None, 105);
-			assert_noop!(ok, Error::<Test>::InvaliRoyaltyFeeValue);
+			assert_noop!(ok, Error::<Test>::InvalidRoyaltieFeeValue);
 		})
 	}
 }
@@ -584,6 +584,63 @@ mod set_nft_mint_fee {
 			// Try to change nft mint fee as not root
 			// Should fail and storage should remain empty
 			assert_noop!(NFTs::set_nft_mint_fee(origin(ALICE), 654), BadOrigin);
+		})
+	}
+}
+
+mod set_nft_royaltie_fee {
+	use super::*;
+
+	#[test]
+	fn set_nft_royaltie_fee() {
+		ExtBuilder::new_build(vec![]).execute_with(|| {
+			let new_royaltie_fee = 15;
+			assert_ne!(NFTs::data(ALICE_NFT_ID).unwrap().royaltie_fee, new_royaltie_fee);
+
+			let ok = NFTs::set_nft_royaltie_fee(origin(ALICE), ALICE_NFT_ID, new_royaltie_fee);
+			assert_ok!(ok);
+
+			// Final state checks
+			assert_eq!(NFTs::data(ALICE_NFT_ID).unwrap().royaltie_fee, new_royaltie_fee);
+
+			// Events checks
+			let event = NFTsEvent::NFTRoyaltieFeeUpdated { fee: new_royaltie_fee };
+			let event = Event::NFTs(event);
+			assert_eq!(System::events().last().unwrap().event, event);
+		})
+	}
+
+	#[test]
+	fn invalid_royaltie_fee_value() {
+		ExtBuilder::new_build(vec![]).execute_with(|| {
+			let new_royaltie_fee = 205;
+			assert_ne!(NFTs::data(ALICE_NFT_ID).unwrap().royaltie_fee, new_royaltie_fee);
+
+			// Try to set invalid royaltie fee
+			// Should fail and storage should remain empty
+			let response =
+				NFTs::set_nft_royaltie_fee(origin(ALICE), ALICE_NFT_ID, new_royaltie_fee);
+			assert_noop!(response, Error::<Test>::InvalidRoyaltieFeeValue);
+		})
+	}
+
+	#[test]
+	fn nft_not_found() {
+		ExtBuilder::new_build(vec![]).execute_with(|| {
+			// Try to set invalid royaltie fee
+			// Should fail and storage should remain empty
+			let response = NFTs::set_nft_royaltie_fee(origin(ALICE), INVALID_NFT_ID, 10);
+			assert_noop!(response, Error::<Test>::NFTNotFound);
+		})
+	}
+
+	#[test]
+	fn not_the_nft_owner() {
+		ExtBuilder::new_build(vec![]).execute_with(|| {
+			// Try to set invalid royaltie fee
+			// Should fail and storage should remain empty
+			let response = NFTs::set_nft_royaltie_fee(origin(ALICE), BOB_NFT_ID, 10);
+			assert_noop!(response, Error::<Test>::NotTheNFTOwner);
 		})
 	}
 }

@@ -173,6 +173,7 @@ parameter_types! {
 
 impl Config for Test {
 	type Event = Event;
+	type NFTs = NFTs;
 	type Currency = Balances;
 	type NFTHandler = NFTs;
 	type MarketplaceHandler = Marketplace;
@@ -225,8 +226,8 @@ impl ExtBuilder {
 	}
 
 	fn build_nfts(t: &mut sp_runtime::Storage) {
-		let alice_nft = NFTData::new_default(ALICE, vec![10], vec![ALICE_SERIES_ID], 0);
-		let bob_nft = NFTData::new_default(BOB, vec![10], vec![BOB_SERIES_ID], 0);
+		let alice_nft = NFTData::new_default(ALICE, vec![10], vec![ALICE_SERIES_ID], 15);
+		let bob_nft = NFTData::new_default(BOB, vec![10], vec![BOB_SERIES_ID], 25);
 
 		let alice_series = NFTSeriesDetails::new(ALICE, false);
 		let bob_series = NFTSeriesDetails::new(ALICE, false);

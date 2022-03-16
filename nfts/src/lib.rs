@@ -124,7 +124,7 @@ pub mod pallet {
 			}
 
 			// Check if royaltie_fee is in 0-100 range
-			ensure!(royaltie_fee <= 100, Error::<T>::InvaliRoyaltyFeeValue);
+			ensure!(royaltie_fee <= 100, Error::<T>::InvalidRoyaltieFeeValue);
 
 			// Execute
 			let nft_id = Self::generate_nft_id();
@@ -273,6 +273,28 @@ pub mod pallet {
 
 			Ok(().into())
 		}
+
+		#[pallet::weight(T::WeightInfo::set_nft_royaltie_fee())]
+		pub fn set_nft_royaltie_fee(
+			origin: OriginFor<T>,
+			nft_id: NFTId,
+			royaltie_fee: u8,
+		) -> DispatchResultWithPostInfo {
+			let who = ensure_signed(origin)?;
+			ensure!(royaltie_fee <= 100, Error::<T>::InvalidRoyaltieFeeValue);
+
+			Data::<T>::mutate(nft_id, |x| -> DispatchResult {
+				let data = x.as_mut().ok_or(Error::<T>::NFTNotFound)?;
+				ensure!(data.owner == who, Error::<T>::NotTheNFTOwner);
+				data.royaltie_fee = royaltie_fee;
+				Ok(())
+			})?;
+
+			let event = Event::NFTRoyaltieFeeUpdated { fee: royaltie_fee };
+			Self::deposit_event(event);
+
+			Ok(().into())
+		}
 	}
 
 	#[pallet::event]
@@ -296,6 +318,8 @@ pub mod pallet {
 		NFTMintFeeUpdated { fee: BalanceOf<T> },
 		/// An NFT was delegated to someone else or it was returned.
 		NFTDelegated { nft_id: NFTId, viewer: Option<T::AccountId> },
+		/// NFT royaltie fee updated.
+		NFTRoyaltieFeeUpdated { fee: u8 },
 	}
 
 	#[pallet::error]
@@ -344,8 +368,8 @@ pub mod pallet {
 		NotTheSeriesOwner,
 		/// Series not Found.
 		SeriesNotFound,
-		// Royalties ammount is invalid
-		InvaliRoyaltyFeeValue,
+		// Royaltie ammount is invalid
+		InvalidRoyaltieFeeValue,
 	}
 
 	/// The number of NFTs managed by this pallet
