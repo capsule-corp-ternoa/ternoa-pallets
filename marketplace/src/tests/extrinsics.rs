@@ -4,7 +4,7 @@ use frame_support::{assert_noop, assert_ok, error::BadOrigin};
 use frame_system::RawOrigin;
 use pallet_balances::Error as BalanceError;
 use primitives::{marketplace::MarketplaceType, TextFormat};
-use ternoa_common::traits::NFTTrait;
+use ternoa_common::traits::{MarketplaceTrait, NFTTrait};
 
 type MPT = MarketplaceType;
 
@@ -153,24 +153,21 @@ fn unlist_unhappy() {
 #[test]
 fn buy_happy() {
 	ExtBuilder::default()
-		.caps(vec![(ALICE, 1000), (BOB, 1000), (DAVE, 1000), (JACK, 1000)])
+		.caps(vec![(ALICE, 1000), (BOB, 1000), (DAVE, 1000)])
 		.build()
 		.execute_with(|| {
 			let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
 			let bob: mock::Origin = RawOrigin::Signed(BOB).into();
 			let dave: mock::Origin = RawOrigin::Signed(DAVE).into();
-			let jack: mock::Origin = RawOrigin::Signed(JACK).into();
-			let commission_fee = 10;
 
 			let nft_id_1 = help::create_nft_and_lock_series(alice.clone(), vec![50], vec![50], 0);
 			let nft_id_2 = help::create_nft_and_lock_series(alice.clone(), vec![50], vec![51], 0);
-			let mkp_id =
-				help::create_mkp(dave.clone(), MPT::Private, commission_fee, vec![0], vec![ALICE]);
+			let mkt_id = help::create_mkp(dave.clone(), MPT::Private, 10, vec![0], vec![ALICE]);
 
-			let price: u128 = 50;
+			let price = 50;
 			assert_ok!(Marketplace::list_nft(alice.clone(), nft_id_1, price, None));
 
-			let ok = Marketplace::list_nft(alice.clone(), nft_id_2, price, Some(mkp_id));
+			let ok = Marketplace::list_nft(alice.clone(), nft_id_2, price, Some(mkt_id));
 			assert_ok!(ok);
 
 			// Happy path CAPS
@@ -198,49 +195,76 @@ fn buy_happy() {
 			assert_eq!(Balances::free_balance(BOB), bob_before - 50);
 			assert_eq!(Balances::free_balance(ALICE), alice_before + 45);
 			assert_eq!(Balances::free_balance(DAVE), dave_before + 5);
+		})
+}
 
-			// Happy path with royaltie_fee
-			let mkp_id =
-				help::create_mkp(dave.clone(), MPT::Public, commission_fee, vec![0], vec![]);
-			let royaltie_fee = 15;
-			let nft_id =
-				help::create_nft_and_lock_series(alice.clone(), vec![50], vec![60], royaltie_fee);
-			let ok = Marketplace::list_nft(alice.clone(), nft_id, price, Some(mkp_id));
-			assert_ok!(ok);
+#[test]
+fn buy_happy_with_royalties() {
+	ExtBuilder::default()
+		.caps(vec![(ALICE, 1000), (BOB, 1000), (DAVE, 1000), (JACK, 1000)])
+		.build()
+		.execute_with(|| {
+			let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
+			let bob: mock::Origin = RawOrigin::Signed(BOB).into();
+			let dave: mock::Origin = RawOrigin::Signed(DAVE).into();
+			let jack: mock::Origin = RawOrigin::Signed(JACK).into();
 
-			let alice_before: u128 = Balances::free_balance(ALICE);
-			let bob_before: u128 = Balances::free_balance(BOB);
-			let dave_before: u128 = Balances::free_balance(DAVE);
+			let mkp_id = help::create_mkp(alice.clone(), MPT::Public, 0, vec![0], vec![]);
+			let commission_fee = Marketplace::get_marketplace(mkp_id).unwrap().commission_fee;
+			let nft_id = help::create_nft_and_lock_series(bob.clone(), vec![50], vec![50], 20);
+			let royaltie_fee = NFTs::get_nft(nft_id).unwrap().royaltie_fee;
 
-			assert_ok!(Marketplace::buy_nft(bob.clone(), nft_id));
+			let price = 150;
+			assert_ok!(Marketplace::list_nft(bob.clone(), nft_id, price, Some(mkp_id)));
 
+			let bob_before = Balances::free_balance(BOB);
+			let alice_before = Balances::free_balance(ALICE);
+			let dave_before = Balances::free_balance(DAVE);
+
+			assert_ok!(Marketplace::buy_nft(dave.clone(), nft_id));
+
+			// mkp owner
 			assert_eq!(
 				Balances::free_balance(ALICE),
-				alice_before + price - (commission_fee as u128 * price / 100)
+				alice_before + (price.saturating_mul(commission_fee.into()) / 100)
 			);
-			assert_eq!(Balances::free_balance(BOB), bob_before - price);
+			// nft creator and owner
+			assert_eq!(
+				Balances::free_balance(BOB),
+				bob_before + price - (price.saturating_mul(commission_fee.into()) / 100)
+			);
+			// nft buyer
+			assert_eq!(Balances::free_balance(DAVE), dave_before - price);
+
+			let price = 260;
+			assert_ok!(Marketplace::list_nft(dave, nft_id, price, Some(mkp_id)));
+
+			let bob_before = Balances::free_balance(BOB);
+			let alice_before = Balances::free_balance(ALICE);
+			let dave_before = Balances::free_balance(DAVE);
+			let jack_before = Balances::free_balance(JACK);
+
+			assert_ok!(Marketplace::buy_nft(jack, nft_id));
+
+			// mkp owner
+			assert_eq!(
+				Balances::free_balance(ALICE),
+				alice_before + (price.saturating_mul(commission_fee.into()) / 100)
+			);
+			// nft creator
+			assert_eq!(
+				Balances::free_balance(BOB),
+				bob_before + price.saturating_mul(royaltie_fee.into()) / 100
+			);
+			// nft owner
 			assert_eq!(
 				Balances::free_balance(DAVE),
-				dave_before + (commission_fee as u128 * price / 100)
+				dave_before + price -
+					(price.saturating_mul(commission_fee.into()) / 100) -
+					(price.saturating_mul(royaltie_fee.into()) / 100)
 			);
-
-			let alice_before: u128 = Balances::free_balance(ALICE);
-			let dave_before: u128 = Balances::free_balance(DAVE);
-			let jack_before: u128 = Balances::free_balance(JACK);
-
-			let ok = Marketplace::list_nft(bob.clone(), nft_id, price, Some(mkp_id));
-			assert_ok!(ok);
-			assert_ok!(Marketplace::buy_nft(jack.clone(), nft_id));
-
-			assert_eq!(
-				Balances::free_balance(ALICE),
-				alice_before + (royaltie_fee as u128 * price / 100)
-			);
+			// nft buyer
 			assert_eq!(Balances::free_balance(JACK), jack_before - price);
-			assert_eq!(
-				Balances::free_balance(DAVE),
-				dave_before + (commission_fee as u128 * price / 100)
-			);
 		})
 }
 

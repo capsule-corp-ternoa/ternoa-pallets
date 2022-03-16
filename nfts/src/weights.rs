@@ -33,6 +33,7 @@ pub trait WeightInfo {
 	fn finish_series() -> Weight;
 	fn set_nft_mint_fee() -> Weight;
 	fn delegate() -> Weight;
+	fn set_nft_royaltie_fee() -> Weight;
 }
 
 /// Weight functions for `ternoa_nfts`.
@@ -77,5 +78,9 @@ impl<T: frame_system::Config> WeightInfo for TernoaWeight<T> {
 		(14_870_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(1 as Weight))
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+	}
+	// Storage: Nfts Data (r:0 w:1)
+	fn set_nft_royaltie_fee() -> Weight {
+		(10_100_000 as Weight).saturating_add(T::DbWeight::get().writes(1 as Weight))
 	}
 }

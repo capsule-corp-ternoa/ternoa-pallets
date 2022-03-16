@@ -26,6 +26,7 @@ pub fn prepare_benchmarks<T: Config>() {
 		RawOrigin::Signed(alice.clone()).into(),
 		vec![1],
 		Some(series_id.clone()),
+		10,
 	));
 }
 
@@ -44,7 +45,7 @@ benchmarks! {
 		let alice: T::AccountId = get_account::<T>("ALICE");
 		let nft_id = NFTs::<T>::nft_id_generator();
 
-	}: _(RawOrigin::Signed(alice.clone()), vec![55], None)
+	}: _(RawOrigin::Signed(alice.clone()), vec![55], None, 0)
 	verify {
 		assert_eq!(NFTs::<T>::data(nft_id).unwrap().owner, alice);
 	}
@@ -101,6 +102,19 @@ benchmarks! {
 	verify {
 		assert_eq!(NFTs::<T>::data(NFT_ID).unwrap().is_delegated, true);
 		assert_eq!(NFTs::<T>::delegated_nfts(NFT_ID), Some(bob));
+	}
+
+	set_nft_royaltie_fee {
+		prepare_benchmarks::<T>();
+		let alice: T::AccountId = get_account::<T>("ALICE");
+
+		let old_royaltie_fee = NFTs::<T>::data(NFT_ID).unwrap().royaltie_fee;
+		let new_royaltie_fee = 15;
+
+	}: _(RawOrigin::Signed(alice.clone()), NFT_ID, new_royaltie_fee.clone())
+	verify {
+		assert_ne!(old_royaltie_fee, new_royaltie_fee.clone());
+		assert_eq!(NFTs::<T>::data(NFT_ID).unwrap().royaltie_fee, new_royaltie_fee);
 	}
 }
 
