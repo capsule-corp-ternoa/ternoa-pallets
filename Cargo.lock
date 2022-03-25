@@ -2366,7 +2366,7 @@ checksum = "55937e1799185b12863d447f42597ed69d9928686b8d88a1df17376a097d8369"
 
 [[package]]
 name = "ternoa-associated-accounts"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -2386,7 +2386,7 @@ dependencies = [
 
 [[package]]
 name = "ternoa-auctions"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -2407,7 +2407,7 @@ dependencies = [
 
 [[package]]
 name = "ternoa-capsules"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -2427,7 +2427,7 @@ dependencies = [
 
 [[package]]
 name = "ternoa-common"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "frame-support",
  "sp-runtime",
@@ -2437,7 +2437,7 @@ dependencies = [
 
 [[package]]
 name = "ternoa-mandate"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -2448,7 +2448,7 @@ dependencies = [
 
 [[package]]
 name = "ternoa-marketplace"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -2468,7 +2468,7 @@ dependencies = [
 
 [[package]]
 name = "ternoa-nfts"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -2487,7 +2487,7 @@ dependencies = [
 
 [[package]]
 name = "ternoa-pallets-primitives"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "frame-support",
  "parity-scale-codec",
@@ -2498,7 +2498,7 @@ dependencies = [
 
 [[package]]
 name = "ternoa-sgx"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -2518,7 +2518,7 @@ dependencies = [
 
 [[package]]
 name = "ternoa-staking-rewards"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -2533,7 +2533,7 @@ dependencies = [
 
 [[package]]
 name = "ternoa-timed-escrow"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
