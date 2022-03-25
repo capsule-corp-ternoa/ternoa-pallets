@@ -1,7 +1,7 @@
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 
-use codec::{Decode, Encode};
+use parity_scale_codec::{Decode, Encode};
 use primitives::TextFormat;
 use scale_info::TypeInfo;
 use sp_runtime::RuntimeDebug;

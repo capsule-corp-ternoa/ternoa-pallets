@@ -16,7 +16,7 @@ sp-runtime = { git = "https://github.com/capsule-corp-ternoa/substrate", branch 
 sp-std = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-03-24", default-features = false }
 
 # Rest
-codec = { package = "parity-scale-codec", default-features = false, features = ["derive"], version = "3.0.0" }
+parity-scale-codec = { default-features = false, features = ["derive", "max-encoded-len"], version = "3.1.2" }
 scale-info = { version = "2.0.1", default-features = false, features = ["derive"] }
 
 [features]
@@ -28,6 +28,6 @@ std = [
 	"sp-runtime/std",
     "sp-std/std",
 	# Rest
-	"codec/std",
+	"parity-scale-codec/std",
 	"scale-info/std",
 ]
