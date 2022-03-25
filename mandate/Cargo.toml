@@ -10,15 +10,15 @@ targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
 # Substrate Frame
-frame-support = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-02-03", default-features = false }
-frame-system = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-02-03", default-features = false }
+frame-support = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-03-24", default-features = false }
+frame-system = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-03-24", default-features = false }
 
 # Substrate Orubate
-sp-std = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-02-03", default-features = false }
+sp-std = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-03-24", default-features = false }
 
 # Rest
-codec = { package = "parity-scale-codec", default-features = false, features = ["derive"], version = "2.3.1" }
-scale-info = { version = "1.0", default-features = false, features = ["derive"] }
+codec = { package = "parity-scale-codec", default-features = false, features = ["derive"], version = "3.0.0" }
+scale-info = { version = "2.0.1", default-features = false, features = ["derive"] }
 
 [features]
 default = ["std"]
