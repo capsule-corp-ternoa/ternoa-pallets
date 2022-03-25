@@ -6,7 +6,7 @@ use sp_std::vec::Vec;
 
 pub mod v6 {
 	use crate::Config;
-	use codec::{Decode, Encode};
+	use parity_scale_codec::{Decode, Encode};
 	use frame_support::pallet_prelude::{OptionQuery, ValueQuery};
 	use frame_support::traits::Currency;
 	use frame_support::Blake2_128Concat;
