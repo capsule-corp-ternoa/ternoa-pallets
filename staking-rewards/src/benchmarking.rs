@@ -1,8 +1,7 @@
-use crate::{BalanceOf, Call, Config, Pallet};
+use crate::{Call, Config, Pallet};
 use frame_benchmarking::{benchmarks, impl_benchmark_test_suite};
-use frame_support::traits::Currency;
 use frame_system::RawOrigin;
-use sp_runtime::traits::{Bounded, Saturating, StaticLookup};
+use sp_runtime::traits::Saturating;
 use sp_std::prelude::*;
 
 benchmarks! {
