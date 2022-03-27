@@ -17,7 +17,7 @@ use frame_support::{
 };
 use sp_runtime::traits::{AccountIdConversion, Saturating, Zero};
 use sp_std::prelude::*;
-use weights::WeightInfo;
+pub use weights::WeightInfo;
 
 pub use pallet::*;
 
