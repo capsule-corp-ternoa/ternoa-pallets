@@ -1,5 +1,12 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
+#[cfg(feature = "runtime-benchmarks")]
+mod benchmarking;
+#[cfg(test)]
+mod tests;
+
+pub mod weights;
+
 use frame_support::{
 	pallet_prelude::*,
 	traits::{
@@ -10,6 +17,7 @@ use frame_support::{
 };
 use sp_runtime::traits::{AccountIdConversion, Saturating, Zero};
 use sp_std::prelude::*;
+use weights::WeightInfo;
 
 pub use pallet::*;
 
@@ -49,6 +57,9 @@ pub mod pallet {
 
 		/// Origin that can control this pallet.
 		type ExternalOrigin: EnsureOrigin<Self::Origin>;
+
+		/// Weight
+		type WeightInfo: WeightInfo;
 	}
 
 	#[pallet::pallet]
@@ -58,7 +69,7 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		#[pallet::weight(10_000)]
+		#[pallet::weight(T::WeightInfo::set_session_extra_reward_payout())]
 		pub fn set_session_extra_reward_payout(
 			origin: OriginFor<T>,
 			#[pallet::compact] value: BalanceOf<T>,

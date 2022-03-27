@@ -2439,6 +2439,7 @@ dependencies = [
 name = "ternoa-mandate"
 version = "1.0.0"
 dependencies = [
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "parity-scale-codec",
@@ -2520,13 +2521,17 @@ dependencies = [
 name = "ternoa-staking-rewards"
 version = "1.0.0"
 dependencies = [
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "log",
  "pallet-authorship",
+ "pallet-balances",
  "pallet-staking",
  "parity-scale-codec",
  "scale-info",
+ "sp-core",
+ "sp-io",
  "sp-runtime",
  "sp-std",
 ]
