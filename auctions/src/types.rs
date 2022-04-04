@@ -1,16 +1,18 @@
-use parity_scale_codec::{Decode, Encode};
+use frame_support::{traits::Get, BoundedVec};
+use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use primitives::{marketplace::MarketplaceId, nfts::NFTId};
 use scale_info::TypeInfo;
 use sp_runtime::RuntimeDebug;
 use sp_std::vec::Vec;
 
-#[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug, TypeInfo)]
+#[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 /// Structure to store Auction data
-pub struct AuctionData<AccountId, BlockNumber, Balance>
+pub struct AuctionData<AccountId, BlockNumber, Balance, ListLengthLimit>
 where
 	AccountId: sp_std::cmp::Ord + Clone,
 	BlockNumber: Clone,
 	Balance: sp_std::cmp::PartialOrd + Clone + Default,
+	ListLengthLimit: Get<u32>,
 {
 	/// The owner of the nft that has listed the item on auction
 	pub creator: AccountId,
@@ -23,18 +25,20 @@ where
 	/// Optional price at which the auction is stopped and item can be bought
 	pub buy_it_price: Option<Balance>,
 	/// List of bidders
-	pub bidders: BidderList<AccountId, Balance>,
+	pub bidders: BidderList<AccountId, Balance, ListLengthLimit>,
 	/// The marketplace where the auction has been listed
 	pub marketplace_id: MarketplaceId,
 	/// Is the auction going beyond the original end_block
 	pub is_extended: bool,
 }
 
-impl<AccountId, BlockNumber, Balance> AuctionData<AccountId, BlockNumber, Balance>
+impl<AccountId, BlockNumber, Balance, ListLengthLimit>
+	AuctionData<AccountId, BlockNumber, Balance, ListLengthLimit>
 where
 	AccountId: sp_std::cmp::Ord + Clone,
 	BlockNumber: Clone,
 	Balance: sp_std::cmp::PartialOrd + Clone + Default,
+	ListLengthLimit: Get<u32>,
 {
 	pub fn to_raw(&self, nft_id: NFTId) -> AuctionsGenesis<AccountId, BlockNumber, Balance> {
 		(
@@ -72,31 +76,32 @@ pub type AuctionsGenesis<AccountId, BlockNumber, Balance> = (
 	BlockNumber,
 	Balance,
 	Option<Balance>,
-	(Vec<(AccountId, Balance)>, u16),
+	Vec<(AccountId, Balance)>,
 	MarketplaceId,
 	bool,
 );
 
-#[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug, TypeInfo)]
+#[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 /// wrapper type to store sorted list of all bids
 /// The wrapper exists to ensure a queue implementation of sorted bids
-pub struct BidderList<AccountId, Balance>
+pub struct BidderList<AccountId, Balance, ListLengthLimit>
 where
 	AccountId: sp_std::cmp::Ord + Clone,
 	Balance: sp_std::cmp::PartialOrd + Clone,
+	ListLengthLimit: Get<u32>,
 {
-	pub list: Vec<(AccountId, Balance)>,
-	pub max_size: u16,
+	pub list: BoundedVec<(AccountId, Balance), ListLengthLimit>,
 }
 
-impl<AccountId, Balance> BidderList<AccountId, Balance>
+impl<AccountId, Balance, ListLengthLimit> BidderList<AccountId, Balance, ListLengthLimit>
 where
 	AccountId: sp_std::cmp::Ord + Clone,
 	Balance: sp_std::cmp::PartialOrd + Clone,
+	ListLengthLimit: Get<u32>,
 {
 	/// Create a new empty bidders list
-	pub fn new(max_size: u16) -> Self {
-		Self { list: Vec::new(), max_size }
+	pub fn new() -> Self {
+		Self { list: BoundedVec::default() }
 	}
 
 	/// Insert a new bid to the list
@@ -106,13 +111,13 @@ where
 		value: Balance,
 	) -> Option<(AccountId, Balance)> {
 		// If list is at max capacity, remove lowest bid
-		if self.list.len() >= self.max_size as usize {
+		if self.list.is_full() {
 			let removed_bid = self.list.remove(0);
-			self.list.push((account_id, value));
+			self.list.try_push((account_id, value)).expect("Cannot happen.");
 			// return removed bid
 			Some(removed_bid)
 		} else {
-			self.list.push((account_id, value));
+			self.list.try_push((account_id, value)).expect("Cannot happen.");
 			None
 		}
 	}
@@ -161,29 +166,33 @@ where
 		self.list.iter().find(|&x| x.0 == account_id)
 	}
 
-	pub fn to_raw(&self) -> (Vec<(AccountId, Balance)>, u16) {
-		(self.list.clone(), self.max_size)
+	pub fn to_raw(&self) -> Vec<(AccountId, Balance)> {
+		self.list.to_vec()
 	}
 
-	pub fn from_raw(raw: (Vec<(AccountId, Balance)>, u16)) -> Self {
-		Self { list: raw.0, max_size: raw.1 }
+	pub fn from_raw(raw: Vec<(AccountId, Balance)>) -> Self {
+		let list = BoundedVec::try_from(raw).expect("It will never happen.");
+		Self { list }
 	}
 }
 
-#[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug, TypeInfo, Default)]
+#[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug, TypeInfo, Default, MaxEncodedLen)]
 /// wrapper type to store sorted list of all bids
 /// The wrapper exists to ensure a queue implementation of sorted bids
-pub struct DeadlineList<BlockNumber>(pub Vec<(NFTId, BlockNumber)>);
+pub struct DeadlineList<BlockNumber, ParallelAuctionLimit: Get<u32>>(
+	pub BoundedVec<(NFTId, BlockNumber), ParallelAuctionLimit>,
+);
 
-impl<BlockNumber> DeadlineList<BlockNumber>
+impl<BlockNumber, ParallelAuctionLimit> DeadlineList<BlockNumber, ParallelAuctionLimit>
 where
 	BlockNumber: sp_std::cmp::PartialOrd,
+	ParallelAuctionLimit: Get<u32>,
 {
-	pub fn insert(&mut self, nft_id: NFTId, block_number: BlockNumber) {
+	pub fn insert(&mut self, nft_id: NFTId, block_number: BlockNumber) -> Result<(), ()> {
 		let index = self.0.iter().position(|x| x.1 > block_number);
 		let index = index.unwrap_or_else(|| self.0.len());
 
-		self.0.insert(index, (nft_id, block_number));
+		self.0.try_insert(index, (nft_id, block_number))
 	}
 
 	pub fn remove(&mut self, nft_id: NFTId) -> bool {
@@ -199,7 +208,7 @@ where
 	pub fn update(&mut self, nft_id: NFTId, block_number: BlockNumber) -> bool {
 		let removed = self.remove(nft_id);
 		if removed {
-			self.insert(nft_id, block_number);
+			self.insert(nft_id, block_number).expect("Cannot happen.");
 			true
 		} else {
 			false
