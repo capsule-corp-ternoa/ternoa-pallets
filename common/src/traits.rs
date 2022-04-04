@@ -8,7 +8,6 @@ use frame_support::{
 use primitives::{
 	marketplace::{MarketplaceData, MarketplaceId, MarketplaceType},
 	nfts::{NFTData, NFTId, NFTSeriesId},
-	TextFormat,
 };
 
 pub trait NFTTrait {
@@ -64,21 +63,40 @@ pub trait NFTTrait {
 
 /// Trait that implements basic functionalities related to Ternoa Marketplace
 /// TODO: Expand trait with more useful functions
-pub trait MarketplaceTrait<AccountId: Clone> {
+pub trait MarketplaceTrait {
+	type AccountId: Clone;
+	type AccountListLength: Get<u32>;
+	type NameLengthLimit: Get<u32>;
+	type URILengthLimit: Get<u32>;
+	type DescriptionLengthLimit: Get<u32>;
+
 	/// Return if an account is permitted to list on given marketplace
-	fn is_allowed_to_list(marketplace_id: MarketplaceId, account_id: AccountId) -> DispatchResult;
+	fn is_allowed_to_list(
+		marketplace_id: MarketplaceId,
+		account_id: Self::AccountId,
+	) -> DispatchResult;
 
 	/// Return marketplace
-	fn get_marketplace(marketplace_id: MarketplaceId) -> Option<MarketplaceData<AccountId>>;
+	fn get_marketplace(
+		marketplace_id: MarketplaceId,
+	) -> Option<
+		MarketplaceData<
+			Self::AccountId,
+			Self::AccountListLength,
+			Self::NameLengthLimit,
+			Self::URILengthLimit,
+			Self::DescriptionLengthLimit,
+		>,
+	>;
 
 	/// create a new marketplace
 	fn create(
-		origin: AccountId,
+		origin: Self::AccountId,
 		kind: MarketplaceType,
 		commission_fee: u8,
-		name: TextFormat,
-		uri: Option<TextFormat>,
-		logo_uri: Option<TextFormat>,
-		description: Option<TextFormat>,
+		name: BoundedVec<u8, Self::NameLengthLimit>,
+		uri: BoundedVec<u8, Self::URILengthLimit>,
+		logo_uri: BoundedVec<u8, Self::URILengthLimit>,
+		description: BoundedVec<u8, Self::DescriptionLengthLimit>,
 	) -> Result<MarketplaceId, DispatchErrorWithPostInfo>;
 }

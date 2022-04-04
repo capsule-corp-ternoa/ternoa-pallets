@@ -14,7 +14,6 @@ pub type NFTSeriesId = Vec<u8>;
 
 /// Data related to an NFT, such as who is its owner.
 #[derive(Encode, Decode, Clone, PartialEq, Eq, Default, RuntimeDebug, TypeInfo)]
-#[codec(mel_bound())]
 pub struct NFTData<AccountId, IPFSLengthLimit>
 where
 	AccountId: Clone,

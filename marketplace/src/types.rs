@@ -1,9 +1,9 @@
-use parity_scale_codec::{Decode, Encode};
+use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use primitives::{marketplace::MarketplaceId, nfts::NFTId};
 use scale_info::TypeInfo;
 use sp_runtime::RuntimeDebug;
 
-#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo)]
+#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 pub struct SaleData<AccountId, Balance>
 where
 	Balance: Clone + Default,

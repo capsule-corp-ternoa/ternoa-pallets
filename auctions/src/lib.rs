@@ -52,7 +52,13 @@ pub mod pallet {
 		type NFTHandler: NFTTrait<AccountId = Self::AccountId>;
 
 		/// Get information on marketplace
-		type MarketplaceHandler: MarketplaceTrait<Self::AccountId>;
+		type MarketplaceHandler: MarketplaceTrait<
+			AccountId = Self::AccountId,
+			AccountListLength = Self::AccountListLength,
+			NameLengthLimit = Self::NameLengthLimit,
+			URILengthLimit = Self::URILengthLimit,
+			DescriptionLengthLimit = Self::DescriptionLengthLimit,
+		>;
 
 		/// Minimum required length of auction
 		#[pallet::constant]
@@ -80,6 +86,18 @@ pub mod pallet {
 
 		// weight information for pallet
 		type WeightInfo: WeightInfo;
+
+		#[pallet::constant]
+		type AccountListLength: Get<u32> + TypeInfo + MaxEncodedLen;
+
+		#[pallet::constant]
+		type NameLengthLimit: Get<u32> + TypeInfo + MaxEncodedLen;
+
+		#[pallet::constant]
+		type URILengthLimit: Get<u32> + TypeInfo + MaxEncodedLen;
+
+		#[pallet::constant]
+		type DescriptionLengthLimit: Get<u32> + TypeInfo + MaxEncodedLen;
 	}
 
 	#[pallet::pallet]

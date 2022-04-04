@@ -10,7 +10,10 @@ mod migrations;
 mod types;
 mod weights;
 
-use frame_support::dispatch::{DispatchErrorWithPostInfo, DispatchResult};
+use frame_support::{
+	dispatch::{DispatchErrorWithPostInfo, DispatchResult},
+	BoundedVec,
+};
 pub use pallet::*;
 pub use types::*;
 
@@ -28,10 +31,9 @@ use frame_system::Origin;
 use primitives::{
 	marketplace::{MarketplaceData, MarketplaceId, MarketplaceType, MarketplacesGenesis},
 	nfts::NFTId,
-	TextFormat,
 };
 use sp_std::vec::Vec;
-use ternoa_common::{helpers::check_bounds, traits::MarketplaceTrait};
+use ternoa_common::traits::MarketplaceTrait;
 
 /// The current storage version.
 const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
@@ -39,6 +41,7 @@ const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
+
 	use frame_support::{pallet_prelude::*, transactional};
 	use frame_system::pallet_prelude::*;
 	use sp_runtime::traits::{CheckedDiv, CheckedSub, StaticLookup};
@@ -67,35 +70,22 @@ pub mod pallet {
 		/// Place where the marketplace fees go.
 		type FeesCollector: OnUnbalanced<NegativeImbalanceOf<Self>>;
 
-		/// Min name length.
 		#[pallet::constant]
-		type MinNameLen: Get<u16>;
+		type AccountListLength: Get<u32> + TypeInfo + MaxEncodedLen;
 
-		/// Max name length.
 		#[pallet::constant]
-		type MaxNameLen: Get<u16>;
+		type NameLengthLimit: Get<u32> + TypeInfo + MaxEncodedLen;
 
-		/// Min description length.
 		#[pallet::constant]
-		type MinDescriptionLen: Get<u16>;
+		type URILengthLimit: Get<u32> + TypeInfo + MaxEncodedLen;
 
-		/// Max description length.
 		#[pallet::constant]
-		type MaxDescriptionLen: Get<u16>;
-
-		/// Min uri length.
-		#[pallet::constant]
-		type MinUriLen: Get<u16>;
-
-		/// Max uri length.
-		#[pallet::constant]
-		type MaxUriLen: Get<u16>;
+		type DescriptionLengthLimit: Get<u32> + TypeInfo + MaxEncodedLen;
 	}
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
 	#[pallet::storage_version(STORAGE_VERSION)]
-	#[pallet::without_storage_info]
 	pub struct Pallet<T>(PhantomData<T>);
 
 	#[pallet::hooks]
@@ -206,43 +196,14 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			kind: MarketplaceType,
 			commission_fee: u8,
-			name: TextFormat,
-			uri: Option<TextFormat>,
-			logo_uri: Option<TextFormat>,
-			description: Option<TextFormat>,
+			name: BoundedVec<u8, T::NameLengthLimit>,
+			uri: BoundedVec<u8, T::URILengthLimit>,
+			logo_uri: BoundedVec<u8, T::URILengthLimit>,
+			description: BoundedVec<u8, T::DescriptionLengthLimit>,
 		) -> DispatchResultWithPostInfo {
 			let caller_id = ensure_signed(origin)?;
 
 			ensure!(commission_fee <= 100, Error::<T>::InvalidCommissionFeeValue);
-			check_bounds(
-				name.len(),
-				(T::MinNameLen::get(), Error::<T>::TooShortMarketplaceName),
-				(T::MaxNameLen::get(), Error::<T>::TooLongMarketplaceName),
-			)?;
-
-			if let Some(text) = uri.as_ref() {
-				check_bounds(
-					text.len(),
-					(T::MinUriLen::get(), Error::<T>::TooShortUri),
-					(T::MaxUriLen::get(), Error::<T>::TooLongUri),
-				)?;
-			}
-
-			if let Some(text) = logo_uri.as_ref() {
-				check_bounds(
-					text.len(),
-					(T::MinUriLen::get(), Error::<T>::TooShortLogoUri),
-					(T::MaxUriLen::get(), Error::<T>::TooLongLogoUri),
-				)?;
-			}
-
-			if let Some(text) = description.as_ref() {
-				check_bounds(
-					text.len(),
-					(T::MinDescriptionLen::get(), Error::<T>::TooShortDescription),
-					(T::MaxDescriptionLen::get(), Error::<T>::TooLongDescription),
-				)?;
-			}
 
 			// Needs to have enough money
 			let imbalance = T::Currency::withdraw(
@@ -257,8 +218,8 @@ pub mod pallet {
 				kind,
 				commission_fee,
 				caller_id.clone(),
-				Vec::default(),
-				Vec::default(),
+				BoundedVec::default(),
+				BoundedVec::default(),
 				name,
 				uri,
 				logo_uri,
@@ -292,7 +253,10 @@ pub mod pallet {
 					Error::<T>::UnsupportedMarketplace
 				);
 
-				market_info.allow_list.push(account_id.clone());
+				market_info
+					.allow_list
+					.try_push(account_id.clone())
+					.map_err(|_| Error::<T>::RandomError)?;
 				Ok(())
 			})?;
 
@@ -348,7 +312,11 @@ pub mod pallet {
 					Error::<T>::UnsupportedMarketplace
 				);
 
-				market_info.disallow_list.push(account_id.clone());
+				market_info
+					.disallow_list
+					.try_push(account_id.clone())
+					.map_err(|_| Error::<T>::RandomError)?;
+
 				Ok(())
 			})?;
 
@@ -435,15 +403,9 @@ pub mod pallet {
 		pub fn set_marketplace_name(
 			origin: OriginFor<T>,
 			marketplace_id: MarketplaceId,
-			name: TextFormat,
+			name: BoundedVec<u8, T::NameLengthLimit>,
 		) -> DispatchResultWithPostInfo {
 			let caller_id = ensure_signed(origin)?;
-
-			check_bounds(
-				name.len(),
-				(T::MinNameLen::get(), Error::<T>::TooShortMarketplaceName),
-				(T::MaxNameLen::get(), Error::<T>::TooLongMarketplaceName),
-			)?;
 
 			Marketplaces::<T>::try_mutate(marketplace_id, |x| -> DispatchResult {
 				let market_info = x.as_mut().ok_or(Error::<T>::MarketplaceNotFound)?;
@@ -499,20 +461,14 @@ pub mod pallet {
 		pub fn set_marketplace_uri(
 			origin: OriginFor<T>,
 			marketplace_id: MarketplaceId,
-			uri: TextFormat,
+			uri: BoundedVec<u8, T::URILengthLimit>,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
-
-			check_bounds(
-				uri.len(),
-				(T::MinUriLen::get(), Error::<T>::TooShortUri),
-				(T::MaxUriLen::get(), Error::<T>::TooLongUri),
-			)?;
 
 			Marketplaces::<T>::try_mutate(marketplace_id, |x| -> DispatchResult {
 				let market_info = x.as_mut().ok_or(Error::<T>::MarketplaceNotFound)?;
 				ensure!(market_info.owner == who, Error::<T>::NotMarketplaceOwner);
-				market_info.uri = Some(uri.clone());
+				market_info.uri = uri.clone();
 				Ok(())
 			})?;
 
@@ -525,20 +481,14 @@ pub mod pallet {
 		pub fn set_marketplace_logo_uri(
 			origin: OriginFor<T>,
 			marketplace_id: MarketplaceId,
-			logo_uri: TextFormat,
+			logo_uri: BoundedVec<u8, T::URILengthLimit>,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
-
-			check_bounds(
-				logo_uri.len(),
-				(T::MinUriLen::get(), Error::<T>::TooShortLogoUri),
-				(T::MaxUriLen::get(), Error::<T>::TooLongLogoUri),
-			)?;
 
 			Marketplaces::<T>::try_mutate(marketplace_id, |x| -> DispatchResult {
 				let market_info = x.as_mut().ok_or(Error::<T>::MarketplaceNotFound)?;
 				ensure!(market_info.owner == who, Error::<T>::NotMarketplaceOwner);
-				market_info.logo_uri = Some(logo_uri.clone());
+				market_info.logo_uri = logo_uri.clone();
 				Ok(())
 			})?;
 
@@ -551,20 +501,14 @@ pub mod pallet {
 		pub fn set_marketplace_description(
 			origin: OriginFor<T>,
 			marketplace_id: MarketplaceId,
-			description: TextFormat,
+			description: BoundedVec<u8, T::DescriptionLengthLimit>,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
-
-			check_bounds(
-				description.len(),
-				(T::MinDescriptionLen::get(), Error::<T>::TooShortDescription),
-				(T::MaxDescriptionLen::get(), Error::<T>::TooLongDescription),
-			)?;
 
 			Marketplaces::<T>::try_mutate(marketplace_id, |x| -> DispatchResult {
 				let market_info = x.as_mut().ok_or(Error::<T>::MarketplaceNotFound)?;
 				ensure!(market_info.owner == who, Error::<T>::NotMarketplaceOwner);
-				market_info.description = Some(description.clone());
+				market_info.description = description.clone();
 				Ok(())
 			})?;
 
@@ -592,17 +536,29 @@ pub mod pallet {
 		/// Marketplace changed type.
 		MarketplaceTypeChanged { marketplace_id: MarketplaceId, kind: MarketplaceType },
 		/// Marketplace updated name.
-		MarketplaceNameUpdated { marketplace_id: MarketplaceId, name: TextFormat },
+		MarketplaceNameUpdated {
+			marketplace_id: MarketplaceId,
+			name: BoundedVec<u8, T::NameLengthLimit>,
+		},
 		/// Marketplace mint fee updated.
 		MarketplaceMintFeeUpdated { fee: BalanceOf<T> },
 		/// Marketplace mint fee updated.
 		MarketplaceCommissionFeeUpdated { marketplace_id: MarketplaceId, fee: u8 },
-		/// Marketplace TextFormat updated.
-		MarketplaceUriUpdated { marketplace_id: MarketplaceId, uri: TextFormat },
-		/// Marketplace Logo TextFormat updated.
-		MarketplaceLogoUriUpdated { marketplace_id: MarketplaceId, uri: TextFormat },
-		/// Marketplace description updated.
-		MarketplaceDescriptionUpdated { marketplace_id: MarketplaceId, description: TextFormat },
+		/// Marketplace URI updated.
+		MarketplaceUriUpdated {
+			marketplace_id: MarketplaceId,
+			uri: BoundedVec<u8, T::URILengthLimit>,
+		},
+		/// Marketplace Logo URI updated.
+		MarketplaceLogoUriUpdated {
+			marketplace_id: MarketplaceId,
+			uri: BoundedVec<u8, T::URILengthLimit>,
+		},
+		/// Marketplace Description updated.
+		MarketplaceDescriptionUpdated {
+			marketplace_id: MarketplaceId,
+			description: BoundedVec<u8, T::DescriptionLengthLimit>,
+		},
 		/// A nft has been listed for sale.
 		NFTListed { nft_id: NFTId, price: BalanceOf<T>, marketplace_id: MarketplaceId },
 		/// A nft is removed from the marketplace by its owner.
@@ -667,6 +623,8 @@ pub mod pallet {
 		TooShortDescription,
 		/// Marketplace description in too long.
 		TooLongDescription,
+		/// TODO
+		RandomError,
 	}
 
 	/// Nfts listed on the marketplace
@@ -681,8 +639,19 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn marketplaces)]
-	pub type Marketplaces<T: Config> =
-		StorageMap<_, Blake2_128Concat, MarketplaceId, MarketplaceData<T::AccountId>, OptionQuery>;
+	pub type Marketplaces<T: Config> = StorageMap<
+		_,
+		Blake2_128Concat,
+		MarketplaceId,
+		MarketplaceData<
+			T::AccountId,
+			T::AccountListLength,
+			T::NameLengthLimit,
+			T::URILengthLimit,
+			T::DescriptionLengthLimit,
+		>,
+		OptionQuery,
+	>;
 
 	/// Host much does it cost to create a marketplace.
 	#[pallet::storage]
@@ -726,11 +695,17 @@ pub mod pallet {
 	}
 }
 
-impl<T: Config> MarketplaceTrait<T::AccountId> for Pallet<T> {
+impl<T: Config> MarketplaceTrait for Pallet<T> {
+	type AccountId = T::AccountId;
+	type AccountListLength = T::AccountListLength;
+	type NameLengthLimit = T::NameLengthLimit;
+	type URILengthLimit = T::URILengthLimit;
+	type DescriptionLengthLimit = T::DescriptionLengthLimit;
+
 	// Return if an account is permitted to list on given marketplace
 	fn is_allowed_to_list(
 		marketplace_id: MarketplaceId,
-		account_id: T::AccountId,
+		account_id: Self::AccountId,
 	) -> DispatchResult {
 		let market =
 			Marketplaces::<T>::get(marketplace_id).ok_or(Error::<T>::MarketplaceNotFound)?;
@@ -747,7 +722,17 @@ impl<T: Config> MarketplaceTrait<T::AccountId> for Pallet<T> {
 	}
 
 	// Return the owner account and commision for marketplace with `marketplace_id`
-	fn get_marketplace(marketplace_id: MarketplaceId) -> Option<MarketplaceData<T::AccountId>> {
+	fn get_marketplace(
+		marketplace_id: MarketplaceId,
+	) -> Option<
+		MarketplaceData<
+			Self::AccountId,
+			Self::AccountListLength,
+			Self::NameLengthLimit,
+			Self::URILengthLimit,
+			Self::DescriptionLengthLimit,
+		>,
+	> {
 		match Marketplaces::<T>::get(marketplace_id) {
 			Some(marketplace) => Some(marketplace),
 			None => None,
@@ -756,13 +741,13 @@ impl<T: Config> MarketplaceTrait<T::AccountId> for Pallet<T> {
 
 	// create a new marketplace
 	fn create(
-		caller_id: <T as frame_system::Config>::AccountId,
+		caller_id: Self::AccountId,
 		kind: MarketplaceType,
 		commission_fee: u8,
-		name: TextFormat,
-		uri: Option<TextFormat>,
-		logo_uri: Option<TextFormat>,
-		description: Option<TextFormat>,
+		name: BoundedVec<u8, Self::NameLengthLimit>,
+		uri: BoundedVec<u8, Self::URILengthLimit>,
+		logo_uri: BoundedVec<u8, Self::URILengthLimit>,
+		description: BoundedVec<u8, Self::DescriptionLengthLimit>,
 	) -> Result<MarketplaceId, DispatchErrorWithPostInfo> {
 		Self::create_marketplace(
 			Origin::<T>::Signed(caller_id).into(),
