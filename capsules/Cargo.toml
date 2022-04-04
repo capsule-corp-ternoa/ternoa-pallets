@@ -25,10 +25,10 @@ scale-info = { version = "2.0.1", default-features = false, features = ["derive"
 # Ternoa
 ternoa-common = { default-features = false, path = "../common" }
 primitives = { package = "ternoa-pallets-primitives", default-features = false, path = "../primitives" }
+ternoa-nfts = { default-features = false, path = "../nfts" }
 
 # We needs this dependencies to run our tests
 [dev-dependencies]
-ternoa-nfts = { default-features = false, path = "../nfts" }
 pallet-balances = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-03-24" }
 sp-core = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-03-24", default-features = false }
 sp-io = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-03-24", default-features = false }

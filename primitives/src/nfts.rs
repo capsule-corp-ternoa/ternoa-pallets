@@ -1,6 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use crate::TextFormat;
+use frame_support::{traits::Get, BoundedVec};
 use parity_scale_codec::{Decode, Encode};
 use scale_info::TypeInfo;
 use sp_runtime::RuntimeDebug;
@@ -14,16 +14,18 @@ pub type NFTSeriesId = Vec<u8>;
 
 /// Data related to an NFT, such as who is its owner.
 #[derive(Encode, Decode, Clone, PartialEq, Eq, Default, RuntimeDebug, TypeInfo)]
-pub struct NFTData<AccountId>
+#[codec(mel_bound())]
+pub struct NFTData<AccountId, IPFSLengthLimit>
 where
 	AccountId: Clone,
+	IPFSLengthLimit: Get<u32>,
 {
 	// NFT owner
 	pub owner: AccountId,
 	// NFT creator
 	pub creator: AccountId,
 	// IPFS reference
-	pub ipfs_reference: TextFormat,
+	pub ipfs_reference: BoundedVec<u8, IPFSLengthLimit>,
 	// Series ID
 	pub series_id: NFTSeriesId,
 	// Is listed for sale
@@ -40,14 +42,15 @@ where
 	pub royalties: u8,
 }
 
-impl<AccountId> NFTData<AccountId>
+impl<AccountId, IPFSLengthLimit> NFTData<AccountId, IPFSLengthLimit>
 where
 	AccountId: Clone,
+	IPFSLengthLimit: Get<u32>,
 {
 	pub fn new(
 		owner: AccountId,
 		creator: AccountId,
-		ipfs_reference: TextFormat,
+		ipfs_reference: BoundedVec<u8, IPFSLengthLimit>,
 		series_id: NFTSeriesId,
 		listed_for_sale: bool,
 		is_in_transmission: bool,
@@ -72,7 +75,7 @@ where
 
 	pub fn new_default(
 		owner: AccountId,
-		ipfs_reference: TextFormat,
+		ipfs_reference: BoundedVec<u8, IPFSLengthLimit>,
 		series_id: NFTSeriesId,
 	) -> Self {
 		Self::new(
@@ -94,7 +97,7 @@ where
 			nft_id,
 			self.owner.clone(),
 			self.creator.clone(),
-			self.ipfs_reference.clone(),
+			self.ipfs_reference.to_vec(),
 			self.series_id.clone(),
 			self.listed_for_sale,
 			self.is_in_transmission,
@@ -106,10 +109,11 @@ where
 	}
 
 	pub fn from_raw(raw: NFTsGenesis<AccountId>) -> Self {
+		let ipfs_reference = BoundedVec::try_from(raw.3).expect("It will never happen.");
 		Self {
 			owner: raw.1,
 			creator: raw.2,
-			ipfs_reference: raw.3,
+			ipfs_reference,
 			series_id: raw.4,
 			listed_for_sale: raw.5,
 			is_in_transmission: raw.6,

@@ -52,7 +52,13 @@ pub mod pallet {
 		type Currency: Currency<Self::AccountId>;
 
 		/// TODO!
-		type NFTTrait: NFTTrait<AccountId = Self::AccountId>;
+		type NFTTrait: NFTTrait<
+			AccountId = Self::AccountId,
+			IPFSLengthLimit = Self::IPFSLengthLimit,
+		>;
+
+		#[pallet::constant]
+		type IPFSLengthLimit: Get<u32> + TypeInfo + MaxEncodedLen;
 
 		/// Min Ipfs len
 		#[pallet::constant]
@@ -97,7 +103,7 @@ pub mod pallet {
 		#[transactional]
 		pub fn create(
 			origin: OriginFor<T>,
-			nft_ipfs_reference: TextFormat,
+			nft_ipfs_reference: BoundedVec<u8, T::IPFSLengthLimit>,
 			capsule_ipfs_reference: TextFormat,
 			series_id: Option<NFTSeriesId>,
 		) -> DispatchResultWithPostInfo {

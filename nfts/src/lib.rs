@@ -13,6 +13,7 @@ use frame_support::{
 	dispatch::{DispatchErrorWithPostInfo, DispatchResult},
 	pallet_prelude::ensure,
 	traits::StorageVersion,
+	BoundedVec,
 };
 use frame_system::Origin;
 pub use pallet::*;
@@ -36,7 +37,6 @@ pub mod pallet {
 	};
 	use frame_system::pallet_prelude::*;
 	use sp_runtime::traits::StaticLookup;
-	use ternoa_common::helpers::check_bounds;
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
@@ -51,17 +51,8 @@ pub mod pallet {
 		/// What we do with additional fees
 		type FeesCollector: OnUnbalanced<NegativeImbalanceOf<Self>>;
 
-		/// Min Ipfs len
-		//#[pallet::constant]
-		//type MinIpfsLen: Get<u16>;
-
-		/// Min Ipfs len
 		#[pallet::constant]
-		type MinIpfsLen: Get<u16>;
-
-		/// Max Uri len
-		#[pallet::constant]
-		type MaxIpfsLen: Get<u16>;
+		type IPFSLengthLimit: Get<u32> + TypeInfo + MaxEncodedLen;
 	}
 
 	pub type BalanceOf<T> =
@@ -94,16 +85,10 @@ pub mod pallet {
 		#[transactional]
 		pub fn create(
 			origin: OriginFor<T>,
-			ipfs_reference: TextFormat,
+			ipfs_reference: BoundedVec<u8, T::IPFSLengthLimit>,
 			series_id: Option<NFTSeriesId>,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
-
-			check_bounds(
-				ipfs_reference.len(),
-				(T::MinIpfsLen::get(), Error::<T>::IPFSReferenceIsTooShort),
-				(T::MaxIpfsLen::get(), Error::<T>::IPFSReferenceIsTooLong),
-			)?;
 
 			// Checks
 			// The Caller needs to pay the NFT Mint fee.
@@ -275,7 +260,7 @@ pub mod pallet {
 			nft_id: NFTId,
 			owner: T::AccountId,
 			series_id: NFTSeriesId,
-			ipfs_reference: TextFormat,
+			ipfs_reference: BoundedVec<u8, T::IPFSLengthLimit>,
 			mint_fee: BalanceOf<T>,
 		},
 		/// An NFT was transferred to someone else.
@@ -346,8 +331,13 @@ pub mod pallet {
 	/// Data related to NFTs.
 	#[pallet::storage]
 	#[pallet::getter(fn data)]
-	pub type Data<T: Config> =
-		StorageMap<_, Blake2_128Concat, NFTId, NFTData<T::AccountId>, OptionQuery>;
+	pub type Data<T: Config> = StorageMap<
+		_,
+		Blake2_128Concat,
+		NFTId,
+		NFTData<T::AccountId, T::IPFSLengthLimit>,
+		OptionQuery,
+	>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn secret_nfts)]
@@ -422,6 +412,7 @@ pub mod pallet {
 
 impl<T: Config> traits::NFTTrait for Pallet<T> {
 	type AccountId = T::AccountId;
+	type IPFSLengthLimit = T::IPFSLengthLimit;
 
 	fn set_owner(id: NFTId, owner: &Self::AccountId) -> DispatchResult {
 		Data::<T>::try_mutate(id, |data| -> DispatchResult {
@@ -444,14 +435,14 @@ impl<T: Config> traits::NFTTrait for Pallet<T> {
 
 	fn create_nft(
 		owner: Self::AccountId,
-		ipfs_reference: TextFormat,
+		ipfs_reference: BoundedVec<u8, T::IPFSLengthLimit>,
 		series_id: Option<NFTSeriesId>,
 	) -> Result<NFTId, DispatchErrorWithPostInfo> {
 		Self::create(Origin::<T>::Signed(owner).into(), ipfs_reference, series_id)?;
 		return Ok(Self::nft_id_generator() - 1)
 	}
 
-	fn get_nft(id: NFTId) -> Option<NFTData<Self::AccountId>> {
+	fn get_nft(id: NFTId) -> Option<NFTData<Self::AccountId, Self::IPFSLengthLimit>> {
 		Data::<T>::get(id)
 	}
 

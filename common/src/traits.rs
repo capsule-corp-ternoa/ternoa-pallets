@@ -1,15 +1,19 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use frame_support::dispatch::{DispatchErrorWithPostInfo, DispatchResult};
+use frame_support::{
+	dispatch::{DispatchErrorWithPostInfo, DispatchResult},
+	traits::Get,
+	BoundedVec,
+};
 use primitives::{
 	marketplace::{MarketplaceData, MarketplaceId, MarketplaceType},
 	nfts::{NFTData, NFTId, NFTSeriesId},
 	TextFormat,
 };
-use sp_std::vec::Vec;
 
 pub trait NFTTrait {
 	type AccountId: Clone;
+	type IPFSLengthLimit: Get<u32>;
 
 	/// Change the owner of an NFT.
 	fn set_owner(id: NFTId, owner: &Self::AccountId) -> DispatchResult;
@@ -23,12 +27,12 @@ pub trait NFTTrait {
 	/// Create NFT and return its NFTId
 	fn create_nft(
 		owner: Self::AccountId,
-		ipfs_reference: Vec<u8>,
+		ipfs_reference: BoundedVec<u8, Self::IPFSLengthLimit>,
 		series_id: Option<NFTSeriesId>,
 	) -> Result<NFTId, DispatchErrorWithPostInfo>;
 
 	/// Get NFT data
-	fn get_nft(id: NFTId) -> Option<NFTData<Self::AccountId>>;
+	fn get_nft(id: NFTId) -> Option<NFTData<Self::AccountId, Self::IPFSLengthLimit>>;
 
 	/// Lock series WARNING: Only for benchmark purposes!
 	fn benchmark_lock_series(series_id: NFTSeriesId);
