@@ -51,6 +51,7 @@ pub mod pallet {
 		/// Currency used to bill minting fees
 		type Currency: Currency<Self::AccountId>;
 
+		/// TODO!
 		#[pallet::constant]
 		type IPFSLengthLimit: Get<u32> + TypeInfo + MaxEncodedLen;
 
@@ -63,6 +64,10 @@ pub mod pallet {
 		/// The treasury's pallet id, used for deriving its sovereign account ID.
 		#[pallet::constant]
 		type PalletId: Get<PalletId>;
+
+		/// TODO!
+		#[pallet::constant]
+		type CapsuleCountLimit: Get<u32> + TypeInfo + MaxEncodedLen;
 	}
 
 	pub type BalanceOf<T> =
@@ -71,7 +76,6 @@ pub mod pallet {
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
 	#[pallet::storage_version(STORAGE_VERSION)]
-	#[pallet::without_storage_info]
 	pub struct Pallet<T>(PhantomData<T>);
 
 	#[pallet::hooks]
@@ -107,8 +111,9 @@ pub mod pallet {
 
 			// Create NFT and capsule
 			let nft_id = T::NFTTrait::create_nft(who.clone(), nft_ipfs_reference, series_id)?;
+
+			Self::new_capsule(&who, nft_id, capsule_ipfs_reference.clone(), amount)?;
 			T::NFTTrait::set_converted_to_capsule(nft_id, true)?;
-			Self::new_capsule(&who, nft_id, capsule_ipfs_reference.clone(), amount);
 
 			Self::deposit_event(Event::CapsuleDeposit { balance: amount });
 			let event = Event::CapsuleCreated { owner: who, nft_id, frozen_balance: amount };
@@ -142,8 +147,8 @@ pub mod pallet {
 			Self::send_funds(&who, &Self::account_id(), amount, KeepAlive)?;
 
 			// Create capsule
+			Self::new_capsule(&who, nft_id, ipfs_reference.clone(), amount)?;
 			T::NFTTrait::set_converted_to_capsule(nft_id, true)?;
-			Self::new_capsule(&who, nft_id, ipfs_reference.clone(), amount);
 
 			Self::deposit_event(Event::CapsuleDeposit { balance: amount });
 			let event = Event::CapsuleCreated { owner: who, nft_id, frozen_balance: amount };
@@ -294,6 +299,8 @@ pub mod pallet {
 		NFTNotFound,
 		/// Callers is not the NFT owner.
 		NotTheNFTOwner,
+		/// TODO.
+		RandomError,
 	}
 
 	/// Current capsule mint fee.
@@ -315,8 +322,13 @@ pub mod pallet {
 	/// List of accounts that hold capsulized NFTs.
 	#[pallet::storage]
 	#[pallet::getter(fn ledgers)]
-	pub type Ledgers<T: Config> =
-		StorageMap<_, Blake2_128Concat, T::AccountId, CapsuleLedger<BalanceOf<T>>, OptionQuery>;
+	pub type Ledgers<T: Config> = StorageMap<
+		_,
+		Blake2_128Concat,
+		T::AccountId,
+		CapsuleLedger<BalanceOf<T>, T::CapsuleCountLimit>,
+		OptionQuery,
+	>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
@@ -346,6 +358,7 @@ pub mod pallet {
 			});
 
 			self.ledgers.clone().into_iter().for_each(|(account, data)| {
+				let data = BoundedVec::try_from(data).expect("It will never happen.");
 				Ledgers::<T>::insert(account, data);
 			});
 
@@ -360,17 +373,21 @@ impl<T: Config> Pallet<T> {
 		nft_id: NFTId,
 		ipfs_reference: BoundedVec<u8, T::IPFSLengthLimit>,
 		funds: BalanceOf<T>,
-	) {
+	) -> Result<(), Error<T>> {
 		let data = CapsuleData::new(owner.clone(), ipfs_reference.clone());
 		Capsules::<T>::insert(nft_id, data);
 
-		Ledgers::<T>::mutate(&owner, |x| {
+		Ledgers::<T>::mutate(&owner, |x| -> Result<(), Error<T>> {
 			if let Some(data) = x {
-				data.push((nft_id, funds));
+				data.try_push((nft_id, funds)).map_err(|_| Error::<T>::RandomError)?
 			} else {
-				*x = Some(vec![(nft_id, funds)]);
+				*x = Some(
+					BoundedVec::try_from(vec![(nft_id, funds)])
+						.map_err(|_| Error::<T>::RandomError)?,
+				);
 			}
-		});
+			Ok(())
+		})
 	}
 
 	fn account_id() -> T::AccountId {

@@ -1,11 +1,10 @@
 use frame_support::{traits::Get, BoundedVec};
-use parity_scale_codec::{Decode, Encode};
+use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use primitives::nfts::NFTId;
 use scale_info::TypeInfo;
 use sp_runtime::RuntimeDebug;
-use sp_std::vec::Vec;
 
-#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo)]
+#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 pub struct CapsuleData<AccountId, IPFSLengthLimit>
 where
 	AccountId: Clone,
@@ -28,4 +27,5 @@ where
 	}
 }
 
-pub type CapsuleLedger<Balance> = Vec<(NFTId, Balance)>;
+pub type CapsuleLedger<Balance, CapsuleCountLimit> =
+	BoundedVec<(NFTId, Balance), CapsuleCountLimit>;
