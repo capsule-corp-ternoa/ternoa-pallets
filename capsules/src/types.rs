@@ -5,6 +5,8 @@ use scale_info::TypeInfo;
 use sp_runtime::RuntimeDebug;
 
 #[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
+#[codec(mel_bound(AccountId: MaxEncodedLen))]
+#[scale_info(skip_type_params(IPFSLengthLimit))]
 pub struct CapsuleData<AccountId, IPFSLengthLimit>
 where
 	AccountId: Clone,

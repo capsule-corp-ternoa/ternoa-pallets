@@ -52,7 +52,7 @@ pub mod pallet {
 		type FeesCollector: OnUnbalanced<NegativeImbalanceOf<Self>>;
 
 		#[pallet::constant]
-		type IPFSLengthLimit: Get<u32> + TypeInfo;
+		type IPFSLengthLimit: Get<u32>;
 	}
 
 	pub type BalanceOf<T> =

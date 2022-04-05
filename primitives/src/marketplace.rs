@@ -37,7 +37,14 @@ impl MarketplaceType {
 	}
 }
 
-#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
+#[derive(Decode, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen, Encode)]
+#[scale_info(skip_type_params(
+	AccountListLength,
+	NameLengthLimit,
+	URILengthLimit,
+	DescriptionLengthLimit
+))]
+#[codec(mel_bound(AccountId: MaxEncodedLen))]
 pub struct MarketplaceData<
 	AccountId,
 	AccountListLength,

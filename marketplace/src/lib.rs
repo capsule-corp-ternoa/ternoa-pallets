@@ -71,16 +71,16 @@ pub mod pallet {
 		type FeesCollector: OnUnbalanced<NegativeImbalanceOf<Self>>;
 
 		#[pallet::constant]
-		type AccountListLength: Get<u32> + TypeInfo + MaxEncodedLen;
+		type AccountListLength: Get<u32>;
 
 		#[pallet::constant]
-		type NameLengthLimit: Get<u32> + TypeInfo + MaxEncodedLen;
+		type NameLengthLimit: Get<u32>;
 
 		#[pallet::constant]
-		type URILengthLimit: Get<u32> + TypeInfo + MaxEncodedLen;
+		type URILengthLimit: Get<u32>;
 
 		#[pallet::constant]
-		type DescriptionLengthLimit: Get<u32> + TypeInfo + MaxEncodedLen;
+		type DescriptionLengthLimit: Get<u32>;
 	}
 
 	#[pallet::pallet]

@@ -6,6 +6,8 @@ use sp_runtime::RuntimeDebug;
 use sp_std::vec::Vec;
 
 #[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
+#[codec(mel_bound(AccountId: MaxEncodedLen, BlockNumber: MaxEncodedLen, Balance: MaxEncodedLen))]
+#[scale_info(skip_type_params(ListLengthLimit))]
 /// Structure to store Auction data
 pub struct AuctionData<AccountId, BlockNumber, Balance, ListLengthLimit>
 where
@@ -82,6 +84,8 @@ pub type AuctionsGenesis<AccountId, BlockNumber, Balance> = (
 );
 
 #[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
+#[codec(mel_bound(AccountId: MaxEncodedLen, Balance: MaxEncodedLen))]
+#[scale_info(skip_type_params(ListLengthLimit))]
 /// wrapper type to store sorted list of all bids
 /// The wrapper exists to ensure a queue implementation of sorted bids
 pub struct BidderList<AccountId, Balance, ListLengthLimit>
@@ -177,6 +181,8 @@ where
 }
 
 #[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug, TypeInfo, Default, MaxEncodedLen)]
+#[codec(mel_bound(BlockNumber: MaxEncodedLen))]
+#[scale_info(skip_type_params(ParallelAuctionLimit))]
 /// wrapper type to store sorted list of all bids
 /// The wrapper exists to ensure a queue implementation of sorted bids
 pub struct DeadlineList<BlockNumber, ParallelAuctionLimit: Get<u32>>(

@@ -89,27 +89,27 @@ pub mod pallet {
 
 		/// TODO
 		#[pallet::constant]
-		type AccountListLength: Get<u32> + TypeInfo + MaxEncodedLen;
+		type AccountListLength: Get<u32>;
 
 		/// TODO
 		#[pallet::constant]
-		type NameLengthLimit: Get<u32> + TypeInfo + MaxEncodedLen;
+		type NameLengthLimit: Get<u32>;
 
 		/// TODO
 		#[pallet::constant]
-		type URILengthLimit: Get<u32> + TypeInfo + MaxEncodedLen;
+		type URILengthLimit: Get<u32>;
 
 		/// TODO
 		#[pallet::constant]
-		type DescriptionLengthLimit: Get<u32> + TypeInfo + MaxEncodedLen;
+		type DescriptionLengthLimit: Get<u32>;
 
 		/// TODO
 		#[pallet::constant]
-		type ListLengthLimit: Get<u32> + TypeInfo + MaxEncodedLen;
+		type ListLengthLimit: Get<u32>;
 
 		/// TODO
 		#[pallet::constant]
-		type ParallelAuctionLimit: Get<u32> + TypeInfo + MaxEncodedLen + Default;
+		type ParallelAuctionLimit: Get<u32> + Default;
 	}
 
 	#[pallet::pallet]

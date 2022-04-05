@@ -53,7 +53,7 @@ pub mod pallet {
 
 		/// TODO!
 		#[pallet::constant]
-		type IPFSLengthLimit: Get<u32> + TypeInfo + MaxEncodedLen;
+		type IPFSLengthLimit: Get<u32>;
 
 		/// TODO!
 		type NFTTrait: NFTTrait<
@@ -67,7 +67,7 @@ pub mod pallet {
 
 		/// TODO!
 		#[pallet::constant]
-		type CapsuleCountLimit: Get<u32> + TypeInfo + MaxEncodedLen;
+		type CapsuleCountLimit: Get<u32>;
 	}
 
 	pub type BalanceOf<T> =
