@@ -2,7 +2,7 @@
 
 use super::*;
 use frame_benchmarking::{account as benchmark_account, benchmarks, impl_benchmark_test_suite};
-use frame_support::{assert_ok, traits::Currency};
+use frame_support::{assert_ok, bounded_vec, traits::Currency};
 use frame_system::RawOrigin;
 use sp_runtime::traits::{Bounded, StaticLookup};
 use sp_std::prelude::*;
@@ -24,7 +24,7 @@ pub fn prepare_benchmarks<T: Config>() {
 	let series_id = vec![SERIES_ID];
 	assert_ok!(NFTs::<T>::create(
 		RawOrigin::Signed(alice.clone()).into(),
-		vec![1],
+		bounded_vec![1],
 		Some(series_id.clone()),
 	));
 }
@@ -44,7 +44,7 @@ benchmarks! {
 		let alice: T::AccountId = get_account::<T>("ALICE");
 		let nft_id = NFTs::<T>::nft_id_generator();
 
-	}: _(RawOrigin::Signed(alice.clone()), vec![55], None)
+	}: _(RawOrigin::Signed(alice.clone()), bounded_vec![55], None)
 	verify {
 		assert_eq!(NFTs::<T>::data(nft_id).unwrap().owner, alice);
 	}

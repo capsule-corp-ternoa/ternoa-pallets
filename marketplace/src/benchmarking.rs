@@ -3,7 +3,7 @@
 use super::*;
 use crate::Pallet as Marketplace;
 use frame_benchmarking::{account as benchmark_account, benchmarks, impl_benchmark_test_suite};
-use frame_support::{assert_ok, traits::Currency};
+use frame_support::{assert_ok, bounded_vec, traits::Currency};
 use frame_system::RawOrigin;
 use sp_runtime::traits::{Bounded, StaticLookup};
 use sp_std::prelude::*;
@@ -21,7 +21,8 @@ pub fn prepare_benchmarks<T: Config>() -> (MarketplaceId, MarketplaceId, NFTId) 
 
 	// Create default NFT and series
 	let series_id = vec![SERIES_ID];
-	let nft_id = T::NFTs::create_nft(alice.clone(), vec![1], Some(series_id.clone())).unwrap();
+	let nft_id =
+		T::NFTs::create_nft(alice.clone(), bounded_vec![1], Some(series_id.clone())).unwrap();
 
 	// Lock series
 	T::NFTs::benchmark_lock_series(series_id.clone());
@@ -31,10 +32,10 @@ pub fn prepare_benchmarks<T: Config>() -> (MarketplaceId, MarketplaceId, NFTId) 
 		get_origin::<T>("ALICE").into(),
 		MarketplaceType::Public,
 		0,
-		vec![50],
-		None,
-		None,
-		None,
+		bounded_vec![50],
+		bounded_vec![],
+		bounded_vec![],
+		bounded_vec![],
 	));
 	let public_id = Marketplace::<T>::marketplace_id_generator();
 
@@ -43,10 +44,10 @@ pub fn prepare_benchmarks<T: Config>() -> (MarketplaceId, MarketplaceId, NFTId) 
 		get_origin::<T>("ALICE").into(),
 		MarketplaceType::Private,
 		0,
-		vec![51],
-		None,
-		None,
-		None,
+		bounded_vec![51],
+		bounded_vec![],
+		bounded_vec![],
+		bounded_vec![],
 	));
 	let private_id = Marketplace::<T>::marketplace_id_generator();
 
@@ -105,7 +106,7 @@ benchmarks! {
 
 		let alice: T::AccountId = get_account::<T>("ALICE");
 		let mkp_id = Marketplace::<T>::marketplace_id_generator() + 1;
-	}: _(RawOrigin::Signed(alice.clone().into()), MarketplaceType::Public, 0, "Hop".into(), None, None, None)
+	}: _(RawOrigin::Signed(alice.clone().into()), MarketplaceType::Public, 0, bounded_vec![20, 30, 40], bounded_vec![], bounded_vec![], bounded_vec![])
 	verify {
 		assert_eq!(Marketplaces::<T>::contains_key(mkp_id), true);
 		assert_eq!(Marketplaces::<T>::get(mkp_id).unwrap().owner, alice);
@@ -118,9 +119,11 @@ benchmarks! {
 		let bob: T::AccountId = get_account::<T>("BOB");
 		let bob_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(bob.clone());
 
+
 	}: _(get_origin::<T>("ALICE"), mkp_id, bob_lookup.into())
 	verify {
-		assert_eq!(Marketplaces::<T>::get(mkp_id).unwrap().allow_list, vec![bob]);
+		let allow_list: BoundedVec<T::AccountId, T::AccountListLimit> = bounded_vec![bob];
+		assert_eq!(Marketplaces::<T>::get(mkp_id).unwrap().allow_list, allow_list);
 	}
 
 	remove_account_from_allow_list {
@@ -133,7 +136,8 @@ benchmarks! {
 
 	}: _(alice.clone(), mkp_id, bob_lookup)
 	verify {
-		assert_eq!(Marketplaces::<T>::get(mkp_id).unwrap().allow_list, vec![]);
+		let allow_list: BoundedVec<T::AccountId, T::AccountListLimit> = bounded_vec![];
+		assert_eq!(Marketplaces::<T>::get(mkp_id).unwrap().allow_list, allow_list);
 	}
 
 	set_marketplace_owner {
@@ -158,7 +162,7 @@ benchmarks! {
 	set_marketplace_name {
 		let (mkp_id, ..) = prepare_benchmarks::<T>();
 
-		let new_name: Vec<u8> = "poH".into();
+		let new_name: BoundedVec<u8, T::NameLengthLimit> = bounded_vec![40, 30, 20];
 	}: _(get_origin::<T>("ALICE"), mkp_id, new_name.clone())
 	verify {
 		assert_eq!(Marketplaces::<T>::get(mkp_id).unwrap().name, new_name);
@@ -188,19 +192,19 @@ benchmarks! {
 	set_marketplace_uri {
 		let (mkp_id, ..) = prepare_benchmarks::<T>();
 
-		let uri: TextFormat = "test".as_bytes().to_vec();
+		let uri = BoundedVec::try_from("test".as_bytes().to_vec()).unwrap();
 	}: _(get_origin::<T>("ALICE"), mkp_id, uri.clone())
 	verify {
-		assert_eq!(Marketplaces::<T>::get(mkp_id).unwrap().uri, Some(uri));
+		assert_eq!(Marketplaces::<T>::get(mkp_id).unwrap().uri, uri);
 	}
 
 	set_marketplace_logo_uri {
 		let (mkp_id, ..) = prepare_benchmarks::<T>();
 
-		let uri: TextFormat = "test".as_bytes().to_vec();
+		let uri = BoundedVec::try_from("test".as_bytes().to_vec()).unwrap();
 	}: _(get_origin::<T>("ALICE"), mkp_id, uri.clone())
 	verify {
-		assert_eq!(Marketplaces::<T>::get(mkp_id).unwrap().logo_uri, Some(uri));
+		assert_eq!(Marketplaces::<T>::get(mkp_id).unwrap().logo_uri, uri);
 	}
 
 	add_account_to_disallow_list {

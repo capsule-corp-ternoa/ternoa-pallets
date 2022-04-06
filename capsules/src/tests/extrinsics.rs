@@ -27,17 +27,13 @@ fn create_happy() {
 
 #[test]
 fn create_unhappy() {
-	ExtBuilder::default()
-		.caps(vec![(ALICE, 10000), (BOB, 101)])
-		.build()
-		.execute_with(|| {
-			let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
-			let bob: mock::Origin = RawOrigin::Signed(BOB).into();
+	ExtBuilder::default().caps(vec![(BOB, 101)]).build().execute_with(|| {
+		let bob: mock::Origin = RawOrigin::Signed(BOB).into();
 
-			// Unhappy not enough caps to reserve a capsule
-			let ok = TernoaCapsules::create(bob.clone(), bounded_vec![], bounded_vec![1], None);
-			assert_noop!(ok, BalanceError::<Test>::InsufficientBalance);
-		})
+		// Unhappy not enough caps to reserve a capsule
+		let ok = TernoaCapsules::create(bob.clone(), bounded_vec![], bounded_vec![1], None);
+		assert_noop!(ok, BalanceError::<Test>::InsufficientBalance);
+	})
 }
 
 #[test]
