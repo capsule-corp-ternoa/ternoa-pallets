@@ -9,9 +9,10 @@ use primitives::{
 	marketplace::{MarketplaceData, MarketplaceId, MarketplaceType},
 	nfts::{NFTData, NFTId, NFTSeriesId},
 };
+use sp_std::fmt::Debug;
 
 pub trait NFTTrait {
-	type AccountId: Clone;
+	type AccountId: Clone + PartialEq + Debug;
 	type IPFSLengthLimit: Get<u32>;
 
 	/// Change the owner of an NFT.

@@ -1,10 +1,10 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use frame_support::{traits::Get, BoundedVec};
+use frame_support::{traits::Get, BoundedVec, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound};
 use parity_scale_codec::{Decode, Encode};
 use scale_info::TypeInfo;
 use sp_runtime::RuntimeDebug;
-use sp_std::vec::Vec;
+use sp_std::{fmt::Debug, vec::Vec};
 
 /// How NFT IDs are encoded.
 pub type NFTId = u32;
@@ -13,11 +13,14 @@ pub type NFTId = u32;
 pub type NFTSeriesId = Vec<u8>;
 
 /// Data related to an NFT, such as who is its owner.
-#[derive(Encode, Decode, Clone, PartialEq, Eq, Default, RuntimeDebug, TypeInfo)]
+#[derive(
+	Encode, Decode, Eq, Default, TypeInfo, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound,
+)]
 #[scale_info(skip_type_params(IPFSLengthLimit))]
+#[codec(mel_bound(AccountId: MaxEncodedLen))]
 pub struct NFTData<AccountId, IPFSLengthLimit>
 where
-	AccountId: Clone,
+	AccountId: Clone + PartialEq + Debug,
 	IPFSLengthLimit: Get<u32>,
 {
 	// NFT owner
@@ -44,7 +47,7 @@ where
 
 impl<AccountId, IPFSLengthLimit> NFTData<AccountId, IPFSLengthLimit>
 where
-	AccountId: Clone,
+	AccountId: Clone + PartialEq + Debug,
 	IPFSLengthLimit: Get<u32>,
 {
 	pub fn new(

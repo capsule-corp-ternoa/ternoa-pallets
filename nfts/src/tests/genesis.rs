@@ -1,6 +1,6 @@
 use super::mock::*;
 use crate::{GenesisConfig, NFTData};
-use frame_support::traits::GenesisBuild;
+use frame_support::{bounded_vec, traits::GenesisBuild};
 use primitives::nfts::NFTsGenesis;
 
 #[test]
@@ -9,14 +9,14 @@ fn register_nfts() {
 
 	let nft_id = 100;
 	let mint_fee = 10;
-	let data_original = NFTData::new_default(ALICE, vec![1], vec![48]);
+	let data_original = NFTData::new_default(ALICE, bounded_vec![1], vec![48]);
 	let data = data_original.clone();
 
 	let genesis_nfts: NFTsGenesis<u64> = (
 		nft_id,
 		data.owner,
 		data.creator,
-		data.ipfs_reference,
+		data.ipfs_reference.to_vec(),
 		data.series_id,
 		data.listed_for_sale,
 		data.is_in_transmission,
