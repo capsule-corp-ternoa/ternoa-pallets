@@ -1,4 +1,12 @@
+use frame_support::{bounded_vec, parameter_types};
+
 use crate::{BidderList, DeadlineList};
+
+parameter_types! {
+	pub const ListLengthLimit: u32 = 3;
+	pub const ListLengthLimit10: u32 = 10;
+	pub const ParallelAuctionLimit: u32 = 10;
+}
 
 mod bidder_list {
 	use super::*;
@@ -7,11 +15,9 @@ mod bidder_list {
 	fn test_sorted_bid_works() {
 		type MockBalance = u32;
 		type MockAccount = u32;
-		// create a new list
-		let max_size = 10;
 
-		let mut bidders_list: BidderList<MockAccount, MockBalance> = BidderList::new(max_size);
-		assert_eq!(bidders_list.max_size, max_size);
+		let mut bidders_list: BidderList<MockAccount, MockBalance, ListLengthLimit10> =
+			BidderList::new();
 
 		// insert to list works
 		bidders_list.insert_new_bid(1u32, 2u32);
@@ -111,11 +117,13 @@ mod bidder_list {
 }
 
 mod deadline_list {
+	use frame_support::assert_ok;
+
 	use super::*;
 
 	#[test]
 	fn insert_random_values() {
-		let mut deadlines = DeadlineList::<u32>(vec![]);
+		let mut deadlines = DeadlineList::<u32, ParallelAuctionLimit>(bounded_vec![]);
 
 		// Insert 5 different values and after every insert check if the order is correct
 
@@ -128,14 +136,14 @@ mod deadline_list {
 		];
 
 		for entry in entires {
-			deadlines.insert(entry.0, entry.1);
+			assert_ok!(deadlines.insert(entry.0, entry.1));
 			assert_eq!(deadlines.0, entry.2);
 		}
 	}
 
 	#[test]
 	fn remove_random_values() {
-		let mut deadlines = DeadlineList::<u32>(vec![]);
+		let mut deadlines = DeadlineList::<u32, ParallelAuctionLimit>(bounded_vec![]);
 
 		// Insert 5 different values and after every insert check if the order is correct
 
@@ -148,19 +156,19 @@ mod deadline_list {
 		];
 
 		for entry in entires.iter() {
-			deadlines.insert(entry.0, entry.1);
+			assert_ok!(deadlines.insert(entry.0, entry.1));
 		}
 
 		for entry in entires.iter().rev() {
-			let index = deadlines.remove(entry.0);
-			assert_eq!(index, true);
+			let result = deadlines.remove(entry.0);
+			assert_eq!(result, true);
 			assert_eq!(deadlines.0, entry.2);
 		}
 	}
 
 	#[test]
 	fn update_values() {
-		let mut deadlines = DeadlineList::<u32>(vec![]);
+		let mut deadlines = DeadlineList::<u32, ParallelAuctionLimit>(bounded_vec![]);
 
 		// Insert 5 different values and after every insert check if the order is correct
 
@@ -172,7 +180,7 @@ mod deadline_list {
 		];
 
 		for entry in entires {
-			deadlines.insert(entry.0, entry.1);
+			assert_ok!(deadlines.insert(entry.0, entry.1));
 		}
 
 		for entry in new_entires {
@@ -184,13 +192,13 @@ mod deadline_list {
 
 	#[test]
 	fn get_next_ready_blocks() {
-		let mut deadlines = DeadlineList::<u32>(vec![]);
+		let mut deadlines = DeadlineList::<u32, ParallelAuctionLimit>(bounded_vec![]);
 
 		// Insert 5 different values and after every insert check if the order is correct
 
 		let entries = vec![(0, 100), (1, 50), (2, 150)];
 		for entry in entries.iter() {
-			deadlines.insert(entry.0, entry.1);
+			assert_ok!(deadlines.insert(entry.0, entry.1));
 		}
 
 		assert_eq!(deadlines.next(49), None);

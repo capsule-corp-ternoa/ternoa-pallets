@@ -109,7 +109,7 @@ pub mod pallet {
 
 		/// TODO
 		#[pallet::constant]
-		type ParallelAuctionLimit: Get<u32> + Default;
+		type ParallelAuctionLimit: Get<u32>;
 	}
 
 	#[pallet::pallet]
@@ -573,13 +573,12 @@ pub mod pallet {
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
 		pub auctions: Vec<AuctionsGenesis<T::AccountId, T::BlockNumber, BalanceOf<T>>>,
-		pub bid_history_size: u16,
 	}
 
 	#[cfg(feature = "std")]
 	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self {
-			Self { auctions: Default::default(), bid_history_size: Default::default() }
+			Self { auctions: Default::default() }
 		}
 	}
 

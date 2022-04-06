@@ -4,7 +4,7 @@ use crate::{
 	Config,
 };
 use frame_support::{
-	parameter_types,
+	bounded_vec, parameter_types,
 	traits::{ConstU32, Contains, GenesisBuild, OnFinalize, OnInitialize},
 	PalletId,
 };
@@ -20,13 +20,14 @@ use sp_runtime::{
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
+pub type BlockNumber = u64;
+pub type AccountId = u64;
 
 pub const ALICE: u64 = 1;
 pub const BOB: u64 = 2;
 pub const CHARLIE: u64 = 3;
 pub const DAVE: u64 = 4;
 pub const EVE: u64 = 5;
-pub type BlockNumber = u64;
 
 pub const MIN_AUCTION_DURATION: u64 = 100;
 pub const MAX_AUCTION_DURATION: u64 = 1000;
@@ -42,7 +43,6 @@ pub const BOB_NFT_ID: u32 = 10;
 pub const BOB_SERIES_ID: u8 = 10;
 pub const INVALID_NFT_ID: u32 = 404;
 pub const MARKETPLACE_COMMISSION_FEE: u8 = 10;
-pub const BID_HISTORY_SIZE: u16 = 3;
 
 frame_support::construct_runtime!(
 	pub enum Test where
@@ -94,7 +94,7 @@ impl frame_system::Config for Test {
 	type Call = Call;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
-	type AccountId = u64;
+	type AccountId = AccountId;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
 	type Event = Event;
@@ -129,14 +129,11 @@ impl pallet_balances::Config for Test {
 }
 
 parameter_types! {
-	pub const MinUriLen: u16 = 1;
-	pub const MaxUriLen: u16 = 5;
-	pub const MinIpfsLen: u16 = 1;
-	pub const MaxIpfsLen: u16 = 5;
-	pub const MinDescriptionLen: u16 = 1;
-	pub const MaxDescriptionLen: u16 = 500;
-	pub const MinNameLen: u16 = 1;
-	pub const MaxNameLen: u16 = 5;
+	pub const IPFSLengthLimit: u32 = 5;
+	pub const AccountListLimit: u32 = 5;
+	pub const NameLengthLimit: u32 = 5;
+	pub const URILengthLimit: u32 = 5;
+	pub const DescriptionLengthLimit: u32 = 5;
 }
 
 impl ternoa_nfts::Config for Test {
@@ -144,8 +141,7 @@ impl ternoa_nfts::Config for Test {
 	type WeightInfo = ternoa_nfts::weights::TernoaWeight<Test>;
 	type Currency = Balances;
 	type FeesCollector = ();
-	type MinIpfsLen = MinIpfsLen;
-	type MaxIpfsLen = MaxIpfsLen;
+	type IPFSLengthLimit = IPFSLengthLimit;
 }
 
 impl ternoa_marketplace::Config for Test {
@@ -154,12 +150,10 @@ impl ternoa_marketplace::Config for Test {
 	type NFTs = NFTs;
 	type WeightInfo = ();
 	type FeesCollector = ();
-	type MinNameLen = MinNameLen;
-	type MaxNameLen = MaxNameLen;
-	type MinUriLen = MinUriLen;
-	type MaxUriLen = MaxUriLen;
-	type MinDescriptionLen = MinDescriptionLen;
-	type MaxDescriptionLen = MaxDescriptionLen;
+	type AccountListLimit = AccountListLimit;
+	type NameLengthLimit = NameLengthLimit;
+	type URILengthLimit = URILengthLimit;
+	type DescriptionLengthLimit = DescriptionLengthLimit;
 }
 
 parameter_types! {
@@ -169,6 +163,8 @@ parameter_types! {
 	pub const AuctionGracePeriod: BlockNumber = AUCTION_GRACE_PERIOD;
 	pub const AuctionEndingPeriod: BlockNumber = AUCTION_ENDING_PERIOD;
 	pub const AuctionsPalletId: PalletId = PalletId(*b"tauction");
+	pub const ListLengthLimit: u32 = 3;
+	pub const ParallelAuctionLimit: u32 = 10;
 }
 
 impl Config for Test {
@@ -183,6 +179,12 @@ impl Config for Test {
 	type AuctionEndingPeriod = AuctionEndingPeriod;
 	type PalletId = AuctionsPalletId;
 	type WeightInfo = ();
+	type AccountListLimit = AccountListLimit;
+	type NameLengthLimit = NameLengthLimit;
+	type URILengthLimit = URILengthLimit;
+	type DescriptionLengthLimit = DescriptionLengthLimit;
+	type ListLengthLimit = ListLengthLimit;
+	type ParallelAuctionLimit = ParallelAuctionLimit;
 }
 
 pub struct ExtBuilder {
@@ -225,8 +227,10 @@ impl ExtBuilder {
 	}
 
 	fn build_nfts(t: &mut sp_runtime::Storage) {
-		let alice_nft = NFTData::new_default(ALICE, vec![10], vec![ALICE_SERIES_ID]);
-		let bob_nft = NFTData::new_default(BOB, vec![10], vec![BOB_SERIES_ID]);
+		let alice_nft: NFTData<AccountId, IPFSLengthLimit> =
+			NFTData::new_default(ALICE, bounded_vec![10], vec![ALICE_SERIES_ID]);
+		let bob_nft: NFTData<AccountId, IPFSLengthLimit> =
+			NFTData::new_default(BOB, bounded_vec![10], vec![BOB_SERIES_ID]);
 
 		let alice_series = NFTSeriesDetails::new(ALICE, false);
 		let bob_series = NFTSeriesDetails::new(ALICE, false);
@@ -243,16 +247,22 @@ impl ExtBuilder {
 	}
 
 	fn build_market(t: &mut sp_runtime::Storage) {
-		let alice_market = MarketplaceData::new(
+		let alice_market: MarketplaceData<
+			AccountId,
+			AccountListLimit,
+			NameLengthLimit,
+			URILengthLimit,
+			DescriptionLengthLimit,
+		> = MarketplaceData::new(
 			MarketplaceType::Public,
 			MARKETPLACE_COMMISSION_FEE,
 			ALICE,
-			vec![],
-			vec![],
-			vec![10],
-			None,
-			None,
-			None,
+			bounded_vec![],
+			bounded_vec![],
+			bounded_vec![10],
+			bounded_vec![],
+			bounded_vec![],
+			bounded_vec![],
 		);
 		let marketplaces = vec![alice_market.to_raw(ALICE_MARKET_ID)];
 
@@ -269,7 +279,8 @@ impl ExtBuilder {
 		pub const NFT_PRICE: u128 = 100;
 		pub const NFT_BUY_PRICE: Option<u128> = Some(200);
 
-		let mut auctions = vec![];
+		let mut auctions: Vec<(u32, AuctionData<AccountId, BlockNumber, u128, ListLengthLimit>)> =
+			vec![];
 		if let Some(state) = state {
 			let (start, end, extended) = match state {
 				AuctionState::Before => (2, 2 + MAX_AUCTION_DURATION, false),
@@ -283,7 +294,7 @@ impl ExtBuilder {
 				end_block: end,
 				start_price: NFT_PRICE,
 				buy_it_price: NFT_BUY_PRICE.clone(),
-				bidders: BidderList::new(BID_HISTORY_SIZE),
+				bidders: BidderList::new(),
 				marketplace_id: ALICE_MARKET_ID,
 				is_extended: extended,
 			};
@@ -294,7 +305,7 @@ impl ExtBuilder {
 				end_block: end,
 				start_price: NFT_PRICE,
 				buy_it_price: NFT_BUY_PRICE.clone(),
-				bidders: BidderList::new(BID_HISTORY_SIZE),
+				bidders: BidderList::new(),
 				marketplace_id: ALICE_MARKET_ID,
 				is_extended: extended,
 			};
@@ -303,7 +314,7 @@ impl ExtBuilder {
 		}
 
 		let auctions = auctions.iter().map(|x| x.1.to_raw(x.0)).collect();
-		ternoa_auctions::GenesisConfig::<Test> { auctions, bid_history_size: BID_HISTORY_SIZE }
+		ternoa_auctions::GenesisConfig::<Test> { auctions }
 			.assimilate_storage(t)
 			.unwrap();
 	}
@@ -313,12 +324,9 @@ impl ExtBuilder {
 pub fn new_test_ext() -> sp_io::TestExternalities {
 	let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
-	ternoa_auctions::GenesisConfig::<Test> {
-		auctions: Default::default(),
-		bid_history_size: BID_HISTORY_SIZE,
-	}
-	.assimilate_storage(&mut t)
-	.unwrap();
+	ternoa_auctions::GenesisConfig::<Test> { auctions: Default::default() }
+		.assimilate_storage(&mut t)
+		.unwrap();
 
 	let mut ext = sp_io::TestExternalities::new(t);
 	ext.execute_with(|| System::set_block_number(1));

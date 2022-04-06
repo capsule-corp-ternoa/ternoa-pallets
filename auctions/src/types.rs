@@ -1,19 +1,22 @@
-use frame_support::{traits::Get, BoundedVec};
+use frame_support::{
+	bounded_vec, traits::Get, BoundedVec, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound,
+};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use primitives::{marketplace::MarketplaceId, nfts::NFTId};
 use scale_info::TypeInfo;
-use sp_runtime::RuntimeDebug;
-use sp_std::vec::Vec;
+use sp_std::{fmt::Debug, vec::Vec};
 
-#[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
+#[derive(
+	Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen,
+)]
 #[codec(mel_bound(AccountId: MaxEncodedLen, BlockNumber: MaxEncodedLen, Balance: MaxEncodedLen))]
 #[scale_info(skip_type_params(ListLengthLimit))]
 /// Structure to store Auction data
 pub struct AuctionData<AccountId, BlockNumber, Balance, ListLengthLimit>
 where
-	AccountId: sp_std::cmp::Ord + Clone,
-	BlockNumber: Clone,
-	Balance: sp_std::cmp::PartialOrd + Clone + Default,
+	AccountId: Clone + PartialEq + Debug + sp_std::cmp::Ord,
+	BlockNumber: Clone + PartialEq + Debug + std::cmp::PartialOrd,
+	Balance: Clone + PartialEq + Debug + sp_std::cmp::PartialOrd,
 	ListLengthLimit: Get<u32>,
 {
 	/// The owner of the nft that has listed the item on auction
@@ -37,9 +40,9 @@ where
 impl<AccountId, BlockNumber, Balance, ListLengthLimit>
 	AuctionData<AccountId, BlockNumber, Balance, ListLengthLimit>
 where
-	AccountId: sp_std::cmp::Ord + Clone,
-	BlockNumber: Clone,
-	Balance: sp_std::cmp::PartialOrd + Clone + Default,
+	AccountId: Clone + PartialEq + Debug + sp_std::cmp::Ord,
+	BlockNumber: Clone + PartialEq + Debug + std::cmp::PartialOrd,
+	Balance: Clone + PartialEq + Debug + sp_std::cmp::PartialOrd,
 	ListLengthLimit: Get<u32>,
 {
 	pub fn to_raw(&self, nft_id: NFTId) -> AuctionsGenesis<AccountId, BlockNumber, Balance> {
@@ -83,15 +86,17 @@ pub type AuctionsGenesis<AccountId, BlockNumber, Balance> = (
 	bool,
 );
 
-#[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
+#[derive(
+	Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen,
+)]
 #[codec(mel_bound(AccountId: MaxEncodedLen, Balance: MaxEncodedLen))]
 #[scale_info(skip_type_params(ListLengthLimit))]
 /// wrapper type to store sorted list of all bids
 /// The wrapper exists to ensure a queue implementation of sorted bids
 pub struct BidderList<AccountId, Balance, ListLengthLimit>
 where
-	AccountId: sp_std::cmp::Ord + Clone,
-	Balance: sp_std::cmp::PartialOrd + Clone,
+	AccountId: Clone + PartialEq + Debug + sp_std::cmp::Ord,
+	Balance: Clone + PartialEq + Debug + sp_std::cmp::PartialOrd,
 	ListLengthLimit: Get<u32>,
 {
 	pub list: BoundedVec<(AccountId, Balance), ListLengthLimit>,
@@ -99,8 +104,8 @@ where
 
 impl<AccountId, Balance, ListLengthLimit> BidderList<AccountId, Balance, ListLengthLimit>
 where
-	AccountId: sp_std::cmp::Ord + Clone,
-	Balance: sp_std::cmp::PartialOrd + Clone,
+	AccountId: Clone + PartialEq + Debug + sp_std::cmp::Ord,
+	Balance: Clone + PartialEq + Debug + sp_std::cmp::PartialOrd,
 	ListLengthLimit: Get<u32>,
 {
 	/// Create a new empty bidders list
@@ -180,18 +185,21 @@ where
 	}
 }
 
-#[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug, TypeInfo, Default, MaxEncodedLen)]
+#[derive(
+	Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen,
+)]
 #[codec(mel_bound(BlockNumber: MaxEncodedLen))]
 #[scale_info(skip_type_params(ParallelAuctionLimit))]
 /// wrapper type to store sorted list of all bids
 /// The wrapper exists to ensure a queue implementation of sorted bids
-pub struct DeadlineList<BlockNumber, ParallelAuctionLimit: Get<u32>>(
-	pub BoundedVec<(NFTId, BlockNumber), ParallelAuctionLimit>,
-);
+pub struct DeadlineList<
+	BlockNumber: Clone + PartialEq + Debug + std::cmp::PartialOrd,
+	ParallelAuctionLimit: Get<u32>,
+>(pub BoundedVec<(NFTId, BlockNumber), ParallelAuctionLimit>);
 
 impl<BlockNumber, ParallelAuctionLimit> DeadlineList<BlockNumber, ParallelAuctionLimit>
 where
-	BlockNumber: sp_std::cmp::PartialOrd,
+	BlockNumber: Clone + PartialEq + Debug + std::cmp::PartialOrd,
 	ParallelAuctionLimit: Get<u32>,
 {
 	pub fn insert(&mut self, nft_id: NFTId, block_number: BlockNumber) -> Result<(), ()> {
@@ -228,5 +236,15 @@ where
 		} else {
 			None
 		}
+	}
+}
+
+impl<BlockNumber, ParallelAuctionLimit> Default for DeadlineList<BlockNumber, ParallelAuctionLimit>
+where
+	BlockNumber: Clone + PartialEq + Debug + std::cmp::PartialOrd,
+	ParallelAuctionLimit: Get<u32>,
+{
+	fn default() -> Self {
+		Self(bounded_vec![])
 	}
 }
