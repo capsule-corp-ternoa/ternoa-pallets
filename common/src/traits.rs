@@ -65,8 +65,8 @@ pub trait NFTTrait {
 /// Trait that implements basic functionalities related to Ternoa Marketplace
 /// TODO: Expand trait with more useful functions
 pub trait MarketplaceTrait {
-	type AccountId: Clone;
-	type AccountListLength: Get<u32>;
+	type AccountId: Clone + PartialEq + Debug;
+	type AccountListLimit: Get<u32>;
 	type NameLengthLimit: Get<u32>;
 	type URILengthLimit: Get<u32>;
 	type DescriptionLengthLimit: Get<u32>;
@@ -83,7 +83,7 @@ pub trait MarketplaceTrait {
 	) -> Option<
 		MarketplaceData<
 			Self::AccountId,
-			Self::AccountListLength,
+			Self::AccountListLimit,
 			Self::NameLengthLimit,
 			Self::URILengthLimit,
 			Self::DescriptionLengthLimit,

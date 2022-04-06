@@ -1,15 +1,17 @@
-use frame_support::{traits::Get, BoundedVec};
+use frame_support::{traits::Get, BoundedVec, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use primitives::nfts::NFTId;
 use scale_info::TypeInfo;
-use sp_runtime::RuntimeDebug;
+use sp_std::fmt::Debug;
 
-#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
+#[derive(
+	Encode, Decode, CloneNoBound, PartialEqNoBound, Eq, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen,
+)]
 #[codec(mel_bound(AccountId: MaxEncodedLen))]
 #[scale_info(skip_type_params(IPFSLengthLimit))]
 pub struct CapsuleData<AccountId, IPFSLengthLimit>
 where
-	AccountId: Clone,
+	AccountId: Clone + PartialEq + Debug,
 	IPFSLengthLimit: Get<u32>,
 {
 	pub owner: AccountId,
@@ -18,7 +20,7 @@ where
 
 impl<AccountId, IPFSLengthLimit> CapsuleData<AccountId, IPFSLengthLimit>
 where
-	AccountId: Clone,
+	AccountId: Clone + PartialEq + Debug,
 	IPFSLengthLimit: Get<u32>,
 {
 	pub fn new(

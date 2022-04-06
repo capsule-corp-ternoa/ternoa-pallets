@@ -1,11 +1,11 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use crate::TextFormat;
-use frame_support::{traits::Get, BoundedVec};
+use frame_support::{traits::Get, BoundedVec, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_runtime::RuntimeDebug;
-use sp_std::vec::Vec;
+use sp_std::{fmt::Debug, vec::Vec};
 
 /// The type of marketplace Id
 pub type MarketplaceId = u32;
@@ -37,9 +37,11 @@ impl MarketplaceType {
 	}
 }
 
-#[derive(Decode, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen, Encode)]
+#[derive(
+	Decode, CloneNoBound, Eq, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen, Encode,
+)]
 #[scale_info(skip_type_params(
-	AccountListLength,
+	AccountListLimit,
 	NameLengthLimit,
 	URILengthLimit,
 	DescriptionLengthLimit
@@ -47,13 +49,13 @@ impl MarketplaceType {
 #[codec(mel_bound(AccountId: MaxEncodedLen))]
 pub struct MarketplaceData<
 	AccountId,
-	AccountListLength,
+	AccountListLimit,
 	NameLengthLimit,
 	URILengthLimit,
 	DescriptionLengthLimit,
 > where
-	AccountId: Clone,
-	AccountListLength: Get<u32>,
+	AccountId: Clone + PartialEq + Debug,
+	AccountListLimit: Get<u32>,
 	NameLengthLimit: Get<u32>,
 	URILengthLimit: Get<u32>,
 	DescriptionLengthLimit: Get<u32>,
@@ -61,24 +63,24 @@ pub struct MarketplaceData<
 	pub kind: MarketplaceType,
 	pub commission_fee: MarketplaceCommission,
 	pub owner: AccountId,
-	pub allow_list: BoundedVec<AccountId, AccountListLength>,
-	pub disallow_list: BoundedVec<AccountId, AccountListLength>,
+	pub allow_list: BoundedVec<AccountId, AccountListLimit>,
+	pub disallow_list: BoundedVec<AccountId, AccountListLimit>,
 	pub name: BoundedVec<u8, NameLengthLimit>,
 	pub uri: BoundedVec<u8, URILengthLimit>,
 	pub logo_uri: BoundedVec<u8, URILengthLimit>,
 	pub description: BoundedVec<u8, DescriptionLengthLimit>,
 }
 
-impl<AccountId, AccountListLength, NameLengthLimit, URILengthLimit, DescriptionLengthLimit>
+impl<AccountId, AccountListLimit, NameLengthLimit, URILengthLimit, DescriptionLengthLimit>
 	MarketplaceData<
 		AccountId,
-		AccountListLength,
+		AccountListLimit,
 		NameLengthLimit,
 		URILengthLimit,
 		DescriptionLengthLimit,
 	> where
-	AccountId: Clone,
-	AccountListLength: Get<u32>,
+	AccountId: Clone + PartialEq + Debug,
+	AccountListLimit: Get<u32>,
 	NameLengthLimit: Get<u32>,
 	URILengthLimit: Get<u32>,
 	DescriptionLengthLimit: Get<u32>,
@@ -87,15 +89,15 @@ impl<AccountId, AccountListLength, NameLengthLimit, URILengthLimit, DescriptionL
 		kind: MarketplaceType,
 		commission_fee: MarketplaceCommission,
 		owner: AccountId,
-		allow_list: BoundedVec<AccountId, AccountListLength>,
-		disallow_list: BoundedVec<AccountId, AccountListLength>,
+		allow_list: BoundedVec<AccountId, AccountListLimit>,
+		disallow_list: BoundedVec<AccountId, AccountListLimit>,
 		name: BoundedVec<u8, NameLengthLimit>,
 		uri: BoundedVec<u8, URILengthLimit>,
 		logo_uri: BoundedVec<u8, URILengthLimit>,
 		description: BoundedVec<u8, DescriptionLengthLimit>,
 	) -> MarketplaceData<
 		AccountId,
-		AccountListLength,
+		AccountListLimit,
 		NameLengthLimit,
 		URILengthLimit,
 		DescriptionLengthLimit,

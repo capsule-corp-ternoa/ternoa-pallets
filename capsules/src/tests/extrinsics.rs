@@ -1,6 +1,6 @@
 use super::mock::*;
 use crate::{tests::mock, CapsuleData, Error};
-use frame_support::{assert_noop, assert_ok, error::BadOrigin};
+use frame_support::{assert_noop, assert_ok, bounded_vec, error::BadOrigin, BoundedVec};
 use frame_system::RawOrigin;
 use pallet_balances::Error as BalanceError;
 use ternoa_common::traits::NFTTrait;
@@ -10,15 +10,15 @@ fn create_happy() {
 	ExtBuilder::default().caps(vec![(ALICE, 10000)]).build().execute_with(|| {
 		// Initial state
 		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
-		let ipfs_reference = vec![60];
+		let ipfs_reference: BoundedVec<u8, IPFSLengthLimit> = bounded_vec![60];
 		let nft_id = 0;
 		let data = CapsuleData::new(ALICE, ipfs_reference.clone());
-		let ledger = vec![(nft_id, TernoaCapsules::capsule_mint_fee())];
+		let ledger = bounded_vec![(nft_id, TernoaCapsules::capsule_mint_fee())];
 		assert_eq!(TernoaCapsules::capsules(&nft_id), None);
 		assert_eq!(TernoaCapsules::ledgers(&ALICE), None);
 
 		// Happy path
-		let ok = TernoaCapsules::create(alice.clone(), vec![50], ipfs_reference, None);
+		let ok = TernoaCapsules::create(alice.clone(), bounded_vec![50], ipfs_reference, None);
 		assert_ok!(ok);
 		assert_eq!(TernoaCapsules::capsules(&nft_id), Some(data));
 		assert_eq!(TernoaCapsules::ledgers(&ALICE), Some(ledger));
@@ -34,22 +34,9 @@ fn create_unhappy() {
 			let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
 			let bob: mock::Origin = RawOrigin::Signed(BOB).into();
 
-			// Unhappy too short ipfs reference
-			let ok = TernoaCapsules::create(bob.clone(), vec![], vec![], None);
-			assert_noop!(ok, Error::<Test>::IPFSReferenceIsTooShort);
-
-			// Unhappy too longs ipfs reference
-			let long = vec![1, 2, 3, 4, 5, 6, 7];
-			let ok = TernoaCapsules::create(bob.clone(), vec![], long, None);
-			assert_noop!(ok, Error::<Test>::IPFSReferenceIsTooLong);
-
 			// Unhappy not enough caps to reserve a capsule
-			let ok = TernoaCapsules::create(bob.clone(), vec![], vec![1], None);
+			let ok = TernoaCapsules::create(bob.clone(), bounded_vec![], bounded_vec![1], None);
 			assert_noop!(ok, BalanceError::<Test>::InsufficientBalance);
-
-			// Unhappy nft creation failed
-			let ok = TernoaCapsules::create(alice.clone(), vec![], vec![1], None);
-			assert_noop!(ok, ternoa_nfts::Error::<Test>::IPFSReferenceIsTooShort);
 		})
 }
 
@@ -66,7 +53,7 @@ fn create_caps_transfer() {
 		assert_eq!(Balances::free_balance(pallet_id), 0);
 
 		// Funds are transferred
-		let ok = TernoaCapsules::create(alice.clone(), vec![50], vec![25], None);
+		let ok = TernoaCapsules::create(alice.clone(), bounded_vec![50], bounded_vec![25], None);
 		assert_ok!(ok);
 		assert_eq!(Balances::free_balance(ALICE), balance - capsule_fee - nft_fee);
 		assert_eq!(Balances::free_balance(pallet_id), capsule_fee);
@@ -75,25 +62,32 @@ fn create_caps_transfer() {
 
 #[test]
 fn create_transactional() {
-	ExtBuilder::default().caps(vec![(ALICE, 1002)]).build().execute_with(|| {
-		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
-		let balance = Balances::free_balance(ALICE);
-		let capsule_fee = TernoaCapsules::capsule_mint_fee();
-		let nft_fee = TernoaNFTs::nft_mint_fee();
-		let pallet_id = TernoaCapsules::account_id();
+	ExtBuilder::default()
+		.caps(vec![(ALICE, 10002), (BOB, 10002)])
+		.build()
+		.execute_with(|| {
+			let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
+			let balance = Balances::free_balance(ALICE);
+			let capsule_fee = TernoaCapsules::capsule_mint_fee();
+			let nft_fee = TernoaNFTs::nft_mint_fee();
+			let pallet_id = TernoaCapsules::account_id();
 
-		// Lets make sure that Alice has enough to reserve but not to reserve and mint and NFT
-		assert!(balance > capsule_fee);
-		assert!(balance < (capsule_fee + nft_fee));
+			// Lets make sure that Alice has enough funds
+			assert!(balance > (capsule_fee + nft_fee));
 
-		// Trigger an error
-		let ok = TernoaCapsules::create(alice.clone(), vec![], vec![1], None);
-		assert_noop!(ok, ternoa_nfts::Error::<Test>::IPFSReferenceIsTooShort);
+			let series_id = Some("AAA".into());
+			let ok = TernoaNFTs::create_nft(BOB, bounded_vec![], series_id.clone());
+			assert_ok!(ok);
 
-		// She should not have lost any caps
-		assert_eq!(Balances::free_balance(ALICE), balance);
-		assert_eq!(Balances::free_balance(pallet_id), 0);
-	})
+			// Trigger an error
+			let ok =
+				TernoaCapsules::create(alice.clone(), bounded_vec![], bounded_vec![], series_id);
+			assert_noop!(ok, ternoa_nfts::Error::<Test>::NotTheSeriesOwner);
+
+			// She should not have lost any caps
+			assert_eq!(Balances::free_balance(ALICE), balance);
+			assert_eq!(Balances::free_balance(pallet_id), 0);
+		})
 }
 
 #[test]
@@ -102,13 +96,13 @@ fn create_from_nft_happy() {
 		// Initial state
 		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
 		let nft_id = help::create_nft_fast(alice.clone());
-		let ipfs_reference = vec![60];
+		let ipfs_reference: BoundedVec<u8, IPFSLengthLimit> = bounded_vec![60];
 		assert_eq!(TernoaCapsules::capsules(&nft_id), None);
 		assert_eq!(TernoaCapsules::ledgers(&ALICE), None);
 
 		// Happy path
 		let data = CapsuleData::new(ALICE, ipfs_reference.clone());
-		let ledger = vec![(nft_id, TernoaCapsules::capsule_mint_fee())];
+		let ledger = bounded_vec![(nft_id, TernoaCapsules::capsule_mint_fee())];
 
 		let ok = TernoaCapsules::create_from_nft(alice.clone(), nft_id, ipfs_reference);
 		assert_ok!(ok);
@@ -126,43 +120,33 @@ fn create_from_nft_unhappy() {
 			let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
 			let bob: mock::Origin = RawOrigin::Signed(BOB).into();
 
-			// Unhappy too short ipfs reference
-			let nft_id = help::create_nft_fast(alice.clone());
-			let ok = TernoaCapsules::create_from_nft(alice.clone(), nft_id, vec![]);
-			assert_noop!(ok, Error::<Test>::IPFSReferenceIsTooShort);
-
-			// Unhappy too longs ipfs reference
-			let long = vec![1, 2, 3, 4, 5, 6, 7];
-			let ok = TernoaCapsules::create_from_nft(alice.clone(), nft_id, long);
-			assert_noop!(ok, Error::<Test>::IPFSReferenceIsTooLong);
-
 			// Unhappy not nft owner
 			let nft_id = help::create_nft_fast(bob.clone());
-			let ok = TernoaCapsules::create_from_nft(alice.clone(), nft_id, vec![25]);
+			let ok = TernoaCapsules::create_from_nft(alice.clone(), nft_id, bounded_vec![25]);
 			assert_noop!(ok, Error::<Test>::NotTheNFTOwner);
 
 			// Unhappy nft is listed for sale
 			let nft_id = help::create_nft_fast(alice.clone());
 			<TernoaNFTs as NFTTrait>::set_listed_for_sale(nft_id, true).unwrap();
-			let ok = TernoaCapsules::create_from_nft(alice.clone(), nft_id, vec![25]);
+			let ok = TernoaCapsules::create_from_nft(alice.clone(), nft_id, bounded_vec![25]);
 			assert_noop!(ok, Error::<Test>::CannotCreateCapsulesFromNFTsListedForSale);
 
 			// Unhappy nft is in transmission
 			let nft_id = help::create_nft_fast(alice.clone());
 			<TernoaNFTs as NFTTrait>::set_in_transmission(nft_id, true).unwrap();
-			let ok = TernoaCapsules::create_from_nft(alice.clone(), nft_id, vec![25]);
+			let ok = TernoaCapsules::create_from_nft(alice.clone(), nft_id, bounded_vec![25]);
 			assert_noop!(ok, Error::<Test>::CannotCreateCapsulesFromNFTsInTransmission);
 
 			// Unhappy nft is already a capsule
 			let nft_id = help::create_nft_fast(alice.clone());
-			let ok = TernoaCapsules::create_from_nft(alice.clone(), nft_id, vec![25]);
+			let ok = TernoaCapsules::create_from_nft(alice.clone(), nft_id, bounded_vec![25]);
 			assert_ok!(ok);
-			let ok = TernoaCapsules::create_from_nft(alice.clone(), nft_id, vec![30]);
+			let ok = TernoaCapsules::create_from_nft(alice.clone(), nft_id, bounded_vec![30]);
 			assert_noop!(ok, Error::<Test>::CannotCreateCapsulesFromCapsules);
 
 			// Unhappy not enough caps to reserve a capsule
 			let nft_id = help::create_nft_fast(bob.clone());
-			let ok = TernoaCapsules::create_from_nft(bob.clone(), nft_id, vec![30]);
+			let ok = TernoaCapsules::create_from_nft(bob.clone(), nft_id, bounded_vec![30]);
 			assert_noop!(ok, BalanceError::<Test>::InsufficientBalance);
 		})
 }
@@ -179,7 +163,7 @@ fn create_from_nft_caps_transfer() {
 		// Funds are transferred
 		let nft_id = help::create_nft_fast(alice.clone());
 		let balance = Balances::free_balance(ALICE);
-		let ok = TernoaCapsules::create_from_nft(alice.clone(), nft_id, vec![50]);
+		let ok = TernoaCapsules::create_from_nft(alice.clone(), nft_id, bounded_vec![50]);
 		assert_ok!(ok);
 		assert_eq!(Balances::free_balance(ALICE), balance - capsule_fee);
 		assert_eq!(Balances::free_balance(pallet_id), capsule_fee);
@@ -193,7 +177,7 @@ fn remove_happy() {
 		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
 		let nft_id_1 = help::create_capsule_fast(alice.clone());
 		let nft_id_2 = help::create_capsule_fast(alice.clone());
-		let ledger = vec![(nft_id_2, TernoaCapsules::capsule_mint_fee())];
+		let ledger = bounded_vec![(nft_id_2, TernoaCapsules::capsule_mint_fee())];
 
 		// Happy path delete one nft id associated with that owner
 		assert_ok!(TernoaCapsules::remove(alice.clone(), nft_id_1));
@@ -259,12 +243,12 @@ fn add_funds_happy() {
 		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
 		let nft_id = help::create_capsule_fast(alice.clone());
 		let fee = TernoaCapsules::capsule_mint_fee();
-		let ledger = vec![(nft_id, fee)];
+		let ledger = bounded_vec![(nft_id, fee)];
 		assert_eq!(TernoaCapsules::ledgers(&ALICE), Some(ledger));
 
 		// Happy path
 		let add = 55;
-		let ledger = vec![(nft_id, fee + add)];
+		let ledger = bounded_vec![(nft_id, fee + add)];
 		assert_ok!(TernoaCapsules::add_funds(alice.clone(), nft_id, add));
 		assert_eq!(TernoaCapsules::ledgers(&ALICE), Some(ledger));
 	})
@@ -320,7 +304,7 @@ fn set_ipfs_reference_happy() {
 		let nft_id = help::create_capsule_fast(alice.clone());
 		let data = TernoaCapsules::capsules(nft_id).unwrap();
 		let old_reference = data.ipfs_reference.clone();
-		let new_reference = vec![67];
+		let new_reference: BoundedVec<u8, IPFSLengthLimit> = bounded_vec![67];
 		assert_ne!(old_reference, new_reference);
 
 		// Happy path
@@ -339,20 +323,11 @@ fn set_ipfs_reference_unhappy() {
 			// Initial state
 			let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
 			let bob: mock::Origin = RawOrigin::Signed(BOB).into();
-			let nft_id = help::create_capsule_fast(alice.clone());
-
-			// Unhappy too short ipfs reference
-			let ok = TernoaCapsules::set_ipfs_reference(alice.clone(), nft_id, vec![]);
-			assert_noop!(ok, Error::<Test>::IPFSReferenceIsTooShort);
-
-			// Unhappy too longs ipfs reference
-			let long = vec![1, 2, 3, 4, 5, 6, 7];
-			let ok = TernoaCapsules::set_ipfs_reference(alice.clone(), nft_id, long);
-			assert_noop!(ok, Error::<Test>::IPFSReferenceIsTooLong);
+			let _ = help::create_capsule_fast(alice.clone());
 
 			// Unhappy not nft owner
 			let bob_nft_id = help::create_capsule_fast(bob.clone());
-			let ok = TernoaCapsules::set_ipfs_reference(alice.clone(), bob_nft_id, vec![1]);
+			let ok = TernoaCapsules::set_ipfs_reference(alice.clone(), bob_nft_id, bounded_vec![1]);
 			assert_noop!(ok, Error::<Test>::NotTheNFTOwner);
 		})
 }

@@ -54,7 +54,7 @@ pub mod pallet {
 		/// Get information on marketplace
 		type MarketplaceHandler: MarketplaceTrait<
 			AccountId = Self::AccountId,
-			AccountListLength = Self::AccountListLength,
+			AccountListLimit = Self::AccountListLimit,
 			NameLengthLimit = Self::NameLengthLimit,
 			URILengthLimit = Self::URILengthLimit,
 			DescriptionLengthLimit = Self::DescriptionLengthLimit,
@@ -89,7 +89,7 @@ pub mod pallet {
 
 		/// TODO
 		#[pallet::constant]
-		type AccountListLength: Get<u32>;
+		type AccountListLimit: Get<u32>;
 
 		/// TODO
 		#[pallet::constant]

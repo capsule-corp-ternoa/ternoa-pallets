@@ -10,20 +10,18 @@ mod migrations;
 mod types;
 mod weights;
 
-use frame_support::{
-	dispatch::{DispatchErrorWithPostInfo, DispatchResult},
-	BoundedVec,
-};
 pub use pallet::*;
 pub use types::*;
 
 use frame_support::{
+	dispatch::{DispatchErrorWithPostInfo, DispatchResult},
 	ensure,
 	pallet_prelude::DispatchResultWithPostInfo,
 	traits::{
 		Currency, ExistenceRequirement::KeepAlive, Get, OnUnbalanced, StorageVersion,
 		WithdrawReasons,
 	},
+	BoundedVec,
 };
 use weights::WeightInfo;
 // use frame_support::weights::Weight;
