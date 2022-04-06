@@ -71,7 +71,7 @@ pub mod pallet {
 		type FeesCollector: OnUnbalanced<NegativeImbalanceOf<Self>>;
 
 		#[pallet::constant]
-		type AccountListLength: Get<u32>;
+		type AccountListLimit: Get<u32>;
 
 		#[pallet::constant]
 		type NameLengthLimit: Get<u32>;
@@ -645,7 +645,7 @@ pub mod pallet {
 		MarketplaceId,
 		MarketplaceData<
 			T::AccountId,
-			T::AccountListLength,
+			T::AccountListLimit,
 			T::NameLengthLimit,
 			T::URILengthLimit,
 			T::DescriptionLengthLimit,
@@ -697,7 +697,7 @@ pub mod pallet {
 
 impl<T: Config> MarketplaceTrait for Pallet<T> {
 	type AccountId = T::AccountId;
-	type AccountListLength = T::AccountListLength;
+	type AccountListLimit = T::AccountListLimit;
 	type NameLengthLimit = T::NameLengthLimit;
 	type URILengthLimit = T::URILengthLimit;
 	type DescriptionLengthLimit = T::DescriptionLengthLimit;
@@ -727,7 +727,7 @@ impl<T: Config> MarketplaceTrait for Pallet<T> {
 	) -> Option<
 		MarketplaceData<
 			Self::AccountId,
-			Self::AccountListLength,
+			Self::AccountListLimit,
 			Self::NameLengthLimit,
 			Self::URILengthLimit,
 			Self::DescriptionLengthLimit,
