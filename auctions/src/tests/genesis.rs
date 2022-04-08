@@ -9,7 +9,7 @@ use frame_support::{bounded_vec, traits::GenesisBuild};
 fn genesis() {
 	let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
-	let auction: AuctionData<AccountId, BlockNumber, u128, ListLengthLimit> = AuctionData {
+	let auction: AuctionData<AccountId, BlockNumber, u128, BidderListLengthLimit> = AuctionData {
 		creator: ALICE,
 		start_block: 10,
 		end_block: 20,

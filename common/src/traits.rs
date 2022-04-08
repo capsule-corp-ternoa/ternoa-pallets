@@ -66,7 +66,7 @@ pub trait NFTTrait {
 /// TODO: Expand trait with more useful functions
 pub trait MarketplaceTrait {
 	type AccountId: Clone + PartialEq + Debug;
-	type AccountListLimit: Get<u32>;
+	type AccountCountLimit: Get<u32>;
 	type NameLengthLimit: Get<u32>;
 	type URILengthLimit: Get<u32>;
 	type DescriptionLengthLimit: Get<u32>;
@@ -83,7 +83,7 @@ pub trait MarketplaceTrait {
 	) -> Option<
 		MarketplaceData<
 			Self::AccountId,
-			Self::AccountListLimit,
+			Self::AccountCountLimit,
 			Self::NameLengthLimit,
 			Self::URILengthLimit,
 			Self::DescriptionLengthLimit,

@@ -10,14 +10,14 @@ use sp_std::{fmt::Debug, vec::Vec};
 	Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen,
 )]
 #[codec(mel_bound(AccountId: MaxEncodedLen, BlockNumber: MaxEncodedLen, Balance: MaxEncodedLen))]
-#[scale_info(skip_type_params(ListLengthLimit))]
+#[scale_info(skip_type_params(BidderListLengthLimit))]
 /// Structure to store Auction data
-pub struct AuctionData<AccountId, BlockNumber, Balance, ListLengthLimit>
+pub struct AuctionData<AccountId, BlockNumber, Balance, BidderListLengthLimit>
 where
 	AccountId: Clone + PartialEq + Debug + sp_std::cmp::Ord,
 	BlockNumber: Clone + PartialEq + Debug + std::cmp::PartialOrd,
 	Balance: Clone + PartialEq + Debug + sp_std::cmp::PartialOrd,
-	ListLengthLimit: Get<u32>,
+	BidderListLengthLimit: Get<u32>,
 {
 	/// The owner of the nft that has listed the item on auction
 	pub creator: AccountId,
@@ -30,20 +30,20 @@ where
 	/// Optional price at which the auction is stopped and item can be bought
 	pub buy_it_price: Option<Balance>,
 	/// List of bidders
-	pub bidders: BidderList<AccountId, Balance, ListLengthLimit>,
+	pub bidders: BidderList<AccountId, Balance, BidderListLengthLimit>,
 	/// The marketplace where the auction has been listed
 	pub marketplace_id: MarketplaceId,
 	/// Is the auction going beyond the original end_block
 	pub is_extended: bool,
 }
 
-impl<AccountId, BlockNumber, Balance, ListLengthLimit>
-	AuctionData<AccountId, BlockNumber, Balance, ListLengthLimit>
+impl<AccountId, BlockNumber, Balance, BidderListLengthLimit>
+	AuctionData<AccountId, BlockNumber, Balance, BidderListLengthLimit>
 where
 	AccountId: Clone + PartialEq + Debug + sp_std::cmp::Ord,
 	BlockNumber: Clone + PartialEq + Debug + std::cmp::PartialOrd,
 	Balance: Clone + PartialEq + Debug + sp_std::cmp::PartialOrd,
-	ListLengthLimit: Get<u32>,
+	BidderListLengthLimit: Get<u32>,
 {
 	pub fn to_raw(&self, nft_id: NFTId) -> AuctionsGenesis<AccountId, BlockNumber, Balance> {
 		(
@@ -90,23 +90,24 @@ pub type AuctionsGenesis<AccountId, BlockNumber, Balance> = (
 	Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen,
 )]
 #[codec(mel_bound(AccountId: MaxEncodedLen, Balance: MaxEncodedLen))]
-#[scale_info(skip_type_params(ListLengthLimit))]
+#[scale_info(skip_type_params(BidderListLengthLimit))]
 /// wrapper type to store sorted list of all bids
 /// The wrapper exists to ensure a queue implementation of sorted bids
-pub struct BidderList<AccountId, Balance, ListLengthLimit>
+pub struct BidderList<AccountId, Balance, BidderListLengthLimit>
 where
 	AccountId: Clone + PartialEq + Debug + sp_std::cmp::Ord,
 	Balance: Clone + PartialEq + Debug + sp_std::cmp::PartialOrd,
-	ListLengthLimit: Get<u32>,
+	BidderListLengthLimit: Get<u32>,
 {
-	pub list: BoundedVec<(AccountId, Balance), ListLengthLimit>,
+	pub list: BoundedVec<(AccountId, Balance), BidderListLengthLimit>,
 }
 
-impl<AccountId, Balance, ListLengthLimit> BidderList<AccountId, Balance, ListLengthLimit>
+impl<AccountId, Balance, BidderListLengthLimit>
+	BidderList<AccountId, Balance, BidderListLengthLimit>
 where
 	AccountId: Clone + PartialEq + Debug + sp_std::cmp::Ord,
 	Balance: Clone + PartialEq + Debug + sp_std::cmp::PartialOrd,
-	ListLengthLimit: Get<u32>,
+	BidderListLengthLimit: Get<u32>,
 {
 	/// Create a new empty bidders list
 	pub fn new() -> Self {

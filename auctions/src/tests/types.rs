@@ -3,7 +3,7 @@ use frame_support::{bounded_vec, parameter_types};
 use crate::{BidderList, DeadlineList};
 
 parameter_types! {
-	pub const ListLengthLimit: u32 = 3;
+	pub const BidderListLengthLimit: u32 = 3;
 	pub const ListLengthLimit10: u32 = 10;
 	pub const ParallelAuctionLimit: u32 = 10;
 }

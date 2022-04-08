@@ -122,7 +122,7 @@ benchmarks! {
 
 	}: _(get_origin::<T>("ALICE"), mkp_id, bob_lookup.into())
 	verify {
-		let allow_list: BoundedVec<T::AccountId, T::AccountListLimit> = bounded_vec![bob];
+		let allow_list: BoundedVec<T::AccountId, T::AccountCountLimit> = bounded_vec![bob];
 		assert_eq!(Marketplaces::<T>::get(mkp_id).unwrap().allow_list, allow_list);
 	}
 
@@ -136,7 +136,7 @@ benchmarks! {
 
 	}: _(alice.clone(), mkp_id, bob_lookup)
 	verify {
-		let allow_list: BoundedVec<T::AccountId, T::AccountListLimit> = bounded_vec![];
+		let allow_list: BoundedVec<T::AccountId, T::AccountCountLimit> = bounded_vec![];
 		assert_eq!(Marketplaces::<T>::get(mkp_id).unwrap().allow_list, allow_list);
 	}
 

@@ -99,7 +99,7 @@ impl pallet_balances::Config for Test {
 
 parameter_types! {
 	pub const IPFSLengthLimit: u32 = 5;
-	pub const AccountListLimit: u32 = 5;
+	pub const AccountCountLimit: u32 = 5;
 	pub const NameLengthLimit: u32 = 5;
 	pub const URILengthLimit: u32 = 5;
 	pub const DescriptionLengthLimit: u32 = 5;
@@ -119,7 +119,7 @@ impl Config for Test {
 	type NFTs = NFTs;
 	type WeightInfo = ();
 	type FeesCollector = ();
-	type AccountListLimit = AccountListLimit;
+	type AccountCountLimit = AccountCountLimit;
 	type NameLengthLimit = NameLengthLimit;
 	type URILengthLimit = URILengthLimit;
 	type DescriptionLengthLimit = DescriptionLengthLimit;
@@ -166,7 +166,7 @@ impl ExtBuilder {
 		.assimilate_storage(&mut t)
 		.unwrap();
 
-		let empty_list: BoundedVec<AccountId, AccountListLimit> = bounded_vec![];
+		let empty_list: BoundedVec<AccountId, AccountCountLimit> = bounded_vec![];
 		let name: BoundedVec<u8, NameLengthLimit> = bounded_vec![50, 50, 50, 50];
 		let uri: BoundedVec<u8, URILengthLimit> = bounded_vec![];
 		let description: BoundedVec<u8, DescriptionLengthLimit> = bounded_vec![];

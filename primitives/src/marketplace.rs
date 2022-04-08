@@ -41,7 +41,7 @@ impl MarketplaceType {
 	Decode, CloneNoBound, Eq, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen, Encode,
 )]
 #[scale_info(skip_type_params(
-	AccountListLimit,
+	AccountCountLimit,
 	NameLengthLimit,
 	URILengthLimit,
 	DescriptionLengthLimit
@@ -49,13 +49,13 @@ impl MarketplaceType {
 #[codec(mel_bound(AccountId: MaxEncodedLen))]
 pub struct MarketplaceData<
 	AccountId,
-	AccountListLimit,
+	AccountCountLimit,
 	NameLengthLimit,
 	URILengthLimit,
 	DescriptionLengthLimit,
 > where
 	AccountId: Clone + PartialEq + Debug,
-	AccountListLimit: Get<u32>,
+	AccountCountLimit: Get<u32>,
 	NameLengthLimit: Get<u32>,
 	URILengthLimit: Get<u32>,
 	DescriptionLengthLimit: Get<u32>,
@@ -63,24 +63,24 @@ pub struct MarketplaceData<
 	pub kind: MarketplaceType,
 	pub commission_fee: MarketplaceCommission,
 	pub owner: AccountId,
-	pub allow_list: BoundedVec<AccountId, AccountListLimit>,
-	pub disallow_list: BoundedVec<AccountId, AccountListLimit>,
+	pub allow_list: BoundedVec<AccountId, AccountCountLimit>,
+	pub disallow_list: BoundedVec<AccountId, AccountCountLimit>,
 	pub name: BoundedVec<u8, NameLengthLimit>,
 	pub uri: BoundedVec<u8, URILengthLimit>,
 	pub logo_uri: BoundedVec<u8, URILengthLimit>,
 	pub description: BoundedVec<u8, DescriptionLengthLimit>,
 }
 
-impl<AccountId, AccountListLimit, NameLengthLimit, URILengthLimit, DescriptionLengthLimit>
+impl<AccountId, AccountCountLimit, NameLengthLimit, URILengthLimit, DescriptionLengthLimit>
 	MarketplaceData<
 		AccountId,
-		AccountListLimit,
+		AccountCountLimit,
 		NameLengthLimit,
 		URILengthLimit,
 		DescriptionLengthLimit,
 	> where
 	AccountId: Clone + PartialEq + Debug,
-	AccountListLimit: Get<u32>,
+	AccountCountLimit: Get<u32>,
 	NameLengthLimit: Get<u32>,
 	URILengthLimit: Get<u32>,
 	DescriptionLengthLimit: Get<u32>,
@@ -89,15 +89,15 @@ impl<AccountId, AccountListLimit, NameLengthLimit, URILengthLimit, DescriptionLe
 		kind: MarketplaceType,
 		commission_fee: MarketplaceCommission,
 		owner: AccountId,
-		allow_list: BoundedVec<AccountId, AccountListLimit>,
-		disallow_list: BoundedVec<AccountId, AccountListLimit>,
+		allow_list: BoundedVec<AccountId, AccountCountLimit>,
+		disallow_list: BoundedVec<AccountId, AccountCountLimit>,
 		name: BoundedVec<u8, NameLengthLimit>,
 		uri: BoundedVec<u8, URILengthLimit>,
 		logo_uri: BoundedVec<u8, URILengthLimit>,
 		description: BoundedVec<u8, DescriptionLengthLimit>,
 	) -> MarketplaceData<
 		AccountId,
-		AccountListLimit,
+		AccountCountLimit,
 		NameLengthLimit,
 		URILengthLimit,
 		DescriptionLengthLimit,

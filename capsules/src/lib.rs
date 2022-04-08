@@ -46,16 +46,13 @@ pub mod pallet {
 		/// Because this pallet emits events, it depends on the runtime's definition of an event.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
+		/// Weight information for pallet.
 		type WeightInfo: WeightInfo;
 
-		/// Currency used to bill minting fees
+		/// Currency type.
 		type Currency: Currency<Self::AccountId>;
 
-		/// TODO!
-		#[pallet::constant]
-		type IPFSLengthLimit: Get<u32>;
-
-		/// TODO!
+		/// Link to the NFT pallet.
 		type NFTTrait: NFTTrait<
 			AccountId = Self::AccountId,
 			IPFSLengthLimit = Self::IPFSLengthLimit,
@@ -65,7 +62,12 @@ pub mod pallet {
 		#[pallet::constant]
 		type PalletId: Get<PalletId>;
 
-		/// TODO!
+		/// Maximum IPFS length.
+		#[pallet::constant]
+		type IPFSLengthLimit: Get<u32>;
+
+		/// The Maximum amount of capsules that can be active at the same time for a user has been
+		/// reached.
 		#[pallet::constant]
 		type CapsuleCountLimit: Get<u32>;
 	}
@@ -105,6 +107,9 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
+			// Check if the user has reached the capsule count limit.
+			ensure!(!Self::has_reached_limit(&who), Error::<T>::MaximumCapsuleCountReached);
+
 			// Reserve funds
 			let amount = CapsuleMintFee::<T>::get();
 			Self::send_funds(&who, &Self::account_id(), amount, KeepAlive)?;
@@ -131,6 +136,9 @@ pub mod pallet {
 			ipfs_reference: BoundedVec<u8, T::IPFSLengthLimit>,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
+
+			// Check if the user has reached the capsule count limit.
+			ensure!(!Self::has_reached_limit(&who), Error::<T>::MaximumCapsuleCountReached);
 
 			let nft = T::NFTTrait::get_nft(nft_id).ok_or(Error::<T>::NFTNotFound)?;
 			ensure!(nft.owner == who, Error::<T>::NotTheNFTOwner);
@@ -299,8 +307,8 @@ pub mod pallet {
 		NFTNotFound,
 		/// Callers is not the NFT owner.
 		NotTheNFTOwner,
-		/// TODO.
-		RandomError,
+		/// The Maximum amount of capsule that can be active at the same time for a user has been
+		MaximumCapsuleCountReached,
 	}
 
 	/// Current capsule mint fee.
@@ -379,11 +387,12 @@ impl<T: Config> Pallet<T> {
 
 		Ledgers::<T>::mutate(&owner, |x| -> Result<(), Error<T>> {
 			if let Some(data) = x {
-				data.try_push((nft_id, funds)).map_err(|_| Error::<T>::RandomError)?
+				data.try_push((nft_id, funds))
+					.map_err(|_| Error::<T>::MaximumCapsuleCountReached)?
 			} else {
 				*x = Some(
 					BoundedVec::try_from(vec![(nft_id, funds)])
-						.map_err(|_| Error::<T>::RandomError)?,
+						.map_err(|_| Error::<T>::MaximumCapsuleCountReached)?,
 				);
 			}
 			Ok(())
@@ -404,5 +413,14 @@ impl<T: Config> Pallet<T> {
 		T::Currency::resolve_creating(receiver, imbalance);
 
 		Ok(())
+	}
+
+	fn has_reached_limit(owner: &T::AccountId) -> bool {
+		let ledger = Ledgers::<T>::try_get(owner);
+		if let Ok(ledger) = ledger {
+			return ledger.is_full()
+		}
+
+		false
 	}
 }

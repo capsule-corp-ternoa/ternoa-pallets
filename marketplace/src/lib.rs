@@ -56,27 +56,31 @@ pub mod pallet {
 		/// Because this pallet emits events, it depends on the runtime's definition of an event.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
-		/// Pallet managing nfts.
-		type NFTs: NFTTrait<AccountId = Self::AccountId>;
-
-		/// Weight values for this pallet
+		/// Weight information for pallet.
 		type WeightInfo: WeightInfo;
 
-		/// Caps Currency
+		/// Currency type.
 		type Currency: Currency<Self::AccountId>;
+
+		/// Link to the NFT pallet.
+		type NFTs: NFTTrait<AccountId = Self::AccountId>;
 
 		/// Place where the marketplace fees go.
 		type FeesCollector: OnUnbalanced<NegativeImbalanceOf<Self>>;
 
+		/// The maximum number of accounts that can be stored inside the allow or disallow list.
 		#[pallet::constant]
-		type AccountListLimit: Get<u32>;
+		type AccountCountLimit: Get<u32>;
 
+		/// Maximum name length.
 		#[pallet::constant]
 		type NameLengthLimit: Get<u32>;
 
+		/// Maximum URI length.
 		#[pallet::constant]
 		type URILengthLimit: Get<u32>;
 
+		/// Maximum description length.
 		#[pallet::constant]
 		type DescriptionLengthLimit: Get<u32>;
 	}
@@ -590,8 +594,6 @@ pub mod pallet {
 		/// NFT is not present on the marketplace.
 		NFTNotForSale,
 
-		/// Used wrong currency to buy an nft.
-		WrongCurrencyUsed,
 		/// We do not have any marketplace ids left, a runtime upgrade is necessary.
 		MarketplaceIdOverflow,
 
@@ -605,22 +607,6 @@ pub mod pallet {
 		AccountNotFound,
 		/// Internal math error.
 		InternalMathError,
-		/// Marketplace name is too short.
-		TooShortMarketplaceName,
-		/// Marketplace name is too long.
-		TooLongMarketplaceName,
-		// Marketplace uri is too long.
-		TooLongUri,
-		// Marketplace uri is too short.
-		TooShortUri,
-		// Marketplace logo uri is too long.
-		TooLongLogoUri,
-		// Marketplace logo uri is too short.
-		TooShortLogoUri,
-		/// Marketplace description in too short.
-		TooShortDescription,
-		/// Marketplace description in too long.
-		TooLongDescription,
 		/// TODO
 		RandomError,
 	}
@@ -643,7 +629,7 @@ pub mod pallet {
 		MarketplaceId,
 		MarketplaceData<
 			T::AccountId,
-			T::AccountListLimit,
+			T::AccountCountLimit,
 			T::NameLengthLimit,
 			T::URILengthLimit,
 			T::DescriptionLengthLimit,
@@ -695,7 +681,7 @@ pub mod pallet {
 
 impl<T: Config> MarketplaceTrait for Pallet<T> {
 	type AccountId = T::AccountId;
-	type AccountListLimit = T::AccountListLimit;
+	type AccountCountLimit = T::AccountCountLimit;
 	type NameLengthLimit = T::NameLengthLimit;
 	type URILengthLimit = T::URILengthLimit;
 	type DescriptionLengthLimit = T::DescriptionLengthLimit;
@@ -725,7 +711,7 @@ impl<T: Config> MarketplaceTrait for Pallet<T> {
 	) -> Option<
 		MarketplaceData<
 			Self::AccountId,
-			Self::AccountListLimit,
+			Self::AccountCountLimit,
 			Self::NameLengthLimit,
 			Self::URILengthLimit,
 			Self::DescriptionLengthLimit,

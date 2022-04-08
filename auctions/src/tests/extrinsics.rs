@@ -576,7 +576,7 @@ pub mod add_bid {
 			let eve_bid = dave_bid + 1;
 			let mut accounts =
 				vec![(BOB, bob_bid), (CHARLIE, charlie_bid), (DAVE, dave_bid), (EVE, eve_bid)];
-			assert_eq!(accounts.len(), (ListLengthLimit::get() + 1) as usize);
+			assert_eq!(accounts.len(), (BidderListLengthLimit::get() + 1) as usize);
 
 			for bidder in accounts.iter() {
 				assert_ok!(Auctions::add_bid(origin(bidder.0), nft_id, bidder.1));
@@ -590,7 +590,7 @@ pub mod add_bid {
 
 			// Storage
 			accounts.remove(0);
-			let accounts: BoundedVec<(AccountId, u128), ListLengthLimit> =
+			let accounts: BoundedVec<(AccountId, u128), BidderListLengthLimit> =
 				BoundedVec::try_from(accounts).unwrap();
 			auction.bidders.list = accounts;
 

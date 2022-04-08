@@ -130,7 +130,7 @@ impl pallet_balances::Config for Test {
 
 parameter_types! {
 	pub const IPFSLengthLimit: u32 = 5;
-	pub const AccountListLimit: u32 = 5;
+	pub const AccountCountLimit: u32 = 5;
 	pub const NameLengthLimit: u32 = 5;
 	pub const URILengthLimit: u32 = 5;
 	pub const DescriptionLengthLimit: u32 = 5;
@@ -150,7 +150,7 @@ impl ternoa_marketplace::Config for Test {
 	type NFTs = NFTs;
 	type WeightInfo = ();
 	type FeesCollector = ();
-	type AccountListLimit = AccountListLimit;
+	type AccountCountLimit = AccountCountLimit;
 	type NameLengthLimit = NameLengthLimit;
 	type URILengthLimit = URILengthLimit;
 	type DescriptionLengthLimit = DescriptionLengthLimit;
@@ -163,7 +163,7 @@ parameter_types! {
 	pub const AuctionGracePeriod: BlockNumber = AUCTION_GRACE_PERIOD;
 	pub const AuctionEndingPeriod: BlockNumber = AUCTION_ENDING_PERIOD;
 	pub const AuctionsPalletId: PalletId = PalletId(*b"tauction");
-	pub const ListLengthLimit: u32 = 3;
+	pub const BidderListLengthLimit: u32 = 3;
 	pub const ParallelAuctionLimit: u32 = 10;
 }
 
@@ -179,11 +179,11 @@ impl Config for Test {
 	type AuctionEndingPeriod = AuctionEndingPeriod;
 	type PalletId = AuctionsPalletId;
 	type WeightInfo = ();
-	type AccountListLimit = AccountListLimit;
+	type AccountCountLimit = AccountCountLimit;
 	type NameLengthLimit = NameLengthLimit;
 	type URILengthLimit = URILengthLimit;
 	type DescriptionLengthLimit = DescriptionLengthLimit;
-	type ListLengthLimit = ListLengthLimit;
+	type BidderListLengthLimit = BidderListLengthLimit;
 	type ParallelAuctionLimit = ParallelAuctionLimit;
 }
 
@@ -249,7 +249,7 @@ impl ExtBuilder {
 	fn build_market(t: &mut sp_runtime::Storage) {
 		let alice_market: MarketplaceData<
 			AccountId,
-			AccountListLimit,
+			AccountCountLimit,
 			NameLengthLimit,
 			URILengthLimit,
 			DescriptionLengthLimit,
@@ -279,8 +279,10 @@ impl ExtBuilder {
 		pub const NFT_PRICE: u128 = 100;
 		pub const NFT_BUY_PRICE: Option<u128> = Some(200);
 
-		let mut auctions: Vec<(u32, AuctionData<AccountId, BlockNumber, u128, ListLengthLimit>)> =
-			vec![];
+		let mut auctions: Vec<(
+			u32,
+			AuctionData<AccountId, BlockNumber, u128, BidderListLengthLimit>,
+		)> = vec![];
 		if let Some(state) = state {
 			let (start, end, extended) = match state {
 				AuctionState::Before => (2, 2 + MAX_AUCTION_DURATION, false),

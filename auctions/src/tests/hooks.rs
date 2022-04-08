@@ -19,7 +19,7 @@ fn on_initialize() {
 
 		let alice_start_block = 10;
 		let alice_end_block = alice_start_block + MIN_AUCTION_DURATION;
-		let alice_auction: AuctionData<AccountId, BlockNumber, u128, ListLengthLimit> =
+		let alice_auction: AuctionData<AccountId, BlockNumber, u128, BidderListLengthLimit> =
 			AuctionData {
 				creator: ALICE,
 				start_block: alice_start_block,
@@ -33,16 +33,17 @@ fn on_initialize() {
 
 		let bob_start_block = 10 + 5;
 		let bob_end_block = bob_start_block + MIN_AUCTION_DURATION;
-		let bob_auction: AuctionData<AccountId, BlockNumber, u128, ListLengthLimit> = AuctionData {
-			creator: BOB,
-			start_block: bob_start_block,
-			end_block: bob_end_block,
-			start_price: 300,
-			buy_it_price: Some(400),
-			bidders: BidderList::new(),
-			marketplace_id: market_id,
-			is_extended: false,
-		};
+		let bob_auction: AuctionData<AccountId, BlockNumber, u128, BidderListLengthLimit> =
+			AuctionData {
+				creator: BOB,
+				start_block: bob_start_block,
+				end_block: bob_end_block,
+				start_price: 300,
+				buy_it_price: Some(400),
+				bidders: BidderList::new(),
+				marketplace_id: market_id,
+				is_extended: false,
+			};
 
 		let ok = Auctions::create_auction(
 			origin(ALICE),
