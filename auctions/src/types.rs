@@ -15,7 +15,7 @@ use sp_std::{fmt::Debug, vec::Vec};
 pub struct AuctionData<AccountId, BlockNumber, Balance, BidderListLengthLimit>
 where
 	AccountId: Clone + PartialEq + Debug + sp_std::cmp::Ord,
-	BlockNumber: Clone + PartialEq + Debug + std::cmp::PartialOrd,
+	BlockNumber: Clone + PartialEq + Debug + sp_std::cmp::PartialOrd,
 	Balance: Clone + PartialEq + Debug + sp_std::cmp::PartialOrd,
 	BidderListLengthLimit: Get<u32>,
 {
@@ -41,7 +41,7 @@ impl<AccountId, BlockNumber, Balance, BidderListLengthLimit>
 	AuctionData<AccountId, BlockNumber, Balance, BidderListLengthLimit>
 where
 	AccountId: Clone + PartialEq + Debug + sp_std::cmp::Ord,
-	BlockNumber: Clone + PartialEq + Debug + std::cmp::PartialOrd,
+	BlockNumber: Clone + PartialEq + Debug + sp_std::cmp::PartialOrd,
 	Balance: Clone + PartialEq + Debug + sp_std::cmp::PartialOrd,
 	BidderListLengthLimit: Get<u32>,
 {
@@ -194,13 +194,13 @@ where
 /// wrapper type to store sorted list of all bids
 /// The wrapper exists to ensure a queue implementation of sorted bids
 pub struct DeadlineList<
-	BlockNumber: Clone + PartialEq + Debug + std::cmp::PartialOrd,
+	BlockNumber: Clone + PartialEq + Debug + sp_std::cmp::PartialOrd,
 	ParallelAuctionLimit: Get<u32>,
 >(pub BoundedVec<(NFTId, BlockNumber), ParallelAuctionLimit>);
 
 impl<BlockNumber, ParallelAuctionLimit> DeadlineList<BlockNumber, ParallelAuctionLimit>
 where
-	BlockNumber: Clone + PartialEq + Debug + std::cmp::PartialOrd,
+	BlockNumber: Clone + PartialEq + Debug + sp_std::cmp::PartialOrd,
 	ParallelAuctionLimit: Get<u32>,
 {
 	pub fn insert(&mut self, nft_id: NFTId, block_number: BlockNumber) -> Result<(), ()> {
@@ -242,7 +242,7 @@ where
 
 impl<BlockNumber, ParallelAuctionLimit> Default for DeadlineList<BlockNumber, ParallelAuctionLimit>
 where
-	BlockNumber: Clone + PartialEq + Debug + std::cmp::PartialOrd,
+	BlockNumber: Clone + PartialEq + Debug + sp_std::cmp::PartialOrd,
 	ParallelAuctionLimit: Get<u32>,
 {
 	fn default() -> Self {
