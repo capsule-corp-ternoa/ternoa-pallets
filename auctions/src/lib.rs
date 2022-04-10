@@ -55,13 +55,7 @@ pub mod pallet {
 		type NFTHandler: NFTTrait<AccountId = Self::AccountId>;
 
 		/// Link to the Marketplace pallet.
-		type MarketplaceHandler: MarketplaceTrait<
-			AccountId = Self::AccountId,
-			AccountCountLimit = Self::AccountCountLimit,
-			NameLengthLimit = Self::NameLengthLimit,
-			URILengthLimit = Self::URILengthLimit,
-			DescriptionLengthLimit = Self::DescriptionLengthLimit,
-		>;
+		type MarketplaceHandler: MarketplaceTrait<AccountId = Self::AccountId>;
 
 		/// Minimum required length of auction.
 		#[pallet::constant]
@@ -86,22 +80,6 @@ pub mod pallet {
 		/// The auctions pallet id - will be used to generate account id.
 		#[pallet::constant]
 		type PalletId: Get<PalletId>;
-
-		/// Maximum amount of accounts that can be in the allow list or disallow list.
-		#[pallet::constant]
-		type AccountCountLimit: Get<u32>;
-
-		/// Maximum name length.
-		#[pallet::constant]
-		type NameLengthLimit: Get<u32>;
-
-		/// Maximum URI length.
-		#[pallet::constant]
-		type URILengthLimit: Get<u32>;
-
-		/// Maximum Description length.
-		#[pallet::constant]
-		type DescriptionLengthLimit: Get<u32>;
 
 		/// Total amount of accounts that can be in the bidder list.
 		#[pallet::constant]

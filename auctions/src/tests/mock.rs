@@ -179,10 +179,6 @@ impl Config for Test {
 	type AuctionEndingPeriod = AuctionEndingPeriod;
 	type PalletId = AuctionsPalletId;
 	type WeightInfo = ();
-	type AccountCountLimit = AccountCountLimit;
-	type NameLengthLimit = NameLengthLimit;
-	type URILengthLimit = URILengthLimit;
-	type DescriptionLengthLimit = DescriptionLengthLimit;
 	type BidderListLengthLimit = BidderListLengthLimit;
 	type ParallelAuctionLimit = ParallelAuctionLimit;
 }
