@@ -38,6 +38,13 @@ pub mod pallet {
 	use frame_system::pallet_prelude::*;
 	use sp_runtime::traits::StaticLookup;
 
+	pub type BalanceOf<T> =
+		<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+	pub type NegativeImbalanceOf<T> = <<T as Config>::Currency as Currency<
+		<T as frame_system::Config>::AccountId,
+	>>::NegativeImbalance;
+	pub type NFTIPFSReference<T> = BoundedVec<u8, <T as Config>::IPFSLengthLimit>;
+
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		/// Because this pallet emits events, it depends on the runtime's definition of an event.
@@ -54,12 +61,6 @@ pub mod pallet {
 		#[pallet::constant]
 		type IPFSLengthLimit: Get<u32>;
 	}
-
-	pub type BalanceOf<T> =
-		<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
-	pub(crate) type NegativeImbalanceOf<T> = <<T as Config>::Currency as Currency<
-		<T as frame_system::Config>::AccountId,
-	>>::NegativeImbalance;
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
@@ -81,7 +82,7 @@ pub mod pallet {
 		#[transactional]
 		pub fn create(
 			origin: OriginFor<T>,
-			ipfs_reference: BoundedVec<u8, T::IPFSLengthLimit>,
+			ipfs_reference: NFTIPFSReference<T>,
 			series_id: Option<NFTSeriesId>,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
@@ -256,7 +257,7 @@ pub mod pallet {
 			nft_id: NFTId,
 			owner: T::AccountId,
 			series_id: NFTSeriesId,
-			ipfs_reference: BoundedVec<u8, T::IPFSLengthLimit>,
+			ipfs_reference: NFTIPFSReference<T>,
 			mint_fee: BalanceOf<T>,
 		},
 		/// An NFT was transferred to someone else.
@@ -431,7 +432,7 @@ impl<T: Config> traits::NFTTrait for Pallet<T> {
 
 	fn create_nft(
 		owner: Self::AccountId,
-		ipfs_reference: BoundedVec<u8, T::IPFSLengthLimit>,
+		ipfs_reference: NFTIPFSReference<T>,
 		series_id: Option<NFTSeriesId>,
 	) -> Result<NFTId, DispatchErrorWithPostInfo> {
 		Self::create(Origin::<T>::Signed(owner).into(), ipfs_reference, series_id)?;

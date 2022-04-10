@@ -1,9 +1,10 @@
 use super::mock::*;
-use crate::{tests::mock, Error, Event as NFTsEvent, NFTData, NFTSeriesDetails};
-use frame_support::{assert_noop, assert_ok, error::BadOrigin};
+use frame_support::{assert_noop, assert_ok, bounded_vec, error::BadOrigin};
 use frame_system::RawOrigin;
 use pallet_balances::Error as BalanceError;
 use ternoa_common::traits::NFTTrait;
+
+use crate::{tests::mock, Error, Event as NFTsEvent, NFTData, NFTIPFSReference, NFTSeriesDetails};
 
 fn origin(account: u64) -> mock::Origin {
 	RawOrigin::Signed(account).into()
@@ -14,8 +15,6 @@ fn root() -> mock::Origin {
 }
 
 mod create {
-	use frame_support::{bounded_vec, BoundedVec};
-
 	use super::*;
 
 	#[test]
@@ -58,7 +57,7 @@ mod create {
 	fn create_without_series() {
 		ExtBuilder::new_build(vec![(ALICE, 1000)]).execute_with(|| {
 			let owner = ALICE;
-			let ipfs_reference: BoundedVec<u8, IPFSLengthLimit> = bounded_vec![1];
+			let ipfs_reference: NFTIPFSReference<Test> = bounded_vec![1];
 			let alice_balance = Balances::free_balance(ALICE);
 
 			// Create NFT with new serie id while there is no series already registered

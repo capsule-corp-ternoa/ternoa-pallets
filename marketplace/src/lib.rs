@@ -47,9 +47,12 @@ pub mod pallet {
 
 	pub type BalanceOf<T> =
 		<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
-	pub(crate) type NegativeImbalanceOf<T> = <<T as Config>::Currency as Currency<
+	pub type NegativeImbalanceOf<T> = <<T as Config>::Currency as Currency<
 		<T as frame_system::Config>::AccountId,
 	>>::NegativeImbalance;
+	pub type NameVec<T> = BoundedVec<u8, <T as Config>::NameLengthLimit>;
+	pub type URIVec<T> = BoundedVec<u8, <T as Config>::URILengthLimit>;
+	pub type DescriptionVec<T> = BoundedVec<u8, <T as Config>::DescriptionLengthLimit>;
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
@@ -198,10 +201,10 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			kind: MarketplaceType,
 			commission_fee: u8,
-			name: BoundedVec<u8, T::NameLengthLimit>,
-			uri: BoundedVec<u8, T::URILengthLimit>,
-			logo_uri: BoundedVec<u8, T::URILengthLimit>,
-			description: BoundedVec<u8, T::DescriptionLengthLimit>,
+			name: NameVec<T>,
+			uri: URIVec<T>,
+			logo_uri: URIVec<T>,
+			description: DescriptionVec<T>,
 		) -> DispatchResultWithPostInfo {
 			let caller_id = ensure_signed(origin)?;
 
@@ -405,7 +408,7 @@ pub mod pallet {
 		pub fn set_marketplace_name(
 			origin: OriginFor<T>,
 			marketplace_id: MarketplaceId,
-			name: BoundedVec<u8, T::NameLengthLimit>,
+			name: NameVec<T>,
 		) -> DispatchResultWithPostInfo {
 			let caller_id = ensure_signed(origin)?;
 
@@ -463,7 +466,7 @@ pub mod pallet {
 		pub fn set_marketplace_uri(
 			origin: OriginFor<T>,
 			marketplace_id: MarketplaceId,
-			uri: BoundedVec<u8, T::URILengthLimit>,
+			uri: URIVec<T>,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
@@ -483,7 +486,7 @@ pub mod pallet {
 		pub fn set_marketplace_logo_uri(
 			origin: OriginFor<T>,
 			marketplace_id: MarketplaceId,
-			logo_uri: BoundedVec<u8, T::URILengthLimit>,
+			logo_uri: URIVec<T>,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
@@ -503,7 +506,7 @@ pub mod pallet {
 		pub fn set_marketplace_description(
 			origin: OriginFor<T>,
 			marketplace_id: MarketplaceId,
-			description: BoundedVec<u8, T::DescriptionLengthLimit>,
+			description: DescriptionVec<T>,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
@@ -538,28 +541,19 @@ pub mod pallet {
 		/// Marketplace changed type.
 		MarketplaceTypeChanged { marketplace_id: MarketplaceId, kind: MarketplaceType },
 		/// Marketplace updated name.
-		MarketplaceNameUpdated {
-			marketplace_id: MarketplaceId,
-			name: BoundedVec<u8, T::NameLengthLimit>,
-		},
+		MarketplaceNameUpdated { marketplace_id: MarketplaceId, name: NameVec<T> },
 		/// Marketplace mint fee updated.
 		MarketplaceMintFeeUpdated { fee: BalanceOf<T> },
 		/// Marketplace mint fee updated.
 		MarketplaceCommissionFeeUpdated { marketplace_id: MarketplaceId, fee: u8 },
 		/// Marketplace URI updated.
-		MarketplaceUriUpdated {
-			marketplace_id: MarketplaceId,
-			uri: BoundedVec<u8, T::URILengthLimit>,
-		},
+		MarketplaceUriUpdated { marketplace_id: MarketplaceId, uri: URIVec<T> },
 		/// Marketplace Logo URI updated.
-		MarketplaceLogoUriUpdated {
-			marketplace_id: MarketplaceId,
-			uri: BoundedVec<u8, T::URILengthLimit>,
-		},
+		MarketplaceLogoUriUpdated { marketplace_id: MarketplaceId, uri: URIVec<T> },
 		/// Marketplace Description updated.
 		MarketplaceDescriptionUpdated {
 			marketplace_id: MarketplaceId,
-			description: BoundedVec<u8, T::DescriptionLengthLimit>,
+			description: DescriptionVec<T>,
 		},
 		/// A nft has been listed for sale.
 		NFTListed { nft_id: NFTId, price: BalanceOf<T>, marketplace_id: MarketplaceId },
@@ -728,10 +722,10 @@ impl<T: Config> MarketplaceTrait for Pallet<T> {
 		caller_id: Self::AccountId,
 		kind: MarketplaceType,
 		commission_fee: u8,
-		name: BoundedVec<u8, Self::NameLengthLimit>,
-		uri: BoundedVec<u8, Self::URILengthLimit>,
-		logo_uri: BoundedVec<u8, Self::URILengthLimit>,
-		description: BoundedVec<u8, Self::DescriptionLengthLimit>,
+		name: NameVec<T>,
+		uri: URIVec<T>,
+		logo_uri: URIVec<T>,
+		description: DescriptionVec<T>,
 	) -> Result<MarketplaceId, DispatchErrorWithPostInfo> {
 		Self::create_marketplace(
 			Origin::<T>::Signed(caller_id).into(),
