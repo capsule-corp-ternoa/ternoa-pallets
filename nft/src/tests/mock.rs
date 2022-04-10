@@ -52,7 +52,7 @@ frame_support::construct_runtime!(
 	{
 		System: frame_system,
 		Balances: pallet_balances,
-		NFTs: ternoa_nft,
+		NFT: ternoa_nft,
 	}
 );
 

@@ -48,9 +48,9 @@ fn register_nfts() {
 
 	let mut ext = sp_io::TestExternalities::new(t);
 	ext.execute_with(|| {
-		assert_eq!(NFTs::nft_id_generator(), nft_id + 1);
-		assert_eq!(NFTs::series_id_generator(), 0);
-		assert_eq!(NFTs::data(nft_id), Some(data_original));
-		assert_eq!(NFTs::nft_mint_fee(), mint_fee);
+		assert_eq!(NFT::nft_id_generator(), nft_id + 1);
+		assert_eq!(NFT::series_id_generator(), 0);
+		assert_eq!(NFT::data(nft_id), Some(data_original));
+		assert_eq!(NFT::nft_mint_fee(), mint_fee);
 	});
 }

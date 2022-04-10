@@ -23,7 +23,7 @@ use frame_system::RawOrigin;
 use sp_runtime::traits::{Bounded, StaticLookup};
 use sp_std::prelude::*;
 
-use crate::Pallet as NFTs;
+use crate::Pallet as NFT;
 
 const SERIES_ID: u8 = 20;
 const NFT_ID: u32 = 0;
@@ -38,7 +38,7 @@ pub fn prepare_benchmarks<T: Config>() {
 
 	// Create default NFT and series
 	let series_id = vec![SERIES_ID];
-	assert_ok!(NFTs::<T>::create(
+	assert_ok!(NFT::<T>::create(
 		RawOrigin::Signed(alice.clone()).into(),
 		bounded_vec![1],
 		Some(series_id.clone()),
@@ -58,11 +58,11 @@ benchmarks! {
 	create {
 		prepare_benchmarks::<T>();
 		let alice: T::AccountId = get_account::<T>("ALICE");
-		let nft_id = NFTs::<T>::nft_id_generator();
+		let nft_id = NFT::<T>::nft_id_generator();
 
 	}: _(RawOrigin::Signed(alice.clone()), bounded_vec![55], None)
 	verify {
-		assert_eq!(NFTs::<T>::data(nft_id).unwrap().owner, alice);
+		assert_eq!(NFT::<T>::data(nft_id).unwrap().owner, alice);
 	}
 
 	transfer {
@@ -72,10 +72,10 @@ benchmarks! {
 		let bob: T::AccountId = get_account::<T>("BOB");
 		let bob_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(bob.clone());
 
-		assert_ok!(NFTs::<T>::finish_series(alice.clone().into(), vec![SERIES_ID]));
+		assert_ok!(NFT::<T>::finish_series(alice.clone().into(), vec![SERIES_ID]));
 	}: _(alice.clone(), NFT_ID, bob_lookup)
 	verify {
-		assert_eq!(NFTs::<T>::data(NFT_ID).unwrap().owner, bob);
+		assert_eq!(NFT::<T>::data(NFT_ID).unwrap().owner, bob);
 	}
 
 	burn {
@@ -83,7 +83,7 @@ benchmarks! {
 
 	}: _(origin::<T>("ALICE"), NFT_ID)
 	verify {
-		assert_eq!(NFTs::<T>::data(NFT_ID), None);
+		assert_eq!(NFT::<T>::data(NFT_ID), None);
 	}
 
 	finish_series {
@@ -93,19 +93,19 @@ benchmarks! {
 
 	}: _(origin::<T>("ALICE"), series_id.clone())
 	verify {
-		assert_eq!(NFTs::<T>::series(&series_id).unwrap().draft, false);
+		assert_eq!(NFT::<T>::series(&series_id).unwrap().draft, false);
 	}
 
 	set_nft_mint_fee {
 		prepare_benchmarks::<T>();
 
-		let old_mint_fee = NFTs::<T>::nft_mint_fee();
+		let old_mint_fee = NFT::<T>::nft_mint_fee();
 		let new_mint_fee = 1000u32;
 
 	}: _(RawOrigin::Root, new_mint_fee.clone().into())
 	verify {
 		assert_ne!(old_mint_fee, new_mint_fee.clone().into());
-		assert_eq!(NFTs::<T>::nft_mint_fee(), new_mint_fee.into());
+		assert_eq!(NFT::<T>::nft_mint_fee(), new_mint_fee.into());
 	}
 
 	delegate {
@@ -115,9 +115,9 @@ benchmarks! {
 
 	}: _(origin::<T>("ALICE"), NFT_ID, Some(bob.clone()))
 	verify {
-		assert_eq!(NFTs::<T>::data(NFT_ID).unwrap().is_delegated, true);
-		assert_eq!(NFTs::<T>::delegated_nfts(NFT_ID), Some(bob));
+		assert_eq!(NFT::<T>::data(NFT_ID).unwrap().is_delegated, true);
+		assert_eq!(NFT::<T>::delegated_nfts(NFT_ID), Some(bob));
 	}
 }
 
-impl_benchmark_test_suite!(NFTs, crate::tests::mock::new_test_ext(), crate::tests::mock::Test);
+impl_benchmark_test_suite!(NFT, crate::tests::mock::new_test_ext(), crate::tests::mock::Test);

@@ -61,7 +61,7 @@ fn on_initialize() {
 				is_extended: false,
 			};
 
-		let ok = Auctions::create_auction(
+		let ok = Auction::create_auction(
 			origin(ALICE),
 			alice_nft_id,
 			alice_auction.marketplace_id,
@@ -72,7 +72,7 @@ fn on_initialize() {
 		);
 		assert_ok!(ok);
 
-		let ok = Auctions::create_auction(
+		let ok = Auction::create_auction(
 			origin(BOB),
 			bob_nft_id,
 			bob_auction.marketplace_id,

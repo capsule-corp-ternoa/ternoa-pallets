@@ -21,7 +21,7 @@ mod version_1 {
 	use super::*;
 
 	frame_support::generate_storage_alias!(
-		TernoaCapsules, CapsuleMintFee => Value<()>
+		Capsule, CapsuleMintFee => Value<()>
 	);
 
 	#[test]
@@ -29,8 +29,8 @@ mod version_1 {
 		ExtBuilder::default().build().execute_with(|| {
 			CapsuleMintFee::kill();
 
-			let weight = <TernoaCapsules as OnRuntimeUpgrade>::on_runtime_upgrade();
-			let mint_fee = TernoaCapsules::capsule_mint_fee();
+			let weight = <Capsule as OnRuntimeUpgrade>::on_runtime_upgrade();
+			let mint_fee = Capsule::capsule_mint_fee();
 
 			// Check NFT mint fee
 			assert_eq!(weight, 1);
@@ -42,7 +42,7 @@ mod version_1 {
 #[test]
 fn upgrade_from_latest_to_latest() {
 	ExtBuilder::default().build().execute_with(|| {
-		let weight = <TernoaCapsules as OnRuntimeUpgrade>::on_runtime_upgrade();
+		let weight = <Capsule as OnRuntimeUpgrade>::on_runtime_upgrade();
 		assert_eq!(weight, 0);
 	})
 }

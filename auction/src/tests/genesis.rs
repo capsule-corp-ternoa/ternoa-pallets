@@ -48,8 +48,8 @@ fn genesis() {
 		for auction in auctions {
 			let nft_id = auction.0;
 			let auction = AuctionData::from_raw(auction);
-			assert_eq!(Auctions::auctions(nft_id), Some(auction));
+			assert_eq!(Auction::auctions(nft_id), Some(auction));
 		}
-		assert_eq!(Auctions::deadlines(), deadlines);
+		assert_eq!(Auction::deadlines(), deadlines);
 	});
 }

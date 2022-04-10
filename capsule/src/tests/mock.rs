@@ -37,10 +37,10 @@ frame_support::construct_runtime!(
 		NodeBlock = Block,
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
-		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-		Balances: pallet_balances::{Pallet, Call, Config<T>, Storage, Event<T>},
-		TernoaNFTs: ternoa_nft::{Pallet, Call, Storage, Event<T>, Config<T>},
-		TernoaCapsules: ternoa_capsule::{Pallet, Call, Storage, Event<T>, Config<T>},
+		System: frame_system,
+		Balances: pallet_balances,
+		NFT: ternoa_nft,
+		Capsule: ternoa_capsule,
 	}
 );
 
@@ -126,7 +126,7 @@ impl Config for Test {
 	type Event = Event;
 	type WeightInfo = ();
 	type Currency = Balances;
-	type NFTExt = TernoaNFTs;
+	type NFTExt = NFT;
 	type PalletId = CapsulePalletId;
 	type CapsuleCountLimit = CapsuleCountLimit;
 }
@@ -186,7 +186,7 @@ pub mod help {
 
 	pub fn create_capsule_fast(owner: Origin) -> NFTId {
 		let nft_id = create_nft(owner.clone(), bounded_vec![50], None);
-		assert_ok!(TernoaCapsules::create_from_nft(owner, nft_id, bounded_vec![60]));
+		assert_ok!(Capsule::create_from_nft(owner, nft_id, bounded_vec![60]));
 		nft_id
 	}
 
@@ -199,8 +199,8 @@ pub mod help {
 		ipfs_reference: BoundedVec<u8, IPFSLengthLimit>,
 		series_id: Option<NFTSeriesId>,
 	) -> NFTId {
-		assert_ok!(TernoaNFTs::create(owner, ipfs_reference, series_id));
-		TernoaNFTs::nft_id_generator() - 1
+		assert_ok!(NFT::create(owner, ipfs_reference, series_id));
+		NFT::nft_id_generator() - 1
 	}
 }
 

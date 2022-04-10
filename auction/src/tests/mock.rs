@@ -15,7 +15,7 @@
 // along with Ternoa.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{
-	self as ternoa_auctions,
+	self as ternoa_auction,
 	types::{AuctionData, BidderList},
 	Config,
 };
@@ -66,11 +66,11 @@ frame_support::construct_runtime!(
 		NodeBlock = Block,
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
-		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-		Balances: pallet_balances::{Pallet, Call, Storage, Event<T>},
-		NFTs: ternoa_nft::{Pallet, Call, Storage, Event<T>, Config<T>},
-		Marketplace: ternoa_marketplace::{Pallet, Call, Event<T>},
-		Auctions: ternoa_auctions::{Pallet, Call, Event<T>}
+		System: frame_system,
+		Balances: pallet_balances,
+		NFT: ternoa_nft,
+		Marketplace: ternoa_marketplace,
+		Auction: ternoa_auction,
 	}
 );
 
@@ -163,7 +163,7 @@ impl ternoa_nft::Config for Test {
 impl ternoa_marketplace::Config for Test {
 	type Event = Event;
 	type Currency = Balances;
-	type NFTExt = NFTs;
+	type NFTExt = NFT;
 	type WeightInfo = ();
 	type FeesCollector = ();
 	type AccountCountLimit = AccountCountLimit;
@@ -186,7 +186,7 @@ parameter_types! {
 impl Config for Test {
 	type Event = Event;
 	type Currency = Balances;
-	type NFTExt = NFTs;
+	type NFTExt = NFT;
 	type MarketplaceExt = Marketplace;
 	type MaxAuctionDelay = MaxAuctionDelay;
 	type MaxAuctionDuration = MaxAuctionDuration;
@@ -328,7 +328,7 @@ impl ExtBuilder {
 		}
 
 		let auctions = auctions.iter().map(|x| x.1.to_raw(x.0)).collect();
-		ternoa_auctions::GenesisConfig::<Test> { auctions }
+		ternoa_auction::GenesisConfig::<Test> { auctions }
 			.assimilate_storage(t)
 			.unwrap();
 	}
@@ -338,7 +338,7 @@ impl ExtBuilder {
 pub fn new_test_ext() -> sp_io::TestExternalities {
 	let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
-	ternoa_auctions::GenesisConfig::<Test> { auctions: Default::default() }
+	ternoa_auction::GenesisConfig::<Test> { auctions: Default::default() }
 		.assimilate_storage(&mut t)
 		.unwrap();
 
@@ -349,12 +349,12 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 
 pub fn run_to_block(n: u64) {
 	while System::block_number() < n {
-		Auctions::on_finalize(System::block_number());
+		Auction::on_finalize(System::block_number());
 		Balances::on_finalize(System::block_number());
 		System::on_finalize(System::block_number());
 		System::set_block_number(System::block_number() + 1);
 		System::on_initialize(System::block_number());
 		Balances::on_initialize(System::block_number());
-		Auctions::on_initialize(System::block_number());
+		Auction::on_initialize(System::block_number());
 	}
 }

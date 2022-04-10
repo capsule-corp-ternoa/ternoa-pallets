@@ -41,8 +41,8 @@ fn register_capsules() {
 	let ledger = bounded_vec![(nft_id, mint_fee)];
 	let mut ext = sp_io::TestExternalities::new(t);
 	ext.execute_with(|| {
-		assert_eq!(TernoaCapsules::ledgers(owner), Some(ledger));
-		assert_eq!(TernoaCapsules::capsules(nft_id), Some(data));
-		assert_eq!(TernoaCapsules::capsule_mint_fee(), mint_fee);
+		assert_eq!(Capsule::ledgers(owner), Some(ledger));
+		assert_eq!(Capsule::capsules(nft_id), Some(data));
+		assert_eq!(Capsule::capsule_mint_fee(), mint_fee);
 	});
 }

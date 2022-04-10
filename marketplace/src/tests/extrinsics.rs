@@ -37,28 +37,26 @@ fn list_happy() {
 			// Happy path Public marketplace
 			let price = 50;
 			let series_id = vec![50];
-			let nft_id =
-				NFTs::create_nft(ALICE, bounded_vec![50], Some(series_id.clone())).unwrap();
+			let nft_id = NFT::create_nft(ALICE, bounded_vec![50], Some(series_id.clone())).unwrap();
 			let sale_info = SaleData::new(ALICE, price.clone(), 0);
 
 			help::finish_series(alice.clone(), series_id);
 			assert_ok!(Marketplace::list_nft(alice.clone(), nft_id, price, Some(0)));
 			assert_eq!(Marketplace::nft_for_sale(nft_id), Some(sale_info));
-			assert_eq!(<NFTs as NFTExt>::is_listed_for_sale(nft_id), Some(true));
+			assert_eq!(<NFT as NFTExt>::is_listed_for_sale(nft_id), Some(true));
 
 			// Happy path Private marketplace
 			let series_id = vec![51];
 			let mkp_id =
 				help::create_mkp(bob.clone(), MPT::Private, 0, bounded_vec![1], vec![ALICE]);
 			let sale_info = SaleData::new(ALICE, price.clone(), mkp_id);
-			let nft_id =
-				NFTs::create_nft(ALICE, bounded_vec![50], Some(series_id.clone())).unwrap();
+			let nft_id = NFT::create_nft(ALICE, bounded_vec![50], Some(series_id.clone())).unwrap();
 
 			help::finish_series(alice.clone(), series_id);
 			let ok = Marketplace::list_nft(alice.clone(), nft_id, price, Some(mkp_id));
 			assert_ok!(ok);
 			assert_eq!(Marketplace::nft_for_sale(nft_id), Some(sale_info));
-			assert_eq!(NFTs::is_listed_for_sale(nft_id), Some(true));
+			assert_eq!(NFT::is_listed_for_sale(nft_id), Some(true));
 		})
 }
 
@@ -77,23 +75,22 @@ fn list_unhappy() {
 			assert_noop!(ok, Error::<Test>::NFTNotFound);
 
 			// Unhappy not the NFT owner
-			let nft_id = NFTs::create_nft(BOB, bounded_vec![50], None).unwrap();
+			let nft_id = NFT::create_nft(BOB, bounded_vec![50], None).unwrap();
 			let ok = Marketplace::list_nft(alice.clone(), nft_id, price, Some(0));
 			assert_noop!(ok, Error::<Test>::NotTheNFTOwner);
 
 			// Unhappy series not completed
 			let series_id = vec![50];
-			let nft_id =
-				NFTs::create_nft(ALICE, bounded_vec![50], Some(series_id.clone())).unwrap();
+			let nft_id = NFT::create_nft(ALICE, bounded_vec![50], Some(series_id.clone())).unwrap();
 			let ok = Marketplace::list_nft(alice.clone(), nft_id, price, Some(0));
 			assert_noop!(ok, Error::<Test>::CannotListNFTsInUncompletedSeries);
 
 			// Unhappy nft is capsulized
 			help::finish_series(alice.clone(), series_id);
-			NFTs::set_converted_to_capsule(nft_id, true).unwrap();
+			NFT::set_converted_to_capsule(nft_id, true).unwrap();
 			let ok = Marketplace::list_nft(alice.clone(), nft_id, price, Some(0));
 			assert_noop!(ok, Error::<Test>::CannotListCapsules);
-			NFTs::set_converted_to_capsule(nft_id, false).unwrap();
+			NFT::set_converted_to_capsule(nft_id, false).unwrap();
 
 			// Unhappy unknown marketplace
 			let ok = Marketplace::list_nft(alice.clone(), nft_id, price, Some(10001));
@@ -111,7 +108,7 @@ fn list_unhappy() {
 			assert_noop!(ok, Error::<Test>::AccountNotAllowedToList);
 
 			// Unhappy already listed for sale
-			NFTs::set_listed_for_sale(nft_id, true).unwrap();
+			NFT::set_listed_for_sale(nft_id, true).unwrap();
 			let ok = Marketplace::list_nft(alice.clone(), nft_id, price, None);
 			assert_noop!(ok, Error::<Test>::CannotListNFTsThatAreAlreadyListed);
 		})
@@ -124,14 +121,14 @@ fn unlist_happy() {
 
 		let price = 50;
 		let series_id = vec![50];
-		let nft_id = NFTs::create_nft(ALICE, bounded_vec![50], Some(series_id.clone())).unwrap();
+		let nft_id = NFT::create_nft(ALICE, bounded_vec![50], Some(series_id.clone())).unwrap();
 
 		// Happy path
 		help::finish_series(alice.clone(), series_id);
 		assert_ok!(Marketplace::list_nft(alice.clone(), nft_id, price, Some(0)));
 		assert_ok!(Marketplace::unlist_nft(alice.clone(), nft_id));
 		assert_eq!(Marketplace::nft_for_sale(nft_id), None);
-		assert_eq!(NFTs::is_listed_for_sale(nft_id), Some(false));
+		assert_eq!(NFT::is_listed_for_sale(nft_id), Some(false));
 	})
 }
 
@@ -145,7 +142,7 @@ fn unlist_unhappy() {
 		assert_noop!(ok, Error::<Test>::NotTheNFTOwner);
 
 		// Unhappy not listed NFT
-		let nft_id = NFTs::create_nft(ALICE, bounded_vec![50], None).unwrap();
+		let nft_id = NFT::create_nft(ALICE, bounded_vec![50], None).unwrap();
 		let ok = Marketplace::unlist_nft(alice.clone(), nft_id);
 		assert_noop!(ok, Error::<Test>::NFTNotForSale);
 	})
@@ -179,8 +176,8 @@ fn buy_happy() {
 			let alice_before = Balances::free_balance(ALICE);
 
 			assert_ok!(Marketplace::buy_nft(bob.clone(), nft_id_1));
-			assert_eq!(NFTs::is_listed_for_sale(nft_id_1), Some(false));
-			assert_eq!(NFTs::owner(nft_id_1), Some(BOB));
+			assert_eq!(NFT::is_listed_for_sale(nft_id_1), Some(false));
+			assert_eq!(NFT::owner(nft_id_1), Some(BOB));
 			assert_eq!(Marketplace::nft_for_sale(nft_id_1), None);
 
 			assert_eq!(Balances::free_balance(BOB), bob_before - 50);
@@ -192,8 +189,8 @@ fn buy_happy() {
 			let dave_before = Balances::free_balance(DAVE);
 
 			assert_ok!(Marketplace::buy_nft(bob.clone(), nft_id_2));
-			assert_eq!(NFTs::is_listed_for_sale(nft_id_2), Some(false));
-			assert_eq!(NFTs::owner(nft_id_2), Some(BOB));
+			assert_eq!(NFT::is_listed_for_sale(nft_id_2), Some(false));
+			assert_eq!(NFT::owner(nft_id_2), Some(BOB));
 			assert_eq!(Marketplace::nft_for_sale(nft_id_2), None);
 
 			assert_eq!(Balances::free_balance(BOB), bob_before - 50);

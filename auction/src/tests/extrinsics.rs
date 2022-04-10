@@ -21,7 +21,7 @@ use super::mock::{
 use crate::{
 	tests::mock,
 	types::{AuctionData, BidderList, DeadlineList},
-	Auctions as AuctionsStorage, Claims, Deadlines, Error, Event as AuctionEvent,
+	Auctions, Claims, Deadlines, Error, Event as AuctionEvent,
 };
 use frame_support::{assert_noop, assert_ok, bounded_vec, error::BadOrigin};
 use frame_system::RawOrigin;
@@ -59,7 +59,7 @@ pub mod create_auction {
 
 			let deadline = DeadlineList(bounded_vec![(nft_id, auction.end_block)]);
 
-			let ok = Auctions::create_auction(
+			let ok = Auction::create_auction(
 				origin(ALICE),
 				nft_id,
 				auction.marketplace_id,
@@ -71,11 +71,11 @@ pub mod create_auction {
 			assert_ok!(ok);
 
 			// Storage
-			assert_eq!(NFTs::is_listed_for_sale(nft_id), Some(true));
-			assert_eq!(AuctionsStorage::<Test>::iter().count(), 1);
+			assert_eq!(NFT::is_listed_for_sale(nft_id), Some(true));
+			assert_eq!(Auctions::<Test>::iter().count(), 1);
 			assert_eq!(Claims::<Test>::iter().count(), 0);
 
-			assert_eq!(AuctionsStorage::<Test>::get(nft_id).unwrap(), auction);
+			assert_eq!(Auctions::<Test>::get(nft_id).unwrap(), auction);
 			assert_eq!(Deadlines::<Test>::get(), deadline);
 
 			// Events
@@ -88,7 +88,7 @@ pub mod create_auction {
 				marketplace_id: auction.marketplace_id,
 				start_price: auction.start_price,
 			};
-			let event = Event::Auctions(event);
+			let event = Event::Auction(event);
 			assert_eq!(System::events().last().unwrap().event, event);
 		})
 	}
@@ -102,7 +102,7 @@ pub mod create_auction {
 			let start_block = current_block - 1;
 			assert!(start_block < current_block);
 
-			let ok = Auctions::create_auction(
+			let ok = Auction::create_auction(
 				origin(ALICE),
 				nft_id,
 				market_id,
@@ -123,7 +123,7 @@ pub mod create_auction {
 			let start_block = System::block_number();
 			let end_block = start_block - 1;
 
-			let ok = Auctions::create_auction(
+			let ok = Auction::create_auction(
 				origin(ALICE),
 				nft_id,
 				market_id,
@@ -144,7 +144,7 @@ pub mod create_auction {
 			let start_block = System::block_number();
 			let end_block = start_block + MAX_AUCTION_DURATION + 1;
 
-			let ok = Auctions::create_auction(
+			let ok = Auction::create_auction(
 				origin(ALICE),
 				nft_id,
 				market_id,
@@ -165,7 +165,7 @@ pub mod create_auction {
 			let start_block = System::block_number();
 			let end_block = start_block + MIN_AUCTION_DURATION - 1;
 
-			let ok = Auctions::create_auction(
+			let ok = Auction::create_auction(
 				origin(ALICE),
 				nft_id,
 				market_id,
@@ -186,7 +186,7 @@ pub mod create_auction {
 			let start_block = System::block_number() + MAX_AUCTION_DELAY + 1;
 			let end_block = start_block + MIN_AUCTION_DURATION;
 
-			let ok = Auctions::create_auction(
+			let ok = Auction::create_auction(
 				origin(ALICE),
 				nft_id,
 				market_id,
@@ -205,7 +205,7 @@ pub mod create_auction {
 			let (nft_id, market_id) = (ALICE_NFT_ID, ALICE_MARKET_ID);
 			let start_price = 100;
 
-			let ok = Auctions::create_auction(
+			let ok = Auction::create_auction(
 				origin(ALICE),
 				nft_id,
 				market_id,
@@ -223,7 +223,7 @@ pub mod create_auction {
 		ExtBuilder::new_build(vec![], None).execute_with(|| {
 			let (nft_id, market_id) = (INVALID_NFT_ID, ALICE_MARKET_ID);
 
-			let ok = Auctions::create_auction(
+			let ok = Auction::create_auction(
 				origin(ALICE),
 				nft_id,
 				market_id,
@@ -240,7 +240,7 @@ pub mod create_auction {
 		ExtBuilder::new_build(vec![], None).execute_with(|| {
 			let (nft_id, market_id) = (BOB_NFT_ID, ALICE_MARKET_ID);
 
-			let ok = Auctions::create_auction(
+			let ok = Auction::create_auction(
 				origin(ALICE),
 				nft_id,
 				market_id,
@@ -257,9 +257,9 @@ pub mod create_auction {
 	fn cannot_auction_nfts_listed_for_sale() {
 		ExtBuilder::new_build(vec![], None).execute_with(|| {
 			let (nft_id, market_id) = (ALICE_NFT_ID, ALICE_MARKET_ID);
-			assert_ok!(NFTs::set_listed_for_sale(nft_id, true));
+			assert_ok!(NFT::set_listed_for_sale(nft_id, true));
 
-			let ok = Auctions::create_auction(
+			let ok = Auction::create_auction(
 				origin(ALICE),
 				nft_id,
 				market_id,
@@ -276,9 +276,9 @@ pub mod create_auction {
 	fn cannot_auction_nfts_in_transmission() {
 		ExtBuilder::new_build(vec![], None).execute_with(|| {
 			let (nft_id, market_id) = (ALICE_NFT_ID, ALICE_MARKET_ID);
-			assert_ok!(NFTs::set_in_transmission(nft_id, true));
+			assert_ok!(NFT::set_in_transmission(nft_id, true));
 
-			let ok = Auctions::create_auction(
+			let ok = Auction::create_auction(
 				origin(ALICE),
 				nft_id,
 				market_id,
@@ -295,9 +295,9 @@ pub mod create_auction {
 	fn cannot_auction_capsules() {
 		ExtBuilder::new_build(vec![], None).execute_with(|| {
 			let (nft_id, market_id) = (ALICE_NFT_ID, ALICE_MARKET_ID);
-			assert_ok!(NFTs::set_converted_to_capsule(ALICE_NFT_ID, true));
+			assert_ok!(NFT::set_converted_to_capsule(ALICE_NFT_ID, true));
 
-			let ok = Auctions::create_auction(
+			let ok = Auction::create_auction(
 				origin(ALICE),
 				nft_id,
 				market_id,
@@ -314,9 +314,9 @@ pub mod create_auction {
 	fn cannot_auction_nfts_in_uncompleted_series() {
 		ExtBuilder::new_build(vec![], None).execute_with(|| {
 			let (nft_id, market_id) = (ALICE_NFT_ID, ALICE_MARKET_ID);
-			assert_ok!(NFTs::set_series_completion(&vec![ALICE_SERIES_ID], false));
+			assert_ok!(NFT::set_series_completion(&vec![ALICE_SERIES_ID], false));
 
-			let ok = Auctions::create_auction(
+			let ok = Auction::create_auction(
 				origin(ALICE),
 				nft_id,
 				market_id,
@@ -338,7 +338,7 @@ pub mod create_auction {
 			let ok = Marketplace::add_account_to_disallow_list(alice.clone(), market_id, ALICE);
 			assert_ok!(ok);
 
-			let ok = Auctions::create_auction(
+			let ok = Auction::create_auction(
 				alice.clone(),
 				nft_id,
 				market_id,
@@ -355,9 +355,9 @@ pub mod create_auction {
 	fn cannot_auction_delegated_nfts() {
 		ExtBuilder::new_build(vec![], None).execute_with(|| {
 			let (nft_id, market_id) = (ALICE_NFT_ID, ALICE_MARKET_ID);
-			assert_ok!(NFTs::delegate(origin(ALICE), nft_id, Some(BOB)));
+			assert_ok!(NFT::delegate(origin(ALICE), nft_id, Some(BOB)));
 
-			let ok = Auctions::create_auction(
+			let ok = Auction::create_auction(
 				origin(ALICE),
 				nft_id,
 				market_id,
@@ -378,29 +378,29 @@ pub mod cancel_auction {
 	fn cancel_auction() {
 		ExtBuilder::new_build(vec![], Some(Before)).execute_with(|| {
 			let nft_id = ALICE_NFT_ID;
-			let auction_count = AuctionsStorage::<Test>::iter().count();
+			let auction_count = Auctions::<Test>::iter().count();
 			let mut deadlines = Deadlines::<Test>::get();
 
-			assert_ok!(Auctions::cancel_auction(origin(ALICE), nft_id));
+			assert_ok!(Auction::cancel_auction(origin(ALICE), nft_id));
 
 			// NFT
-			let nft = NFTs::get_nft(nft_id).unwrap();
+			let nft = NFT::get_nft(nft_id).unwrap();
 			assert_eq!(nft.listed_for_sale, false);
 			assert_eq!(nft.owner, ALICE);
 
 			// Storage
 			deadlines.remove(nft_id);
 
-			assert_eq!(NFTs::is_listed_for_sale(nft_id), Some(false));
-			assert_eq!(AuctionsStorage::<Test>::iter().count(), auction_count - 1);
+			assert_eq!(NFT::is_listed_for_sale(nft_id), Some(false));
+			assert_eq!(Auctions::<Test>::iter().count(), auction_count - 1);
 			assert_eq!(Claims::<Test>::iter().count(), 0);
 
-			assert_eq!(AuctionsStorage::<Test>::get(nft_id), None);
+			assert_eq!(Auctions::<Test>::get(nft_id), None);
 			assert_eq!(Deadlines::<Test>::get(), deadlines);
 
 			// Check Events
 			let event = AuctionEvent::AuctionCancelled { nft_id };
-			let event = Event::Auctions(event);
+			let event = Event::Auction(event);
 			assert_eq!(System::events().last().unwrap().event, event);
 		})
 	}
@@ -408,7 +408,7 @@ pub mod cancel_auction {
 	#[test]
 	fn auction_does_not_exist() {
 		ExtBuilder::new_build(vec![], Some(Before)).execute_with(|| {
-			let ok = Auctions::cancel_auction(origin(ALICE), INVALID_NFT_ID);
+			let ok = Auction::cancel_auction(origin(ALICE), INVALID_NFT_ID);
 			assert_noop!(ok, Error::<Test>::AuctionDoesNotExist);
 		})
 	}
@@ -416,7 +416,7 @@ pub mod cancel_auction {
 	#[test]
 	fn not_the_auction_creator() {
 		ExtBuilder::new_build(vec![], Some(Before)).execute_with(|| {
-			let ok = Auctions::cancel_auction(origin(BOB), ALICE_NFT_ID);
+			let ok = Auction::cancel_auction(origin(BOB), ALICE_NFT_ID);
 			assert_noop!(ok, Error::<Test>::NotTheAuctionCreator);
 		})
 	}
@@ -426,11 +426,11 @@ pub mod cancel_auction {
 		ExtBuilder::new_build(vec![], Some(Before)).execute_with(|| {
 			let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
 			let nft_id = ALICE_NFT_ID;
-			let auction = AuctionsStorage::<Test>::get(nft_id).unwrap();
+			let auction = Auctions::<Test>::get(nft_id).unwrap();
 
 			run_to_block(auction.start_block);
 
-			let ok = Auctions::cancel_auction(alice, nft_id);
+			let ok = Auction::cancel_auction(alice, nft_id);
 			assert_noop!(ok, Error::<Test>::CannotCancelAuctionInProgress);
 		})
 	}
@@ -449,9 +449,9 @@ pub mod end_auction {
 				let dave_balance = Balances::free_balance(CHARLIE);
 
 				let (nft_id, market_id) = (BOB_NFT_ID, ALICE_MARKET_ID);
-				let auction_count = AuctionsStorage::<Test>::iter().count();
+				let auction_count = Auctions::<Test>::iter().count();
 				let mut deadlines = Deadlines::<Test>::get();
-				let auction = AuctionsStorage::<Test>::get(nft_id).unwrap();
+				let auction = Auctions::<Test>::get(nft_id).unwrap();
 				let market = Marketplace::get_marketplace(market_id).unwrap();
 				let market_fee = market.commission_fee;
 				assert!(market_fee > 0);
@@ -459,19 +459,19 @@ pub mod end_auction {
 				let charlie_bid = auction.start_price + 10;
 				let dave_bid = charlie_bid + 10;
 
-				assert_ok!(Auctions::add_bid(origin(CHARLIE), nft_id, charlie_bid));
-				assert_ok!(Auctions::add_bid(origin(DAVE), nft_id, dave_bid));
-				let pallet_balance = Balances::free_balance(Auctions::account_id());
+				assert_ok!(Auction::add_bid(origin(CHARLIE), nft_id, charlie_bid));
+				assert_ok!(Auction::add_bid(origin(DAVE), nft_id, dave_bid));
+				let pallet_balance = Balances::free_balance(Auction::account_id());
 				assert_eq!(pallet_balance, charlie_bid + dave_bid);
 
-				assert_ok!(Auctions::end_auction(origin(BOB), nft_id));
+				assert_ok!(Auction::end_auction(origin(BOB), nft_id));
 
 				// Balance
 				let alice_new_balance = Balances::free_balance(ALICE);
 				let bob_new_balance = Balances::free_balance(BOB);
 				let charlie_new_balance = Balances::free_balance(CHARLIE);
 				let dave_new_balance = Balances::free_balance(DAVE);
-				let pallet_new_balance = Balances::free_balance(Auctions::account_id());
+				let pallet_new_balance = Balances::free_balance(Auction::account_id());
 
 				let market_owner_cut: u128 = dave_bid.saturating_mul(market_fee.into()) / 100u128;
 				let artist_cut: u128 = dave_bid.saturating_sub(market_owner_cut.into());
@@ -487,17 +487,17 @@ pub mod end_auction {
 				assert_eq!(pallet_new_balance, charlie_bid);
 
 				// NFT
-				let nft = NFTs::get_nft(nft_id).unwrap();
+				let nft = NFT::get_nft(nft_id).unwrap();
 				assert_eq!(nft.listed_for_sale, false);
 				assert_eq!(nft.owner, DAVE);
 
 				// Storage
 				deadlines.remove(nft_id);
 
-				assert_eq!(AuctionsStorage::<Test>::iter().count(), auction_count - 1);
+				assert_eq!(Auctions::<Test>::iter().count(), auction_count - 1);
 				assert_eq!(Claims::<Test>::iter().count(), 1);
 
-				assert_eq!(AuctionsStorage::<Test>::get(nft_id), None);
+				assert_eq!(Auctions::<Test>::get(nft_id), None);
 				assert_eq!(Deadlines::<Test>::get(), deadlines);
 				assert_eq!(Claims::<Test>::get(CHARLIE), Some(charlie_bid));
 
@@ -507,7 +507,7 @@ pub mod end_auction {
 					new_owner: Some(DAVE),
 					amount: Some(dave_bid),
 				};
-				let event = Event::Auctions(event);
+				let event = Event::Auction(event);
 				assert_eq!(System::events().last().unwrap().event, event);
 			},
 		)
@@ -516,7 +516,7 @@ pub mod end_auction {
 	#[test]
 	fn auction_does_not_exist() {
 		ExtBuilder::new_build(vec![], Some(Extended)).execute_with(|| {
-			let ok = Auctions::end_auction(origin(ALICE), INVALID_NFT_ID);
+			let ok = Auction::end_auction(origin(ALICE), INVALID_NFT_ID);
 			assert_noop!(ok, Error::<Test>::AuctionDoesNotExist);
 		})
 	}
@@ -524,7 +524,7 @@ pub mod end_auction {
 	#[test]
 	fn not_the_auction_creator() {
 		ExtBuilder::new_build(vec![], Some(Extended)).execute_with(|| {
-			let ok = Auctions::end_auction(origin(BOB), ALICE_NFT_ID);
+			let ok = Auction::end_auction(origin(BOB), ALICE_NFT_ID);
 			assert_noop!(ok, Error::<Test>::NotTheAuctionCreator);
 		})
 	}
@@ -535,7 +535,7 @@ pub mod end_auction {
 			let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
 			let nft_id = ALICE_NFT_ID;
 
-			let ok = Auctions::end_auction(alice, nft_id);
+			let ok = Auction::end_auction(alice, nft_id);
 			assert_noop!(ok, Error::<Test>::CannotEndAuctionThatWasNotExtended);
 		})
 	}
@@ -551,14 +551,14 @@ pub mod add_bid {
 		ExtBuilder::new_build(vec![(BOB, 1000)], Some(InProgress)).execute_with(|| {
 			let bob_balance = Balances::free_balance(BOB);
 			let nft_id = ALICE_NFT_ID;
-			let mut auction = AuctionsStorage::<Test>::get(nft_id).unwrap();
+			let mut auction = Auctions::<Test>::get(nft_id).unwrap();
 
 			let bid = auction.start_price + 10;
-			assert_ok!(Auctions::add_bid(origin(BOB), nft_id, bid));
+			assert_ok!(Auction::add_bid(origin(BOB), nft_id, bid));
 
 			// Balance
 			let bob_new_balance = Balances::free_balance(BOB);
-			let pallet_new_balance = Balances::free_balance(Auctions::account_id());
+			let pallet_new_balance = Balances::free_balance(Auction::account_id());
 			assert_eq!(bob_new_balance, bob_balance - bid);
 			assert_eq!(pallet_new_balance, bid);
 
@@ -566,11 +566,11 @@ pub mod add_bid {
 			auction.bidders.list = bounded_vec![(BOB, bid)];
 
 			assert_eq!(Claims::<Test>::iter().count(), 0);
-			assert_eq!(AuctionsStorage::<Test>::get(nft_id), Some(auction));
+			assert_eq!(Auctions::<Test>::get(nft_id), Some(auction));
 
 			// Check Events
 			let event = AuctionEvent::BidAdded { nft_id, bidder: BOB, amount: bid };
-			let event = Event::Auctions(event);
+			let event = Event::Auction(event);
 			assert_eq!(System::events().last().unwrap().event, event);
 		})
 	}
@@ -584,7 +584,7 @@ pub mod add_bid {
 		.execute_with(|| {
 			let eve_balance = Balances::free_balance(EVE);
 			let nft_id = ALICE_NFT_ID;
-			let mut auction = AuctionsStorage::<Test>::get(nft_id).unwrap();
+			let mut auction = Auctions::<Test>::get(nft_id).unwrap();
 
 			let bob_bid = auction.start_price + 1;
 			let charlie_bid = bob_bid + 1;
@@ -595,12 +595,12 @@ pub mod add_bid {
 			assert_eq!(accounts.len(), (BidderListLengthLimit::get() + 1) as usize);
 
 			for bidder in accounts.iter() {
-				assert_ok!(Auctions::add_bid(origin(bidder.0), nft_id, bidder.1));
+				assert_ok!(Auction::add_bid(origin(bidder.0), nft_id, bidder.1));
 			}
 
 			// Balance
 			let eve_new_balance = Balances::free_balance(EVE);
-			let pallet_new_balance = Balances::free_balance(Auctions::account_id());
+			let pallet_new_balance = Balances::free_balance(Auction::account_id());
 			assert_eq!(eve_new_balance, eve_balance - eve_bid);
 			assert_eq!(pallet_new_balance, bob_bid + charlie_bid + dave_bid + eve_bid);
 
@@ -612,11 +612,11 @@ pub mod add_bid {
 
 			assert_eq!(Claims::<Test>::iter().count(), 1);
 			assert_eq!(Claims::<Test>::get(BOB), Some(bob_bid));
-			assert_eq!(AuctionsStorage::<Test>::get(nft_id), Some(auction));
+			assert_eq!(Auctions::<Test>::get(nft_id), Some(auction));
 
 			// Check Events
 			let event = AuctionEvent::BidAdded { nft_id, bidder: EVE, amount: eve_bid };
-			let event = Event::Auctions(event);
+			let event = Event::Auction(event);
 			assert_eq!(System::events().last().unwrap().event, event);
 		})
 	}
@@ -626,7 +626,7 @@ pub mod add_bid {
 		ExtBuilder::new_build(vec![(BOB, 1000)], Some(InProgress)).execute_with(|| {
 			let bob_balance = Balances::free_balance(BOB);
 			let nft_id = ALICE_NFT_ID;
-			let mut auction = AuctionsStorage::<Test>::get(nft_id).unwrap();
+			let mut auction = Auctions::<Test>::get(nft_id).unwrap();
 			let mut deadlines = Deadlines::<Test>::get();
 
 			let grace_period = AUCTION_GRACE_PERIOD;
@@ -637,7 +637,7 @@ pub mod add_bid {
 			run_to_block(target_block);
 
 			let bid = auction.start_price + 10;
-			assert_ok!(Auctions::add_bid(origin(BOB), nft_id, bid));
+			assert_ok!(Auction::add_bid(origin(BOB), nft_id, bid));
 
 			// Balance
 			let bob_new_balance = Balances::free_balance(BOB);
@@ -649,12 +649,12 @@ pub mod add_bid {
 			auction.is_extended = true;
 			deadlines.update(nft_id, new_end_block);
 
-			assert_eq!(AuctionsStorage::<Test>::get(nft_id), Some(auction));
+			assert_eq!(Auctions::<Test>::get(nft_id), Some(auction));
 			assert_eq!(Deadlines::<Test>::get(), deadlines);
 
 			// Check Events
 			let event = AuctionEvent::BidAdded { nft_id, bidder: BOB, amount: bid };
-			let event = Event::Auctions(event);
+			let event = Event::Auction(event);
 			assert_eq!(System::events().last().unwrap().event, event);
 		})
 	}
@@ -664,12 +664,12 @@ pub mod add_bid {
 		ExtBuilder::new_build(vec![(BOB, 1000)], Some(InProgress)).execute_with(|| {
 			let nft_id = ALICE_NFT_ID;
 			let bob_balance = Balances::free_balance(BOB);
-			let mut auction = AuctionsStorage::<Test>::get(nft_id).unwrap();
+			let mut auction = Auctions::<Test>::get(nft_id).unwrap();
 
 			let old_bid = auction.start_price + 10;
 			let new_bid = old_bid + 10;
-			assert_ok!(Auctions::add_bid(origin(BOB), nft_id, old_bid));
-			assert_ok!(Auctions::add_bid(origin(BOB), nft_id, new_bid));
+			assert_ok!(Auction::add_bid(origin(BOB), nft_id, old_bid));
+			assert_ok!(Auction::add_bid(origin(BOB), nft_id, new_bid));
 
 			// Balance
 			let bob_new_balance = Balances::free_balance(BOB);
@@ -678,11 +678,11 @@ pub mod add_bid {
 			// Storage
 			auction.bidders.list = bounded_vec![(BOB, new_bid)];
 
-			assert_eq!(AuctionsStorage::<Test>::get(nft_id), Some(auction));
+			assert_eq!(Auctions::<Test>::get(nft_id), Some(auction));
 
 			// Check Events
 			let event = AuctionEvent::BidAdded { nft_id, bidder: BOB, amount: new_bid };
-			let event = Event::Auctions(event);
+			let event = Event::Auction(event);
 			assert_eq!(System::events().last().unwrap().event, event);
 		})
 	}
@@ -690,7 +690,7 @@ pub mod add_bid {
 	#[test]
 	fn auction_does_not_exist() {
 		ExtBuilder::new_build(vec![], Some(InProgress)).execute_with(|| {
-			let ok = Auctions::add_bid(origin(ALICE), INVALID_NFT_ID, 1);
+			let ok = Auction::add_bid(origin(ALICE), INVALID_NFT_ID, 1);
 			assert_noop!(ok, Error::<Test>::AuctionDoesNotExist);
 		})
 	}
@@ -698,7 +698,7 @@ pub mod add_bid {
 	#[test]
 	fn cannot_add_bid_to_your_own_auctions() {
 		ExtBuilder::new_build(vec![], Some(InProgress)).execute_with(|| {
-			let ok = Auctions::add_bid(origin(ALICE), ALICE_NFT_ID, 1);
+			let ok = Auction::add_bid(origin(ALICE), ALICE_NFT_ID, 1);
 			assert_noop!(ok, Error::<Test>::CannotAddBidToYourOwnAuctions);
 		})
 	}
@@ -706,7 +706,7 @@ pub mod add_bid {
 	#[test]
 	fn auction_not_started() {
 		ExtBuilder::new_build(vec![], Some(Before)).execute_with(|| {
-			let ok = Auctions::add_bid(origin(BOB), ALICE_NFT_ID, 1);
+			let ok = Auction::add_bid(origin(BOB), ALICE_NFT_ID, 1);
 			assert_noop!(ok, Error::<Test>::AuctionNotStarted);
 		})
 	}
@@ -715,12 +715,12 @@ pub mod add_bid {
 	fn cannot_bid_less_than_the_highest_bid() {
 		ExtBuilder::new_build(vec![(BOB, 1000)], Some(InProgress)).execute_with(|| {
 			let nft_id = ALICE_NFT_ID;
-			let auction = AuctionsStorage::<Test>::get(nft_id).unwrap();
+			let auction = Auctions::<Test>::get(nft_id).unwrap();
 
 			let bob_bid = auction.start_price + 1;
-			assert_ok!(Auctions::add_bid(origin(BOB), ALICE_NFT_ID, bob_bid));
+			assert_ok!(Auction::add_bid(origin(BOB), ALICE_NFT_ID, bob_bid));
 
-			let ok = Auctions::add_bid(origin(DAVE), nft_id, bob_bid);
+			let ok = Auction::add_bid(origin(DAVE), nft_id, bob_bid);
 			assert_noop!(ok, Error::<Test>::CannotBidLessThanTheHighestBid);
 		})
 	}
@@ -729,9 +729,9 @@ pub mod add_bid {
 	fn cannot_bid_less_than_the_starting_price() {
 		ExtBuilder::new_build(vec![], Some(InProgress)).execute_with(|| {
 			let nft_id = ALICE_NFT_ID;
-			let auction = AuctionsStorage::<Test>::get(nft_id).unwrap();
+			let auction = Auctions::<Test>::get(nft_id).unwrap();
 
-			let ok = Auctions::add_bid(origin(BOB), nft_id, auction.start_price - 1);
+			let ok = Auction::add_bid(origin(BOB), nft_id, auction.start_price - 1);
 			assert_noop!(ok, Error::<Test>::CannotBidLessThanTheStartingPrice);
 		})
 	}
@@ -740,13 +740,13 @@ pub mod add_bid {
 	fn not_enough_funds() {
 		ExtBuilder::new_build(vec![(BOB, 1000)], Some(InProgress)).execute_with(|| {
 			let nft_id = ALICE_NFT_ID;
-			let auction = AuctionsStorage::<Test>::get(nft_id).unwrap();
+			let auction = Auctions::<Test>::get(nft_id).unwrap();
 
 			let balance = Balances::free_balance(BOB);
 			let bid = balance + 1;
 			assert!(bid > auction.start_price);
 
-			let ok = Auctions::add_bid(origin(BOB), nft_id, bid);
+			let ok = Auction::add_bid(origin(BOB), nft_id, bid);
 			assert_noop!(ok, BalanceError::<Test>::InsufficientBalance);
 		})
 	}
@@ -755,14 +755,14 @@ pub mod add_bid {
 	fn not_enough_funds_to_replace() {
 		ExtBuilder::new_build(vec![(BOB, 1000)], Some(InProgress)).execute_with(|| {
 			let nft_id = ALICE_NFT_ID;
-			let auction = AuctionsStorage::<Test>::get(nft_id).unwrap();
+			let auction = Auctions::<Test>::get(nft_id).unwrap();
 
 			let bid = Balances::free_balance(BOB);
 			assert!(bid > auction.start_price);
 
-			assert_ok!(Auctions::add_bid(origin(BOB), nft_id, bid));
+			assert_ok!(Auction::add_bid(origin(BOB), nft_id, bid));
 
-			let ok = Auctions::add_bid(origin(BOB), nft_id, bid + 10);
+			let ok = Auction::add_bid(origin(BOB), nft_id, bid + 10);
 			assert_noop!(ok, BalanceError::<Test>::InsufficientBalance);
 		})
 	}
@@ -777,15 +777,15 @@ pub mod remove_bid {
 			let bob: mock::Origin = RawOrigin::Signed(BOB).into();
 			let bob_balance = Balances::free_balance(BOB);
 			let nft_id = ALICE_NFT_ID;
-			let mut auction = AuctionsStorage::<Test>::get(nft_id).unwrap();
+			let mut auction = Auctions::<Test>::get(nft_id).unwrap();
 
 			let bid = auction.start_price + 10;
-			assert_ok!(Auctions::add_bid(bob.clone(), nft_id, bid));
-			assert_ok!(Auctions::remove_bid(bob.clone(), nft_id));
+			assert_ok!(Auction::add_bid(bob.clone(), nft_id, bid));
+			assert_ok!(Auction::remove_bid(bob.clone(), nft_id));
 
 			// Balance
 			let bob_new_balance = Balances::free_balance(BOB);
-			let pallet_new_balance = Balances::free_balance(Auctions::account_id());
+			let pallet_new_balance = Balances::free_balance(Auction::account_id());
 			assert_eq!(bob_new_balance, bob_balance);
 			assert_eq!(pallet_new_balance, 0);
 
@@ -793,11 +793,11 @@ pub mod remove_bid {
 			auction.bidders.list = bounded_vec![];
 
 			assert_eq!(Claims::<Test>::iter().count(), 0);
-			assert_eq!(AuctionsStorage::<Test>::get(nft_id), Some(auction));
+			assert_eq!(Auctions::<Test>::get(nft_id), Some(auction));
 
 			// Check Events
 			let event = AuctionEvent::BidRemoved { nft_id, bidder: BOB, amount: bid };
-			let event = Event::Auctions(event);
+			let event = Event::Auction(event);
 			assert_eq!(System::events().last().unwrap().event, event);
 		})
 	}
@@ -805,7 +805,7 @@ pub mod remove_bid {
 	#[test]
 	fn auction_does_not_exist() {
 		ExtBuilder::new_build(vec![], Some(InProgress)).execute_with(|| {
-			let ok = Auctions::remove_bid(origin(ALICE), INVALID_NFT_ID);
+			let ok = Auction::remove_bid(origin(ALICE), INVALID_NFT_ID);
 			assert_noop!(ok, Error::<Test>::AuctionDoesNotExist);
 		})
 	}
@@ -814,16 +814,16 @@ pub mod remove_bid {
 	fn cannot_remove_bid_at_the_end_of_auction() {
 		ExtBuilder::new_build(vec![(BOB, 1000)], Some(InProgress)).execute_with(|| {
 			let nft_id = ALICE_NFT_ID;
-			let auction = AuctionsStorage::<Test>::get(nft_id).unwrap();
+			let auction = Auctions::<Test>::get(nft_id).unwrap();
 			let auction_end_period = AUCTION_ENDING_PERIOD;
 			let target_block = auction.end_block - auction_end_period;
 
 			let bid = auction.start_price + 1;
-			assert_ok!(Auctions::add_bid(origin(BOB), nft_id, bid));
+			assert_ok!(Auction::add_bid(origin(BOB), nft_id, bid));
 
 			run_to_block(target_block);
 
-			let ok = Auctions::remove_bid(origin(BOB), nft_id);
+			let ok = Auction::remove_bid(origin(BOB), nft_id);
 			assert_noop!(ok, Error::<Test>::CannotRemoveBidAtTheEndOfAuction);
 		})
 	}
@@ -831,7 +831,7 @@ pub mod remove_bid {
 	#[test]
 	fn bid_does_not_exist() {
 		ExtBuilder::new_build(vec![], Some(InProgress)).execute_with(|| {
-			let ok = Auctions::remove_bid(origin(BOB), ALICE_NFT_ID);
+			let ok = Auction::remove_bid(origin(BOB), ALICE_NFT_ID);
 			assert_noop!(ok, Error::<Test>::BidDoesNotExist);
 		})
 	}
@@ -847,18 +847,18 @@ pub mod buy_it_now {
 			let bob_balance = Balances::free_balance(BOB);
 			let charlie_balance = Balances::free_balance(CHARLIE);
 			let nft_id = BOB_NFT_ID;
-			let auction = AuctionsStorage::<Test>::get(nft_id).unwrap();
+			let auction = Auctions::<Test>::get(nft_id).unwrap();
 			let market = Marketplace::get_marketplace(ALICE_MARKET_ID).unwrap();
 			let market_fee = market.commission_fee;
 
 			let price = auction.buy_it_price.clone().unwrap();
-			assert_ok!(Auctions::buy_it_now(origin(CHARLIE), nft_id));
+			assert_ok!(Auction::buy_it_now(origin(CHARLIE), nft_id));
 
 			// Balance
 			let alice_new_balance = Balances::free_balance(ALICE);
 			let bob_new_balance = Balances::free_balance(BOB);
 			let charlie_new_balance = Balances::free_balance(CHARLIE);
-			let pallet_new_balance = Balances::free_balance(Auctions::account_id());
+			let pallet_new_balance = Balances::free_balance(Auction::account_id());
 
 			let market_owner_cut: u128 = price.saturating_mul(market_fee.into()) / 100u128;
 			let artist_cut: u128 = price.saturating_sub(market_owner_cut.into());
@@ -869,13 +869,13 @@ pub mod buy_it_now {
 			assert_eq!(pallet_new_balance, 0);
 
 			// NFT
-			let nft = NFTs::get_nft(nft_id).unwrap();
+			let nft = NFT::get_nft(nft_id).unwrap();
 			assert_eq!(nft.listed_for_sale, false);
 			assert_eq!(nft.owner, CHARLIE);
 
 			// Storage
 			assert_eq!(Claims::<Test>::iter().count(), 0);
-			assert_eq!(AuctionsStorage::<Test>::get(nft_id), None);
+			assert_eq!(Auctions::<Test>::get(nft_id), None);
 
 			// Check Events
 			let event = AuctionEvent::AuctionCompleted {
@@ -883,7 +883,7 @@ pub mod buy_it_now {
 				new_owner: Some(CHARLIE),
 				amount: Some(price),
 			};
-			let event = Event::Auctions(event);
+			let event = Event::Auction(event);
 			assert_eq!(System::events().last().unwrap().event, event);
 		})
 	}
@@ -895,32 +895,32 @@ pub mod buy_it_now {
 				let bob_balance = Balances::free_balance(BOB);
 				let charlie_balance = Balances::free_balance(CHARLIE);
 				let nft_id = ALICE_NFT_ID;
-				let auction = AuctionsStorage::<Test>::get(nft_id).unwrap();
+				let auction = Auctions::<Test>::get(nft_id).unwrap();
 
 				let bob_bid = auction.start_price + 1;
-				assert_ok!(Auctions::add_bid(origin(BOB), nft_id, bob_bid));
+				assert_ok!(Auction::add_bid(origin(BOB), nft_id, bob_bid));
 
 				let price = auction.buy_it_price.clone().unwrap();
-				assert_ok!(Auctions::buy_it_now(origin(CHARLIE), nft_id));
+				assert_ok!(Auction::buy_it_now(origin(CHARLIE), nft_id));
 
 				// Balance
 				let bob_new_balance = Balances::free_balance(BOB);
 				let charlie_new_balance = Balances::free_balance(CHARLIE);
-				let pallet_new_balance = Balances::free_balance(Auctions::account_id());
+				let pallet_new_balance = Balances::free_balance(Auction::account_id());
 
 				assert_eq!(bob_new_balance, bob_balance - bob_bid);
 				assert_eq!(charlie_new_balance, charlie_balance - price);
 				assert_eq!(pallet_new_balance, bob_bid);
 
 				// NFT
-				let nft = NFTs::get_nft(nft_id).unwrap();
+				let nft = NFT::get_nft(nft_id).unwrap();
 				assert_eq!(nft.listed_for_sale, false);
 				assert_eq!(nft.owner, CHARLIE);
 
 				// Storage
 				assert_eq!(Claims::<Test>::iter().count(), 1);
 				assert_eq!(Claims::<Test>::get(BOB), Some(bob_bid));
-				assert_eq!(AuctionsStorage::<Test>::get(nft_id), None);
+				assert_eq!(Auctions::<Test>::get(nft_id), None);
 
 				// Check Events
 				let event = AuctionEvent::AuctionCompleted {
@@ -928,7 +928,7 @@ pub mod buy_it_now {
 					new_owner: Some(CHARLIE),
 					amount: Some(price),
 				};
-				let event = Event::Auctions(event);
+				let event = Event::Auction(event);
 				assert_eq!(System::events().last().unwrap().event, event);
 			},
 		)
@@ -937,7 +937,7 @@ pub mod buy_it_now {
 	#[test]
 	fn auction_does_not_exist() {
 		ExtBuilder::new_build(vec![], Some(InProgress)).execute_with(|| {
-			let ok = Auctions::buy_it_now(origin(BOB), INVALID_NFT_ID);
+			let ok = Auction::buy_it_now(origin(BOB), INVALID_NFT_ID);
 			assert_noop!(ok, Error::<Test>::AuctionDoesNotExist);
 		})
 	}
@@ -946,12 +946,12 @@ pub mod buy_it_now {
 	fn auction_does_not_support_buy_it_now() {
 		ExtBuilder::new_build(vec![], Some(InProgress)).execute_with(|| {
 			let nft_id = ALICE_NFT_ID;
-			AuctionsStorage::<Test>::mutate(nft_id, |x| {
+			Auctions::<Test>::mutate(nft_id, |x| {
 				let x = x.as_mut().unwrap();
 				x.buy_it_price = None;
 			});
 
-			let ok = Auctions::buy_it_now(origin(BOB), nft_id);
+			let ok = Auction::buy_it_now(origin(BOB), nft_id);
 			assert_noop!(ok, Error::<Test>::AuctionDoesNotSupportBuyItNow);
 		})
 	}
@@ -959,7 +959,7 @@ pub mod buy_it_now {
 	#[test]
 	fn auction_not_started() {
 		ExtBuilder::new_build(vec![], Some(Before)).execute_with(|| {
-			let ok = Auctions::buy_it_now(origin(BOB), ALICE_NFT_ID);
+			let ok = Auction::buy_it_now(origin(BOB), ALICE_NFT_ID);
 			assert_noop!(ok, Error::<Test>::AuctionNotStarted);
 		})
 	}
@@ -969,12 +969,12 @@ pub mod buy_it_now {
 		ExtBuilder::new_build(vec![(BOB, 1000), (CHARLIE, 1000)], Some(InProgress)).execute_with(
 			|| {
 				let nft_id = ALICE_NFT_ID;
-				let auction = AuctionsStorage::<Test>::get(nft_id).unwrap();
+				let auction = Auctions::<Test>::get(nft_id).unwrap();
 
 				let price = auction.buy_it_price.unwrap();
-				assert_ok!(Auctions::add_bid(origin(CHARLIE), nft_id, price));
+				assert_ok!(Auction::add_bid(origin(CHARLIE), nft_id, price));
 
-				let ok = Auctions::buy_it_now(origin(BOB), nft_id);
+				let ok = Auction::buy_it_now(origin(BOB), nft_id);
 				assert_noop!(ok, Error::<Test>::CannotBuyItWhenABidIsHigherThanBuyItPrice);
 			},
 		)
@@ -988,13 +988,13 @@ pub mod complete_auction {
 	fn complete_auction_without_bid() {
 		ExtBuilder::new_build(vec![], Some(InProgress)).execute_with(|| {
 			let nft_id = ALICE_NFT_ID;
-			let auction = AuctionsStorage::<Test>::get(nft_id).unwrap();
+			let auction = Auctions::<Test>::get(nft_id).unwrap();
 			let mut deadlines = Deadlines::<Test>::get();
 
-			assert_ok!(Auctions::complete_auction(root(), nft_id));
+			assert_ok!(Auction::complete_auction(root(), nft_id));
 
 			// NFT
-			let nft = NFTs::get_nft(nft_id).unwrap();
+			let nft = NFT::get_nft(nft_id).unwrap();
 			assert_eq!(nft.listed_for_sale, false);
 			assert_eq!(nft.owner, auction.creator);
 
@@ -1002,12 +1002,12 @@ pub mod complete_auction {
 			deadlines.remove(nft_id);
 
 			assert_eq!(Claims::<Test>::iter().count(), 0);
-			assert_eq!(AuctionsStorage::<Test>::get(nft_id), None);
+			assert_eq!(Auctions::<Test>::get(nft_id), None);
 			assert_eq!(Deadlines::<Test>::get(), deadlines);
 
 			// Event
 			let event = AuctionEvent::AuctionCompleted { nft_id, new_owner: None, amount: None };
-			let event = Event::Auctions(event);
+			let event = Event::Auction(event);
 			assert_eq!(System::events().last().unwrap().event, event);
 		})
 	}
@@ -1022,17 +1022,17 @@ pub mod complete_auction {
 				let charlie_balance = Balances::free_balance(CHARLIE);
 				let market = Marketplace::get_marketplace(ALICE_MARKET_ID).unwrap();
 				let market_fee = market.commission_fee;
-				let auction = AuctionsStorage::<Test>::get(nft_id).unwrap();
+				let auction = Auctions::<Test>::get(nft_id).unwrap();
 				let mut deadlines = Deadlines::<Test>::get();
 				let bid = auction.start_price + 1;
-				assert_ok!(Auctions::add_bid(origin(CHARLIE), nft_id, bid));
-				assert_ok!(Auctions::complete_auction(root(), nft_id));
+				assert_ok!(Auction::add_bid(origin(CHARLIE), nft_id, bid));
+				assert_ok!(Auction::complete_auction(root(), nft_id));
 
 				// Balance
 				let alice_new_balance = Balances::free_balance(ALICE);
 				let bob_new_balance = Balances::free_balance(BOB);
 				let charlie_new_balance = Balances::free_balance(CHARLIE);
-				let pallet_new_balance = Balances::free_balance(Auctions::account_id());
+				let pallet_new_balance = Balances::free_balance(Auction::account_id());
 
 				let market_owner_cut: u128 = bid.saturating_mul(market_fee.into()) / 100u128;
 				let artist_cut: u128 = bid.saturating_sub(market_owner_cut.into());
@@ -1043,7 +1043,7 @@ pub mod complete_auction {
 				assert_eq!(pallet_new_balance, 0);
 
 				// NFT
-				let nft = NFTs::get_nft(nft_id).unwrap();
+				let nft = NFT::get_nft(nft_id).unwrap();
 				assert_eq!(nft.listed_for_sale, false);
 				assert_eq!(nft.owner, CHARLIE);
 
@@ -1051,7 +1051,7 @@ pub mod complete_auction {
 				deadlines.remove(nft_id);
 
 				assert_eq!(Claims::<Test>::iter().count(), 0);
-				assert_eq!(AuctionsStorage::<Test>::get(nft_id), None);
+				assert_eq!(Auctions::<Test>::get(nft_id), None);
 				assert_eq!(Deadlines::<Test>::get(), deadlines);
 
 				// Event
@@ -1060,7 +1060,7 @@ pub mod complete_auction {
 					new_owner: Some(CHARLIE),
 					amount: Some(bid),
 				};
-				let event = Event::Auctions(event);
+				let event = Event::Auction(event);
 				assert_eq!(System::events().last().unwrap().event, event);
 			},
 		)
@@ -1074,20 +1074,20 @@ pub mod complete_auction {
 				let alice_balance = Balances::free_balance(ALICE);
 				let bob_balance = Balances::free_balance(BOB);
 				let charlie_balance = Balances::free_balance(CHARLIE);
-				let auction = AuctionsStorage::<Test>::get(nft_id).unwrap();
+				let auction = Auctions::<Test>::get(nft_id).unwrap();
 				let mut deadlines = Deadlines::<Test>::get();
 
 				let bob_bid = auction.start_price + 1;
 				let charlie_bid = bob_bid + 1;
-				assert_ok!(Auctions::add_bid(origin(BOB), nft_id, bob_bid));
-				assert_ok!(Auctions::add_bid(origin(CHARLIE), nft_id, charlie_bid));
-				assert_ok!(Auctions::complete_auction(root(), nft_id));
+				assert_ok!(Auction::add_bid(origin(BOB), nft_id, bob_bid));
+				assert_ok!(Auction::add_bid(origin(CHARLIE), nft_id, charlie_bid));
+				assert_ok!(Auction::complete_auction(root(), nft_id));
 
 				// Balance
 				let alice_new_balance = Balances::free_balance(ALICE);
 				let bob_new_balance = Balances::free_balance(BOB);
 				let charlie_new_balance = Balances::free_balance(CHARLIE);
-				let pallet_new_balance = Balances::free_balance(Auctions::account_id());
+				let pallet_new_balance = Balances::free_balance(Auction::account_id());
 
 				assert_eq!(alice_new_balance, alice_balance + charlie_bid);
 				assert_eq!(bob_new_balance, bob_balance - bob_bid);
@@ -1095,7 +1095,7 @@ pub mod complete_auction {
 				assert_eq!(pallet_new_balance, bob_bid);
 
 				// NFT
-				let nft = NFTs::get_nft(nft_id).unwrap();
+				let nft = NFT::get_nft(nft_id).unwrap();
 				assert_eq!(nft.listed_for_sale, false);
 				assert_eq!(nft.owner, CHARLIE);
 
@@ -1104,7 +1104,7 @@ pub mod complete_auction {
 
 				assert_eq!(Claims::<Test>::iter().count(), 1);
 				assert_eq!(Claims::<Test>::get(BOB), Some(bob_bid));
-				assert_eq!(AuctionsStorage::<Test>::get(nft_id), None);
+				assert_eq!(Auctions::<Test>::get(nft_id), None);
 				assert_eq!(Deadlines::<Test>::get(), deadlines);
 
 				// Event
@@ -1113,7 +1113,7 @@ pub mod complete_auction {
 					new_owner: Some(CHARLIE),
 					amount: Some(charlie_bid),
 				};
-				let event = Event::Auctions(event);
+				let event = Event::Auction(event);
 				assert_eq!(System::events().last().unwrap().event, event);
 			},
 		)
@@ -1122,7 +1122,7 @@ pub mod complete_auction {
 	#[test]
 	fn bad_origin() {
 		ExtBuilder::new_build(vec![], Some(InProgress)).execute_with(|| {
-			let ok = Auctions::complete_auction(origin(ALICE), ALICE_NFT_ID);
+			let ok = Auction::complete_auction(origin(ALICE), ALICE_NFT_ID);
 			assert_noop!(ok, BadOrigin);
 		})
 	}
@@ -1130,7 +1130,7 @@ pub mod complete_auction {
 	#[test]
 	fn auction_does_not_exist() {
 		ExtBuilder::new_build(vec![], Some(InProgress)).execute_with(|| {
-			let ok = Auctions::complete_auction(root(), INVALID_NFT_ID);
+			let ok = Auction::complete_auction(root(), INVALID_NFT_ID);
 			assert_noop!(ok, Error::<Test>::AuctionDoesNotExist);
 		})
 	}
@@ -1145,17 +1145,17 @@ pub mod claim {
 			|| {
 				let nft_id = ALICE_NFT_ID;
 				let bob_balance = Balances::free_balance(BOB);
-				let pallet_balance = Balances::free_balance(Auctions::account_id());
-				let auction = AuctionsStorage::<Test>::get(nft_id).unwrap();
+				let pallet_balance = Balances::free_balance(Auction::account_id());
+				let auction = Auctions::<Test>::get(nft_id).unwrap();
 
 				let bob_bid = auction.start_price + 1;
 				let charlie_bid = bob_bid + 1;
-				assert_ok!(Auctions::add_bid(origin(BOB), nft_id, bob_bid));
-				assert_ok!(Auctions::add_bid(origin(CHARLIE), nft_id, charlie_bid));
-				assert_ok!(Auctions::complete_auction(root(), nft_id));
+				assert_ok!(Auction::add_bid(origin(BOB), nft_id, bob_bid));
+				assert_ok!(Auction::add_bid(origin(CHARLIE), nft_id, charlie_bid));
+				assert_ok!(Auction::complete_auction(root(), nft_id));
 
 				let claim = Claims::<Test>::get(BOB).unwrap();
-				assert_ok!(Auctions::claim(origin(BOB)));
+				assert_ok!(Auction::claim(origin(BOB)));
 
 				// Balance
 				let bob_new_balance = Balances::free_balance(BOB);
@@ -1169,7 +1169,7 @@ pub mod claim {
 				assert_eq!(Claims::<Test>::get(BOB), None);
 				// Event
 				let event = AuctionEvent::BalanceClaimed { account: BOB, amount: claim };
-				let event = Event::Auctions(event);
+				let event = Event::Auction(event);
 				assert_eq!(System::events().last().unwrap().event, event);
 			},
 		)
@@ -1178,7 +1178,7 @@ pub mod claim {
 	#[test]
 	fn claim_does_not_exist() {
 		ExtBuilder::new_build(vec![], Some(InProgress)).execute_with(|| {
-			let ok = Auctions::claim(origin(BOB));
+			let ok = Auction::claim(origin(BOB));
 			assert_noop!(ok, Error::<Test>::ClaimDoesNotExist);
 		})
 	}

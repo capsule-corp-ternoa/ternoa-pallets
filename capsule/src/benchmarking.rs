@@ -17,7 +17,7 @@
 #![cfg(feature = "runtime-benchmarks")]
 
 use super::*;
-use crate::Pallet as TernoaCapsules;
+use crate::Pallet as Capsule;
 use frame_benchmarking::{account as benchmark_account, benchmarks, impl_benchmark_test_suite};
 use frame_support::{assert_ok, bounded_vec};
 use frame_system::RawOrigin;
@@ -36,7 +36,7 @@ pub fn prepare_benchmarks<T: Config>() -> (NFTId, NFTId) {
 	T::Currency::make_free_balance_be(&bob, BalanceOf::<T>::max_value());
 
 	// Create default Capsule
-	assert_ok!(TernoaCapsules::<T>::create(
+	assert_ok!(Capsule::<T>::create(
 		RawOrigin::Signed(alice.clone()).into(),
 		bounded_vec![1],
 		bounded_vec![2],
@@ -75,7 +75,7 @@ benchmarks! {
 
 	}: _(RawOrigin::Signed(alice.clone()), nft_reference, capsule_reference, None)
 	verify {
-		assert_eq!(TernoaCapsules::<T>::capsules(nft_id), Some(capsule));
+		assert_eq!(Capsule::<T>::capsules(nft_id), Some(capsule));
 	}
 
 	create_from_nft {
@@ -87,7 +87,7 @@ benchmarks! {
 
 	}: _(RawOrigin::Signed(alice.clone()), nft_id, capsule_reference.clone())
 	verify {
-		assert_eq!(TernoaCapsules::<T>::capsules(nft_id), Some(capsule));
+		assert_eq!(Capsule::<T>::capsules(nft_id), Some(capsule));
 	}
 
 	remove {
@@ -96,19 +96,19 @@ benchmarks! {
 
 	}: _(RawOrigin::Signed(alice.clone()), nft_id)
 	verify {
-		assert!(TernoaCapsules::<T>::capsules(nft_id).is_none());
-		assert!(TernoaCapsules::<T>::ledgers(&alice).is_none());
+		assert!(Capsule::<T>::capsules(nft_id).is_none());
+		assert!(Capsule::<T>::ledgers(&alice).is_none());
 	}
 
 	add_funds {
 		let (nft_id, ..) = prepare_benchmarks::<T>();
 		let alice: T::AccountId = get_account::<T>("ALICE");
 
-		let fee = TernoaCapsules::<T>::capsule_mint_fee();
+		let fee = Capsule::<T>::capsule_mint_fee();
 		let amount = 200u32;
 	}: _(RawOrigin::Signed(alice.clone()), nft_id, amount.into())
 	verify {
-		assert_eq!(TernoaCapsules::<T>::ledgers(&alice).unwrap()[0].1, fee + amount.into());
+		assert_eq!(Capsule::<T>::ledgers(&alice).unwrap()[0].1, fee + amount.into());
 	}
 
 	set_ipfs_reference {
@@ -117,23 +117,19 @@ benchmarks! {
 
 	}: _(get_origin::<T>("ALICE"), nft_id, new_reference.clone())
 	verify {
-		let reference = TernoaCapsules::<T>::capsules(nft_id).unwrap().ipfs_reference.clone();
+		let reference = Capsule::<T>::capsules(nft_id).unwrap().ipfs_reference.clone();
 		assert_eq!(reference, new_reference);
 	}
 
 	set_capsule_mint_fee {
-		let old_mint_fee = TernoaCapsules::<T>::capsule_mint_fee();
+		let old_mint_fee = Capsule::<T>::capsule_mint_fee();
 		let new_mint_fee = 1234u32;
 		assert_ne!(old_mint_fee, new_mint_fee.clone().into());
 
 	}: _(RawOrigin::Root, new_mint_fee.clone().into())
 	verify {
-		assert_eq!(TernoaCapsules::<T>::capsule_mint_fee(), new_mint_fee.into());
+		assert_eq!(Capsule::<T>::capsule_mint_fee(), new_mint_fee.into());
 	}
 }
 
-impl_benchmark_test_suite!(
-	TernoaCapsules,
-	crate::tests::mock::new_test_ext(),
-	crate::tests::mock::Test
-);
+impl_benchmark_test_suite!(Capsule, crate::tests::mock::new_test_ext(), crate::tests::mock::Test);
