@@ -4,4 +4,4 @@ pub mod common;
 pub mod marketplace;
 pub mod nfts;
 
-pub use common::TextFormat;
+pub use common::{TextFormat, U8BoundedVec};

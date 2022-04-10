@@ -29,6 +29,7 @@ use frame_system::Origin;
 use primitives::{
 	marketplace::{MarketplaceData, MarketplaceId, MarketplaceType, MarketplacesGenesis},
 	nfts::NFTId,
+	U8BoundedVec,
 };
 use sp_std::vec::Vec;
 use ternoa_common::traits::MarketplaceTrait;
@@ -50,9 +51,11 @@ pub mod pallet {
 	pub type NegativeImbalanceOf<T> = <<T as Config>::Currency as Currency<
 		<T as frame_system::Config>::AccountId,
 	>>::NegativeImbalance;
-	pub type NameVec<T> = BoundedVec<u8, <T as Config>::NameLengthLimit>;
-	pub type URIVec<T> = BoundedVec<u8, <T as Config>::URILengthLimit>;
-	pub type DescriptionVec<T> = BoundedVec<u8, <T as Config>::DescriptionLengthLimit>;
+	pub type AccountVec<T> =
+		BoundedVec<<T as frame_system::Config>::AccountId, <T as Config>::NameLengthLimit>;
+	pub type NameVec<T> = U8BoundedVec<<T as Config>::NameLengthLimit>;
+	pub type URIVec<T> = U8BoundedVec<<T as Config>::URILengthLimit>;
+	pub type DescriptionVec<T> = U8BoundedVec<<T as Config>::DescriptionLengthLimit>;
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {

@@ -1,10 +1,11 @@
 use super::mock::*;
-use crate::{tests::mock, Error, MarketplaceData, SaleData};
-use frame_support::{assert_noop, assert_ok, bounded_vec, error::BadOrigin, BoundedVec};
+use frame_support::{assert_noop, assert_ok, bounded_vec, error::BadOrigin};
 use frame_system::RawOrigin;
 use pallet_balances::Error as BalanceError;
 use primitives::marketplace::MarketplaceType;
 use ternoa_common::traits::NFTTrait;
+
+use crate::{tests::mock, DescriptionVec, Error, MarketplaceData, NameVec, SaleData, URIVec};
 
 type MPT = MarketplaceType;
 
@@ -218,11 +219,11 @@ fn create_happy() {
 		assert_eq!(Marketplace::marketplaces(1), None);
 		let balance = Balances::free_balance(ALICE);
 		let fee = 25;
-		let name: BoundedVec<u8, NameLengthLimit> = bounded_vec![50];
+		let name: NameVec<Test> = bounded_vec![50];
 		let kind = MPT::Public;
-		let uri: BoundedVec<u8, URILengthLimit> = bounded_vec![65];
-		let logo_uri: BoundedVec<u8, URILengthLimit> = bounded_vec![66];
-		let description: BoundedVec<u8, DescriptionLengthLimit> = bounded_vec![];
+		let uri: URIVec<Test> = bounded_vec![65];
+		let logo_uri: URIVec<Test> = bounded_vec![66];
+		let description: DescriptionVec<Test> = bounded_vec![];
 		let info = MarketplaceData::new(
 			kind,
 			fee,
@@ -255,7 +256,7 @@ fn create_happy() {
 fn create_unhappy() {
 	ExtBuilder::default().caps(vec![(ALICE, 5)]).build().execute_with(|| {
 		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
-		let normal_uri: BoundedVec<u8, URILengthLimit> = bounded_vec![66];
+		let normal_uri: URIVec<Test> = bounded_vec![66];
 
 		// Unhappy invalid commission fee
 		let ok = Marketplace::create_marketplace(
@@ -445,11 +446,11 @@ fn set_name_happy() {
 			let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
 
 			// Happy path
-			let name: BoundedVec<u8, NameLengthLimit> = bounded_vec![50];
+			let name: NameVec<Test> = bounded_vec![50];
 			let mkp_id = help::create_mkp(alice.clone(), MPT::Private, 0, name.clone(), vec![]);
 			assert_eq!(Marketplace::marketplaces(mkp_id).unwrap().name, name);
 
-			let name: BoundedVec<u8, NameLengthLimit> = bounded_vec![51];
+			let name: NameVec<Test> = bounded_vec![51];
 			assert_ok!(Marketplace::set_marketplace_name(alice.clone(), mkp_id, name.clone()));
 			assert_eq!(Marketplace::marketplaces(mkp_id).unwrap().name, name);
 		})
@@ -536,10 +537,10 @@ fn update_uri_happy() {
 		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
 
 		let fee = 25;
-		let name: BoundedVec<u8, NameLengthLimit> = bounded_vec![50];
+		let name: NameVec<Test> = bounded_vec![50];
 		let kind = MPT::Public;
-		let uri: BoundedVec<u8, URILengthLimit> = bounded_vec![66];
-		let updated_uri: BoundedVec<u8, URILengthLimit> = bounded_vec![67];
+		let uri: URIVec<Test> = bounded_vec![66];
+		let updated_uri: URIVec<Test> = bounded_vec![67];
 
 		let updated_info = MarketplaceData::new(
 			kind,
@@ -574,10 +575,10 @@ fn update_logo_uri_happy() {
 		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
 
 		let fee = 25;
-		let name: BoundedVec<u8, NameLengthLimit> = bounded_vec![50];
+		let name: NameVec<Test> = bounded_vec![50];
 		let kind = MPT::Public;
-		let uri: BoundedVec<u8, URILengthLimit> = bounded_vec![66];
-		let updated_uri: BoundedVec<u8, URILengthLimit> = bounded_vec![67];
+		let uri: URIVec<Test> = bounded_vec![66];
+		let updated_uri: URIVec<Test> = bounded_vec![67];
 
 		let updated_info = MarketplaceData::new(
 			kind,
@@ -694,11 +695,11 @@ fn set_description_happy() {
 		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
 
 		let fee = 25;
-		let name: BoundedVec<u8, NameLengthLimit> = bounded_vec![50];
+		let name: NameVec<Test> = bounded_vec![50];
 		let kind = MPT::Public;
-		let uri: BoundedVec<u8, URILengthLimit> = bounded_vec![66];
-		let description: BoundedVec<u8, DescriptionLengthLimit> = bounded_vec![66];
-		let updated_description: BoundedVec<u8, DescriptionLengthLimit> = bounded_vec![67];
+		let uri: URIVec<Test> = bounded_vec![66];
+		let description: DescriptionVec<Test> = bounded_vec![66];
+		let updated_description: DescriptionVec<Test> = bounded_vec![67];
 
 		let updated_info = MarketplaceData::new(
 			kind,

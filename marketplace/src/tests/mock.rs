@@ -1,14 +1,17 @@
-use crate::{self as ternoa_marketplace, Config, MarketplaceData};
 use frame_support::{
 	bounded_vec, parameter_types,
 	traits::{ConstU32, Contains, GenesisBuild},
-	BoundedVec,
 };
 use primitives::marketplace::{MarketplaceType, MarketplacesGenesis};
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
+};
+
+use crate::{
+	self as ternoa_marketplace, AccountVec, Config, DescriptionVec, MarketplaceData, NameVec,
+	URIVec,
 };
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
@@ -166,10 +169,10 @@ impl ExtBuilder {
 		.assimilate_storage(&mut t)
 		.unwrap();
 
-		let empty_list: BoundedVec<AccountId, AccountCountLimit> = bounded_vec![];
-		let name: BoundedVec<u8, NameLengthLimit> = bounded_vec![50, 50, 50, 50];
-		let uri: BoundedVec<u8, URILengthLimit> = bounded_vec![];
-		let description: BoundedVec<u8, DescriptionLengthLimit> = bounded_vec![];
+		let empty_list: AccountVec<Test> = bounded_vec![];
+		let name: NameVec<Test> = bounded_vec![50, 50, 50, 50];
+		let uri: URIVec<Test> = bounded_vec![];
+		let description: DescriptionVec<Test> = bounded_vec![];
 		let market = MarketplaceData::new(
 			MarketplaceType::Public,
 			0,
@@ -209,7 +212,7 @@ impl ExtBuilder {
 }
 
 pub mod help {
-	use crate::MarketplaceId;
+	use crate::{MarketplaceId, NameVec};
 
 	use super::*;
 	use frame_support::assert_ok;
@@ -217,7 +220,7 @@ pub mod help {
 
 	pub fn create_nft(
 		owner: Origin,
-		ipfs_reference: BoundedVec<u8, IPFSLengthLimit>,
+		ipfs_reference: primitives::nfts::IPFSReference<IPFSLengthLimit>,
 		series_id: Option<NFTSeriesId>,
 	) -> NFTId {
 		assert_ok!(NFTs::create(owner, ipfs_reference, series_id));
@@ -226,7 +229,7 @@ pub mod help {
 
 	pub fn create_nft_and_lock_series(
 		owner: Origin,
-		ipfs_reference: BoundedVec<u8, IPFSLengthLimit>,
+		ipfs_reference: primitives::nfts::IPFSReference<IPFSLengthLimit>,
 		series_id: NFTSeriesId,
 	) -> NFTId {
 		let nft_id = help::create_nft(owner.clone(), ipfs_reference, Some(series_id.clone()));
@@ -239,7 +242,7 @@ pub mod help {
 		owner: Origin,
 		kind: MarketplaceType,
 		fee: u8,
-		name: BoundedVec<u8, NameLengthLimit>,
+		name: NameVec<Test>,
 		list: Vec<u64>,
 	) -> MarketplaceId {
 		assert_ok!(Marketplace::create_marketplace(

@@ -6,6 +6,8 @@ use scale_info::TypeInfo;
 use sp_runtime::RuntimeDebug;
 use sp_std::{fmt::Debug, vec::Vec};
 
+use crate::U8BoundedVec;
+
 /// How NFT IDs are encoded.
 pub type NFTId = u32;
 
@@ -13,7 +15,7 @@ pub type NFTId = u32;
 pub type NFTSeriesId = Vec<u8>;
 
 /// IPFS Reference Type
-pub type IPFSReference<S> = BoundedVec<u8, S>;
+pub type IPFSReference<S> = U8BoundedVec<S>;
 
 /// Data related to an NFT, such as who is its owner.
 #[derive(

@@ -1,6 +1,6 @@
 use super::mock::*;
-use crate::{CapsuleData, GenesisConfig};
-use frame_support::{bounded_vec, traits::GenesisBuild, BoundedVec};
+use crate::{CapsuleData, CapsuleIPFSReference, GenesisConfig};
+use frame_support::{bounded_vec, traits::GenesisBuild};
 
 #[test]
 fn register_capsules() {
@@ -9,7 +9,7 @@ fn register_capsules() {
 	let mint_fee = 1000;
 	let nft_id = 1;
 	let owner = ALICE;
-	let reference: BoundedVec<u8, IPFSLengthLimit> = bounded_vec![20];
+	let reference: CapsuleIPFSReference<Test> = bounded_vec![20];
 
 	let data = CapsuleData::new(owner, reference.clone());
 	let ledger = vec![(nft_id, mint_fee)];

@@ -1,6 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use crate::TextFormat;
+use crate::{TextFormat, U8BoundedVec};
 use frame_support::{traits::Get, BoundedVec, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
@@ -65,10 +65,10 @@ pub struct MarketplaceData<
 	pub owner: AccountId,
 	pub allow_list: BoundedVec<AccountId, AccountCountLimit>,
 	pub disallow_list: BoundedVec<AccountId, AccountCountLimit>,
-	pub name: BoundedVec<u8, NameLengthLimit>,
-	pub uri: BoundedVec<u8, URILengthLimit>,
-	pub logo_uri: BoundedVec<u8, URILengthLimit>,
-	pub description: BoundedVec<u8, DescriptionLengthLimit>,
+	pub name: U8BoundedVec<NameLengthLimit>,
+	pub uri: U8BoundedVec<URILengthLimit>,
+	pub logo_uri: U8BoundedVec<URILengthLimit>,
+	pub description: U8BoundedVec<DescriptionLengthLimit>,
 }
 
 impl<AccountId, AccountCountLimit, NameLengthLimit, URILengthLimit, DescriptionLengthLimit>
@@ -91,10 +91,10 @@ impl<AccountId, AccountCountLimit, NameLengthLimit, URILengthLimit, DescriptionL
 		owner: AccountId,
 		allow_list: BoundedVec<AccountId, AccountCountLimit>,
 		disallow_list: BoundedVec<AccountId, AccountCountLimit>,
-		name: BoundedVec<u8, NameLengthLimit>,
-		uri: BoundedVec<u8, URILengthLimit>,
-		logo_uri: BoundedVec<u8, URILengthLimit>,
-		description: BoundedVec<u8, DescriptionLengthLimit>,
+		name: U8BoundedVec<NameLengthLimit>,
+		uri: U8BoundedVec<URILengthLimit>,
+		logo_uri: U8BoundedVec<URILengthLimit>,
+		description: U8BoundedVec<DescriptionLengthLimit>,
 	) -> MarketplaceData<
 		AccountId,
 		AccountCountLimit,
