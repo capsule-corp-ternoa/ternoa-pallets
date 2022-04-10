@@ -1,6 +1,4 @@
-use frame_support::{
-	bounded_vec, traits::Get, BoundedVec, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound,
-};
+use frame_support::{traits::Get, BoundedVec, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use primitives::{marketplace::MarketplaceId, nfts::NFTId};
 use scale_info::TypeInfo;
@@ -246,6 +244,6 @@ where
 	ParallelAuctionLimit: Get<u32>,
 {
 	fn default() -> Self {
-		Self(bounded_vec![])
+		Self(BoundedVec::default())
 	}
 }
