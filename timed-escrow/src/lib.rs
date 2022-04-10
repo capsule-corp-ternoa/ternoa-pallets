@@ -29,14 +29,14 @@ pub mod pallet {
 	};
 	use frame_system::{pallet_prelude::*, RawOrigin};
 	use sp_runtime::traits::{Dispatchable, StaticLookup};
-	use ternoa_common::traits::NFTTrait;
+	use ternoa_common::traits::NFTExt;
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		/// Because this pallet emits events, it depends on the runtime's definition of an event.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 		/// Pallet managing NFTs.
-		type NFTs: NFTTrait<AccountId = Self::AccountId>;
+		type NFTs: NFTExt<AccountId = Self::AccountId>;
 		/// Scheduler instance which we use to schedule actual transfer calls. This way, we have
 		/// all scheduled calls accross all pallets in one place.
 		type Scheduler: ScheduleNamed<Self::BlockNumber, Self::PalletsCall, Self::PalletsOrigin>;

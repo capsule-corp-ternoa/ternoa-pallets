@@ -18,13 +18,13 @@ use super::mock::*;
 use crate::{tests::mock, Error};
 use frame_support::{assert_noop, assert_ok, bounded_vec};
 use frame_system::RawOrigin;
-use ternoa_common::traits::NFTTrait;
+use ternoa_common::traits::NFTExt;
 
 #[test]
 fn set_owner_happy() {
 	ExtBuilder::default().caps(vec![(ALICE, 100)]).build().execute_with(|| {
 		// Happy path
-		let nft_id = <NFTs as NFTTrait>::create_nft(ALICE, bounded_vec![1], None).unwrap();
+		let nft_id = <NFTs as NFTExt>::create_nft(ALICE, bounded_vec![1], None).unwrap();
 		assert_ok!(NFTs::set_owner(nft_id, &BOB));
 		assert_eq!(NFTs::data(nft_id).unwrap().owner, BOB);
 	})
@@ -42,7 +42,7 @@ fn set_owner_unhappy() {
 fn owner_happy() {
 	ExtBuilder::default().caps(vec![(ALICE, 100)]).build().execute_with(|| {
 		// Happy path
-		let nft_id = <NFTs as NFTTrait>::create_nft(ALICE, bounded_vec![1], None).unwrap();
+		let nft_id = <NFTs as NFTExt>::create_nft(ALICE, bounded_vec![1], None).unwrap();
 		assert_eq!(NFTs::owner(nft_id), Some(ALICE));
 	})
 }
@@ -63,8 +63,7 @@ fn is_series_completed_happy() {
 		// Happy path
 		let series_id = vec![50];
 		let nft_id =
-			<NFTs as NFTTrait>::create_nft(ALICE, bounded_vec![1], Some(series_id.clone()))
-				.unwrap();
+			<NFTs as NFTExt>::create_nft(ALICE, bounded_vec![1], Some(series_id.clone())).unwrap();
 		assert_eq!(NFTs::is_nft_in_completed_series(nft_id), Some(false));
 		assert_ok!(NFTs::finish_series(alice, series_id));
 		assert_eq!(NFTs::is_nft_in_completed_series(nft_id), Some(true));

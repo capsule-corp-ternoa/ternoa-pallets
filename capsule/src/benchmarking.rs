@@ -23,7 +23,7 @@ use frame_support::{assert_ok, bounded_vec};
 use frame_system::RawOrigin;
 use sp_runtime::traits::Bounded;
 use sp_std::prelude::*;
-use ternoa_common::traits::NFTTrait;
+use ternoa_common::traits::NFTExt;
 
 const SERIES_ID: u8 = 20;
 
@@ -46,10 +46,10 @@ pub fn prepare_benchmarks<T: Config>() -> (NFTId, NFTId) {
 	// Create default NFT and series
 	let series_id = vec![SERIES_ID];
 	let nft_id =
-		T::NFTTrait::create_nft(alice.clone(), bounded_vec![1], Some(series_id.clone())).unwrap();
+		T::NFTExt::create_nft(alice.clone(), bounded_vec![1], Some(series_id.clone())).unwrap();
 
 	// Lock series
-	T::NFTTrait::benchmark_lock_series(series_id.clone());
+	T::NFTExt::benchmark_lock_series(series_id.clone());
 
 	(nft_id - 1, nft_id)
 }

@@ -64,7 +64,10 @@ pub mod pallet {
 		/// Because this pallet emits events, it depends on the runtime's definition of an event.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
-		/// Caps Currency
+		/// Weight information for pallet.
+		type WeightInfo: WeightInfo;
+
+		/// Currency type.
 		type Currency: Currency<Self::AccountId>;
 
 		/// The auctions pallet id - will be used to generate account id
@@ -73,9 +76,6 @@ pub mod pallet {
 
 		/// Origin that can control this pallet.
 		type ExternalOrigin: EnsureOrigin<Self::Origin>;
-
-		/// Weight
-		type WeightInfo: WeightInfo;
 	}
 
 	#[pallet::pallet]

@@ -68,7 +68,7 @@ frame_support::construct_runtime!(
 	{
 		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
 		Balances: pallet_balances::{Pallet, Call, Storage, Event<T>},
-		NFTs: ternoa_nfts::{Pallet, Call, Storage, Event<T>, Config<T>},
+		NFTs: ternoa_nft::{Pallet, Call, Storage, Event<T>, Config<T>},
 		Marketplace: ternoa_marketplace::{Pallet, Call, Event<T>},
 		Auctions: ternoa_auctions::{Pallet, Call, Event<T>}
 	}
@@ -152,9 +152,9 @@ parameter_types! {
 	pub const DescriptionLengthLimit: u32 = 5;
 }
 
-impl ternoa_nfts::Config for Test {
+impl ternoa_nft::Config for Test {
 	type Event = Event;
-	type WeightInfo = ternoa_nfts::weights::TernoaWeight<Test>;
+	type WeightInfo = ternoa_nft::weights::TernoaWeight<Test>;
 	type Currency = Balances;
 	type FeesCollector = ();
 	type IPFSLengthLimit = IPFSLengthLimit;
@@ -163,7 +163,7 @@ impl ternoa_nfts::Config for Test {
 impl ternoa_marketplace::Config for Test {
 	type Event = Event;
 	type Currency = Balances;
-	type NFTs = NFTs;
+	type NFTExt = NFTs;
 	type WeightInfo = ();
 	type FeesCollector = ();
 	type AccountCountLimit = AccountCountLimit;
@@ -186,8 +186,8 @@ parameter_types! {
 impl Config for Test {
 	type Event = Event;
 	type Currency = Balances;
-	type NFTHandler = NFTs;
-	type MarketplaceHandler = Marketplace;
+	type NFTExt = NFTs;
+	type MarketplaceExt = Marketplace;
 	type MaxAuctionDelay = MaxAuctionDelay;
 	type MaxAuctionDuration = MaxAuctionDuration;
 	type MinAuctionDuration = MinAuctionDuration;
@@ -253,7 +253,7 @@ impl ExtBuilder {
 			bob_series.to_raw(vec![BOB_SERIES_ID]),
 		];
 
-		ternoa_nfts::GenesisConfig::<Test> { nfts, series, nft_mint_fee: 5 }
+		ternoa_nft::GenesisConfig::<Test> { nfts, series, nft_mint_fee: 5 }
 			.assimilate_storage(t)
 			.unwrap();
 	}

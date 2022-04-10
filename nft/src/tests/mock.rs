@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Ternoa.  If not, see <http://www.gnu.org/licenses/>.
 
-use crate::{self as ternoa_nfts, weights, Config, NegativeImbalanceOf};
+use crate::{self as ternoa_nft, weights, Config, NegativeImbalanceOf};
 use frame_support::{
 	bounded_vec, parameter_types,
 	traits::{ConstU32, Contains, Currency, GenesisBuild},
@@ -52,7 +52,7 @@ frame_support::construct_runtime!(
 	{
 		System: frame_system,
 		Balances: pallet_balances,
-		NFTs: ternoa_nfts,
+		NFTs: ternoa_nft,
 	}
 );
 
@@ -196,7 +196,7 @@ impl ExtBuilder {
 			bob_series.to_raw(vec![BOB_SERIES_ID]),
 		];
 
-		ternoa_nfts::GenesisConfig::<Test> { nfts, series, nft_mint_fee: NFT_MINT_FEE }
+		ternoa_nft::GenesisConfig::<Test> { nfts, series, nft_mint_fee: NFT_MINT_FEE }
 			.assimilate_storage(t)
 			.unwrap();
 	}

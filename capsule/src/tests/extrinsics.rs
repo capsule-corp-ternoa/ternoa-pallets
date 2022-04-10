@@ -19,7 +19,7 @@ use crate::{tests::mock, CapsuleData, CapsuleIPFSReference, Error};
 use frame_support::{assert_noop, assert_ok, bounded_vec, error::BadOrigin, BoundedVec};
 use frame_system::RawOrigin;
 use pallet_balances::Error as BalanceError;
-use ternoa_common::traits::NFTTrait;
+use ternoa_common::traits::NFTExt;
 
 #[test]
 fn create_happy() {
@@ -94,7 +94,7 @@ fn create_transactional() {
 			// Trigger an error
 			let ok =
 				TernoaCapsules::create(alice.clone(), bounded_vec![], bounded_vec![], series_id);
-			assert_noop!(ok, ternoa_nfts::Error::<Test>::NotTheSeriesOwner);
+			assert_noop!(ok, ternoa_nft::Error::<Test>::NotTheSeriesOwner);
 
 			// She should not have lost any caps
 			assert_eq!(Balances::free_balance(ALICE), balance);
@@ -139,13 +139,13 @@ fn create_from_nft_unhappy() {
 
 			// Unhappy nft is listed for sale
 			let nft_id = help::create_nft_fast(alice.clone());
-			<TernoaNFTs as NFTTrait>::set_listed_for_sale(nft_id, true).unwrap();
+			<TernoaNFTs as NFTExt>::set_listed_for_sale(nft_id, true).unwrap();
 			let ok = TernoaCapsules::create_from_nft(alice.clone(), nft_id, bounded_vec![25]);
 			assert_noop!(ok, Error::<Test>::CannotCreateCapsulesFromNFTsListedForSale);
 
 			// Unhappy nft is in transmission
 			let nft_id = help::create_nft_fast(alice.clone());
-			<TernoaNFTs as NFTTrait>::set_in_transmission(nft_id, true).unwrap();
+			<TernoaNFTs as NFTExt>::set_in_transmission(nft_id, true).unwrap();
 			let ok = TernoaCapsules::create_from_nft(alice.clone(), nft_id, bounded_vec![25]);
 			assert_noop!(ok, Error::<Test>::CannotCreateCapsulesFromNFTsInTransmission);
 

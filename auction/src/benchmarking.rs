@@ -30,7 +30,7 @@ use primitives::{
 };
 use sp_runtime::traits::Bounded;
 use sp_std::prelude::*;
-use ternoa_common::traits::{MarketplaceTrait, NFTTrait};
+use ternoa_common::traits::{MarketplaceExt, NFTExt};
 
 pub enum AuctionState {
 	Before,
@@ -58,7 +58,7 @@ pub fn prepare_benchmarks<T: Config>(state: Option<AuctionState>) -> BenchmarkDa
 	T::Currency::make_free_balance_be(&eve, BalanceOf::<T>::max_value() / 5u32.into());
 
 	// Create Alice's marketplace
-	let market_id = T::MarketplaceHandler::create(
+	let market_id = T::MarketplaceExt::create(
 		alice.clone(),
 		MarketplaceType::Public,
 		10,
@@ -70,14 +70,14 @@ pub fn prepare_benchmarks<T: Config>(state: Option<AuctionState>) -> BenchmarkDa
 	.unwrap();
 
 	// Create NFTs
-	let alice_nft_id = T::NFTHandler::create_nft(alice.clone(), bounded_vec![10], None).unwrap();
-	let bob_nft_id = T::NFTHandler::create_nft(bob.clone(), bounded_vec![10], None).unwrap();
+	let alice_nft_id = T::NFTExt::create_nft(alice.clone(), bounded_vec![10], None).unwrap();
+	let bob_nft_id = T::NFTExt::create_nft(bob.clone(), bounded_vec![10], None).unwrap();
 
-	let alice_series = T::NFTHandler::get_nft(alice_nft_id).unwrap().series_id;
-	let bob_series = T::NFTHandler::get_nft(bob_nft_id).unwrap().series_id;
+	let alice_series = T::NFTExt::get_nft(alice_nft_id).unwrap().series_id;
+	let bob_series = T::NFTExt::get_nft(bob_nft_id).unwrap().series_id;
 
-	assert_ok!(T::NFTHandler::set_series_completion(&alice_series, true));
-	assert_ok!(T::NFTHandler::set_series_completion(&bob_series, true));
+	assert_ok!(T::NFTExt::set_series_completion(&alice_series, true));
+	assert_ok!(T::NFTExt::set_series_completion(&bob_series, true));
 
 	// Create auctions
 	if let Some(state) = state {
@@ -139,9 +139,9 @@ pub fn run_to_block<T: Config>(n: T::BlockNumber) {
 
 	// Create 10 000 additional auctions
 	for _i in 0..10_000 {
-		let nft_id = T::NFTHandler::create_nft(alice.clone(), vec![10], None).unwrap();
-		let series_id = T::NFTHandler::get_nft(nft_id).unwrap().series_id;
-		assert_ok!(T::NFTHandler::set_series_completion(&series_id, true));
+		let nft_id = T::NFTExt::create_nft(alice.clone(), vec![10], None).unwrap();
+		let series_id = T::NFTExt::get_nft(nft_id).unwrap().series_id;
+		assert_ok!(T::NFTExt::set_series_completion(&series_id, true));
 
 		let start_block = System::<T>::block_number() + T::MaxAuctionDelay::get() - 1u16.into();
 		let end_block = start_block + T::MinAuctionDuration::get();
@@ -177,7 +177,7 @@ benchmarks! {
 
 	}: _(RawOrigin::Signed(alice.clone()), nft_id, market_id, start_block, end_block, start_price, Some(buy_now_price))
 	verify {
-		assert_eq!(T::NFTHandler::is_listed_for_sale(nft_id), Some(true));
+		assert_eq!(T::NFTExt::is_listed_for_sale(nft_id), Some(true));
 	}
 
 	 cancel_auction {
@@ -187,7 +187,7 @@ benchmarks! {
 
 	}: _(RawOrigin::Signed(bob.clone()), nft_id)
 	verify {
-		assert_eq!(T::NFTHandler::is_listed_for_sale(nft_id), Some(false));
+		assert_eq!(T::NFTExt::is_listed_for_sale(nft_id), Some(false));
 	}
 
 	end_auction {
@@ -206,8 +206,8 @@ benchmarks! {
 	verify {
 		let eve: T::AccountId = get_account::<T>("EVE");
 
-		assert_eq!(T::NFTHandler::is_listed_for_sale(nft_id), Some(false));
-		assert_eq!(T::NFTHandler::owner(nft_id), Some(eve));
+		assert_eq!(T::NFTExt::is_listed_for_sale(nft_id), Some(false));
+		assert_eq!(T::NFTExt::owner(nft_id), Some(eve));
 	}
 
 	add_bid {
@@ -245,8 +245,8 @@ benchmarks! {
 
 	}: _(RawOrigin::Signed(charlie.clone()), nft_id)
 	verify {
-		assert_eq!(T::NFTHandler::is_listed_for_sale(nft_id), Some(false));
-		assert_eq!(T::NFTHandler::owner(nft_id), Some(charlie));
+		assert_eq!(T::NFTExt::is_listed_for_sale(nft_id), Some(false));
+		assert_eq!(T::NFTExt::owner(nft_id), Some(charlie));
 	}
 
 	complete_auction {
@@ -265,8 +265,8 @@ benchmarks! {
 	verify {
 		let eve: T::AccountId = get_account::<T>("EVE");
 
-		assert_eq!(T::NFTHandler::is_listed_for_sale(nft_id), Some(false));
-		assert_eq!(T::NFTHandler::owner(nft_id), Some(eve));
+		assert_eq!(T::NFTExt::is_listed_for_sale(nft_id), Some(false));
+		assert_eq!(T::NFTExt::owner(nft_id), Some(eve));
 	}
 
 	claim {

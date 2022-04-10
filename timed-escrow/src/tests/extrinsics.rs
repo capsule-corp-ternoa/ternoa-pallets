@@ -3,7 +3,7 @@ use crate::{tests::mock, Error};
 use frame_support::{assert_noop, assert_ok, error::BadOrigin, traits::OnInitialize};
 use frame_system::RawOrigin;
 use pallet_scheduler::Agenda as SchedulerAgenda;
-use ternoa_common::traits::NFTTrait;
+use ternoa_common::traits::NFTExt;
 
 #[test]
 fn create_happy() {
@@ -11,10 +11,10 @@ fn create_happy() {
 		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
 
 		// Happy path
-		let nft_id = <NFTs as NFTTrait>::create_nft(ALICE, vec![0], None).unwrap();
+		let nft_id = <NFTs as NFTExt>::create_nft(ALICE, vec![0], None).unwrap();
 		assert_ok!(TimedEscrow::create(alice.clone(), nft_id, BOB, 10));
 
-		let nft = <NFTs as NFTTrait>::get_nft(nft_id).unwrap();
+		let nft = <NFTs as NFTExt>::get_nft(nft_id).unwrap();
 		assert_eq!(nft.is_in_transmission, true);
 
 		// By default nothing is scheduled so checking if we have one element
@@ -25,7 +25,7 @@ fn create_happy() {
 
 		// block 10
 		Scheduler::on_initialize(10);
-		let nft = <NFTs as NFTTrait>::get_nft(nft_id).unwrap();
+		let nft = <NFTs as NFTExt>::get_nft(nft_id).unwrap();
 		assert_eq!(nft.owner, BOB);
 		assert_eq!(nft.is_in_transmission, false);
 	});
@@ -44,20 +44,20 @@ fn create_unhappy() {
 			assert_noop!(ok, Error::<Test>::NFTNotFound);
 
 			// Unhappy not nft owner
-			let nft_id = <NFTs as NFTTrait>::create_nft(BOB, vec![0], None).unwrap();
+			let nft_id = <NFTs as NFTExt>::create_nft(BOB, vec![0], None).unwrap();
 			let ok = TimedEscrow::create(alice.clone(), nft_id, BOB, 10);
 			assert_noop!(ok, Error::<Test>::NotTheNFTOwner);
 
 			// Unhappy listed for sale
-			let nft_id = <NFTs as NFTTrait>::create_nft(ALICE, vec![0], None).unwrap();
-			<NFTs as NFTTrait>::set_listed_for_sale(nft_id, true).unwrap();
+			let nft_id = <NFTs as NFTExt>::create_nft(ALICE, vec![0], None).unwrap();
+			<NFTs as NFTExt>::set_listed_for_sale(nft_id, true).unwrap();
 
 			let ok = TimedEscrow::create(alice.clone(), nft_id, BOB, 10);
 			assert_noop!(ok, Error::<Test>::ListedForSale);
 
 			// Unhappy already in transmission
-			let nft_id = <NFTs as NFTTrait>::create_nft(ALICE, vec![0], None).unwrap();
-			<NFTs as NFTTrait>::set_in_transmission(nft_id, true).unwrap();
+			let nft_id = <NFTs as NFTExt>::create_nft(ALICE, vec![0], None).unwrap();
+			<NFTs as NFTExt>::set_in_transmission(nft_id, true).unwrap();
 
 			let ok = TimedEscrow::create(alice.clone(), nft_id, BOB, 10);
 			assert_noop!(ok, Error::<Test>::AlreadyInTransmission);
@@ -70,10 +70,10 @@ fn cancel_happy() {
 		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
 
 		// Happy path
-		let nft_id = <NFTs as NFTTrait>::create_nft(ALICE, vec![0], None).unwrap();
+		let nft_id = <NFTs as NFTExt>::create_nft(ALICE, vec![0], None).unwrap();
 		assert_ok!(TimedEscrow::create(alice.clone(), nft_id, BOB, 10));
 		assert_ok!(TimedEscrow::cancel(alice.clone(), nft_id));
-		assert_eq!(<NFTs as NFTTrait>::is_in_transmission(nft_id), Some(false));
+		assert_eq!(<NFTs as NFTExt>::is_in_transmission(nft_id), Some(false));
 
 		// We verified previously would fill the block's agenda. So canceling should
 		// reset it to 0. However, due to how this is implemented in the scheduler
@@ -93,7 +93,7 @@ fn cancel_unhappy() {
 		assert_noop!(ok, Error::<Test>::NFTNotFound);
 
 		// Unhappy not nft owner
-		let nft_id = <NFTs as NFTTrait>::create_nft(BOB, vec![0], None).unwrap();
+		let nft_id = <NFTs as NFTExt>::create_nft(BOB, vec![0], None).unwrap();
 		let ok = TimedEscrow::cancel(alice.clone(), nft_id);
 		assert_noop!(ok, Error::<Test>::NotTheNFTOwner);
 	});
@@ -106,11 +106,11 @@ fn complete_transfer_happy() {
 		let root: mock::Origin = RawOrigin::Root.into();
 
 		// Happy path
-		let nft_id = <NFTs as NFTTrait>::create_nft(ALICE, vec![0], None).unwrap();
+		let nft_id = <NFTs as NFTExt>::create_nft(ALICE, vec![0], None).unwrap();
 		assert_ok!(TimedEscrow::create(alice.clone(), nft_id, BOB, 10));
 		assert_ok!(TimedEscrow::complete_transfer(root, BOB, nft_id));
 
-		let nft = <NFTs as NFTTrait>::get_nft(nft_id).unwrap();
+		let nft = <NFTs as NFTExt>::get_nft(nft_id).unwrap();
 		assert_eq!(nft.owner, BOB);
 		assert_eq!(nft.is_in_transmission, false);
 	});
@@ -122,7 +122,7 @@ fn complete_transfer_unhappy() {
 		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
 		let root: mock::Origin = RawOrigin::Root.into();
 
-		let nft_id = <NFTs as NFTTrait>::create_nft(ALICE, vec![0], None).unwrap();
+		let nft_id = <NFTs as NFTExt>::create_nft(ALICE, vec![0], None).unwrap();
 		assert_ok!(TimedEscrow::create(alice.clone(), nft_id, BOB, 10));
 
 		// Unhappy not root

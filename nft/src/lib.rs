@@ -64,14 +64,17 @@ pub mod pallet {
 		/// Because this pallet emits events, it depends on the runtime's definition of an event.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
+		/// Weight information for pallet.
 		type WeightInfo: WeightInfo;
 
-		/// Currency used to bill minting fees
+		/// Currency type.
 		type Currency: Currency<Self::AccountId>;
 
 		/// What we do with additional fees
 		type FeesCollector: OnUnbalanced<NegativeImbalanceOf<Self>>;
 
+		// Constants
+		/// Maximum IPFS reference length.
 		#[pallet::constant]
 		type IPFSLengthLimit: Get<u32>;
 	}
@@ -421,7 +424,7 @@ pub mod pallet {
 	}
 }
 
-impl<T: Config> traits::NFTTrait for Pallet<T> {
+impl<T: Config> traits::NFTExt for Pallet<T> {
 	type AccountId = T::AccountId;
 	type IPFSLengthLimit = T::IPFSLengthLimit;
 

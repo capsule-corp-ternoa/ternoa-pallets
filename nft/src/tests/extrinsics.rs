@@ -18,7 +18,7 @@ use super::mock::*;
 use frame_support::{assert_noop, assert_ok, bounded_vec, error::BadOrigin};
 use frame_system::RawOrigin;
 use pallet_balances::Error as BalanceError;
-use ternoa_common::traits::NFTTrait;
+use ternoa_common::traits::NFTExt;
 
 use crate::{tests::mock, Error, Event as NFTsEvent, IPFSReference, NFTData, NFTSeriesDetails};
 

@@ -55,11 +55,11 @@ pub mod pallet {
 	use frame_system::pallet_prelude::*;
 	use sp_runtime::traits::CheckedAdd;
 	use sp_std::convert::TryInto;
-	use ternoa_common::traits::NFTTrait;
+	use ternoa_common::traits::NFTExt;
 
 	pub type BalanceOf<T> =
 		<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
-	pub type IPFSLengthLimitOf<T> = <<T as Config>::NFTTrait as NFTTrait>::IPFSLengthLimit;
+	pub type IPFSLengthLimitOf<T> = <<T as Config>::NFTExt as NFTExt>::IPFSLengthLimit;
 	pub type CapsuleIPFSReference<T> = primitives::nfts::IPFSReference<IPFSLengthLimitOf<T>>;
 
 	#[pallet::config]
@@ -74,8 +74,9 @@ pub mod pallet {
 		type Currency: Currency<Self::AccountId>;
 
 		/// Link to the NFT pallet.
-		type NFTTrait: NFTTrait<AccountId = Self::AccountId>;
+		type NFTExt: NFTExt<AccountId = Self::AccountId>;
 
+		// Constants
 		/// The treasury's pallet id, used for deriving its sovereign account ID.
 		#[pallet::constant]
 		type PalletId: Get<PalletId>;
@@ -126,10 +127,10 @@ pub mod pallet {
 			Self::send_funds(&who, &Self::account_id(), amount, KeepAlive)?;
 
 			// Create NFT and capsule
-			let nft_id = T::NFTTrait::create_nft(who.clone(), nft_ipfs_reference, series_id)?;
+			let nft_id = T::NFTExt::create_nft(who.clone(), nft_ipfs_reference, series_id)?;
 
 			Self::new_capsule(&who, nft_id, capsule_ipfs_reference.clone(), amount)?;
-			T::NFTTrait::set_converted_to_capsule(nft_id, true)?;
+			T::NFTExt::set_converted_to_capsule(nft_id, true)?;
 
 			Self::deposit_event(Event::CapsuleDeposit { balance: amount });
 			let event = Event::CapsuleCreated { owner: who, nft_id, frozen_balance: amount };
@@ -151,7 +152,7 @@ pub mod pallet {
 			// Check if the user has reached the capsule count limit.
 			ensure!(!Self::has_reached_limit(&who), Error::<T>::MaximumCapsuleCountReached);
 
-			let nft = T::NFTTrait::get_nft(nft_id).ok_or(Error::<T>::NFTNotFound)?;
+			let nft = T::NFTExt::get_nft(nft_id).ok_or(Error::<T>::NFTNotFound)?;
 			ensure!(nft.owner == who, Error::<T>::NotTheNFTOwner);
 			ensure!(!nft.listed_for_sale, Error::<T>::CannotCreateCapsulesFromNFTsListedForSale);
 			ensure!(
@@ -167,7 +168,7 @@ pub mod pallet {
 
 			// Create capsule
 			Self::new_capsule(&who, nft_id, ipfs_reference.clone(), amount)?;
-			T::NFTTrait::set_converted_to_capsule(nft_id, true)?;
+			T::NFTExt::set_converted_to_capsule(nft_id, true)?;
 
 			Self::deposit_event(Event::CapsuleDeposit { balance: amount });
 			let event = Event::CapsuleCreated { owner: who, nft_id, frozen_balance: amount };

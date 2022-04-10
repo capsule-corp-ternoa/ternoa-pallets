@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Ternoa.  If not, see <http://www.gnu.org/licenses/>.
 
-use crate::{self as ternoa_capsules, Config};
+use crate::{self as ternoa_capsule, Config};
 use frame_support::{
 	parameter_types,
 	traits::{ConstU32, Contains, GenesisBuild},
@@ -39,8 +39,8 @@ frame_support::construct_runtime!(
 	{
 		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
 		Balances: pallet_balances::{Pallet, Call, Config<T>, Storage, Event<T>},
-		TernoaNFTs: ternoa_nfts::{Pallet, Call, Storage, Event<T>, Config<T>},
-		TernoaCapsules: ternoa_capsules::{Pallet, Call, Storage, Event<T>, Config<T>},
+		TernoaNFTs: ternoa_nft::{Pallet, Call, Storage, Event<T>, Config<T>},
+		TernoaCapsules: ternoa_capsule::{Pallet, Call, Storage, Event<T>, Config<T>},
 	}
 );
 
@@ -114,9 +114,9 @@ parameter_types! {
 	pub const CapsulePalletId: PalletId = PalletId(*b"mockcaps");
 }
 
-impl ternoa_nfts::Config for Test {
+impl ternoa_nft::Config for Test {
 	type Event = Event;
-	type WeightInfo = ternoa_nfts::weights::TernoaWeight<Test>;
+	type WeightInfo = ternoa_nft::weights::TernoaWeight<Test>;
 	type Currency = Balances;
 	type FeesCollector = ();
 	type IPFSLengthLimit = IPFSLengthLimit;
@@ -126,7 +126,7 @@ impl Config for Test {
 	type Event = Event;
 	type WeightInfo = ();
 	type Currency = Balances;
-	type NFTTrait = TernoaNFTs;
+	type NFTExt = TernoaNFTs;
 	type PalletId = CapsulePalletId;
 	type CapsuleCountLimit = CapsuleCountLimit;
 }
@@ -161,7 +161,7 @@ impl ExtBuilder {
 			.assimilate_storage(&mut t)
 			.unwrap();
 
-		ternoa_nfts::GenesisConfig::<Test> {
+		ternoa_nft::GenesisConfig::<Test> {
 			nfts: Default::default(),
 			series: Default::default(),
 			nft_mint_fee: 10,
@@ -169,7 +169,7 @@ impl ExtBuilder {
 		.assimilate_storage(&mut t)
 		.unwrap();
 
-		ternoa_capsules::GenesisConfig::<Test> { capsule_mint_fee: 1000, ..Default::default() }
+		ternoa_capsule::GenesisConfig::<Test> { capsule_mint_fee: 1000, ..Default::default() }
 			.assimilate_storage(&mut t)
 			.unwrap();
 

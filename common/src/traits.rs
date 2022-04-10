@@ -27,7 +27,7 @@ use primitives::{
 };
 use sp_std::fmt::Debug;
 
-pub trait NFTTrait {
+pub trait NFTExt {
 	type AccountId: Clone + PartialEq + Debug;
 	type IPFSLengthLimit: Get<u32>;
 
@@ -80,7 +80,7 @@ pub trait NFTTrait {
 
 /// Trait that implements basic functionalities related to Ternoa Marketplace
 /// TODO: Expand trait with more useful functions
-pub trait MarketplaceTrait {
+pub trait MarketplaceExt {
 	type AccountId: Clone + PartialEq + Debug;
 	type AccountCountLimit: Get<u32>;
 	type NameLengthLimit: Get<u32>;

@@ -47,7 +47,7 @@ frame_support::construct_runtime!(
 	{
 		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
 		Balances: pallet_balances::{Pallet, Call, Storage, Event<T>},
-		NFTs: ternoa_nfts::{Pallet, Call, Storage, Event<T>, Config<T>},
+		NFTs: ternoa_nft::{Pallet, Call, Storage, Event<T>, Config<T>},
 		Marketplace: ternoa_marketplace::{Pallet, Call, Event<T>},
 	}
 );
@@ -124,9 +124,9 @@ parameter_types! {
 	pub const DescriptionLengthLimit: u32 = 5;
 }
 
-impl ternoa_nfts::Config for Test {
+impl ternoa_nft::Config for Test {
 	type Event = Event;
-	type WeightInfo = ternoa_nfts::weights::TernoaWeight<Test>;
+	type WeightInfo = ternoa_nft::weights::TernoaWeight<Test>;
 	type Currency = Balances;
 	type FeesCollector = ();
 	type IPFSLengthLimit = IPFSLengthLimit;
@@ -135,7 +135,7 @@ impl ternoa_nfts::Config for Test {
 impl Config for Test {
 	type Event = Event;
 	type Currency = Balances;
-	type NFTs = NFTs;
+	type NFTExt = NFTs;
 	type WeightInfo = ();
 	type FeesCollector = ();
 	type AccountCountLimit = AccountCountLimit;
@@ -177,7 +177,7 @@ impl ExtBuilder {
 			.assimilate_storage(&mut t)
 			.unwrap();
 
-		ternoa_nfts::GenesisConfig::<Test> {
+		ternoa_nft::GenesisConfig::<Test> {
 			nfts: self.nfts,
 			series: self.series,
 			nft_mint_fee: 10,

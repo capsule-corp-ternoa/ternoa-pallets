@@ -23,7 +23,7 @@ use frame_support::{assert_ok, bounded_vec, traits::Currency};
 use frame_system::RawOrigin;
 use sp_runtime::traits::{Bounded, StaticLookup};
 use sp_std::prelude::*;
-use ternoa_common::traits::NFTTrait;
+use ternoa_common::traits::NFTExt;
 
 const SERIES_ID: u8 = 20;
 
@@ -38,10 +38,10 @@ pub fn prepare_benchmarks<T: Config>() -> (MarketplaceId, MarketplaceId, NFTId) 
 	// Create default NFT and series
 	let series_id = vec![SERIES_ID];
 	let nft_id =
-		T::NFTs::create_nft(alice.clone(), bounded_vec![1], Some(series_id.clone())).unwrap();
+		T::NFTExt::create_nft(alice.clone(), bounded_vec![1], Some(series_id.clone())).unwrap();
 
 	// Lock series
-	T::NFTs::benchmark_lock_series(series_id.clone());
+	T::NFTExt::benchmark_lock_series(series_id.clone());
 
 	// Create Public Marketplace for Alice
 	assert_ok!(Marketplace::<T>::create_marketplace(
@@ -88,7 +88,7 @@ benchmarks! {
 
 	}: _(RawOrigin::Signed(alice.clone()), nft_id, price, Some(mkp_id))
 	verify {
-		assert_eq!(T::NFTs::owner(nft_id), Some(alice));
+		assert_eq!(T::NFTExt::owner(nft_id), Some(alice));
 		assert_eq!(NFTsForSale::<T>::contains_key(nft_id), true);
 	}
 
@@ -113,7 +113,7 @@ benchmarks! {
 		drop(Marketplace::<T>::list_nft(get_origin::<T>("ALICE").into(), nft_id, price, Some(mkp_id)));
 	}: _(RawOrigin::Signed(bob.clone().into()), nft_id)
 	verify {
-		assert_eq!(T::NFTs::owner(nft_id), Some(bob));
+		assert_eq!(T::NFTExt::owner(nft_id), Some(bob));
 		assert_eq!(NFTsForSale::<T>::contains_key(nft_id), false);
 	}
 

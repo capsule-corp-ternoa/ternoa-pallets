@@ -38,7 +38,7 @@ use frame_support::{
 };
 use primitives::nfts::NFTId;
 use sp_runtime::traits::{AccountIdConversion, Saturating};
-use ternoa_common::traits::{MarketplaceTrait, NFTTrait};
+use ternoa_common::traits::{MarketplaceExt, NFTExt};
 use types::{AuctionData, AuctionsGenesis, BidderList, DeadlineList};
 pub use weights::WeightInfo;
 
@@ -50,7 +50,6 @@ pub mod pallet {
 	use frame_support::{dispatch::DispatchResultWithPostInfo, transactional};
 	use frame_system::{ensure_root, pallet_prelude::*, RawOrigin};
 	use primitives::marketplace::MarketplaceId;
-	use ternoa_common::traits::{MarketplaceTrait, NFTTrait};
 
 	pub type BalanceOf<T> =
 		<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
@@ -68,11 +67,12 @@ pub mod pallet {
 		type Currency: Currency<Self::AccountId>;
 
 		/// Link to the NFT pallet.
-		type NFTHandler: NFTTrait<AccountId = Self::AccountId>;
+		type NFTExt: NFTExt<AccountId = Self::AccountId>;
 
 		/// Link to the Marketplace pallet.
-		type MarketplaceHandler: MarketplaceTrait<AccountId = Self::AccountId>;
+		type MarketplaceExt: MarketplaceExt<AccountId = Self::AccountId>;
 
+		// Constants
 		/// Minimum required length of auction.
 		#[pallet::constant]
 		type MinAuctionDuration: Get<Self::BlockNumber>;
@@ -180,8 +180,8 @@ pub mod pallet {
 			}
 
 			// fetch the data of given nftId
-			let nft_data = T::NFTHandler::get_nft(nft_id).ok_or(Error::<T>::NFTDoesNotExist)?;
-			let is_nft_in_completed_series = T::NFTHandler::is_nft_in_completed_series(nft_id);
+			let nft_data = T::NFTExt::get_nft(nft_id).ok_or(Error::<T>::NFTDoesNotExist)?;
+			let is_nft_in_completed_series = T::NFTExt::is_nft_in_completed_series(nft_id);
 
 			ensure!(nft_data.owner == creator.clone(), Error::<T>::CannotAuctionNotOwnedNFTs);
 			ensure!(nft_data.listed_for_sale == false, Error::<T>::CannotAuctionNFTsListedForSale);
@@ -196,8 +196,8 @@ pub mod pallet {
 				Error::<T>::CannotAuctionNFTsInUncompletedSeries
 			);
 
-			T::MarketplaceHandler::is_allowed_to_list(marketplace_id, creator.clone())?;
-			T::NFTHandler::set_listed_for_sale(nft_id, true)?;
+			T::MarketplaceExt::is_allowed_to_list(marketplace_id, creator.clone())?;
+			T::NFTExt::set_listed_for_sale(nft_id, true)?;
 
 			let bidders: BidderList<T::AccountId, BalanceOf<T>, T::BidderListLengthLimit> =
 				BidderList::new();
@@ -249,7 +249,7 @@ pub mod pallet {
 				Error::<T>::CannotCancelAuctionInProgress
 			);
 
-			T::NFTHandler::set_listed_for_sale(nft_id, false)?;
+			T::NFTExt::set_listed_for_sale(nft_id, false)?;
 			Self::remove_auction(nft_id, &auction);
 
 			Self::deposit_event(Event::AuctionCancelled { nft_id });
@@ -620,7 +620,7 @@ impl<T: Config> Pallet<T> {
 		balance_source: Option<T::AccountId>,
 	) -> DispatchResult {
 		// Handle marketplace fees
-		let marketplace = T::MarketplaceHandler::get_marketplace(auction.marketplace_id)
+		let marketplace = T::MarketplaceExt::get_marketplace(auction.marketplace_id)
 			.ok_or(Error::<T>::MarketplaceNotFound)?;
 
 		let to_marketplace =
@@ -636,8 +636,8 @@ impl<T: Config> Pallet<T> {
 		// Transfer remaining to auction creator
 		T::Currency::transfer(&balance_source, &auction.creator, to_auctioneer, existence)?;
 
-		T::NFTHandler::set_owner(nft_id, new_owner)?;
-		T::NFTHandler::set_listed_for_sale(nft_id, false)?;
+		T::NFTExt::set_owner(nft_id, new_owner)?;
+		T::NFTExt::set_listed_for_sale(nft_id, false)?;
 
 		Ok(())
 	}

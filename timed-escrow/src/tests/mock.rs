@@ -26,7 +26,7 @@ frame_support::construct_runtime!(
 		System: frame_system,
 		Balances: pallet_balances,
 		Scheduler: pallet_scheduler,
-		NFTs: ternoa_nfts,
+		NFTs: ternoa_nft,
 		TimedEscrow: ternoa_timed_escrow,
 	}
 );
@@ -126,7 +126,7 @@ impl ternoa_nfts::Config for Test {
 
 impl Config for Test {
 	type Event = Event;
-	type NFTs = NFTs;
+	type NFTExt = NFTs;
 	type Scheduler = Scheduler;
 	type PalletsOrigin = OriginCaller;
 	type PalletsCall = Call;

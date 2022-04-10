@@ -19,7 +19,7 @@ use frame_support::{assert_noop, assert_ok, bounded_vec, error::BadOrigin};
 use frame_system::RawOrigin;
 use pallet_balances::Error as BalanceError;
 use primitives::marketplace::MarketplaceType;
-use ternoa_common::traits::NFTTrait;
+use ternoa_common::traits::NFTExt;
 
 use crate::{tests::mock, DescriptionVec, Error, MarketplaceData, NameVec, SaleData, URIVec};
 
@@ -44,7 +44,7 @@ fn list_happy() {
 			help::finish_series(alice.clone(), series_id);
 			assert_ok!(Marketplace::list_nft(alice.clone(), nft_id, price, Some(0)));
 			assert_eq!(Marketplace::nft_for_sale(nft_id), Some(sale_info));
-			assert_eq!(<NFTs as NFTTrait>::is_listed_for_sale(nft_id), Some(true));
+			assert_eq!(<NFTs as NFTExt>::is_listed_for_sale(nft_id), Some(true));
 
 			// Happy path Private marketplace
 			let series_id = vec![51];
