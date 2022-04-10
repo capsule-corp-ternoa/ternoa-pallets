@@ -45,10 +45,10 @@ frame_support::construct_runtime!(
 		NodeBlock = Block,
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
-		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-		Balances: pallet_balances::{Pallet, Call, Storage, Event<T>},
-		NFTs: ternoa_nfts::{Pallet, Call, Storage, Event<T>, Config<T>},
-		Marketplace: ternoa_marketplace::{Pallet, Call, Event<T>},
+		System: frame_system,
+		Balances: pallet_balances,
+		NFT: ternoa_nft,
+		Marketplace: ternoa_marketplace,
 	}
 );
 
@@ -124,9 +124,9 @@ parameter_types! {
 	pub const DescriptionLengthLimit: u32 = 5;
 }
 
-impl ternoa_nfts::Config for Test {
+impl ternoa_nft::Config for Test {
 	type Event = Event;
-	type WeightInfo = ternoa_nfts::weights::TernoaWeight<Test>;
+	type WeightInfo = ternoa_nft::weights::TernoaWeight<Test>;
 	type Currency = Balances;
 	type FeesCollector = ();
 	type IPFSLengthLimit = IPFSLengthLimit;
@@ -135,7 +135,7 @@ impl ternoa_nfts::Config for Test {
 impl Config for Test {
 	type Event = Event;
 	type Currency = Balances;
-	type NFTs = NFTs;
+	type NFTExt = NFT;
 	type WeightInfo = ();
 	type FeesCollector = ();
 	type AccountCountLimit = AccountCountLimit;
@@ -177,7 +177,7 @@ impl ExtBuilder {
 			.assimilate_storage(&mut t)
 			.unwrap();
 
-		ternoa_nfts::GenesisConfig::<Test> {
+		ternoa_nft::GenesisConfig::<Test> {
 			nfts: self.nfts,
 			series: self.series,
 			nft_mint_fee: 10,
@@ -239,8 +239,8 @@ pub mod help {
 		ipfs_reference: primitives::nfts::IPFSReference<IPFSLengthLimit>,
 		series_id: Option<NFTSeriesId>,
 	) -> NFTId {
-		assert_ok!(NFTs::create(owner, ipfs_reference, series_id));
-		return NFTs::nft_id_generator() - 1
+		assert_ok!(NFT::create(owner, ipfs_reference, series_id));
+		return NFT::nft_id_generator() - 1
 	}
 
 	pub fn create_nft_and_lock_series(
@@ -289,7 +289,7 @@ pub mod help {
 	}
 
 	pub fn finish_series(owner: Origin, series_id: Vec<u8>) {
-		assert_ok!(NFTs::finish_series(owner, series_id));
+		assert_ok!(NFT::finish_series(owner, series_id));
 	}
 }
 

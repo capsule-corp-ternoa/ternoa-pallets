@@ -1,5 +1,5 @@
 [package]
-name = "ternoa-staking-rewards"
+name = "ternoa-nft"
 version = "1.0.0"
 edition = "2021"
 license = "GPL-3.0-or-later WITH Classpath-exception-2.0"
@@ -8,14 +8,12 @@ license = "GPL-3.0-or-later WITH Classpath-exception-2.0"
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
-# Substrate Frame
+# Frame
 frame-benchmarking = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-03-24", default-features = false, optional = true }
 frame-support = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-03-24", default-features = false }
 frame-system = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-03-24", default-features = false }
-pallet-authorship = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-03-24", default-features = false }
-pallet-staking = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-03-24", default-features = false }
 
-# Substrate Primitives
+# Sp
 sp-runtime = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-03-24", default-features = false }
 sp-std = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-03-24", default-features = false }
 
@@ -24,6 +22,11 @@ parity-scale-codec = { default-features = false, features = ["derive", "max-enco
 log = { default-features = false, version = "0.4.14"}
 scale-info = { version = "2.0.1", default-features = false, features = ["derive"] }
 
+# Ternoa
+ternoa-common = { default-features = false, path = "../common" }
+primitives = { package = "ternoa-pallets-primitives", default-features = false, path = "../primitives" }
+
+# We needs this dependencies to run our tests
 [dev-dependencies]
 pallet-balances = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-03-24" }
 sp-core = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-03-24", default-features = false }
@@ -33,14 +36,14 @@ sp-io = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "te
 default = ["std"]
 std = [
     "parity-scale-codec/std",
+    "frame-benchmarking/std",
     "frame-support/std",
     "frame-system/std",
     "sp-runtime/std",
     "sp-std/std",
+    "ternoa-common/std",
+    "primitives/std",
     "scale-info/std",
-    "pallet-authorship/std",
-    "pallet-staking/std",
-    "frame-benchmarking/std",
 ]
 runtime-benchmarks = [
     "frame-benchmarking",

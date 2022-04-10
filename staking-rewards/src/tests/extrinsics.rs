@@ -15,9 +15,10 @@
 // along with Ternoa.  If not, see <http://www.gnu.org/licenses/>.
 
 use super::mock::*;
-use crate::{tests::mock, Event as StakingRewardsEvent};
 use frame_support::{assert_ok, error::BadOrigin};
 use frame_system::RawOrigin;
+
+use crate::{tests::mock, Event as StakingRewardsEvent};
 
 fn origin(account: u64) -> mock::Origin {
 	RawOrigin::Signed(account).into()

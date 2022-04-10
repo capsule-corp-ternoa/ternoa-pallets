@@ -1229,22 +1229,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-scheduler"
-version = "4.0.0-dev"
-source = "git+https://github.com/capsule-corp-ternoa/substrate?branch=ternoa-substrate-2022-03-24#676932fb5543d5b316b4e494631d8e48f98b760d"
-dependencies = [
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "log",
- "parity-scale-codec",
- "scale-info",
- "sp-io",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
 name = "pallet-session"
 version = "4.0.0-dev"
 source = "git+https://github.com/capsule-corp-ternoa/substrate?branch=ternoa-substrate-2022-03-24#676932fb5543d5b316b4e494631d8e48f98b760d"
@@ -2365,27 +2349,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "55937e1799185b12863d447f42597ed69d9928686b8d88a1df17376a097d8369"
 
 [[package]]
-name = "ternoa-associated-accounts"
-version = "1.0.0"
-dependencies = [
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "log",
- "pallet-balances",
- "parity-scale-codec",
- "scale-info",
- "serde",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
- "ternoa-common",
- "ternoa-pallets-primitives",
-]
-
-[[package]]
-name = "ternoa-auctions"
+name = "ternoa-auction"
 version = "1.0.0"
 dependencies = [
  "frame-benchmarking",
@@ -2401,12 +2365,12 @@ dependencies = [
  "sp-std",
  "ternoa-common",
  "ternoa-marketplace",
- "ternoa-nfts",
+ "ternoa-nft",
  "ternoa-pallets-primitives",
 ]
 
 [[package]]
-name = "ternoa-capsules"
+name = "ternoa-capsule"
 version = "1.0.0"
 dependencies = [
  "frame-benchmarking",
@@ -2421,7 +2385,7 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "ternoa-common",
- "ternoa-nfts",
+ "ternoa-nft",
  "ternoa-pallets-primitives",
 ]
 
@@ -2463,12 +2427,12 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "ternoa-common",
- "ternoa-nfts",
+ "ternoa-nft",
  "ternoa-pallets-primitives",
 ]
 
 [[package]]
-name = "ternoa-nfts"
+name = "ternoa-nft"
 version = "1.0.0"
 dependencies = [
  "frame-benchmarking",
@@ -2513,7 +2477,7 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "ternoa-common",
- "ternoa-nfts",
+ "ternoa-nft",
  "ternoa-pallets-primitives",
 ]
 
@@ -2534,26 +2498,6 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
-]
-
-[[package]]
-name = "ternoa-timed-escrow"
-version = "1.0.0"
-dependencies = [
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "pallet-balances",
- "pallet-scheduler",
- "parity-scale-codec",
- "scale-info",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
- "ternoa-common",
- "ternoa-nfts",
- "ternoa-pallets-primitives",
 ]
 
 [[package]]

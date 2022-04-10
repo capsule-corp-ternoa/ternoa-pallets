@@ -59,18 +59,19 @@ pub mod pallet {
 		/// Because this pallet emits events, it depends on the runtime's definition of an event.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
-		/// Weight values for this pallet
+		/// Weight information for pallet.
 		type WeightInfo: WeightInfo;
 
-		/// Currency used to bill minting fees
+		/// Currency type.
 		type Currency: Currency<Self::AccountId>;
-
-		/// Host much does it cost to mint enclave (extra fee on top of the tx fees)
-		#[pallet::constant]
-		type EnclaveFee: Get<BalanceOf<Self>>;
 
 		/// What we do with additional fees
 		type FeesCollector: OnUnbalanced<NegativeImbalanceOf<Self>>;
+
+		// Constants
+		/// Host much does it cost to mint enclave (extra fee on top of the tx fees)
+		#[pallet::constant]
+		type EnclaveFee: Get<BalanceOf<Self>>;
 
 		/// Size of a cluster
 		#[pallet::constant]

@@ -47,7 +47,7 @@ use primitives::{
 	U8BoundedVec,
 };
 use sp_std::vec::Vec;
-use ternoa_common::traits::MarketplaceTrait;
+use ternoa_common::traits::MarketplaceExt;
 
 /// The current storage version.
 const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
@@ -59,7 +59,7 @@ pub mod pallet {
 	use frame_support::{pallet_prelude::*, transactional};
 	use frame_system::pallet_prelude::*;
 	use sp_runtime::traits::{CheckedDiv, CheckedSub, StaticLookup};
-	use ternoa_common::traits::NFTTrait;
+	use ternoa_common::traits::NFTExt;
 
 	pub type BalanceOf<T> =
 		<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
@@ -84,11 +84,12 @@ pub mod pallet {
 		type Currency: Currency<Self::AccountId>;
 
 		/// Link to the NFT pallet.
-		type NFTs: NFTTrait<AccountId = Self::AccountId>;
+		type NFTExt: NFTExt<AccountId = Self::AccountId>;
 
 		/// Place where the marketplace fees go.
 		type FeesCollector: OnUnbalanced<NegativeImbalanceOf<Self>>;
 
+		// Constants
 		/// The maximum number of accounts that can be stored inside the allow or disallow list.
 		#[pallet::constant]
 		type AccountCountLimit: Get<u32>;
@@ -127,14 +128,14 @@ pub mod pallet {
 			let account_id = ensure_signed(origin)?;
 			let mkp_id = marketplace_id.unwrap_or(0);
 
-			let nft = T::NFTs::get_nft(nft_id).ok_or(Error::<T>::NFTNotFound)?;
+			let nft = T::NFTExt::get_nft(nft_id).ok_or(Error::<T>::NFTNotFound)?;
 			ensure!(nft.owner == account_id, Error::<T>::NotTheNFTOwner);
 			ensure!(!nft.is_capsule, Error::<T>::CannotListCapsules);
 			ensure!(!nft.listed_for_sale, Error::<T>::CannotListNFTsThatAreAlreadyListed);
 			ensure!(!nft.is_delegated, Error::<T>::CannotListDelegatedNFTs);
 
 			let is_nft_in_completed_series =
-				T::NFTs::is_nft_in_completed_series(nft_id) == Some(true);
+				T::NFTExt::is_nft_in_completed_series(nft_id) == Some(true);
 			ensure!(is_nft_in_completed_series, Error::<T>::CannotListNFTsInUncompletedSeries);
 
 			let market = Marketplaces::<T>::get(mkp_id).ok_or(Error::<T>::MarketplaceNotFound)?;
@@ -147,7 +148,7 @@ pub mod pallet {
 				ensure!(!is_on_list, Error::<T>::AccountNotAllowedToList);
 			}
 
-			T::NFTs::set_listed_for_sale(nft_id, true)?;
+			T::NFTExt::set_listed_for_sale(nft_id, true)?;
 
 			let sale_info = SaleData::new(account_id, price.clone(), mkp_id);
 			NFTsForSale::<T>::insert(nft_id, sale_info);
@@ -162,10 +163,10 @@ pub mod pallet {
 		pub fn unlist_nft(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			ensure!(T::NFTs::owner(nft_id) == Some(who), Error::<T>::NotTheNFTOwner);
+			ensure!(T::NFTExt::owner(nft_id) == Some(who), Error::<T>::NotTheNFTOwner);
 			ensure!(NFTsForSale::<T>::contains_key(nft_id), Error::<T>::NFTNotForSale);
 
-			T::NFTs::set_listed_for_sale(nft_id, false)?;
+			T::NFTExt::set_listed_for_sale(nft_id, false)?;
 			NFTsForSale::<T>::remove(nft_id);
 
 			Self::deposit_event(Event::NFTUnlisted { nft_id });
@@ -202,8 +203,8 @@ pub mod pallet {
 
 			T::Currency::transfer(&caller, &sale.account_id, price, KeepAlive)?;
 
-			T::NFTs::set_listed_for_sale(nft_id, false)?;
-			T::NFTs::set_owner(nft_id, &caller)?;
+			T::NFTExt::set_listed_for_sale(nft_id, false)?;
+			T::NFTExt::set_owner(nft_id, &caller)?;
 
 			NFTsForSale::<T>::remove(nft_id);
 
@@ -691,7 +692,7 @@ pub mod pallet {
 	}
 }
 
-impl<T: Config> MarketplaceTrait for Pallet<T> {
+impl<T: Config> MarketplaceExt for Pallet<T> {
 	type AccountId = T::AccountId;
 	type AccountCountLimit = T::AccountCountLimit;
 	type NameLengthLimit = T::NameLengthLimit;

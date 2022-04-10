@@ -16,7 +16,8 @@
 
 use frame_support::{
 	parameter_types,
-	traits::{ConstU32, Contains},
+	traits::{ConstU32, Contains, GenesisBuild},
+	PalletId,
 };
 use sp_core::H256;
 use sp_runtime::{
@@ -24,10 +25,12 @@ use sp_runtime::{
 	traits::{BlakeTwo256, IdentityLookup},
 };
 
+use crate::{self as ternoa_capsule, Config};
+
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
-use crate::{self as ternoa_sgx, Config};
+type AccountId = u64;
 
 frame_support::construct_runtime!(
 	pub enum Test where
@@ -37,7 +40,8 @@ frame_support::construct_runtime!(
 	{
 		System: frame_system,
 		Balances: pallet_balances,
-		Sgx: ternoa_sgx,
+		NFT: ternoa_nft,
+		Capsule: ternoa_capsule,
 	}
 );
 
@@ -71,14 +75,14 @@ impl frame_system::Config for Test {
 	type Call = Call;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
-	type AccountId = u64;
+	type AccountId = AccountId;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
 	type Event = Event;
 	type BlockHashCount = BlockHashCount;
 	type Version = ();
 	type PalletInfo = PalletInfo;
-	type AccountData = pallet_balances::AccountData<u64>;
+	type AccountData = pallet_balances::AccountData<u128>;
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
@@ -88,49 +92,53 @@ impl frame_system::Config for Test {
 }
 
 parameter_types! {
-	pub const ExistentialDeposit: u64 = 0;
+	pub const ExistentialDeposit: u128 = 1;
 	pub const MaxLocks: u32 = 50;
 	pub const MaxReserves: u32 = 50;
 }
 
 impl pallet_balances::Config for Test {
-	type Balance = u64;
+	type MaxLocks = MaxLocks;
 	type MaxReserves = MaxReserves;
 	type ReserveIdentifier = [u8; 8];
+	type Balance = u128;
 	type DustRemoval = ();
 	type Event = Event;
 	type ExistentialDeposit = ExistentialDeposit;
 	type AccountStore = System;
 	type WeightInfo = ();
-	type MaxLocks = MaxLocks;
 }
 
 parameter_types! {
-	pub const EnclaveFee: u64 = 5;
-	pub const ClusterSize: u32 = 2;
-	pub const MinUriLen: u16 = 1;
-	pub const MaxUriLen: u16 = 5;
+	pub const IPFSLengthLimit: u32 = 5;
+	pub const CapsuleCountLimit: u32 = 2;
+	pub const CapsulePalletId: PalletId = PalletId(*b"mockcaps");
+}
+
+impl ternoa_nft::Config for Test {
+	type Event = Event;
+	type WeightInfo = ternoa_nft::weights::TernoaWeight<Test>;
+	type Currency = Balances;
+	type FeesCollector = ();
+	type IPFSLengthLimit = IPFSLengthLimit;
 }
 
 impl Config for Test {
 	type Event = Event;
 	type WeightInfo = ();
-	type FeesCollector = ();
 	type Currency = Balances;
-	type EnclaveFee = EnclaveFee;
-	type ClusterSize = ClusterSize;
-	type MinUriLen = MinUriLen;
-	type MaxUriLen = MaxUriLen;
+	type NFTExt = NFT;
+	type PalletId = CapsulePalletId;
+	type CapsuleCountLimit = CapsuleCountLimit;
 }
 
 // Do not use the `0` account id since this would be the default value
 // for our account id. This would mess with some tests.
 pub const ALICE: u64 = 1;
 pub const BOB: u64 = 2;
-pub const DAVE: u64 = 3;
 
 pub struct ExtBuilder {
-	endowed_accounts: Vec<(u64, u64)>,
+	endowed_accounts: Vec<(u64, u128)>,
 }
 
 impl Default for ExtBuilder {
@@ -140,7 +148,7 @@ impl Default for ExtBuilder {
 }
 
 impl ExtBuilder {
-	pub fn tokens(mut self, accounts: Vec<(u64, u64)>) -> Self {
+	pub fn caps(mut self, accounts: Vec<(u64, u128)>) -> Self {
 		for account in accounts {
 			self.endowed_accounts.push(account);
 		}
@@ -154,15 +162,51 @@ impl ExtBuilder {
 			.assimilate_storage(&mut t)
 			.unwrap();
 
+		ternoa_nft::GenesisConfig::<Test> {
+			nfts: Default::default(),
+			series: Default::default(),
+			nft_mint_fee: 10,
+		}
+		.assimilate_storage(&mut t)
+		.unwrap();
+
+		ternoa_capsule::GenesisConfig::<Test> { capsule_mint_fee: 1000, ..Default::default() }
+			.assimilate_storage(&mut t)
+			.unwrap();
+
 		let mut ext = sp_io::TestExternalities::new(t);
 		ext.execute_with(|| System::set_block_number(1));
 		ext
 	}
 }
 
+pub mod help {
+	use super::*;
+	use frame_support::{assert_ok, bounded_vec, BoundedVec};
+	use primitives::nfts::{NFTId, NFTSeriesId};
+
+	pub fn create_capsule_fast(owner: Origin) -> NFTId {
+		let nft_id = create_nft(owner.clone(), bounded_vec![50], None);
+		assert_ok!(Capsule::create_from_nft(owner, nft_id, bounded_vec![60]));
+		nft_id
+	}
+
+	pub fn create_nft_fast(owner: Origin) -> NFTId {
+		create_nft(owner, bounded_vec![50], None)
+	}
+
+	pub fn create_nft(
+		owner: Origin,
+		ipfs_reference: BoundedVec<u8, IPFSLengthLimit>,
+		series_id: Option<NFTSeriesId>,
+	) -> NFTId {
+		assert_ok!(NFT::create(owner, ipfs_reference, series_id));
+		NFT::nft_id_generator() - 1
+	}
+}
+
 #[allow(dead_code)]
 pub fn new_test_ext() -> sp_io::TestExternalities {
 	let t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
-
 	t.into()
 }

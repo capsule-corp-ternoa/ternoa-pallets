@@ -1,13 +1,11 @@
 [workspace]
 members = [
     'common',
-    'associated-accounts',
-    'auctions',
-    'capsules',
+    'auction',
+    'capsule',
     'marketplace',
-    'nfts',
+    'nft',
     'sgx',
-    'timed-escrow',
     'primitives',
     'mandate',
     'staking-rewards',

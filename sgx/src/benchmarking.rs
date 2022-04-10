@@ -14,16 +14,17 @@
 // You should have received a copy of the GNU General Public License
 // along with Ternoa.  If not, see <http://www.gnu.org/licenses/>.
 
-use crate::{
-	BalanceOf, Call, Cluster, ClusterId, ClusterIdGenerator, ClusterIndex, ClusterRegistry, Config,
-	Enclave, EnclaveId, EnclaveIdGenerator, EnclaveIndex, EnclaveRegistry, Pallet,
-};
 use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, whitelisted_caller};
 use frame_support::traits::Currency;
 use frame_system::RawOrigin;
 use primitives::TextFormat;
 use sp_runtime::traits::{Bounded, StaticLookup};
 use sp_std::prelude::*;
+
+use crate::{
+	BalanceOf, Call, Cluster, ClusterId, ClusterIdGenerator, ClusterIndex, ClusterRegistry, Config,
+	Enclave, EnclaveId, EnclaveIdGenerator, EnclaveIndex, EnclaveRegistry, Pallet,
+};
 
 use crate::Pallet as Sgx;
 

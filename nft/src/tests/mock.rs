@@ -14,10 +14,12 @@
 // You should have received a copy of the GNU General Public License
 // along with Ternoa.  If not, see <http://www.gnu.org/licenses/>.
 
+use crate::{self as ternoa_nft, weights, Config, NegativeImbalanceOf};
 use frame_support::{
-	parameter_types,
-	traits::{ConstU32, Contains},
+	bounded_vec, parameter_types,
+	traits::{ConstU32, Contains, Currency, GenesisBuild},
 };
+use primitives::nfts::{NFTData, NFTId, NFTSeriesDetails};
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
@@ -27,7 +29,20 @@ use sp_runtime::{
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
-use crate::{self as ternoa_sgx, Config};
+// Do not use the `0` account id since this would be the default value
+// for our account id. This would mess with some tests.
+pub const ALICE: u64 = 1;
+pub const BOB: u64 = 2;
+pub const COLLECTOR: u64 = 99;
+
+pub const ALICE_NFT_ID: u32 = 1;
+pub const ALICE_SERIES_ID: u8 = 1;
+
+pub const BOB_NFT_ID: u32 = 2;
+pub const BOB_SERIES_ID: u8 = 2;
+
+pub const NFT_MINT_FEE: Balance = 10;
+pub const INVALID_NFT_ID: NFTId = 1001;
 
 frame_support::construct_runtime!(
 	pub enum Test where
@@ -37,7 +52,7 @@ frame_support::construct_runtime!(
 	{
 		System: frame_system,
 		Balances: pallet_balances,
-		Sgx: ternoa_sgx,
+		NFT: ternoa_nft,
 	}
 );
 
@@ -60,6 +75,9 @@ parameter_types! {
 	pub BlockWeights: frame_system::limits::BlockWeights =
 		frame_system::limits::BlockWeights::simple_max(1024);
 }
+
+pub type Balance = u64;
+
 impl frame_system::Config for Test {
 	type BaseCallFilter = TestBaseCallFilter;
 	type BlockWeights = ();
@@ -78,7 +96,7 @@ impl frame_system::Config for Test {
 	type BlockHashCount = BlockHashCount;
 	type Version = ();
 	type PalletInfo = PalletInfo;
-	type AccountData = pallet_balances::AccountData<u64>;
+	type AccountData = pallet_balances::AccountData<Balance>;
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
@@ -88,75 +106,99 @@ impl frame_system::Config for Test {
 }
 
 parameter_types! {
-	pub const ExistentialDeposit: u64 = 0;
+	pub const ExistentialDeposit: Balance = 1;
 	pub const MaxLocks: u32 = 50;
 	pub const MaxReserves: u32 = 50;
 }
-
 impl pallet_balances::Config for Test {
-	type Balance = u64;
+	type MaxLocks = MaxLocks;
 	type MaxReserves = MaxReserves;
 	type ReserveIdentifier = [u8; 8];
+	type Balance = Balance;
 	type DustRemoval = ();
 	type Event = Event;
 	type ExistentialDeposit = ExistentialDeposit;
 	type AccountStore = System;
 	type WeightInfo = ();
-	type MaxLocks = MaxLocks;
 }
 
 parameter_types! {
-	pub const EnclaveFee: u64 = 5;
-	pub const ClusterSize: u32 = 2;
-	pub const MinUriLen: u16 = 1;
-	pub const MaxUriLen: u16 = 5;
+	pub const IPFSLengthLimit: u32 = 5;
 }
 
 impl Config for Test {
 	type Event = Event;
-	type WeightInfo = ();
-	type FeesCollector = ();
+	type WeightInfo = weights::TernoaWeight<Test>;
 	type Currency = Balances;
-	type EnclaveFee = EnclaveFee;
-	type ClusterSize = ClusterSize;
-	type MinUriLen = MinUriLen;
-	type MaxUriLen = MaxUriLen;
+	type FeesCollector = MockFeeCollector;
+	type IPFSLengthLimit = IPFSLengthLimit;
 }
 
-// Do not use the `0` account id since this would be the default value
-// for our account id. This would mess with some tests.
-pub const ALICE: u64 = 1;
-pub const BOB: u64 = 2;
-pub const DAVE: u64 = 3;
+pub struct MockFeeCollector;
+impl frame_support::traits::OnUnbalanced<NegativeImbalanceOf<Test>> for MockFeeCollector {
+	fn on_nonzero_unbalanced(amount: NegativeImbalanceOf<Test>) {
+		Balances::resolve_creating(&COLLECTOR, amount);
+	}
+}
 
 pub struct ExtBuilder {
-	endowed_accounts: Vec<(u64, u64)>,
+	balances: Vec<(u64, Balance)>,
 }
 
 impl Default for ExtBuilder {
 	fn default() -> Self {
-		ExtBuilder { endowed_accounts: Vec::new() }
+		Self { balances: Vec::new() }
 	}
 }
 
 impl ExtBuilder {
-	pub fn tokens(mut self, accounts: Vec<(u64, u64)>) -> Self {
+	pub fn caps(mut self, accounts: Vec<(u64, Balance)>) -> Self {
 		for account in accounts {
-			self.endowed_accounts.push(account);
+			self.balances.push(account);
 		}
 		self
+	}
+
+	pub fn new(balances: Vec<(u64, Balance)>) -> Self {
+		Self { balances }
+	}
+
+	pub fn new_build(balances: Vec<(u64, Balance)>) -> sp_io::TestExternalities {
+		Self::new(balances).build()
 	}
 
 	pub fn build(self) -> sp_io::TestExternalities {
 		let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
-		pallet_balances::GenesisConfig::<Test> { balances: self.endowed_accounts }
+		pallet_balances::GenesisConfig::<Test> { balances: self.balances }
 			.assimilate_storage(&mut t)
 			.unwrap();
+
+		Self::build_nfts(&mut t);
 
 		let mut ext = sp_io::TestExternalities::new(t);
 		ext.execute_with(|| System::set_block_number(1));
 		ext
+	}
+
+	fn build_nfts(t: &mut sp_runtime::Storage) {
+		let alice_nft: NFTData<_, IPFSLengthLimit> =
+			NFTData::new_default(ALICE, bounded_vec![100], vec![ALICE_SERIES_ID]);
+		let bob_nft: NFTData<_, IPFSLengthLimit> =
+			NFTData::new_default(BOB, bounded_vec![101], vec![BOB_SERIES_ID]);
+
+		let alice_series = NFTSeriesDetails::new(ALICE, true);
+		let bob_series = NFTSeriesDetails::new(BOB, true);
+
+		let nfts = vec![alice_nft.to_raw(ALICE_NFT_ID), bob_nft.to_raw(BOB_NFT_ID)];
+		let series = vec![
+			alice_series.to_raw(vec![ALICE_SERIES_ID]),
+			bob_series.to_raw(vec![BOB_SERIES_ID]),
+		];
+
+		ternoa_nft::GenesisConfig::<Test> { nfts, series, nft_mint_fee: NFT_MINT_FEE }
+			.assimilate_storage(t)
+			.unwrap();
 	}
 }
 

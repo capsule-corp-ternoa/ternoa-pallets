@@ -15,15 +15,16 @@
 // along with Ternoa.  If not, see <http://www.gnu.org/licenses/>.
 
 use super::{mock, mock::*};
-use crate::{
-	Cluster, ClusterId, ClusterIdGenerator, ClusterIndex, ClusterRegistry, Enclave, EnclaveId,
-	EnclaveIdGenerator, EnclaveIndex, EnclaveRegistry, Error,
-};
 use frame_support::{assert_noop, assert_ok};
 use frame_system::RawOrigin;
 use pallet_balances::Error as BalanceError;
 use primitives::TextFormat;
 use sp_runtime::traits::BadOrigin;
+
+use crate::{
+	Cluster, ClusterId, ClusterIdGenerator, ClusterIndex, ClusterRegistry, Enclave, EnclaveId,
+	EnclaveIdGenerator, EnclaveIndex, EnclaveRegistry, Error,
+};
 
 #[test]
 fn register_enclave() {
