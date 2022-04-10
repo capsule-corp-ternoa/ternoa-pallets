@@ -1,6 +1,6 @@
 use frame_support::{traits::Get, BoundedVec, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
-use primitives::nfts::NFTId;
+use primitives::nfts::{IPFSReference, NFTId};
 use scale_info::TypeInfo;
 use sp_std::fmt::Debug;
 
@@ -15,7 +15,7 @@ where
 	IPFSLengthLimit: Get<u32>,
 {
 	pub owner: AccountId,
-	pub ipfs_reference: BoundedVec<u8, IPFSLengthLimit>,
+	pub ipfs_reference: IPFSReference<IPFSLengthLimit>,
 }
 
 impl<AccountId, IPFSLengthLimit> CapsuleData<AccountId, IPFSLengthLimit>
@@ -25,7 +25,7 @@ where
 {
 	pub fn new(
 		owner: AccountId,
-		ipfs_reference: BoundedVec<u8, IPFSLengthLimit>,
+		ipfs_reference: IPFSReference<IPFSLengthLimit>,
 	) -> CapsuleData<AccountId, IPFSLengthLimit> {
 		Self { owner, ipfs_reference }
 	}

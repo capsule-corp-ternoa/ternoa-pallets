@@ -44,7 +44,7 @@ pub mod pallet {
 	pub type BalanceOf<T> =
 		<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 	pub type IPFSLengthLimitOf<T> = <<T as Config>::NFTTrait as NFTTrait>::IPFSLengthLimit;
-	pub type CapsuleIPFSReference<T> = BoundedVec<u8, IPFSLengthLimitOf<T>>;
+	pub type CapsuleIPFSReference<T> = primitives::nfts::IPFSReference<IPFSLengthLimitOf<T>>;
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {

@@ -1,5 +1,5 @@
 use super::mock::*;
-use crate::{tests::mock, CapsuleData, Error};
+use crate::{tests::mock, CapsuleData, CapsuleIPFSReference, Error};
 use frame_support::{assert_noop, assert_ok, bounded_vec, error::BadOrigin, BoundedVec};
 use frame_system::RawOrigin;
 use pallet_balances::Error as BalanceError;
@@ -10,7 +10,7 @@ fn create_happy() {
 	ExtBuilder::default().caps(vec![(ALICE, 10000)]).build().execute_with(|| {
 		// Initial state
 		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
-		let ipfs_reference: BoundedVec<u8, IPFSLengthLimit> = bounded_vec![60];
+		let ipfs_reference: CapsuleIPFSReference<Test> = bounded_vec![60];
 		let nft_id = 0;
 		let data = CapsuleData::new(ALICE, ipfs_reference.clone());
 		let ledger = bounded_vec![(nft_id, TernoaCapsules::capsule_mint_fee())];
@@ -300,7 +300,7 @@ fn set_ipfs_reference_happy() {
 		let nft_id = help::create_capsule_fast(alice.clone());
 		let data = TernoaCapsules::capsules(nft_id).unwrap();
 		let old_reference = data.ipfs_reference.clone();
-		let new_reference: BoundedVec<u8, IPFSLengthLimit> = bounded_vec![67];
+		let new_reference: CapsuleIPFSReference<Test> = bounded_vec![67];
 		assert_ne!(old_reference, new_reference);
 
 		// Happy path

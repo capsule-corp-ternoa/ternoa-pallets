@@ -190,7 +190,7 @@ mod transfer {
 	#[test]
 	fn cannot_transfer_nfts_listed_for_sale() {
 		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
-			let ok = <NFTs as NFTTrait>::set_listed_for_sale(ALICE_NFT_ID, true);
+			let ok = NFTs::set_listed_for_sale(ALICE_NFT_ID, true);
 			assert_ok!(ok);
 
 			// Try to transfer an nft that is listed for sale
@@ -205,7 +205,7 @@ mod transfer {
 	#[test]
 	fn cannot_transfer_capsules() {
 		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
-			let ok = <NFTs as NFTTrait>::set_converted_to_capsule(ALICE_NFT_ID, true);
+			let ok = NFTs::set_converted_to_capsule(ALICE_NFT_ID, true);
 			assert_ok!(ok);
 
 			// Try to transfer an nft that is converted to capsule
@@ -220,7 +220,7 @@ mod transfer {
 	#[test]
 	fn cannot_transfer_nfts_in_transmission() {
 		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
-			let ok = <NFTs as NFTTrait>::set_in_transmission(ALICE_NFT_ID, true);
+			let ok = NFTs::set_in_transmission(ALICE_NFT_ID, true);
 			assert_ok!(ok);
 
 			// Try to transfer an nft that is in transmission
@@ -292,7 +292,7 @@ mod burn {
 	#[test]
 	fn cannot_burn_nfts_listed_for_sale() {
 		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
-			let ok = <NFTs as NFTTrait>::set_listed_for_sale(ALICE_NFT_ID, true);
+			let ok = NFTs::set_listed_for_sale(ALICE_NFT_ID, true);
 			assert_ok!(ok);
 
 			// Try to burn an nft that is listed for sale
@@ -307,7 +307,7 @@ mod burn {
 	#[test]
 	fn cannot_burn_capsules() {
 		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
-			let ok = <NFTs as NFTTrait>::set_converted_to_capsule(ALICE_NFT_ID, true);
+			let ok = NFTs::set_converted_to_capsule(ALICE_NFT_ID, true);
 			assert_ok!(ok);
 
 			// Try to burn an nft that is converted to capsule

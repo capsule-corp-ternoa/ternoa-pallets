@@ -66,7 +66,7 @@ benchmarks! {
 		let (_, nft_id) = prepare_benchmarks::<T>();
 
 		let alice: T::AccountId = get_account::<T>("ALICE");
-		let capsule_reference: BoundedVec<u8, IPFSLengthLimitOf<T>>  = bounded_vec![51];
+		let capsule_reference: CapsuleIPFSReference<T>  = bounded_vec![51];
 		let capsule = CapsuleData::new(alice.clone(), capsule_reference.clone());
 
 	}: _(RawOrigin::Signed(alice.clone()), nft_id, capsule_reference.clone())
