@@ -1,8 +1,8 @@
 [package]
-name = "ternoa-capsules"
+name = "ternoa-capsule"
 version = "1.0.0"
 edition = "2021"
-license = "Apache 2.0"
+license = "GPL-3.0-or-later WITH Classpath-exception-2.0"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
@@ -25,7 +25,7 @@ scale-info = { version = "2.0.1", default-features = false, features = ["derive"
 # Ternoa
 ternoa-common = { default-features = false, path = "../common" }
 primitives = { package = "ternoa-pallets-primitives", default-features = false, path = "../primitives" }
-ternoa-nfts = { default-features = false, path = "../nfts" }
+ternoa-nft = { default-features = false, path = "../nft" }
 
 # We needs this dependencies to run our tests
 [dev-dependencies]
@@ -44,7 +44,7 @@ std = [
     "sp-std/std",
     "ternoa-common/std",
     "primitives/std",
-    "ternoa-nfts/std",
+    "ternoa-nft/std",
     "scale-info/std",
 ]
 runtime-benchmarks = [

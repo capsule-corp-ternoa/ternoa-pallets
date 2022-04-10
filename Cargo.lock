@@ -2385,7 +2385,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "ternoa-auctions"
+name = "ternoa-auction"
 version = "1.0.0"
 dependencies = [
  "frame-benchmarking",
@@ -2401,12 +2401,12 @@ dependencies = [
  "sp-std",
  "ternoa-common",
  "ternoa-marketplace",
- "ternoa-nfts",
+ "ternoa-nft",
  "ternoa-pallets-primitives",
 ]
 
 [[package]]
-name = "ternoa-capsules"
+name = "ternoa-capsule"
 version = "1.0.0"
 dependencies = [
  "frame-benchmarking",
@@ -2421,7 +2421,7 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "ternoa-common",
- "ternoa-nfts",
+ "ternoa-nft",
  "ternoa-pallets-primitives",
 ]
 
@@ -2463,12 +2463,12 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "ternoa-common",
- "ternoa-nfts",
+ "ternoa-nft",
  "ternoa-pallets-primitives",
 ]
 
 [[package]]
-name = "ternoa-nfts"
+name = "ternoa-nft"
 version = "1.0.0"
 dependencies = [
  "frame-benchmarking",
@@ -2513,7 +2513,7 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "ternoa-common",
- "ternoa-nfts",
+ "ternoa-nft",
  "ternoa-pallets-primitives",
 ]
 
@@ -2552,7 +2552,7 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "ternoa-common",
- "ternoa-nfts",
+ "ternoa-nft",
  "ternoa-pallets-primitives",
 ]
 

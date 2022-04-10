@@ -2,7 +2,7 @@
 name = "ternoa-staking-rewards"
 version = "1.0.0"
 edition = "2021"
-license = "Apache 2.0"
+license = "GPL-3.0-or-later WITH Classpath-exception-2.0"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]

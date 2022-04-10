@@ -2,7 +2,7 @@
 name = "ternoa-marketplace"
 version = "1.0.0"
 edition = "2021"
-license = "Apache 2.0"
+license = "GPL-3.0-or-later WITH Classpath-exception-2.0"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
@@ -28,7 +28,7 @@ primitives = { package = "ternoa-pallets-primitives", default-features = false, 
 
 # We needs this dependencies to run our tests
 [dev-dependencies]
-ternoa-nfts = { default-features = false, path = "../nfts" }
+ternoa-nft = { default-features = false, path = "../nft" }
 pallet-balances = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-03-24" }
 sp-core = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-03-24", default-features = false }
 sp-io = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-03-24", default-features = false }
@@ -44,7 +44,7 @@ std = [
     "sp-std/std",
     "ternoa-common/std",
     "primitives/std",
-    "ternoa-nfts/std",
+    "ternoa-nft/std",
     "scale-info/std",
 ]
 runtime-benchmarks = [
