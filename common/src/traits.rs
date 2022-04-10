@@ -1,15 +1,19 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use frame_support::dispatch::{DispatchErrorWithPostInfo, DispatchResult};
+use frame_support::{
+	dispatch::{DispatchErrorWithPostInfo, DispatchResult},
+	traits::Get,
+	BoundedVec,
+};
 use primitives::{
 	marketplace::{MarketplaceData, MarketplaceId, MarketplaceType},
-	nfts::{NFTData, NFTId, NFTSeriesId},
-	TextFormat,
+	nfts::{IPFSReference, NFTData, NFTId, NFTSeriesId},
 };
-use sp_std::vec::Vec;
+use sp_std::fmt::Debug;
 
 pub trait NFTTrait {
-	type AccountId: Clone;
+	type AccountId: Clone + PartialEq + Debug;
+	type IPFSLengthLimit: Get<u32>;
 
 	/// Change the owner of an NFT.
 	fn set_owner(id: NFTId, owner: &Self::AccountId) -> DispatchResult;
@@ -23,12 +27,12 @@ pub trait NFTTrait {
 	/// Create NFT and return its NFTId
 	fn create_nft(
 		owner: Self::AccountId,
-		ipfs_reference: Vec<u8>,
+		ipfs_reference: IPFSReference<Self::IPFSLengthLimit>,
 		series_id: Option<NFTSeriesId>,
 	) -> Result<NFTId, DispatchErrorWithPostInfo>;
 
 	/// Get NFT data
-	fn get_nft(id: NFTId) -> Option<NFTData<Self::AccountId>>;
+	fn get_nft(id: NFTId) -> Option<NFTData<Self::AccountId, Self::IPFSLengthLimit>>;
 
 	/// Lock series WARNING: Only for benchmark purposes!
 	fn benchmark_lock_series(series_id: NFTSeriesId);
@@ -60,21 +64,40 @@ pub trait NFTTrait {
 
 /// Trait that implements basic functionalities related to Ternoa Marketplace
 /// TODO: Expand trait with more useful functions
-pub trait MarketplaceTrait<AccountId: Clone> {
+pub trait MarketplaceTrait {
+	type AccountId: Clone + PartialEq + Debug;
+	type AccountCountLimit: Get<u32>;
+	type NameLengthLimit: Get<u32>;
+	type URILengthLimit: Get<u32>;
+	type DescriptionLengthLimit: Get<u32>;
+
 	/// Return if an account is permitted to list on given marketplace
-	fn is_allowed_to_list(marketplace_id: MarketplaceId, account_id: AccountId) -> DispatchResult;
+	fn is_allowed_to_list(
+		marketplace_id: MarketplaceId,
+		account_id: Self::AccountId,
+	) -> DispatchResult;
 
 	/// Return marketplace
-	fn get_marketplace(marketplace_id: MarketplaceId) -> Option<MarketplaceData<AccountId>>;
+	fn get_marketplace(
+		marketplace_id: MarketplaceId,
+	) -> Option<
+		MarketplaceData<
+			Self::AccountId,
+			Self::AccountCountLimit,
+			Self::NameLengthLimit,
+			Self::URILengthLimit,
+			Self::DescriptionLengthLimit,
+		>,
+	>;
 
 	/// create a new marketplace
 	fn create(
-		origin: AccountId,
+		origin: Self::AccountId,
 		kind: MarketplaceType,
 		commission_fee: u8,
-		name: TextFormat,
-		uri: Option<TextFormat>,
-		logo_uri: Option<TextFormat>,
-		description: Option<TextFormat>,
+		name: BoundedVec<u8, Self::NameLengthLimit>,
+		uri: BoundedVec<u8, Self::URILengthLimit>,
+		logo_uri: BoundedVec<u8, Self::URILengthLimit>,
+		description: BoundedVec<u8, Self::DescriptionLengthLimit>,
 	) -> Result<MarketplaceId, DispatchErrorWithPostInfo>;
 }

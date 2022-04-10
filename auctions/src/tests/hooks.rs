@@ -4,7 +4,7 @@ use crate::{
 	types::{AuctionData, BidderList, DeadlineList},
 	Auctions as AuctionsStorage, Deadlines,
 };
-use frame_support::assert_ok;
+use frame_support::{assert_ok, bounded_vec};
 use frame_system::RawOrigin;
 
 fn origin(account: u64) -> mock::Origin {
@@ -19,29 +19,31 @@ fn on_initialize() {
 
 		let alice_start_block = 10;
 		let alice_end_block = alice_start_block + MIN_AUCTION_DURATION;
-		let alice_auction = AuctionData {
-			creator: ALICE,
-			start_block: alice_start_block,
-			end_block: alice_end_block,
-			start_price: 300,
-			buy_it_price: Some(400),
-			bidders: BidderList::new(BID_HISTORY_SIZE),
-			marketplace_id: market_id,
-			is_extended: false,
-		};
+		let alice_auction: AuctionData<AccountId, BlockNumber, u128, BidderListLengthLimit> =
+			AuctionData {
+				creator: ALICE,
+				start_block: alice_start_block,
+				end_block: alice_end_block,
+				start_price: 300,
+				buy_it_price: Some(400),
+				bidders: BidderList::new(),
+				marketplace_id: market_id,
+				is_extended: false,
+			};
 
 		let bob_start_block = 10 + 5;
 		let bob_end_block = bob_start_block + MIN_AUCTION_DURATION;
-		let bob_auction = AuctionData {
-			creator: BOB,
-			start_block: bob_start_block,
-			end_block: bob_end_block,
-			start_price: 300,
-			buy_it_price: Some(400),
-			bidders: BidderList::new(BID_HISTORY_SIZE),
-			marketplace_id: market_id,
-			is_extended: false,
-		};
+		let bob_auction: AuctionData<AccountId, BlockNumber, u128, BidderListLengthLimit> =
+			AuctionData {
+				creator: BOB,
+				start_block: bob_start_block,
+				end_block: bob_end_block,
+				start_price: 300,
+				buy_it_price: Some(400),
+				bidders: BidderList::new(),
+				marketplace_id: market_id,
+				is_extended: false,
+			};
 
 		let ok = Auctions::create_auction(
 			origin(ALICE),
@@ -66,8 +68,10 @@ fn on_initialize() {
 		assert_ok!(ok);
 
 		// At block one we should have two auctions and two entries in deadlines
-		let deadlines =
-			DeadlineList(vec![(ALICE_NFT_ID, alice_end_block), (BOB_NFT_ID, bob_end_block)]);
+		let deadlines = DeadlineList(bounded_vec![
+			(ALICE_NFT_ID, alice_end_block),
+			(BOB_NFT_ID, bob_end_block)
+		]);
 
 		assert_eq!(Deadlines::<Test>::get(), deadlines);
 		assert_eq!(AuctionsStorage::<Test>::iter().count(), 2);
@@ -77,7 +81,7 @@ fn on_initialize() {
 		// At block alice_auction.end_block we should have 1 auction and 1 entry in deadlines
 		run_to_block(alice_auction.end_block);
 
-		let deadlines = DeadlineList(vec![(BOB_NFT_ID, bob_end_block)]);
+		let deadlines = DeadlineList(bounded_vec![(BOB_NFT_ID, bob_end_block)]);
 
 		assert_eq!(Deadlines::<Test>::get(), deadlines);
 		assert_eq!(AuctionsStorage::<Test>::iter().count(), 1);
@@ -86,7 +90,7 @@ fn on_initialize() {
 		// At block bob_auction.end_block we should have 0 auctions and 0 entries in deadlines
 		run_to_block(bob_auction.end_block);
 
-		let deadlines = DeadlineList(vec![]);
+		let deadlines = DeadlineList(bounded_vec![]);
 
 		assert_eq!(Deadlines::<Test>::get(), deadlines);
 		assert_eq!(AuctionsStorage::<Test>::iter().count(), 0);

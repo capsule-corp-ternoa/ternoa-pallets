@@ -7,7 +7,7 @@ use crate::{
 	types::{AuctionData, BidderList, DeadlineList},
 	Auctions as AuctionsStorage, Claims, Deadlines, Error, Event as AuctionEvent,
 };
-use frame_support::{assert_noop, assert_ok, error::BadOrigin};
+use frame_support::{assert_noop, assert_ok, bounded_vec, error::BadOrigin};
 use frame_system::RawOrigin;
 use pallet_balances::Error as BalanceError;
 use ternoa_common::traits::{MarketplaceTrait, NFTTrait};
@@ -36,12 +36,12 @@ pub mod create_auction {
 				end_block: start_block + MIN_AUCTION_DURATION,
 				start_price: 300,
 				buy_it_price: Some(400),
-				bidders: BidderList::new(BID_HISTORY_SIZE),
+				bidders: BidderList::new(),
 				marketplace_id: market_id,
 				is_extended: false,
 			};
 
-			let deadline = DeadlineList(vec![(nft_id, auction.end_block)]);
+			let deadline = DeadlineList(bounded_vec![(nft_id, auction.end_block)]);
 
 			let ok = Auctions::create_auction(
 				origin(ALICE),
@@ -526,6 +526,8 @@ pub mod end_auction {
 }
 
 pub mod add_bid {
+	use frame_support::BoundedVec;
+
 	pub use super::*;
 
 	#[test]
@@ -545,7 +547,7 @@ pub mod add_bid {
 			assert_eq!(pallet_new_balance, bid);
 
 			// Storage
-			auction.bidders.list = vec![(BOB, bid)];
+			auction.bidders.list = bounded_vec![(BOB, bid)];
 
 			assert_eq!(Claims::<Test>::iter().count(), 0);
 			assert_eq!(AuctionsStorage::<Test>::get(nft_id), Some(auction));
@@ -574,9 +576,9 @@ pub mod add_bid {
 			let eve_bid = dave_bid + 1;
 			let mut accounts =
 				vec![(BOB, bob_bid), (CHARLIE, charlie_bid), (DAVE, dave_bid), (EVE, eve_bid)];
-			assert_eq!(accounts.len(), (BID_HISTORY_SIZE + 1) as usize);
+			assert_eq!(accounts.len(), (BidderListLengthLimit::get() + 1) as usize);
 
-			for bidder in &accounts {
+			for bidder in accounts.iter() {
 				assert_ok!(Auctions::add_bid(origin(bidder.0), nft_id, bidder.1));
 			}
 
@@ -588,6 +590,8 @@ pub mod add_bid {
 
 			// Storage
 			accounts.remove(0);
+			let accounts: BoundedVec<(AccountId, u128), BidderListLengthLimit> =
+				BoundedVec::try_from(accounts).unwrap();
 			auction.bidders.list = accounts;
 
 			assert_eq!(Claims::<Test>::iter().count(), 1);
@@ -656,7 +660,7 @@ pub mod add_bid {
 			assert_eq!(bob_new_balance, bob_balance - new_bid);
 
 			// Storage
-			auction.bidders.list = vec![(BOB, new_bid)];
+			auction.bidders.list = bounded_vec![(BOB, new_bid)];
 
 			assert_eq!(AuctionsStorage::<Test>::get(nft_id), Some(auction));
 
@@ -770,7 +774,7 @@ pub mod remove_bid {
 			assert_eq!(pallet_new_balance, 0);
 
 			// Storage
-			auction.bidders.list = vec![];
+			auction.bidders.list = bounded_vec![];
 
 			assert_eq!(Claims::<Test>::iter().count(), 0);
 			assert_eq!(AuctionsStorage::<Test>::get(nft_id), Some(auction));

@@ -1,6 +1,5 @@
-use crate::{self as ternoa_marketplace, Config, MarketplaceData};
 use frame_support::{
-	parameter_types,
+	bounded_vec, parameter_types,
 	traits::{ConstU32, Contains, GenesisBuild},
 };
 use primitives::marketplace::{MarketplaceType, MarketplacesGenesis};
@@ -10,12 +9,19 @@ use sp_runtime::{
 	traits::{BlakeTwo256, IdentityLookup},
 };
 
+use crate::{
+	self as ternoa_marketplace, AccountVec, Config, DescriptionVec, MarketplaceData, NameVec,
+	URIVec,
+};
+
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
 pub const ALICE: u64 = 1;
 pub const BOB: u64 = 2;
 pub const DAVE: u64 = 3;
+
+pub type AccountId = u64;
 
 frame_support::construct_runtime!(
 	pub enum Test where
@@ -60,7 +66,7 @@ impl frame_system::Config for Test {
 	type Call = Call;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
-	type AccountId = u64;
+	type AccountId = AccountId;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
 	type Event = Event;
@@ -95,14 +101,11 @@ impl pallet_balances::Config for Test {
 }
 
 parameter_types! {
-	pub const MinUriLen: u16 = 1;
-	pub const MaxUriLen: u16 = 5;
-	pub const MinIpfsLen: u16 = 1;
-	pub const MaxIpfsLen: u16 = 5;
-	pub const MinDescriptionLen: u16 = 1;
-	pub const MaxDescriptionLen: u16 = 500;
-	pub const MinNameLen: u16 = 1;
-	pub const MaxNameLen: u16 = 5;
+	pub const IPFSLengthLimit: u32 = 5;
+	pub const AccountCountLimit: u32 = 5;
+	pub const NameLengthLimit: u32 = 5;
+	pub const URILengthLimit: u32 = 5;
+	pub const DescriptionLengthLimit: u32 = 5;
 }
 
 impl ternoa_nfts::Config for Test {
@@ -110,8 +113,7 @@ impl ternoa_nfts::Config for Test {
 	type WeightInfo = ternoa_nfts::weights::TernoaWeight<Test>;
 	type Currency = Balances;
 	type FeesCollector = ();
-	type MinIpfsLen = MinIpfsLen;
-	type MaxIpfsLen = MaxIpfsLen;
+	type IPFSLengthLimit = IPFSLengthLimit;
 }
 
 impl Config for Test {
@@ -120,12 +122,10 @@ impl Config for Test {
 	type NFTs = NFTs;
 	type WeightInfo = ();
 	type FeesCollector = ();
-	type MinNameLen = MinNameLen;
-	type MaxNameLen = MaxNameLen;
-	type MinUriLen = MinUriLen;
-	type MaxUriLen = MaxUriLen;
-	type MinDescriptionLen = MinDescriptionLen;
-	type MaxDescriptionLen = MaxDescriptionLen;
+	type AccountCountLimit = AccountCountLimit;
+	type NameLengthLimit = NameLengthLimit;
+	type URILengthLimit = URILengthLimit;
+	type DescriptionLengthLimit = DescriptionLengthLimit;
 }
 
 pub struct ExtBuilder {
@@ -169,16 +169,20 @@ impl ExtBuilder {
 		.assimilate_storage(&mut t)
 		.unwrap();
 
+		let empty_list: AccountVec<Test> = bounded_vec![];
+		let name: NameVec<Test> = bounded_vec![50, 50, 50, 50];
+		let uri: URIVec<Test> = bounded_vec![];
+		let description: DescriptionVec<Test> = bounded_vec![];
 		let market = MarketplaceData::new(
 			MarketplaceType::Public,
 			0,
 			ALICE,
-			Default::default(),
-			vec![],
-			"Ternoa marketplace".into(),
-			None,
-			None,
-			None,
+			empty_list.clone(),
+			empty_list.clone(),
+			name,
+			uri.clone(),
+			uri.clone(),
+			description,
 		);
 		let mut marketplaces: Vec<MarketplacesGenesis<u64>> = vec![market.to_raw(0)];
 		marketplaces.extend(self.marketplaces);
@@ -208,18 +212,15 @@ impl ExtBuilder {
 }
 
 pub mod help {
-	use crate::MarketplaceId;
+	use crate::{MarketplaceId, NameVec};
 
 	use super::*;
 	use frame_support::assert_ok;
-	use primitives::{
-		nfts::{NFTId, NFTSeriesId},
-		TextFormat,
-	};
+	use primitives::nfts::{NFTId, NFTSeriesId};
 
 	pub fn create_nft(
 		owner: Origin,
-		ipfs_reference: TextFormat,
+		ipfs_reference: primitives::nfts::IPFSReference<IPFSLengthLimit>,
 		series_id: Option<NFTSeriesId>,
 	) -> NFTId {
 		assert_ok!(NFTs::create(owner, ipfs_reference, series_id));
@@ -228,7 +229,7 @@ pub mod help {
 
 	pub fn create_nft_and_lock_series(
 		owner: Origin,
-		ipfs_reference: TextFormat,
+		ipfs_reference: primitives::nfts::IPFSReference<IPFSLengthLimit>,
 		series_id: NFTSeriesId,
 	) -> NFTId {
 		let nft_id = help::create_nft(owner.clone(), ipfs_reference, Some(series_id.clone()));
@@ -241,7 +242,7 @@ pub mod help {
 		owner: Origin,
 		kind: MarketplaceType,
 		fee: u8,
-		name: TextFormat,
+		name: NameVec<Test>,
 		list: Vec<u64>,
 	) -> MarketplaceId {
 		assert_ok!(Marketplace::create_marketplace(
@@ -249,9 +250,9 @@ pub mod help {
 			kind,
 			fee,
 			name,
-			None,
-			None,
-			None,
+			bounded_vec![],
+			bounded_vec![],
+			bounded_vec![],
 		));
 		let mkp_id = Marketplace::marketplace_id_generator();
 

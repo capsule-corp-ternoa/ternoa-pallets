@@ -1,10 +1,11 @@
 use super::mock::*;
-use crate::{tests::mock, Error, MarketplaceData, SaleData};
-use frame_support::{assert_noop, assert_ok, error::BadOrigin};
+use frame_support::{assert_noop, assert_ok, bounded_vec, error::BadOrigin};
 use frame_system::RawOrigin;
 use pallet_balances::Error as BalanceError;
-use primitives::{marketplace::MarketplaceType, TextFormat};
+use primitives::marketplace::MarketplaceType;
 use ternoa_common::traits::NFTTrait;
+
+use crate::{tests::mock, DescriptionVec, Error, MarketplaceData, NameVec, SaleData, URIVec};
 
 type MPT = MarketplaceType;
 
@@ -21,7 +22,7 @@ fn list_happy() {
 			let price = 50;
 			let series_id = vec![50];
 			let nft_id =
-				<NFTs as NFTTrait>::create_nft(ALICE, vec![50], Some(series_id.clone())).unwrap();
+				NFTs::create_nft(ALICE, bounded_vec![50], Some(series_id.clone())).unwrap();
 			let sale_info = SaleData::new(ALICE, price.clone(), 0);
 
 			help::finish_series(alice.clone(), series_id);
@@ -31,16 +32,17 @@ fn list_happy() {
 
 			// Happy path Private marketplace
 			let series_id = vec![51];
-			let mkp_id = help::create_mkp(bob.clone(), MPT::Private, 0, vec![1], vec![ALICE]);
+			let mkp_id =
+				help::create_mkp(bob.clone(), MPT::Private, 0, bounded_vec![1], vec![ALICE]);
 			let sale_info = SaleData::new(ALICE, price.clone(), mkp_id);
 			let nft_id =
-				<NFTs as NFTTrait>::create_nft(ALICE, vec![50], Some(series_id.clone())).unwrap();
+				NFTs::create_nft(ALICE, bounded_vec![50], Some(series_id.clone())).unwrap();
 
 			help::finish_series(alice.clone(), series_id);
 			let ok = Marketplace::list_nft(alice.clone(), nft_id, price, Some(mkp_id));
 			assert_ok!(ok);
 			assert_eq!(Marketplace::nft_for_sale(nft_id), Some(sale_info));
-			assert_eq!(<NFTs as NFTTrait>::is_listed_for_sale(nft_id), Some(true));
+			assert_eq!(NFTs::is_listed_for_sale(nft_id), Some(true));
 		})
 }
 
@@ -59,40 +61,41 @@ fn list_unhappy() {
 			assert_noop!(ok, Error::<Test>::NFTNotFound);
 
 			// Unhappy not the NFT owner
-			let nft_id = <NFTs as NFTTrait>::create_nft(BOB, vec![50], None).unwrap();
+			let nft_id = NFTs::create_nft(BOB, bounded_vec![50], None).unwrap();
 			let ok = Marketplace::list_nft(alice.clone(), nft_id, price, Some(0));
 			assert_noop!(ok, Error::<Test>::NotTheNFTOwner);
 
 			// Unhappy series not completed
 			let series_id = vec![50];
 			let nft_id =
-				<NFTs as NFTTrait>::create_nft(ALICE, vec![50], Some(series_id.clone())).unwrap();
+				NFTs::create_nft(ALICE, bounded_vec![50], Some(series_id.clone())).unwrap();
 			let ok = Marketplace::list_nft(alice.clone(), nft_id, price, Some(0));
 			assert_noop!(ok, Error::<Test>::CannotListNFTsInUncompletedSeries);
 
 			// Unhappy nft is capsulized
 			help::finish_series(alice.clone(), series_id);
-			<NFTs as NFTTrait>::set_converted_to_capsule(nft_id, true).unwrap();
+			NFTs::set_converted_to_capsule(nft_id, true).unwrap();
 			let ok = Marketplace::list_nft(alice.clone(), nft_id, price, Some(0));
 			assert_noop!(ok, Error::<Test>::CannotListCapsules);
-			<NFTs as NFTTrait>::set_converted_to_capsule(nft_id, false).unwrap();
+			NFTs::set_converted_to_capsule(nft_id, false).unwrap();
 
 			// Unhappy unknown marketplace
 			let ok = Marketplace::list_nft(alice.clone(), nft_id, price, Some(10001));
 			assert_noop!(ok, Error::<Test>::MarketplaceNotFound);
 
 			// Unhappy not on the private list
-			let mkp_id = help::create_mkp(bob.clone(), MPT::Private, 0, vec![1], vec![]);
+			let mkp_id = help::create_mkp(bob.clone(), MPT::Private, 0, bounded_vec![1], vec![]);
 			let ok = Marketplace::list_nft(alice.clone(), nft_id, price, Some(mkp_id));
 			assert_noop!(ok, Error::<Test>::AccountNotAllowedToList);
 
 			// Unhappy on the disallow list
-			let mkp_id = help::create_mkp(bob.clone(), MPT::Public, 0, vec![1], vec![ALICE]);
+			let mkp_id =
+				help::create_mkp(bob.clone(), MPT::Public, 0, bounded_vec![1], vec![ALICE]);
 			let ok = Marketplace::list_nft(alice.clone(), nft_id, price, Some(mkp_id));
 			assert_noop!(ok, Error::<Test>::AccountNotAllowedToList);
 
 			// Unhappy already listed for sale
-			<NFTs as NFTTrait>::set_listed_for_sale(nft_id, true).unwrap();
+			NFTs::set_listed_for_sale(nft_id, true).unwrap();
 			let ok = Marketplace::list_nft(alice.clone(), nft_id, price, None);
 			assert_noop!(ok, Error::<Test>::CannotListNFTsThatAreAlreadyListed);
 		})
@@ -105,15 +108,14 @@ fn unlist_happy() {
 
 		let price = 50;
 		let series_id = vec![50];
-		let nft_id =
-			<NFTs as NFTTrait>::create_nft(ALICE, vec![50], Some(series_id.clone())).unwrap();
+		let nft_id = NFTs::create_nft(ALICE, bounded_vec![50], Some(series_id.clone())).unwrap();
 
 		// Happy path
 		help::finish_series(alice.clone(), series_id);
 		assert_ok!(Marketplace::list_nft(alice.clone(), nft_id, price, Some(0)));
 		assert_ok!(Marketplace::unlist_nft(alice.clone(), nft_id));
 		assert_eq!(Marketplace::nft_for_sale(nft_id), None);
-		assert_eq!(<NFTs as NFTTrait>::is_listed_for_sale(nft_id), Some(false));
+		assert_eq!(NFTs::is_listed_for_sale(nft_id), Some(false));
 	})
 }
 
@@ -127,7 +129,7 @@ fn unlist_unhappy() {
 		assert_noop!(ok, Error::<Test>::NotTheNFTOwner);
 
 		// Unhappy not listed NFT
-		let nft_id = <NFTs as NFTTrait>::create_nft(ALICE, vec![50], None).unwrap();
+		let nft_id = NFTs::create_nft(ALICE, bounded_vec![50], None).unwrap();
 		let ok = Marketplace::unlist_nft(alice.clone(), nft_id);
 		assert_noop!(ok, Error::<Test>::NFTNotForSale);
 	})
@@ -143,9 +145,12 @@ fn buy_happy() {
 			let bob: mock::Origin = RawOrigin::Signed(BOB).into();
 			let dave: mock::Origin = RawOrigin::Signed(DAVE).into();
 
-			let nft_id_1 = help::create_nft_and_lock_series(alice.clone(), vec![50], vec![50]);
-			let nft_id_2 = help::create_nft_and_lock_series(alice.clone(), vec![50], vec![51]);
-			let mkt_id = help::create_mkp(dave.clone(), MPT::Private, 10, vec![0], vec![ALICE]);
+			let nft_id_1 =
+				help::create_nft_and_lock_series(alice.clone(), bounded_vec![50], vec![50]);
+			let nft_id_2 =
+				help::create_nft_and_lock_series(alice.clone(), bounded_vec![50], vec![51]);
+			let mkt_id =
+				help::create_mkp(dave.clone(), MPT::Private, 10, bounded_vec![0], vec![ALICE]);
 
 			let price = 50;
 			assert_ok!(Marketplace::list_nft(alice.clone(), nft_id_1, price, None));
@@ -158,8 +163,8 @@ fn buy_happy() {
 			let alice_before = Balances::free_balance(ALICE);
 
 			assert_ok!(Marketplace::buy_nft(bob.clone(), nft_id_1));
-			assert_eq!(<NFTs as NFTTrait>::is_listed_for_sale(nft_id_1), Some(false));
-			assert_eq!(<NFTs as NFTTrait>::owner(nft_id_1), Some(BOB));
+			assert_eq!(NFTs::is_listed_for_sale(nft_id_1), Some(false));
+			assert_eq!(NFTs::owner(nft_id_1), Some(BOB));
 			assert_eq!(Marketplace::nft_for_sale(nft_id_1), None);
 
 			assert_eq!(Balances::free_balance(BOB), bob_before - 50);
@@ -171,8 +176,8 @@ fn buy_happy() {
 			let dave_before = Balances::free_balance(DAVE);
 
 			assert_ok!(Marketplace::buy_nft(bob.clone(), nft_id_2));
-			assert_eq!(<NFTs as NFTTrait>::is_listed_for_sale(nft_id_2), Some(false));
-			assert_eq!(<NFTs as NFTTrait>::owner(nft_id_2), Some(BOB));
+			assert_eq!(NFTs::is_listed_for_sale(nft_id_2), Some(false));
+			assert_eq!(NFTs::owner(nft_id_2), Some(BOB));
 			assert_eq!(Marketplace::nft_for_sale(nft_id_2), None);
 
 			assert_eq!(Balances::free_balance(BOB), bob_before - 50);
@@ -191,7 +196,8 @@ fn buy_unhappy() {
 			let bob: mock::Origin = RawOrigin::Signed(BOB).into();
 
 			let price = 5000;
-			let nft_id = help::create_nft_and_lock_series(alice.clone(), vec![50], vec![50]);
+			let nft_id =
+				help::create_nft_and_lock_series(alice.clone(), bounded_vec![50], vec![50]);
 			assert_ok!(Marketplace::list_nft(alice.clone(), nft_id, price, None));
 
 			// Unhappy nft not on sale
@@ -213,20 +219,21 @@ fn create_happy() {
 		assert_eq!(Marketplace::marketplaces(1), None);
 		let balance = Balances::free_balance(ALICE);
 		let fee = 25;
-		let name = vec![50];
+		let name: NameVec<Test> = bounded_vec![50];
 		let kind = MPT::Public;
-		let uri = Some(vec![65]);
-		let logo_uri = Some(vec![66]);
+		let uri: URIVec<Test> = bounded_vec![65];
+		let logo_uri: URIVec<Test> = bounded_vec![66];
+		let description: DescriptionVec<Test> = bounded_vec![];
 		let info = MarketplaceData::new(
 			kind,
 			fee,
 			ALICE,
-			vec![],
-			vec![],
+			bounded_vec![],
+			bounded_vec![],
 			name.clone(),
 			uri.clone(),
 			logo_uri.clone(),
-			None,
+			description.clone(),
 		);
 
 		// Happy path
@@ -235,9 +242,9 @@ fn create_happy() {
 			kind,
 			fee,
 			name,
-			uri.clone(),
-			logo_uri.clone(),
-			None,
+			uri,
+			logo_uri,
+			description,
 		));
 		assert_eq!(Marketplace::marketplace_id_generator(), 1);
 		assert_eq!(Marketplace::marketplaces(1), Some(info));
@@ -249,105 +256,31 @@ fn create_happy() {
 fn create_unhappy() {
 	ExtBuilder::default().caps(vec![(ALICE, 5)]).build().execute_with(|| {
 		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
-		let normal_uri: Option<TextFormat> = Some(vec![66]);
-		let too_short_uri: Option<TextFormat> = Some(vec![]);
-		let too_long_uri: Option<TextFormat> = Some([0; 1001].to_vec());
+		let normal_uri: URIVec<Test> = bounded_vec![66];
 
 		// Unhappy invalid commission fee
 		let ok = Marketplace::create_marketplace(
 			alice.clone(),
 			MPT::Public,
 			101,
-			vec![50],
+			bounded_vec![50],
 			normal_uri.clone(),
 			normal_uri.clone(),
-			None,
+			bounded_vec![],
 		);
 		assert_noop!(ok, Error::<Test>::InvalidCommissionFeeValue);
-
-		// Unhappy too short name
-		let ok = Marketplace::create_marketplace(
-			alice.clone(),
-			MPT::Public,
-			0,
-			vec![],
-			normal_uri.clone(),
-			normal_uri.clone(),
-			None,
-		);
-		assert_noop!(ok, Error::<Test>::TooShortMarketplaceName);
-
-		// Unhappy too long name
-		let ok = Marketplace::create_marketplace(
-			alice.clone(),
-			MPT::Public,
-			0,
-			vec![1, 2, 3, 4, 5, 6],
-			normal_uri.clone(),
-			normal_uri.clone(),
-			None,
-		);
-		assert_noop!(ok, Error::<Test>::TooLongMarketplaceName);
 
 		// Unhappy not enough funds
 		let ok = Marketplace::create_marketplace(
 			alice.clone(),
 			MPT::Public,
 			5,
-			vec![50],
+			bounded_vec![50],
 			normal_uri.clone(),
 			normal_uri.clone(),
-			None,
+			bounded_vec![],
 		);
 		assert_noop!(ok, BalanceError::<Test>::InsufficientBalance);
-
-		// Unhappy too short uri
-		let ok = Marketplace::create_marketplace(
-			alice.clone(),
-			MPT::Public,
-			0,
-			vec![50],
-			too_short_uri.clone(),
-			normal_uri.clone(),
-			None,
-		);
-		assert_noop!(ok, Error::<Test>::TooShortUri);
-
-		// Unhappy too long uri
-		let ok = Marketplace::create_marketplace(
-			alice.clone(),
-			MPT::Public,
-			0,
-			vec![50],
-			too_long_uri.clone(),
-			normal_uri.clone(),
-			None,
-		);
-		assert_noop!(ok, Error::<Test>::TooLongUri);
-
-		// Unhappy too short logo uri
-		let ok = Marketplace::create_marketplace(
-			alice.clone(),
-			MPT::Public,
-			0,
-			vec![50],
-			normal_uri.clone(),
-			too_short_uri,
-			None,
-		);
-		assert_noop!(ok, Error::<Test>::TooShortLogoUri);
-
-		// Unhappy too long logo uri
-		let ok = Marketplace::create_marketplace(
-			alice.clone(),
-			MPT::Public,
-			0,
-			vec![50],
-			normal_uri,
-			too_long_uri,
-			None,
-		);
-		assert_noop!(ok, Error::<Test>::TooLongLogoUri);
 	})
 }
 
@@ -358,7 +291,8 @@ fn add_account_to_allow_list_happy() {
 
 		// Happy path
 		let list = vec![];
-		let mkp_1 = help::create_mkp(alice.clone(), MPT::Private, 0, vec![50], list.clone());
+		let mkp_1 =
+			help::create_mkp(alice.clone(), MPT::Private, 0, bounded_vec![50], list.clone());
 		assert_eq!(Marketplace::marketplaces(mkp_1).unwrap().allow_list, list);
 
 		let ok = Marketplace::add_account_to_allow_list(alice.clone(), mkp_1, BOB);
@@ -385,7 +319,7 @@ fn add_account_to_allow_list_unhappy() {
 			assert_noop!(ok, Error::<Test>::NotMarketplaceOwner);
 
 			// Unhappy unsupported marketplace type
-			let mkp_id = help::create_mkp(bob.clone(), MPT::Public, 0, vec![50], vec![]);
+			let mkp_id = help::create_mkp(bob.clone(), MPT::Public, 0, bounded_vec![50], vec![]);
 			let ok = Marketplace::add_account_to_allow_list(bob.clone(), mkp_id, DAVE);
 			assert_noop!(ok, Error::<Test>::UnsupportedMarketplace);
 		})
@@ -398,7 +332,8 @@ fn remove_account_from_allow_list_happy() {
 
 		// Happy path
 		let list = vec![BOB];
-		let mkp_id = help::create_mkp(alice.clone(), MPT::Private, 0, vec![50], list.clone());
+		let mkp_id =
+			help::create_mkp(alice.clone(), MPT::Private, 0, bounded_vec![50], list.clone());
 		assert_eq!(Marketplace::marketplaces(mkp_id).unwrap().allow_list, list);
 
 		let ok = Marketplace::remove_account_from_allow_list(alice.clone(), mkp_id, BOB);
@@ -425,7 +360,7 @@ fn remove_account_from_allow_list_unhappy() {
 			assert_noop!(ok, Error::<Test>::NotMarketplaceOwner);
 
 			// Unhappy unsupported marketplace type
-			let mkp_id = help::create_mkp(bob.clone(), MPT::Public, 0, vec![50], vec![]);
+			let mkp_id = help::create_mkp(bob.clone(), MPT::Public, 0, bounded_vec![50], vec![]);
 			let ok = Marketplace::remove_account_from_allow_list(bob.clone(), mkp_id, DAVE);
 			assert_noop!(ok, Error::<Test>::UnsupportedMarketplace);
 		})
@@ -440,7 +375,7 @@ fn set_owner_happy() {
 			let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
 
 			// Happy path
-			let mkp_id = help::create_mkp(alice.clone(), MPT::Private, 0, vec![50], vec![]);
+			let mkp_id = help::create_mkp(alice.clone(), MPT::Private, 0, bounded_vec![50], vec![]);
 			assert_ok!(Marketplace::set_marketplace_owner(alice.clone(), mkp_id, BOB));
 			assert_eq!(Marketplace::marketplaces(mkp_id).unwrap().owner, BOB);
 		})
@@ -470,7 +405,7 @@ fn set_market_type_happy() {
 			let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
 
 			let kind = MPT::Public;
-			let mkp_id = help::create_mkp(alice.clone(), MPT::Public, 0, vec![50], vec![]);
+			let mkp_id = help::create_mkp(alice.clone(), MPT::Public, 0, bounded_vec![50], vec![]);
 			assert_eq!(Marketplace::marketplaces(mkp_id).unwrap().kind, kind);
 
 			// Happy path Public to Private
@@ -511,11 +446,11 @@ fn set_name_happy() {
 			let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
 
 			// Happy path
-			let name = vec![50];
+			let name: NameVec<Test> = bounded_vec![50];
 			let mkp_id = help::create_mkp(alice.clone(), MPT::Private, 0, name.clone(), vec![]);
 			assert_eq!(Marketplace::marketplaces(mkp_id).unwrap().name, name);
 
-			let name = vec![51];
+			let name: NameVec<Test> = bounded_vec![51];
 			assert_ok!(Marketplace::set_marketplace_name(alice.clone(), mkp_id, name.clone()));
 			assert_eq!(Marketplace::marketplaces(mkp_id).unwrap().name, name);
 		})
@@ -526,20 +461,12 @@ fn set_name_unhappy() {
 	ExtBuilder::default().caps(vec![(BOB, 1000)]).build().execute_with(|| {
 		let bob: mock::Origin = RawOrigin::Signed(BOB).into();
 
-		// Unhappy too short name
-		let ok = Marketplace::set_marketplace_name(bob.clone(), 0, vec![]);
-		assert_noop!(ok, Error::<Test>::TooShortMarketplaceName);
-
-		// Unhappy too long name
-		let ok = Marketplace::set_marketplace_name(bob.clone(), 0, vec![1, 2, 3, 4, 5, 6]);
-		assert_noop!(ok, Error::<Test>::TooLongMarketplaceName);
-
 		// Unhappy unknown marketplace
-		let ok = Marketplace::set_marketplace_name(bob.clone(), 1001, vec![51]);
+		let ok = Marketplace::set_marketplace_name(bob.clone(), 1001, bounded_vec![51]);
 		assert_noop!(ok, Error::<Test>::MarketplaceNotFound);
 
 		// Unhappy not marketplace owner
-		let ok = Marketplace::set_marketplace_name(bob.clone(), 0, vec![51]);
+		let ok = Marketplace::set_marketplace_name(bob.clone(), 0, bounded_vec![51]);
 		assert_noop!(ok, Error::<Test>::NotMarketplaceOwner);
 	})
 }
@@ -575,7 +502,7 @@ fn set_commission_fee_happy() {
 		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
 
 		let fee = 10;
-		let id = help::create_mkp(alice.clone(), MPT::Public, fee, vec![50], vec![]);
+		let id = help::create_mkp(alice.clone(), MPT::Public, fee, bounded_vec![50], vec![]);
 		assert_eq!(Marketplace::marketplaces(id).unwrap().commission_fee, fee);
 
 		// Happy path
@@ -610,21 +537,21 @@ fn update_uri_happy() {
 		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
 
 		let fee = 25;
-		let name = vec![50];
+		let name: NameVec<Test> = bounded_vec![50];
 		let kind = MPT::Public;
-		let uri = Some(vec![66]);
-		let updated_uri = Some(vec![67]);
+		let uri: URIVec<Test> = bounded_vec![66];
+		let updated_uri: URIVec<Test> = bounded_vec![67];
 
 		let updated_info = MarketplaceData::new(
 			kind,
 			fee,
 			ALICE,
-			vec![],
-			vec![],
+			bounded_vec![],
+			bounded_vec![],
 			name.clone(),
 			updated_uri.clone(),
 			uri.clone(),
-			None,
+			bounded_vec![],
 		);
 
 		assert_ok!(Marketplace::create_marketplace(
@@ -634,40 +561,11 @@ fn update_uri_happy() {
 			name.clone(),
 			uri.clone(),
 			uri.clone(),
-			None,
+			bounded_vec![],
 		));
-		assert_ne!(Marketplace::marketplaces(1).unwrap().uri, updated_uri.clone());
-		assert_ok!(Marketplace::set_marketplace_uri(alice.clone(), 1, updated_uri.unwrap()));
+		assert_ne!(Marketplace::marketplaces(1).unwrap().uri, updated_uri);
+		assert_ok!(Marketplace::set_marketplace_uri(alice.clone(), 1, updated_uri));
 		assert_eq!(Marketplace::marketplaces(1), Some(updated_info));
-	})
-}
-
-#[test]
-fn update_uri_unhappy() {
-	ExtBuilder::default().caps(vec![(ALICE, 10000)]).build().execute_with(|| {
-		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
-
-		let fee = 25;
-		let name = vec![50];
-		let kind = MPT::Public;
-		let uri = Some(vec![66]);
-		let raw_too_short_uri: TextFormat = vec![];
-		let raw_too_long_uri: TextFormat = [0; 1001].to_vec();
-
-		assert_ok!(Marketplace::create_marketplace(
-			alice.clone(),
-			kind.clone(),
-			fee,
-			name.clone(),
-			uri.clone(),
-			uri.clone(),
-			None
-		));
-
-		let nok = Marketplace::set_marketplace_uri(alice.clone(), 1, raw_too_short_uri);
-		assert_noop!(nok, Error::<Test>::TooShortUri);
-		let nok = Marketplace::set_marketplace_uri(alice, 1, raw_too_long_uri);
-		assert_noop!(nok, Error::<Test>::TooLongUri);
 	})
 }
 
@@ -677,21 +575,21 @@ fn update_logo_uri_happy() {
 		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
 
 		let fee = 25;
-		let name = vec![50];
+		let name: NameVec<Test> = bounded_vec![50];
 		let kind = MPT::Public;
-		let uri = Some(vec![66]);
-		let updated_uri = Some(vec![67]);
+		let uri: URIVec<Test> = bounded_vec![66];
+		let updated_uri: URIVec<Test> = bounded_vec![67];
 
 		let updated_info = MarketplaceData::new(
 			kind,
 			fee,
 			ALICE,
-			vec![],
-			vec![],
+			bounded_vec![],
+			bounded_vec![],
 			name.clone(),
 			uri.clone(),
 			updated_uri.clone(),
-			None,
+			bounded_vec![],
 		);
 
 		assert_ok!(Marketplace::create_marketplace(
@@ -701,41 +599,12 @@ fn update_logo_uri_happy() {
 			name.clone(),
 			uri.clone(),
 			uri.clone(),
-			None,
+			bounded_vec![],
 		));
 		assert_ne!(Marketplace::marketplaces(1).unwrap().uri, updated_uri.clone());
 
-		assert_ok!(Marketplace::set_marketplace_logo_uri(alice.clone(), 1, updated_uri.unwrap()));
+		assert_ok!(Marketplace::set_marketplace_logo_uri(alice.clone(), 1, updated_uri));
 		assert_eq!(Marketplace::marketplaces(1), Some(updated_info));
-	})
-}
-
-#[test]
-fn update_logo_uri_unhappy() {
-	ExtBuilder::default().caps(vec![(ALICE, 10000)]).build().execute_with(|| {
-		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
-
-		let fee = 25;
-		let name = vec![50];
-		let kind = MPT::Public;
-		let uri = Some(vec![66]);
-		let raw_too_short_uri: TextFormat = vec![];
-		let raw_too_long_uri: TextFormat = [0; 1001].to_vec();
-
-		assert_ok!(Marketplace::create_marketplace(
-			alice.clone(),
-			kind.clone(),
-			fee,
-			name.clone(),
-			uri.clone(),
-			uri.clone(),
-			None
-		));
-
-		let nok = Marketplace::set_marketplace_logo_uri(alice.clone(), 1, raw_too_short_uri);
-		assert_noop!(nok, Error::<Test>::TooShortLogoUri);
-		let nok = Marketplace::set_marketplace_logo_uri(alice, 1, raw_too_long_uri);
-		assert_noop!(nok, Error::<Test>::TooLongLogoUri);
 	})
 }
 
@@ -746,7 +615,7 @@ fn add_account_to_disallow_list_happy() {
 
 		// Happy path
 		let list = vec![];
-		let mkp_1 = help::create_mkp(alice.clone(), MPT::Public, 0, vec![50], list.clone());
+		let mkp_1 = help::create_mkp(alice.clone(), MPT::Public, 0, bounded_vec![50], list.clone());
 		assert_eq!(Marketplace::marketplaces(mkp_1).unwrap().disallow_list, list);
 
 		let ok = Marketplace::add_account_to_disallow_list(alice.clone(), mkp_1, BOB);
@@ -773,7 +642,7 @@ fn add_account_to_disallow_list_unhappy() {
 			assert_noop!(ok, Error::<Test>::NotMarketplaceOwner);
 
 			// Unhappy unsupported marketplace type
-			let mkp_id = help::create_mkp(bob.clone(), MPT::Private, 0, vec![50], vec![]);
+			let mkp_id = help::create_mkp(bob.clone(), MPT::Private, 0, bounded_vec![50], vec![]);
 			let ok = Marketplace::add_account_to_disallow_list(bob.clone(), mkp_id, DAVE);
 			assert_noop!(ok, Error::<Test>::UnsupportedMarketplace);
 		})
@@ -786,7 +655,8 @@ fn remove_account_from_disallow_list_happy() {
 
 		// Happy path
 		let list = vec![BOB];
-		let mkp_id = help::create_mkp(alice.clone(), MPT::Public, 0, vec![50], list.clone());
+		let mkp_id =
+			help::create_mkp(alice.clone(), MPT::Public, 0, bounded_vec![50], list.clone());
 		assert_eq!(Marketplace::marketplaces(mkp_id).unwrap().disallow_list, list);
 
 		let ok = Marketplace::remove_account_from_disallow_list(alice.clone(), mkp_id, BOB);
@@ -813,7 +683,7 @@ fn remove_account_from_disallow_list_unhappy() {
 			assert_noop!(ok, Error::<Test>::NotMarketplaceOwner);
 
 			// Unhappy unsupported marketplace type
-			let mkp_id = help::create_mkp(bob.clone(), MPT::Private, 0, vec![50], vec![]);
+			let mkp_id = help::create_mkp(bob.clone(), MPT::Private, 0, bounded_vec![50], vec![]);
 			let ok = Marketplace::remove_account_from_disallow_list(bob.clone(), mkp_id, DAVE);
 			assert_noop!(ok, Error::<Test>::UnsupportedMarketplace);
 		})
@@ -825,18 +695,18 @@ fn set_description_happy() {
 		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
 
 		let fee = 25;
-		let name = vec![50];
+		let name: NameVec<Test> = bounded_vec![50];
 		let kind = MPT::Public;
-		let uri = Some(vec![66]);
-		let description = Some(vec![66]);
-		let updated_description = Some(vec![67]);
+		let uri: URIVec<Test> = bounded_vec![66];
+		let description: DescriptionVec<Test> = bounded_vec![66];
+		let updated_description: DescriptionVec<Test> = bounded_vec![67];
 
 		let updated_info = MarketplaceData::new(
 			kind,
 			fee,
 			ALICE,
-			vec![],
-			vec![],
+			bounded_vec![],
+			bounded_vec![],
 			name.clone(),
 			uri.clone(),
 			uri.clone(),
@@ -853,41 +723,7 @@ fn set_description_happy() {
 			description.clone(),
 		));
 
-		assert_ok!(Marketplace::set_marketplace_description(
-			alice.clone(),
-			1,
-			updated_description.unwrap()
-		));
+		assert_ok!(Marketplace::set_marketplace_description(alice.clone(), 1, updated_description));
 		assert_eq!(Marketplace::marketplaces(1), Some(updated_info));
-	})
-}
-
-#[test]
-fn set_description_unhappy() {
-	ExtBuilder::default().caps(vec![(ALICE, 10000)]).build().execute_with(|| {
-		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
-
-		let fee = 25;
-		let name = vec![50];
-		let kind = MPT::Public;
-		let uri = Some(vec![66]);
-		let raw_too_short_description: TextFormat = vec![];
-		let raw_too_long_description: TextFormat = [0; 501].to_vec();
-
-		assert_ok!(Marketplace::create_marketplace(
-			alice.clone(),
-			kind.clone(),
-			fee,
-			name.clone(),
-			uri.clone(),
-			uri.clone(),
-			None
-		));
-
-		let nok =
-			Marketplace::set_marketplace_description(alice.clone(), 1, raw_too_short_description);
-		assert_noop!(nok, Error::<Test>::TooShortDescription);
-		let nok = Marketplace::set_marketplace_description(alice, 1, raw_too_long_description);
-		assert_noop!(nok, Error::<Test>::TooLongDescription);
 	})
 }

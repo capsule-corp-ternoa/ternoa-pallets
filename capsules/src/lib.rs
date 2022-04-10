@@ -9,18 +9,14 @@ mod tests;
 mod types;
 mod weights;
 
-use frame_support::dispatch::DispatchResult;
-pub use pallet::*;
-pub use types::*;
-pub use weights::WeightInfo;
-
 use frame_support::{
+	dispatch::DispatchResult,
 	traits::{
 		Currency, ExistenceRequirement,
 		ExistenceRequirement::{AllowDeath, KeepAlive},
 		Get, StorageVersion, WithdrawReasons,
 	},
-	PalletId,
+	BoundedVec, PalletId,
 };
 use primitives::{
 	nfts::{NFTId, NFTSeriesId},
@@ -28,6 +24,10 @@ use primitives::{
 };
 use sp_runtime::traits::AccountIdConversion;
 use sp_std::vec;
+
+pub use pallet::*;
+pub use types::*;
+pub use weights::WeightInfo;
 
 const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
 
@@ -39,41 +39,40 @@ pub mod pallet {
 	use frame_system::pallet_prelude::*;
 	use sp_runtime::traits::CheckedAdd;
 	use sp_std::convert::TryInto;
-	use ternoa_common::{helpers::check_bounds, traits::NFTTrait};
+	use ternoa_common::traits::NFTTrait;
+
+	pub type BalanceOf<T> =
+		<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+	pub type IPFSLengthLimitOf<T> = <<T as Config>::NFTTrait as NFTTrait>::IPFSLengthLimit;
+	pub type CapsuleIPFSReference<T> = primitives::nfts::IPFSReference<IPFSLengthLimitOf<T>>;
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		/// Because this pallet emits events, it depends on the runtime's definition of an event.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
+		/// Weight information for pallet.
 		type WeightInfo: WeightInfo;
 
-		/// Currency used to bill minting fees
+		/// Currency type.
 		type Currency: Currency<Self::AccountId>;
 
-		/// TODO!
+		/// Link to the NFT pallet.
 		type NFTTrait: NFTTrait<AccountId = Self::AccountId>;
-
-		/// Min Ipfs len
-		#[pallet::constant]
-		type MinIpfsLen: Get<u16>;
-
-		/// Max Uri len
-		#[pallet::constant]
-		type MaxIpfsLen: Get<u16>;
 
 		/// The treasury's pallet id, used for deriving its sovereign account ID.
 		#[pallet::constant]
 		type PalletId: Get<PalletId>;
-	}
 
-	pub type BalanceOf<T> =
-		<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+		/// The Maximum amount of capsules that can be active at the same time for a user has been
+		/// reached.
+		#[pallet::constant]
+		type CapsuleCountLimit: Get<u32>;
+	}
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
 	#[pallet::storage_version(STORAGE_VERSION)]
-	#[pallet::without_storage_info]
 	pub struct Pallet<T>(PhantomData<T>);
 
 	#[pallet::hooks]
@@ -97,17 +96,14 @@ pub mod pallet {
 		#[transactional]
 		pub fn create(
 			origin: OriginFor<T>,
-			nft_ipfs_reference: TextFormat,
-			capsule_ipfs_reference: TextFormat,
+			nft_ipfs_reference: BoundedVec<u8, IPFSLengthLimitOf<T>>,
+			capsule_ipfs_reference: CapsuleIPFSReference<T>,
 			series_id: Option<NFTSeriesId>,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			check_bounds(
-				capsule_ipfs_reference.len(),
-				(T::MinIpfsLen::get(), Error::<T>::IPFSReferenceIsTooShort),
-				(T::MaxIpfsLen::get(), Error::<T>::IPFSReferenceIsTooLong),
-			)?;
+			// Check if the user has reached the capsule count limit.
+			ensure!(!Self::has_reached_limit(&who), Error::<T>::MaximumCapsuleCountReached);
 
 			// Reserve funds
 			let amount = CapsuleMintFee::<T>::get();
@@ -115,8 +111,9 @@ pub mod pallet {
 
 			// Create NFT and capsule
 			let nft_id = T::NFTTrait::create_nft(who.clone(), nft_ipfs_reference, series_id)?;
+
+			Self::new_capsule(&who, nft_id, capsule_ipfs_reference.clone(), amount)?;
 			T::NFTTrait::set_converted_to_capsule(nft_id, true)?;
-			Self::new_capsule(&who, nft_id, capsule_ipfs_reference.clone(), amount);
 
 			Self::deposit_event(Event::CapsuleDeposit { balance: amount });
 			let event = Event::CapsuleCreated { owner: who, nft_id, frozen_balance: amount };
@@ -131,15 +128,12 @@ pub mod pallet {
 		pub fn create_from_nft(
 			origin: OriginFor<T>,
 			nft_id: NFTId,
-			ipfs_reference: TextFormat,
+			ipfs_reference: CapsuleIPFSReference<T>,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			check_bounds(
-				ipfs_reference.len(),
-				(T::MinIpfsLen::get(), Error::<T>::IPFSReferenceIsTooShort),
-				(T::MaxIpfsLen::get(), Error::<T>::IPFSReferenceIsTooLong),
-			)?;
+			// Check if the user has reached the capsule count limit.
+			ensure!(!Self::has_reached_limit(&who), Error::<T>::MaximumCapsuleCountReached);
 
 			let nft = T::NFTTrait::get_nft(nft_id).ok_or(Error::<T>::NFTNotFound)?;
 			ensure!(nft.owner == who, Error::<T>::NotTheNFTOwner);
@@ -156,8 +150,8 @@ pub mod pallet {
 			Self::send_funds(&who, &Self::account_id(), amount, KeepAlive)?;
 
 			// Create capsule
+			Self::new_capsule(&who, nft_id, ipfs_reference.clone(), amount)?;
 			T::NFTTrait::set_converted_to_capsule(nft_id, true)?;
-			Self::new_capsule(&who, nft_id, ipfs_reference.clone(), amount);
 
 			Self::deposit_event(Event::CapsuleDeposit { balance: amount });
 			let event = Event::CapsuleCreated { owner: who, nft_id, frozen_balance: amount };
@@ -232,15 +226,9 @@ pub mod pallet {
 		pub fn set_ipfs_reference(
 			origin: OriginFor<T>,
 			nft_id: NFTId,
-			ipfs_reference: TextFormat,
+			ipfs_reference: CapsuleIPFSReference<T>,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
-
-			check_bounds(
-				ipfs_reference.len(),
-				(T::MinIpfsLen::get(), Error::<T>::IPFSReferenceIsTooShort),
-				(T::MaxIpfsLen::get(), Error::<T>::IPFSReferenceIsTooLong),
-			)?;
 
 			Capsules::<T>::try_mutate(nft_id, |x| -> DispatchResult {
 				let data = x.as_mut().ok_or(Error::<T>::NFTNotFound)?;
@@ -276,7 +264,7 @@ pub mod pallet {
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		/// A capsule ipfs reference was updated.
-		CapsuleIpfsReferenceUpdated { nft_id: NFTId, ipfs_reference: TextFormat },
+		CapsuleIpfsReferenceUpdated { nft_id: NFTId, ipfs_reference: CapsuleIPFSReference<T> },
 		/// Additional funds were added to a capsule.
 		CapsuleFundsAdded { nft_id: NFTId, balance: BalanceOf<T> },
 		/// A capsule was convert into an NFT.
@@ -311,6 +299,8 @@ pub mod pallet {
 		NFTNotFound,
 		/// Callers is not the NFT owner.
 		NotTheNFTOwner,
+		/// The Maximum amount of capsule that can be active at the same time for a user has been
+		MaximumCapsuleCountReached,
 	}
 
 	/// Current capsule mint fee.
@@ -321,14 +311,24 @@ pub mod pallet {
 	/// List of NFTs that are capsulized.
 	#[pallet::storage]
 	#[pallet::getter(fn capsules)]
-	pub type Capsules<T: Config> =
-		StorageMap<_, Blake2_128Concat, NFTId, CapsuleData<T::AccountId>, OptionQuery>;
+	pub type Capsules<T: Config> = StorageMap<
+		_,
+		Blake2_128Concat,
+		NFTId,
+		CapsuleData<T::AccountId, IPFSLengthLimitOf<T>>,
+		OptionQuery,
+	>;
 
 	/// List of accounts that hold capsulized NFTs.
 	#[pallet::storage]
 	#[pallet::getter(fn ledgers)]
-	pub type Ledgers<T: Config> =
-		StorageMap<_, Blake2_128Concat, T::AccountId, CapsuleLedger<BalanceOf<T>>, OptionQuery>;
+	pub type Ledgers<T: Config> = StorageMap<
+		_,
+		Blake2_128Concat,
+		T::AccountId,
+		CapsuleLedger<BalanceOf<T>, T::CapsuleCountLimit>,
+		OptionQuery,
+	>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
@@ -352,10 +352,13 @@ pub mod pallet {
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
 			self.capsules.clone().into_iter().for_each(|(nft_id, account, reference)| {
-				Capsules::<T>::insert(nft_id, CapsuleData::new(account, reference));
+				let ipfs_reference =
+					BoundedVec::try_from(reference).expect("It will never happen.");
+				Capsules::<T>::insert(nft_id, CapsuleData::new(account, ipfs_reference));
 			});
 
 			self.ledgers.clone().into_iter().for_each(|(account, data)| {
+				let data = BoundedVec::try_from(data).expect("It will never happen.");
 				Ledgers::<T>::insert(account, data);
 			});
 
@@ -368,19 +371,24 @@ impl<T: Config> Pallet<T> {
 	fn new_capsule(
 		owner: &T::AccountId,
 		nft_id: NFTId,
-		ipfs_reference: TextFormat,
+		ipfs_reference: CapsuleIPFSReference<T>,
 		funds: BalanceOf<T>,
-	) {
+	) -> Result<(), Error<T>> {
 		let data = CapsuleData::new(owner.clone(), ipfs_reference.clone());
 		Capsules::<T>::insert(nft_id, data);
 
-		Ledgers::<T>::mutate(&owner, |x| {
+		Ledgers::<T>::mutate(&owner, |x| -> Result<(), Error<T>> {
 			if let Some(data) = x {
-				data.push((nft_id, funds));
+				data.try_push((nft_id, funds))
+					.map_err(|_| Error::<T>::MaximumCapsuleCountReached)?
 			} else {
-				*x = Some(vec![(nft_id, funds)]);
+				*x = Some(
+					BoundedVec::try_from(vec![(nft_id, funds)])
+						.map_err(|_| Error::<T>::MaximumCapsuleCountReached)?,
+				);
 			}
-		});
+			Ok(())
+		})
 	}
 
 	fn account_id() -> T::AccountId {
@@ -397,5 +405,14 @@ impl<T: Config> Pallet<T> {
 		T::Currency::resolve_creating(receiver, imbalance);
 
 		Ok(())
+	}
+
+	fn has_reached_limit(owner: &T::AccountId) -> bool {
+		let ledger = Ledgers::<T>::try_get(owner);
+		if let Ok(ledger) = ledger {
+			return ledger.is_full()
+		}
+
+		false
 	}
 }

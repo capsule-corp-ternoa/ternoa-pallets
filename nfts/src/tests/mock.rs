@@ -1,6 +1,6 @@
 use crate::{self as ternoa_nfts, weights, Config, NegativeImbalanceOf};
 use frame_support::{
-	parameter_types,
+	bounded_vec, parameter_types,
 	traits::{ConstU32, Contains, Currency, GenesisBuild},
 };
 use primitives::nfts::{NFTData, NFTId, NFTSeriesDetails};
@@ -107,8 +107,7 @@ impl pallet_balances::Config for Test {
 }
 
 parameter_types! {
-	pub const MinIpfsLen: u16 = 1;
-	pub const MaxIpfsLen: u16 = 5;
+	pub const IPFSLengthLimit: u32 = 5;
 }
 
 impl Config for Test {
@@ -116,8 +115,7 @@ impl Config for Test {
 	type WeightInfo = weights::TernoaWeight<Test>;
 	type Currency = Balances;
 	type FeesCollector = MockFeeCollector;
-	type MinIpfsLen = MinIpfsLen;
-	type MaxIpfsLen = MaxIpfsLen;
+	type IPFSLengthLimit = IPFSLengthLimit;
 }
 
 pub struct MockFeeCollector;
@@ -168,8 +166,10 @@ impl ExtBuilder {
 	}
 
 	fn build_nfts(t: &mut sp_runtime::Storage) {
-		let alice_nft = NFTData::new_default(ALICE, vec![100], vec![ALICE_SERIES_ID]);
-		let bob_nft = NFTData::new_default(BOB, vec![101], vec![BOB_SERIES_ID]);
+		let alice_nft: NFTData<_, IPFSLengthLimit> =
+			NFTData::new_default(ALICE, bounded_vec![100], vec![ALICE_SERIES_ID]);
+		let bob_nft: NFTData<_, IPFSLengthLimit> =
+			NFTData::new_default(BOB, bounded_vec![101], vec![BOB_SERIES_ID]);
 
 		let alice_series = NFTSeriesDetails::new(ALICE, true);
 		let bob_series = NFTSeriesDetails::new(BOB, true);

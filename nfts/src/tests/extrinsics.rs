@@ -1,9 +1,10 @@
 use super::mock::*;
-use crate::{tests::mock, Error, Event as NFTsEvent, NFTData, NFTSeriesDetails};
-use frame_support::{assert_noop, assert_ok, error::BadOrigin};
+use frame_support::{assert_noop, assert_ok, bounded_vec, error::BadOrigin};
 use frame_system::RawOrigin;
 use pallet_balances::Error as BalanceError;
 use ternoa_common::traits::NFTTrait;
+
+use crate::{tests::mock, Error, Event as NFTsEvent, IPFSReference, NFTData, NFTSeriesDetails};
 
 fn origin(account: u64) -> mock::Origin {
 	RawOrigin::Signed(account).into()
@@ -20,7 +21,7 @@ mod create {
 	fn create() {
 		ExtBuilder::new_build(vec![(ALICE, 1000)]).execute_with(|| {
 			let alice: mock::Origin = origin(ALICE);
-			let data = NFTData::new_default(ALICE, vec![1], vec![50]);
+			let data = NFTData::new_default(ALICE, bounded_vec![1], vec![50]);
 			let alice_balance = Balances::free_balance(ALICE);
 
 			// Create NFT with new serie id while there is no series already registered
@@ -56,7 +57,7 @@ mod create {
 	fn create_without_series() {
 		ExtBuilder::new_build(vec![(ALICE, 1000)]).execute_with(|| {
 			let owner = ALICE;
-			let ipfs_reference = vec![1];
+			let ipfs_reference: IPFSReference<Test> = bounded_vec![1];
 			let alice_balance = Balances::free_balance(ALICE);
 
 			// Create NFT with new serie id while there is no series already registered
@@ -85,28 +86,10 @@ mod create {
 	}
 
 	#[test]
-	fn ipfs_reference_is_too_short() {
-		ExtBuilder::new_build(vec![(ALICE, 1)]).execute_with(|| {
-			// Should fail and storage should remain empty
-			let ok = NFTs::create(origin(ALICE), vec![], None);
-			assert_noop!(ok, Error::<Test>::IPFSReferenceIsTooShort);
-		})
-	}
-
-	#[test]
-	fn ipfs_reference_is_too_long() {
-		ExtBuilder::new_build(vec![(ALICE, 1)]).execute_with(|| {
-			// Should fail and storage should remain empty
-			let ok = NFTs::create(origin(ALICE), vec![1, 2, 3, 4, 5, 6], None);
-			assert_noop!(ok, Error::<Test>::IPFSReferenceIsTooLong);
-		})
-	}
-
-	#[test]
 	fn insufficient_balance() {
 		ExtBuilder::new_build(vec![(ALICE, 1)]).execute_with(|| {
 			// Should fail and storage should remain empty
-			let ok = NFTs::create(origin(ALICE), vec![1], None);
+			let ok = NFTs::create(origin(ALICE), bounded_vec![1], None);
 			assert_noop!(ok, BalanceError::<Test>::InsufficientBalance);
 		})
 	}
@@ -115,12 +98,12 @@ mod create {
 	fn not_the_series_owner() {
 		ExtBuilder::new_build(vec![(ALICE, 100), (BOB, 100)]).execute_with(|| {
 			let series_id = Some(vec![50]);
-			let ok = NFTs::create(origin(ALICE), vec![50], series_id.clone());
+			let ok = NFTs::create(origin(ALICE), bounded_vec![50], series_id.clone());
 			assert_ok!(ok);
 
 			// Should fail and storage should remain empty
 			assert_noop!(
-				NFTs::create(origin(BOB), vec![1], series_id),
+				NFTs::create(origin(BOB), bounded_vec![1], series_id),
 				Error::<Test>::NotTheSeriesOwner
 			);
 			assert_eq!(Balances::free_balance(BOB), 100);
@@ -133,14 +116,14 @@ mod create {
 			let alice: mock::Origin = origin(ALICE);
 
 			let series_id = Some(vec![51]);
-			let ok = NFTs::create(alice.clone(), vec![50], series_id.clone());
+			let ok = NFTs::create(alice.clone(), bounded_vec![50], series_id.clone());
 			assert_ok!(ok);
 			let ok = NFTs::finish_series(alice.clone(), series_id.clone().unwrap());
 			assert_ok!(ok);
 
 			// Should fail and storage should remain empty
 			assert_noop!(
-				NFTs::create(alice, vec![1], series_id.clone()),
+				NFTs::create(alice, bounded_vec![1], series_id.clone()),
 				Error::<Test>::CannotCreateNFTsWithCompletedSeries
 			);
 		})
@@ -207,7 +190,7 @@ mod transfer {
 	#[test]
 	fn cannot_transfer_nfts_listed_for_sale() {
 		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
-			let ok = <NFTs as NFTTrait>::set_listed_for_sale(ALICE_NFT_ID, true);
+			let ok = NFTs::set_listed_for_sale(ALICE_NFT_ID, true);
 			assert_ok!(ok);
 
 			// Try to transfer an nft that is listed for sale
@@ -222,7 +205,7 @@ mod transfer {
 	#[test]
 	fn cannot_transfer_capsules() {
 		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
-			let ok = <NFTs as NFTTrait>::set_converted_to_capsule(ALICE_NFT_ID, true);
+			let ok = NFTs::set_converted_to_capsule(ALICE_NFT_ID, true);
 			assert_ok!(ok);
 
 			// Try to transfer an nft that is converted to capsule
@@ -237,7 +220,7 @@ mod transfer {
 	#[test]
 	fn cannot_transfer_nfts_in_transmission() {
 		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
-			let ok = <NFTs as NFTTrait>::set_in_transmission(ALICE_NFT_ID, true);
+			let ok = NFTs::set_in_transmission(ALICE_NFT_ID, true);
 			assert_ok!(ok);
 
 			// Try to transfer an nft that is in transmission
@@ -309,7 +292,7 @@ mod burn {
 	#[test]
 	fn cannot_burn_nfts_listed_for_sale() {
 		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
-			let ok = <NFTs as NFTTrait>::set_listed_for_sale(ALICE_NFT_ID, true);
+			let ok = NFTs::set_listed_for_sale(ALICE_NFT_ID, true);
 			assert_ok!(ok);
 
 			// Try to burn an nft that is listed for sale
@@ -324,7 +307,7 @@ mod burn {
 	#[test]
 	fn cannot_burn_capsules() {
 		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
-			let ok = <NFTs as NFTTrait>::set_converted_to_capsule(ALICE_NFT_ID, true);
+			let ok = NFTs::set_converted_to_capsule(ALICE_NFT_ID, true);
 			assert_ok!(ok);
 
 			// Try to burn an nft that is converted to capsule

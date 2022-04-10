@@ -3,7 +3,7 @@
 use super::*;
 use crate::Pallet as TernoaCapsules;
 use frame_benchmarking::{account as benchmark_account, benchmarks, impl_benchmark_test_suite};
-use frame_support::assert_ok;
+use frame_support::{assert_ok, bounded_vec};
 use frame_system::RawOrigin;
 use sp_runtime::traits::Bounded;
 use sp_std::prelude::*;
@@ -22,14 +22,15 @@ pub fn prepare_benchmarks<T: Config>() -> (NFTId, NFTId) {
 	// Create default Capsule
 	assert_ok!(TernoaCapsules::<T>::create(
 		RawOrigin::Signed(alice.clone()).into(),
-		vec![1],
-		vec![2],
+		bounded_vec![1],
+		bounded_vec![2],
 		None,
 	));
 
 	// Create default NFT and series
 	let series_id = vec![SERIES_ID];
-	let nft_id = T::NFTTrait::create_nft(alice.clone(), vec![1], Some(series_id.clone())).unwrap();
+	let nft_id =
+		T::NFTTrait::create_nft(alice.clone(), bounded_vec![1], Some(series_id.clone())).unwrap();
 
 	// Lock series
 	T::NFTTrait::benchmark_lock_series(series_id.clone());
@@ -51,8 +52,8 @@ benchmarks! {
 		let (_, nft_id) = prepare_benchmarks::<T>();
 
 		let alice: T::AccountId = get_account::<T>("ALICE");
-		let nft_reference = vec![50];
-		let capsule_reference = vec![51];
+		let nft_reference = bounded_vec![50];
+		let capsule_reference: CapsuleIPFSReference<T> = bounded_vec![51];
 		let nft_id = nft_id + 1;
 		let capsule = CapsuleData::new(alice.clone(), capsule_reference.clone());
 
@@ -65,7 +66,7 @@ benchmarks! {
 		let (_, nft_id) = prepare_benchmarks::<T>();
 
 		let alice: T::AccountId = get_account::<T>("ALICE");
-		let capsule_reference = vec![51];
+		let capsule_reference: CapsuleIPFSReference<T>  = bounded_vec![51];
 		let capsule = CapsuleData::new(alice.clone(), capsule_reference.clone());
 
 	}: _(RawOrigin::Signed(alice.clone()), nft_id, capsule_reference.clone())
@@ -96,7 +97,7 @@ benchmarks! {
 
 	set_ipfs_reference {
 		let (nft_id, ..) = prepare_benchmarks::<T>();
-		let new_reference = vec![101];
+		let new_reference: CapsuleIPFSReference<T>  = bounded_vec![101];
 
 	}: _(get_origin::<T>("ALICE"), nft_id, new_reference.clone())
 	verify {

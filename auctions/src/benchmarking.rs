@@ -4,7 +4,7 @@ use super::*;
 use crate::{Auctions as AuctionsStorage, Claims, Pallet as TernoaAuctions};
 use frame_benchmarking::{account as benchmark_account, benchmarks, impl_benchmark_test_suite};
 use frame_support::{
-	assert_ok,
+	assert_ok, bounded_vec,
 	traits::{Currency, OnFinalize, OnInitialize},
 };
 use frame_system::{pallet_prelude::OriginFor, Pallet as System, RawOrigin};
@@ -46,16 +46,16 @@ pub fn prepare_benchmarks<T: Config>(state: Option<AuctionState>) -> BenchmarkDa
 		alice.clone(),
 		MarketplaceType::Public,
 		10,
-		vec![1],
-		None,
-		None,
-		None,
+		bounded_vec![1],
+		bounded_vec![],
+		bounded_vec![],
+		bounded_vec![],
 	)
 	.unwrap();
 
 	// Create NFTs
-	let alice_nft_id = T::NFTHandler::create_nft(alice.clone(), vec![10], None).unwrap();
-	let bob_nft_id = T::NFTHandler::create_nft(bob.clone(), vec![10], None).unwrap();
+	let alice_nft_id = T::NFTHandler::create_nft(alice.clone(), bounded_vec![10], None).unwrap();
+	let bob_nft_id = T::NFTHandler::create_nft(bob.clone(), bounded_vec![10], None).unwrap();
 
 	let alice_series = T::NFTHandler::get_nft(alice_nft_id).unwrap().series_id;
 	let bob_series = T::NFTHandler::get_nft(bob_nft_id).unwrap().series_id;

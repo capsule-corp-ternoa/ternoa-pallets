@@ -13,6 +13,8 @@ use sp_runtime::{
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
+type AccountId = u64;
+
 frame_support::construct_runtime!(
 	pub enum Test where
 		Block = Block,
@@ -56,7 +58,7 @@ impl frame_system::Config for Test {
 	type Call = Call;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
-	type AccountId = u64;
+	type AccountId = AccountId;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
 	type Event = Event;
@@ -91,8 +93,8 @@ impl pallet_balances::Config for Test {
 }
 
 parameter_types! {
-	pub const MinIpfsLen: u16 = 1;
-	pub const MaxIpfsLen: u16 = 5;
+	pub const IPFSLengthLimit: u32 = 5;
+	pub const CapsuleCountLimit: u32 = 2;
 	pub const CapsulePalletId: PalletId = PalletId(*b"mockcaps");
 }
 
@@ -101,8 +103,7 @@ impl ternoa_nfts::Config for Test {
 	type WeightInfo = ternoa_nfts::weights::TernoaWeight<Test>;
 	type Currency = Balances;
 	type FeesCollector = ();
-	type MinIpfsLen = MinIpfsLen;
-	type MaxIpfsLen = MaxIpfsLen;
+	type IPFSLengthLimit = IPFSLengthLimit;
 }
 
 impl Config for Test {
@@ -111,8 +112,7 @@ impl Config for Test {
 	type Currency = Balances;
 	type NFTTrait = TernoaNFTs;
 	type PalletId = CapsulePalletId;
-	type MinIpfsLen = MinIpfsLen;
-	type MaxIpfsLen = MaxIpfsLen;
+	type CapsuleCountLimit = CapsuleCountLimit;
 }
 
 // Do not use the `0` account id since this would be the default value
@@ -165,25 +165,22 @@ impl ExtBuilder {
 
 pub mod help {
 	use super::*;
-	use frame_support::assert_ok;
-	use primitives::{
-		nfts::{NFTId, NFTSeriesId},
-		TextFormat,
-	};
+	use frame_support::{assert_ok, bounded_vec, BoundedVec};
+	use primitives::nfts::{NFTId, NFTSeriesId};
 
 	pub fn create_capsule_fast(owner: Origin) -> NFTId {
-		let nft_id = create_nft(owner.clone(), vec![50], None);
-		assert_ok!(TernoaCapsules::create_from_nft(owner, nft_id, vec![60]));
+		let nft_id = create_nft(owner.clone(), bounded_vec![50], None);
+		assert_ok!(TernoaCapsules::create_from_nft(owner, nft_id, bounded_vec![60]));
 		nft_id
 	}
 
 	pub fn create_nft_fast(owner: Origin) -> NFTId {
-		create_nft(owner, vec![50], None)
+		create_nft(owner, bounded_vec![50], None)
 	}
 
 	pub fn create_nft(
 		owner: Origin,
-		ipfs_reference: TextFormat,
+		ipfs_reference: BoundedVec<u8, IPFSLengthLimit>,
 		series_id: Option<NFTSeriesId>,
 	) -> NFTId {
 		assert_ok!(TernoaNFTs::create(owner, ipfs_reference, series_id));

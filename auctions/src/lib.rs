@@ -45,20 +45,23 @@ pub mod pallet {
 		/// Because this pallet emits events, it depends on the runtime's definition of an event.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
-		/// Caps Currency
+		/// Weight information for pallet.
+		type WeightInfo: WeightInfo;
+
+		/// Currency type.
 		type Currency: Currency<Self::AccountId>;
 
-		/// Get information on nfts
+		/// Link to the NFT pallet.
 		type NFTHandler: NFTTrait<AccountId = Self::AccountId>;
 
-		/// Get information on marketplace
-		type MarketplaceHandler: MarketplaceTrait<Self::AccountId>;
+		/// Link to the Marketplace pallet.
+		type MarketplaceHandler: MarketplaceTrait<AccountId = Self::AccountId>;
 
-		/// Minimum required length of auction
+		/// Minimum required length of auction.
 		#[pallet::constant]
 		type MinAuctionDuration: Get<Self::BlockNumber>;
 
-		/// Maximum permitted length of auction
+		/// Maximum permitted length of auction.
 		#[pallet::constant]
 		type MaxAuctionDuration: Get<Self::BlockNumber>;
 
@@ -66,26 +69,30 @@ pub mod pallet {
 		#[pallet::constant]
 		type MaxAuctionDelay: Get<Self::BlockNumber>;
 
-		/// Grace period to extend auction by if new bid received
+		/// Grace period to extend auction by if new bid received.
 		#[pallet::constant]
 		type AuctionGracePeriod: Get<Self::BlockNumber>;
 
-		/// Ending period during which an auction can be extended
+		/// Ending period during which an auction can be extended.
 		#[pallet::constant]
 		type AuctionEndingPeriod: Get<Self::BlockNumber>;
 
-		/// The auctions pallet id - will be used to generate account id
+		/// The auctions pallet id - will be used to generate account id.
 		#[pallet::constant]
 		type PalletId: Get<PalletId>;
 
-		// weight information for pallet
-		type WeightInfo: WeightInfo;
+		/// Total amount of accounts that can be in the bidder list.
+		#[pallet::constant]
+		type BidderListLengthLimit: Get<u32>;
+
+		/// Maximum amount of auctions that can be active at the same time.
+		#[pallet::constant]
+		type ParallelAuctionLimit: Get<u32>;
 	}
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
 	#[pallet::storage_version(STORAGE_VERSION)]
-	#[pallet::without_storage_info]
 	pub struct Pallet<T>(_);
 
 	#[pallet::hooks]
@@ -176,8 +183,8 @@ pub mod pallet {
 			T::MarketplaceHandler::is_allowed_to_list(marketplace_id, creator.clone())?;
 			T::NFTHandler::set_listed_for_sale(nft_id, true)?;
 
-			let bid_history_size = Pallet::<T>::bid_history_size();
-			let bidders: BidderList<T::AccountId, BalanceOf<T>> = BidderList::new(bid_history_size);
+			let bidders: BidderList<T::AccountId, BalanceOf<T>, T::BidderListLengthLimit> =
+				BidderList::new();
 			let auction_data = AuctionData {
 				creator: creator.clone(),
 				start_block,
@@ -190,8 +197,12 @@ pub mod pallet {
 			};
 
 			// Add auction to storage and insert an entry to deadlines
+			Deadlines::<T>::mutate(|x| -> DispatchResult {
+				x.insert(nft_id, end_block)
+					.map_err(|_| Error::<T>::MaximumAuctionsLimitReached)?;
+				Ok(())
+			})?;
 			Auctions::<T>::insert(nft_id, auction_data);
-			Deadlines::<T>::mutate(|x| x.insert(nft_id, end_block));
 
 			// Emit AuctionCreated event
 			let event = Event::AuctionCreated {
@@ -514,6 +525,8 @@ pub mod pallet {
 		NotTheAuctionCreator,
 		/// Unknown Marketplace found. This should never happen.
 		MarketplaceNotFound,
+		/// The Maximum amount of auctions that can be active at the same time has been reached.
+		MaximumAuctionsLimitReached,
 	}
 
 	#[pallet::storage]
@@ -522,33 +535,29 @@ pub mod pallet {
 		_,
 		Blake2_128Concat,
 		NFTId,
-		AuctionData<T::AccountId, T::BlockNumber, BalanceOf<T>>,
+		AuctionData<T::AccountId, T::BlockNumber, BalanceOf<T>, T::BidderListLengthLimit>,
 		OptionQuery,
 	>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn deadlines)]
-	pub type Deadlines<T: Config> = StorageValue<_, DeadlineList<T::BlockNumber>, ValueQuery>;
+	pub type Deadlines<T: Config> =
+		StorageValue<_, DeadlineList<T::BlockNumber, T::ParallelAuctionLimit>, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn claims)]
 	pub type Claims<T: Config> =
 		StorageMap<_, Blake2_128Concat, T::AccountId, BalanceOf<T>, OptionQuery>;
 
-	#[pallet::storage]
-	#[pallet::getter(fn bid_history_size)]
-	pub type BidHistorySize<T: Config> = StorageValue<_, u16, ValueQuery>;
-
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
 		pub auctions: Vec<AuctionsGenesis<T::AccountId, T::BlockNumber, BalanceOf<T>>>,
-		pub bid_history_size: u16,
 	}
 
 	#[cfg(feature = "std")]
 	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self {
-			Self { auctions: Default::default(), bid_history_size: Default::default() }
+			Self { auctions: Default::default() }
 		}
 	}
 
@@ -557,9 +566,13 @@ pub mod pallet {
 		fn build(&self) {
 			for auction in self.auctions.clone() {
 				let nft_id = auction.0;
-				Deadlines::<T>::mutate(|x| x.insert(nft_id, auction.3));
+				Deadlines::<T>::mutate(|x| {
+					x.insert(nft_id, auction.3)
+						.map_err(|_| Error::<T>::MaximumAuctionsLimitReached)
+						.expect("It will never happen.");
+				});
 
-				let bidders = BidderList { list: auction.6 .0, max_size: auction.6 .1 };
+				let bidders = BidderList::from_raw(auction.6);
 				let data = AuctionData {
 					creator: auction.1,
 					start_block: auction.2,
@@ -572,7 +585,6 @@ pub mod pallet {
 				};
 				Auctions::<T>::insert(nft_id, data);
 			}
-			BidHistorySize::<T>::set(self.bid_history_size);
 		}
 	}
 }
@@ -586,7 +598,7 @@ impl<T: Config> Pallet<T> {
 
 	pub fn close_auction(
 		nft_id: NFTId,
-		auction: &AuctionData<T::AccountId, T::BlockNumber, BalanceOf<T>>,
+		auction: &AuctionData<T::AccountId, T::BlockNumber, BalanceOf<T>, T::BidderListLengthLimit>,
 		new_owner: &T::AccountId,
 		price: BalanceOf<T>,
 		balance_source: Option<T::AccountId>,
@@ -616,11 +628,11 @@ impl<T: Config> Pallet<T> {
 
 	pub fn remove_auction(
 		nft_id: NFTId,
-		auction: &AuctionData<T::AccountId, T::BlockNumber, BalanceOf<T>>,
+		auction: &AuctionData<T::AccountId, T::BlockNumber, BalanceOf<T>, T::BidderListLengthLimit>,
 	) {
 		Deadlines::<T>::mutate(|x| x.remove(nft_id));
 
-		for bidder in &auction.bidders.list {
+		for bidder in auction.bidders.list.iter() {
 			Self::add_claim(&bidder.0, bidder.1);
 		}
 
