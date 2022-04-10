@@ -12,6 +12,9 @@ pub type NFTId = u32;
 /// How NFT IDs are encoded. In the JSON Types this should be "Text" and not "Vec<8>".
 pub type NFTSeriesId = Vec<u8>;
 
+/// IPFS Reference Type
+pub type IPFSReference<S> = BoundedVec<u8, S>;
+
 /// Data related to an NFT, such as who is its owner.
 #[derive(
 	Encode, Decode, Eq, Default, TypeInfo, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound,
@@ -28,7 +31,7 @@ where
 	// NFT creator
 	pub creator: AccountId,
 	// IPFS reference
-	pub ipfs_reference: BoundedVec<u8, IPFSLengthLimit>,
+	pub ipfs_reference: IPFSReference<IPFSLengthLimit>,
 	// Series ID
 	pub series_id: NFTSeriesId,
 	// Is listed for sale
@@ -53,7 +56,7 @@ where
 	pub fn new(
 		owner: AccountId,
 		creator: AccountId,
-		ipfs_reference: BoundedVec<u8, IPFSLengthLimit>,
+		ipfs_reference: IPFSReference<IPFSLengthLimit>,
 		series_id: NFTSeriesId,
 		listed_for_sale: bool,
 		is_in_transmission: bool,
@@ -78,7 +81,7 @@ where
 
 	pub fn new_default(
 		owner: AccountId,
-		ipfs_reference: BoundedVec<u8, IPFSLengthLimit>,
+		ipfs_reference: IPFSReference<IPFSLengthLimit>,
 		series_id: NFTSeriesId,
 	) -> Self {
 		Self::new(

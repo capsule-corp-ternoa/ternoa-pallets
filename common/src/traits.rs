@@ -7,7 +7,7 @@ use frame_support::{
 };
 use primitives::{
 	marketplace::{MarketplaceData, MarketplaceId, MarketplaceType},
-	nfts::{NFTData, NFTId, NFTSeriesId},
+	nfts::{IPFSReference, NFTData, NFTId, NFTSeriesId},
 };
 use sp_std::fmt::Debug;
 
@@ -27,7 +27,7 @@ pub trait NFTTrait {
 	/// Create NFT and return its NFTId
 	fn create_nft(
 		owner: Self::AccountId,
-		ipfs_reference: BoundedVec<u8, Self::IPFSLengthLimit>,
+		ipfs_reference: IPFSReference<Self::IPFSLengthLimit>,
 		series_id: Option<NFTSeriesId>,
 	) -> Result<NFTId, DispatchErrorWithPostInfo>;
 

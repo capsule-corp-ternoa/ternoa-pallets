@@ -13,7 +13,6 @@ use frame_support::{
 	dispatch::{DispatchErrorWithPostInfo, DispatchResult},
 	pallet_prelude::ensure,
 	traits::StorageVersion,
-	BoundedVec,
 };
 use frame_system::Origin;
 pub use pallet::*;
@@ -43,7 +42,7 @@ pub mod pallet {
 	pub type NegativeImbalanceOf<T> = <<T as Config>::Currency as Currency<
 		<T as frame_system::Config>::AccountId,
 	>>::NegativeImbalance;
-	pub type NFTIPFSReference<T> = BoundedVec<u8, <T as Config>::IPFSLengthLimit>;
+	pub type IPFSReference<T> = primitives::nfts::IPFSReference<<T as Config>::IPFSLengthLimit>;
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
@@ -82,7 +81,7 @@ pub mod pallet {
 		#[transactional]
 		pub fn create(
 			origin: OriginFor<T>,
-			ipfs_reference: NFTIPFSReference<T>,
+			ipfs_reference: IPFSReference<T>,
 			series_id: Option<NFTSeriesId>,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
@@ -257,7 +256,7 @@ pub mod pallet {
 			nft_id: NFTId,
 			owner: T::AccountId,
 			series_id: NFTSeriesId,
-			ipfs_reference: NFTIPFSReference<T>,
+			ipfs_reference: IPFSReference<T>,
 			mint_fee: BalanceOf<T>,
 		},
 		/// An NFT was transferred to someone else.
@@ -432,7 +431,7 @@ impl<T: Config> traits::NFTTrait for Pallet<T> {
 
 	fn create_nft(
 		owner: Self::AccountId,
-		ipfs_reference: NFTIPFSReference<T>,
+		ipfs_reference: IPFSReference<T>,
 		series_id: Option<NFTSeriesId>,
 	) -> Result<NFTId, DispatchErrorWithPostInfo> {
 		Self::create(Origin::<T>::Signed(owner).into(), ipfs_reference, series_id)?;
