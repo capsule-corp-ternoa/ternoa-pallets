@@ -15,10 +15,11 @@
 // along with Ternoa.  If not, see <http://www.gnu.org/licenses/>.
 
 use super::mock::*;
-use crate::{tests::mock, Error};
 use frame_support::{assert_noop, assert_ok, bounded_vec};
 use frame_system::RawOrigin;
 use ternoa_common::traits::NFTExt;
+
+use crate::{tests::mock, Error};
 
 #[test]
 fn set_owner_happy() {

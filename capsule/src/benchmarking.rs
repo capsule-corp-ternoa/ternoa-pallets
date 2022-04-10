@@ -17,13 +17,14 @@
 #![cfg(feature = "runtime-benchmarks")]
 
 use super::*;
-use crate::Pallet as Capsule;
 use frame_benchmarking::{account as benchmark_account, benchmarks, impl_benchmark_test_suite};
 use frame_support::{assert_ok, bounded_vec};
 use frame_system::RawOrigin;
 use sp_runtime::traits::Bounded;
 use sp_std::prelude::*;
 use ternoa_common::traits::NFTExt;
+
+use crate::Pallet as Capsule;
 
 const SERIES_ID: u8 = 20;
 

@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Ternoa.  If not, see <http://www.gnu.org/licenses/>.
 
-use crate::{self as ternoa_sgx, Config};
 use frame_support::{
 	parameter_types,
 	traits::{ConstU32, Contains},
@@ -27,6 +26,8 @@ use sp_runtime::{
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
+
+use crate::{self as ternoa_sgx, Config};
 
 frame_support::construct_runtime!(
 	pub enum Test where

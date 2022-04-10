@@ -15,9 +15,10 @@
 // along with Ternoa.  If not, see <http://www.gnu.org/licenses/>.
 
 use super::mock::*;
-use crate::{GenesisConfig, NFTData};
 use frame_support::{bounded_vec, traits::GenesisBuild};
 use primitives::nfts::NFTsGenesis;
+
+use crate::{GenesisConfig, NFTData};
 
 #[test]
 fn register_nfts() {

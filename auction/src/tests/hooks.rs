@@ -15,13 +15,14 @@
 // along with Ternoa.  If not, see <http://www.gnu.org/licenses/>.
 
 use super::mock::*;
+use frame_support::{assert_ok, bounded_vec};
+use frame_system::RawOrigin;
+
 use crate::{
 	tests::mock,
 	types::{AuctionData, BidderList, DeadlineList},
 	Auctions as AuctionsStorage, Deadlines,
 };
-use frame_support::{assert_ok, bounded_vec};
-use frame_system::RawOrigin;
 
 fn origin(account: u64) -> mock::Origin {
 	RawOrigin::Signed(account).into()

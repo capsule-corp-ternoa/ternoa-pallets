@@ -18,16 +18,17 @@ use super::mock::{
 	AuctionState::{Before, Extended, InProgress},
 	*,
 };
-use crate::{
-	tests::mock,
-	types::{AuctionData, BidderList, DeadlineList},
-	Auctions, Claims, Deadlines, Error, Event as AuctionEvent,
-};
 use frame_support::{assert_noop, assert_ok, bounded_vec, error::BadOrigin};
 use frame_system::RawOrigin;
 use pallet_balances::Error as BalanceError;
 use ternoa_common::traits::{MarketplaceExt, NFTExt};
 use ternoa_marketplace::Error as MarketError;
+
+use crate::{
+	tests::mock,
+	types::{AuctionData, BidderList, DeadlineList},
+	Auctions, Claims, Deadlines, Error, Event as AuctionEvent,
+};
 
 fn origin(account: u64) -> mock::Origin {
 	RawOrigin::Signed(account).into()

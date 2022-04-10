@@ -14,11 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Ternoa.  If not, see <http://www.gnu.org/licenses/>.
 
-use crate::{
-	self as ternoa_auction,
-	types::{AuctionData, BidderList},
-	Config,
-};
 use frame_support::{
 	bounded_vec, parameter_types,
 	traits::{ConstU32, Contains, GenesisBuild, OnFinalize, OnInitialize},
@@ -32,6 +27,12 @@ use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
+};
+
+use crate::{
+	self as ternoa_auction,
+	types::{AuctionData, BidderList},
+	Config,
 };
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;

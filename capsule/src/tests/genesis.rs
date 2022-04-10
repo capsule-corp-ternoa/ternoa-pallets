@@ -15,8 +15,9 @@
 // along with Ternoa.  If not, see <http://www.gnu.org/licenses/>.
 
 use super::mock::*;
-use crate::{CapsuleData, CapsuleIPFSReference, GenesisConfig};
 use frame_support::{bounded_vec, traits::GenesisBuild};
+
+use crate::{CapsuleData, CapsuleIPFSReference, GenesisConfig};
 
 #[test]
 fn register_capsules() {
