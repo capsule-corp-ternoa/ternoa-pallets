@@ -112,7 +112,6 @@ impl Config for Test {
 	type Currency = Balances;
 	type NFTTrait = TernoaNFTs;
 	type PalletId = CapsulePalletId;
-	type IPFSLengthLimit = IPFSLengthLimit;
 	type CapsuleCountLimit = CapsuleCountLimit;
 }
 

@@ -41,6 +41,11 @@ pub mod pallet {
 	use sp_std::convert::TryInto;
 	use ternoa_common::traits::NFTTrait;
 
+	pub type BalanceOf<T> =
+		<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+	pub type IPFSLengthLimitOf<T> = <<T as Config>::NFTTrait as NFTTrait>::IPFSLengthLimit;
+	pub type CapsuleIPFSReference<T> = BoundedVec<u8, IPFSLengthLimitOf<T>>;
+
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		/// Because this pallet emits events, it depends on the runtime's definition of an event.
@@ -53,27 +58,17 @@ pub mod pallet {
 		type Currency: Currency<Self::AccountId>;
 
 		/// Link to the NFT pallet.
-		type NFTTrait: NFTTrait<
-			AccountId = Self::AccountId,
-			IPFSLengthLimit = Self::IPFSLengthLimit,
-		>;
+		type NFTTrait: NFTTrait<AccountId = Self::AccountId>;
 
 		/// The treasury's pallet id, used for deriving its sovereign account ID.
 		#[pallet::constant]
 		type PalletId: Get<PalletId>;
-
-		/// Maximum IPFS length.
-		#[pallet::constant]
-		type IPFSLengthLimit: Get<u32>;
 
 		/// The Maximum amount of capsules that can be active at the same time for a user has been
 		/// reached.
 		#[pallet::constant]
 		type CapsuleCountLimit: Get<u32>;
 	}
-
-	pub type BalanceOf<T> =
-		<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
@@ -101,8 +96,8 @@ pub mod pallet {
 		#[transactional]
 		pub fn create(
 			origin: OriginFor<T>,
-			nft_ipfs_reference: BoundedVec<u8, T::IPFSLengthLimit>,
-			capsule_ipfs_reference: BoundedVec<u8, T::IPFSLengthLimit>,
+			nft_ipfs_reference: BoundedVec<u8, IPFSLengthLimitOf<T>>,
+			capsule_ipfs_reference: CapsuleIPFSReference<T>,
 			series_id: Option<NFTSeriesId>,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
@@ -133,7 +128,7 @@ pub mod pallet {
 		pub fn create_from_nft(
 			origin: OriginFor<T>,
 			nft_id: NFTId,
-			ipfs_reference: BoundedVec<u8, T::IPFSLengthLimit>,
+			ipfs_reference: CapsuleIPFSReference<T>,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
@@ -231,7 +226,7 @@ pub mod pallet {
 		pub fn set_ipfs_reference(
 			origin: OriginFor<T>,
 			nft_id: NFTId,
-			ipfs_reference: BoundedVec<u8, T::IPFSLengthLimit>,
+			ipfs_reference: CapsuleIPFSReference<T>,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
@@ -269,10 +264,7 @@ pub mod pallet {
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		/// A capsule ipfs reference was updated.
-		CapsuleIpfsReferenceUpdated {
-			nft_id: NFTId,
-			ipfs_reference: BoundedVec<u8, T::IPFSLengthLimit>,
-		},
+		CapsuleIpfsReferenceUpdated { nft_id: NFTId, ipfs_reference: CapsuleIPFSReference<T> },
 		/// Additional funds were added to a capsule.
 		CapsuleFundsAdded { nft_id: NFTId, balance: BalanceOf<T> },
 		/// A capsule was convert into an NFT.
@@ -323,7 +315,7 @@ pub mod pallet {
 		_,
 		Blake2_128Concat,
 		NFTId,
-		CapsuleData<T::AccountId, T::IPFSLengthLimit>,
+		CapsuleData<T::AccountId, IPFSLengthLimitOf<T>>,
 		OptionQuery,
 	>;
 
@@ -379,7 +371,7 @@ impl<T: Config> Pallet<T> {
 	fn new_capsule(
 		owner: &T::AccountId,
 		nft_id: NFTId,
-		ipfs_reference: BoundedVec<u8, T::IPFSLengthLimit>,
+		ipfs_reference: CapsuleIPFSReference<T>,
 		funds: BalanceOf<T>,
 	) -> Result<(), Error<T>> {
 		let data = CapsuleData::new(owner.clone(), ipfs_reference.clone());
