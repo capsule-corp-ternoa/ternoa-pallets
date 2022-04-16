@@ -1,36 +1,10 @@
-// Copyright 2021 Centrifuge Foundation (centrifuge.io).
-// This file is part of Centrifuge chain project.
-
-// Centrifuge is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version (see http://www.gnu.org/licenses).
-
-// Centrifuge is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-
-//! Types used by the Substrate/Ethereum chains bridging pallet.
-
-// ----------------------------------------------------------------------------
-// Module imports and re-exports
-// ----------------------------------------------------------------------------
-
-// Substrate primitives
 use codec::{Decode, Encode};
 use scale_info::TypeInfo;
-use sp_std::{vec, vec::Vec};
-
 use sp_runtime::RuntimeDebug;
-
-// ----------------------------------------------------------------------------
-// Types definition
-// ----------------------------------------------------------------------------
+use sp_std::vec::Vec;
 
 pub type ChainId = u8;
 pub type DepositNonce = u64;
-pub type ResourceId = [u8; 32];
 
 /// Enumeration of proposal status.
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
@@ -43,51 +17,50 @@ pub enum ProposalStatus {
 /// Proposal votes data structure.
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub struct ProposalVotes<AccountId, BlockNumber> {
-	pub votes_for: Vec<AccountId>,
-	pub votes_against: Vec<AccountId>,
+	pub votes: Vec<(AccountId, bool)>,
 	pub status: ProposalStatus,
 	pub expiry: BlockNumber,
 }
 
-impl<A: PartialEq, B: PartialOrd + Default> ProposalVotes<A, B> {
+impl<AccountId, BlockNumber> ProposalVotes<AccountId, BlockNumber>
+where
+	AccountId: PartialEq,
+	BlockNumber: PartialOrd + Default,
+{
+	pub fn new(initial_votes: Vec<(AccountId, bool)>, block_expiry: BlockNumber) -> Self {
+		Self { votes: initial_votes, status: ProposalStatus::Initiated, expiry: block_expiry }
+	}
+
 	/// Attempts to mark the proposal as approve or rejected.
 	/// Returns true if the status changes from active.
-	pub(crate) fn try_to_complete(&mut self, threshold: u32, total: u32) -> ProposalStatus {
-		if self.votes_for.len() >= threshold as usize {
+	pub fn try_to_complete(&mut self, threshold: u32) -> Option<ProposalStatus> {
+		let for_count = self.votes.iter().filter(|x| x.1 == true).count() as u32;
+		let against_count = self.votes.iter().count() as u32 - for_count;
+
+		if for_count >= threshold {
 			self.status = ProposalStatus::Approved;
-			ProposalStatus::Approved
-		} else if total >= threshold && self.votes_against.len() as u32 + threshold > total {
-			self.status = ProposalStatus::Rejected;
-			ProposalStatus::Rejected
-		} else {
-			ProposalStatus::Initiated
+			return Some(ProposalStatus::Approved)
 		}
+		if against_count >= threshold {
+			self.status = ProposalStatus::Rejected;
+			return Some(ProposalStatus::Rejected)
+		}
+
+		None
 	}
 
 	/// Returns true if the proposal has been rejected or approved, otherwise false.
-	pub(crate) fn is_complete(&self) -> bool {
+	pub fn is_complete(&self) -> bool {
 		self.status != ProposalStatus::Initiated
 	}
 
 	/// Returns true if `who` has voted for or against the proposal
-	pub(crate) fn has_voted(&self, who: &A) -> bool {
-		self.votes_for.contains(&who) || self.votes_against.contains(&who)
+	pub fn has_voted(&self, who: &AccountId) -> bool {
+		self.votes.iter().find(|x| x.0 == *who).is_some()
 	}
 
 	/// Return true if the expiry time has been reached
-	pub(crate) fn is_expired(&self, now: B) -> bool {
+	pub fn is_expired(&self, now: BlockNumber) -> bool {
 		self.expiry <= now
-	}
-}
-
-// Implement default trait for the proposal votes structure.
-impl<AccountId, BlockNumber: Default> Default for ProposalVotes<AccountId, BlockNumber> {
-	fn default() -> Self {
-		Self {
-			votes_for: vec![],
-			votes_against: vec![],
-			status: ProposalStatus::Initiated,
-			expiry: BlockNumber::default(),
-		}
 	}
 }

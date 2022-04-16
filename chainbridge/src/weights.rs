@@ -29,14 +29,6 @@ impl WeightInfo for () {
 		195_000_000 as Weight
 	}
 
-	fn set_resource() -> Weight {
-		195_000_000 as Weight
-	}
-
-	fn remove_resource() -> Weight {
-		195_000_000 as Weight
-	}
-
 	fn whitelist_chain() -> Weight {
 		195_000_000 as Weight
 	}

@@ -1,48 +1,32 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-pub use pallet::*;
-
 #[cfg(test)]
 mod tests;
-
 mod weights;
 
+use chainbridge::types::ChainId;
 use frame_support::{
 	dispatch::DispatchResultWithPostInfo,
 	ensure,
 	traits::{
 		Currency, EnsureOrigin,
 		ExistenceRequirement::{AllowDeath, KeepAlive},
-		Get, OnUnbalanced, WithdrawReasons,
+		OnUnbalanced, WithdrawReasons,
 	},
 };
-
 use frame_system::ensure_signed;
-
 use sp_arithmetic::traits::SaturatedConversion;
 use sp_core::U256;
 use sp_std::prelude::*;
-pub use weights::WeightInfo;
 
-use chainbridge::types::{ChainId, ResourceId};
+pub use pallet::*;
+pub use weights::WeightInfo;
 
 type BalanceOf<T> =
 	<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
-pub use pallet::*;
-
-// ----------------------------------------------------------------------------
-// Pallet module
-// ----------------------------------------------------------------------------
-
-// ERC20Bridge pallet module
-//
-// The name of the pallet is provided by `construct_runtime` and is used as
-// the unique identifier for the pallet's storage. It is not defined in the
-// pallet itself.
 #[frame_support::pallet]
 pub mod pallet {
-
 	use super::*;
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
@@ -51,24 +35,10 @@ pub mod pallet {
 		<T as frame_system::Config>::AccountId,
 	>>::NegativeImbalance;
 
-	// ERC20Bridge pallet type declaration.
-	//
-	// This structure is a placeholder for traits and functions implementation
-	// for the pallet.
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
 	pub struct Pallet<T>(_);
 
-	// ------------------------------------------------------------------------
-	// Pallet configuration
-	// ------------------------------------------------------------------------
-
-	/// ERC20Bridge pallet's configuration trait.
-	///
-	/// Associated types and constants are declared in this trait. If the pallet
-	/// depends on other super-traits, the latter must be added to this trait,
-	/// such as, in this case, [`chainbridge::Config`] super-trait, for instance.
-	/// Note that [`frame_system::Config`] must always be included.
 	#[pallet::config]
 	pub trait Config: frame_system::Config + chainbridge::Config {
 		/// Associated type for Event enum
@@ -87,26 +57,15 @@ pub mod pallet {
 		/// What we do with additional fees
 		type FeesCollector: OnUnbalanced<NegativeImbalanceOf<Self>>;
 
-		#[pallet::constant]
-		type NativeTokenId: Get<ResourceId>;
-
 		/// Weight information for extrinsics in this pallet
 		type WeightInfo: WeightInfo;
 	}
-
-	// ------------------------------------------------------------------------
-	// Pallet storage
-	// ------------------------------------------------------------------------
 
 	/// Host much does it cost to transfer Native through the bridge (extra fee on top of the tx
 	/// fees)
 	#[pallet::storage]
 	#[pallet::getter(fn bridge_fee)]
 	pub type BridgeFee<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
-
-	// ------------------------------------------------------------------------
-	// Pallet events
-	// ------------------------------------------------------------------------
 
 	// The macro generates event metadata and derive Clone, Debug, Eq, PartialEq and Codec
 	#[pallet::event]
@@ -115,38 +74,8 @@ pub mod pallet {
 		BridgeFeeUpdated { fee: BalanceOf<T> },
 	}
 
-	// ------------------------------------------------------------------------
-	// Pallet genesis configuration
-	// ------------------------------------------------------------------------
-
-	// The genesis configuration type.
-	#[pallet::genesis_config]
-	pub struct GenesisConfig {}
-
-	// The default value for the genesis config type.
-	#[cfg(feature = "std")]
-	impl Default for GenesisConfig {
-		fn default() -> Self {
-			Self {}
-		}
-	}
-
-	// The build of genesis for the pallet.
-	#[pallet::genesis_build]
-	impl<T: Config> GenesisBuild<T> for GenesisConfig {
-		fn build(&self) {}
-	}
-
-	// ------------------------------------------------------------------------
-	// Pallet lifecycle hooks
-	// ------------------------------------------------------------------------
-
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
-
-	// ------------------------------------------------------------------------
-	// Pallet errors
-	// ------------------------------------------------------------------------
 
 	#[pallet::error]
 	pub enum Error<T> {
@@ -154,16 +83,6 @@ pub mod pallet {
 		RemovalImpossible,
 	}
 
-	// ------------------------------------------------------------------------
-	// Pallet dispatchable functions
-	// ------------------------------------------------------------------------
-
-	// Declare Call struct and implement dispatchable (or callable) functions.
-	//
-	// Dispatchable functions are transactions modifying the state of the chain. They
-	// are also called extrinsics are constitute the pallet's public interface.
-	// Note that each parameter used in functions must implement `Clone`, `Debug`,
-	// `Eq`, `PartialEq` and `Codec` traits.
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		/// Transfers some amount of the native token to some recipient on a (whitelisted)
@@ -206,10 +125,8 @@ pub mod pallet {
 			}
 			T::Currency::burn(amount);
 
-			let resource_id = T::NativeTokenId::get();
-			<chainbridge::Pallet<T>>::transfer_fungible(
+			<chainbridge::Pallet<T>>::bridge_funds(
 				dest_id,
-				resource_id,
 				recipient,
 				U256::from(amount.saturated_into::<u128>()),
 			)?;
@@ -246,4 +163,4 @@ pub mod pallet {
 			Ok(().into())
 		}
 	}
-} // end of 'pallet' module
+}
