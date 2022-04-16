@@ -1,13 +1,13 @@
-use codec::{Decode, Encode};
+use codec::{Decode, Encode, MaxEncodedLen};
+use frame_support::{traits::Get, BoundedVec};
 use scale_info::TypeInfo;
 use sp_runtime::RuntimeDebug;
-use sp_std::vec::Vec;
 
 pub type ChainId = u8;
 pub type DepositNonce = u64;
 
 /// Enumeration of proposal status.
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 pub enum ProposalStatus {
 	Initiated,
 	Approved,
@@ -15,24 +15,34 @@ pub enum ProposalStatus {
 }
 
 /// Proposal votes data structure.
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
-pub struct ProposalVotes<AccountId, BlockNumber> {
-	pub votes: Vec<(AccountId, bool)>,
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo, MaxEncodedLen)]
+#[codec(mel_bound(AccountId: MaxEncodedLen, BlockNumber: MaxEncodedLen))]
+#[scale_info(skip_type_params(VoteCountLimit))]
+pub struct Proposal<AccountId, BlockNumber, VoteCountLimit>
+where
+	VoteCountLimit: Get<u32>,
+{
+	pub votes: BoundedVec<(AccountId, bool), VoteCountLimit>,
 	pub status: ProposalStatus,
 	pub expiry: BlockNumber,
 }
 
-impl<AccountId, BlockNumber> ProposalVotes<AccountId, BlockNumber>
+impl<AccountId, BlockNumber, VoteCountLimit> Proposal<AccountId, BlockNumber, VoteCountLimit>
 where
 	AccountId: PartialEq,
 	BlockNumber: PartialOrd + Default,
+	VoteCountLimit: Get<u32>,
 {
-	pub fn new(initial_votes: Vec<(AccountId, bool)>, block_expiry: BlockNumber) -> Self {
+	pub fn new(
+		initial_votes: BoundedVec<(AccountId, bool), VoteCountLimit>,
+		block_expiry: BlockNumber,
+	) -> Self {
 		Self { votes: initial_votes, status: ProposalStatus::Initiated, expiry: block_expiry }
 	}
 
 	/// Attempts to mark the proposal as approve or rejected.
 	/// Returns true if the status changes from active.
+	/// TODO!
 	pub fn try_to_complete(&mut self, threshold: u32) -> Option<ProposalStatus> {
 		let for_count = self.votes.iter().filter(|x| x.1 == true).count() as u32;
 		let against_count = self.votes.iter().count() as u32 - for_count;

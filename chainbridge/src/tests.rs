@@ -26,7 +26,7 @@ use crate::{
 		System, SystemCall, TestExternalitiesBuilder, ENDOWED_BALANCE, RELAYER_A, RELAYER_B,
 		RELAYER_C, TEST_RELAYER_VOTE_THRESHOLD,
 	},
-	types::{ProposalStatus, ProposalVotes},
+	types::{Proposal, ProposalStatus},
 };
 
 use frame_support::{assert_noop, assert_ok};
@@ -52,7 +52,7 @@ fn derive_ids() {
 
 #[test]
 fn complete_proposal_approved() {
-	let mut prop = ProposalVotes {
+	let mut prop = Proposal {
 		votes_for: vec![1, 2],
 		votes_against: vec![3],
 		status: ProposalStatus::Initiated,
@@ -65,7 +65,7 @@ fn complete_proposal_approved() {
 
 #[test]
 fn complete_proposal_rejected() {
-	let mut prop = ProposalVotes {
+	let mut prop = Proposal {
 		votes_for: vec![1],
 		votes_against: vec![2, 3],
 		status: ProposalStatus::Initiated,
@@ -78,7 +78,7 @@ fn complete_proposal_rejected() {
 
 #[test]
 fn complete_proposal_bad_threshold() {
-	let mut prop = ProposalVotes {
+	let mut prop = Proposal {
 		votes_for: vec![1, 2],
 		votes_against: vec![],
 		status: ProposalStatus::Initiated,
@@ -88,7 +88,7 @@ fn complete_proposal_bad_threshold() {
 	prop.try_to_complete(3, 2);
 	assert_eq!(prop.status, ProposalStatus::Initiated);
 
-	let mut prop = ProposalVotes {
+	let mut prop = Proposal {
 		votes_for: vec![],
 		votes_against: vec![1, 2],
 		status: ProposalStatus::Initiated,
@@ -263,7 +263,7 @@ fn create_successful_remark_proposal() {
 
 			let prop = ChainBridge::get_votes(src_id, (prop_id.clone(), proposal.clone())).unwrap();
 
-			let expected = ProposalVotes {
+			let expected = Proposal {
 				votes_for: vec![RELAYER_A],
 				votes_against: vec![],
 				status: ProposalStatus::Initiated,
@@ -282,7 +282,7 @@ fn create_successful_remark_proposal() {
 
 			let prop = ChainBridge::get_votes(src_id, (prop_id.clone(), proposal.clone())).unwrap();
 
-			let expected = ProposalVotes {
+			let expected = Proposal {
 				votes_for: vec![RELAYER_A],
 				votes_against: vec![RELAYER_B],
 				status: ProposalStatus::Initiated,
@@ -300,7 +300,7 @@ fn create_successful_remark_proposal() {
 			));
 
 			let prop = ChainBridge::get_votes(src_id, (prop_id.clone(), proposal.clone())).unwrap();
-			let expected = ProposalVotes {
+			let expected = Proposal {
 				votes_for: vec![RELAYER_A, RELAYER_C],
 				votes_against: vec![RELAYER_B],
 				status: ProposalStatus::Approved,
@@ -349,7 +349,7 @@ fn create_unsuccessful_transfer_proposal() {
 				Box::new(proposal.clone())
 			));
 			let prop = ChainBridge::get_votes(src_id, (prop_id.clone(), proposal.clone())).unwrap();
-			let expected = ProposalVotes {
+			let expected = Proposal {
 				votes_for: vec![RELAYER_A],
 				votes_against: vec![],
 				status: ProposalStatus::Initiated,
@@ -366,7 +366,7 @@ fn create_unsuccessful_transfer_proposal() {
 				Box::new(proposal.clone())
 			));
 			let prop = ChainBridge::get_votes(src_id, (prop_id.clone(), proposal.clone())).unwrap();
-			let expected = ProposalVotes {
+			let expected = Proposal {
 				votes_for: vec![RELAYER_A],
 				votes_against: vec![RELAYER_B],
 				status: ProposalStatus::Initiated,
@@ -383,7 +383,7 @@ fn create_unsuccessful_transfer_proposal() {
 				Box::new(proposal.clone())
 			));
 			let prop = ChainBridge::get_votes(src_id, (prop_id.clone(), proposal.clone())).unwrap();
-			let expected = ProposalVotes {
+			let expected = Proposal {
 				votes_for: vec![RELAYER_A],
 				votes_against: vec![RELAYER_B, RELAYER_C],
 				status: ProposalStatus::Rejected,
@@ -431,7 +431,7 @@ fn execute_after_threshold_change() {
 				Box::new(proposal.clone())
 			));
 			let prop = ChainBridge::get_votes(src_id, (prop_id.clone(), proposal.clone())).unwrap();
-			let expected = ProposalVotes {
+			let expected = Proposal {
 				votes_for: vec![RELAYER_A],
 				votes_against: vec![],
 				status: ProposalStatus::Initiated,
@@ -451,7 +451,7 @@ fn execute_after_threshold_change() {
 			));
 
 			let prop = ChainBridge::get_votes(src_id, (prop_id.clone(), proposal.clone())).unwrap();
-			let expected = ProposalVotes {
+			let expected = Proposal {
 				votes_for: vec![RELAYER_A],
 				votes_against: vec![],
 				status: ProposalStatus::Approved,
@@ -497,7 +497,7 @@ fn proposal_expires() {
 				Box::new(proposal.clone())
 			));
 			let prop = ChainBridge::get_votes(src_id, (prop_id.clone(), proposal.clone())).unwrap();
-			let expected = ProposalVotes {
+			let expected = Proposal {
 				votes_for: vec![RELAYER_A],
 				votes_against: vec![],
 				status: ProposalStatus::Initiated,
@@ -522,7 +522,7 @@ fn proposal_expires() {
 
 			// Proposal state should remain unchanged
 			let prop = ChainBridge::get_votes(src_id, (prop_id.clone(), proposal.clone())).unwrap();
-			let expected = ProposalVotes {
+			let expected = Proposal {
 				votes_for: vec![RELAYER_A],
 				votes_against: vec![],
 				status: ProposalStatus::Initiated,
@@ -541,7 +541,7 @@ fn proposal_expires() {
 				Error::<MockRuntime>::ProposalExpired
 			);
 			let prop = ChainBridge::get_votes(src_id, (prop_id.clone(), proposal.clone())).unwrap();
-			let expected = ProposalVotes {
+			let expected = Proposal {
 				votes_for: vec![RELAYER_A],
 				votes_against: vec![],
 				status: ProposalStatus::Initiated,

@@ -10,20 +10,34 @@ pub mod types;
 mod weights;
 
 use frame_support::{
+	bounded_vec,
 	dispatch::DispatchResult,
 	ensure,
-	traits::{EnsureOrigin, Get},
-	PalletId,
+	traits::{
+		Currency, EnsureOrigin,
+		ExistenceRequirement::{AllowDeath, KeepAlive},
+		Get, OnUnbalanced, WithdrawReasons,
+	},
+	transactional, PalletId,
 };
 use frame_system::ensure_signed;
 use sp_core::U256;
-use sp_runtime::traits::AccountIdConversion;
+use sp_runtime::{
+	traits::{AccountIdConversion, StaticLookup},
+	SaturatedConversion,
+};
 use sp_std::prelude::*;
 
 pub use constants::*;
 pub use pallet::*;
 pub use traits::WeightInfo;
 pub use types::*;
+
+pub type BalanceOf<T> =
+	<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+pub type NegativeImbalanceOf<T> = <<T as Config>::Currency as Currency<
+	<T as frame_system::Config>::AccountId,
+>>::NegativeImbalance;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -32,7 +46,6 @@ pub mod pallet {
 	use frame_system::pallet_prelude::*;
 
 	#[pallet::pallet]
-	#[pallet::without_storage_info]
 	#[pallet::generate_store(pub(super) trait Store)]
 	pub struct Pallet<T>(_);
 
@@ -43,6 +56,12 @@ pub mod pallet {
 
 		/// Weight information for extrinsics in this pallet
 		type WeightInfo: WeightInfo;
+
+		/// Currency type.
+		type Currency: Currency<Self::AccountId>;
+
+		/// What we do with additional fees
+		type FeesCollector: OnUnbalanced<NegativeImbalanceOf<Self>>;
 
 		/// Origin that can control this pallet.
 		type ExternalOrigin: EnsureOrigin<Self::Origin>;
@@ -64,32 +83,10 @@ pub mod pallet {
 		/// [RelayerVoteThreshold] in storage section).
 		#[pallet::constant]
 		type RelayerVoteThreshold: Get<u32>;
-	}
 
-	#[pallet::event]
-	#[pallet::generate_deposit(pub(super) fn deposit_event)]
-	pub enum Event<T: Config> {
-		/// Vote threshold has changed (new_threshold)
-		RelayerThresholdChanged { threshold: u32 },
-		/// Chain now available for transfers (chain_id)
-		ChainWhitelisted { chain_id: ChainId },
-		/// Relayer added to set
-		RelayerAdded { account: T::AccountId },
-		/// Relayer removed from set
-		RelayerRemoved { account: T::AccountId },
-		/// FunglibleTransfer is for relaying fungibles (dest_id, nonce, amount, recipient)
-		FungibleTransfer(ChainId, DepositNonce, U256, Vec<u8>),
-		/// Vote submitted in favour of proposal
-		RelayerVoted {
-			chain_id: ChainId,
-			nonce: DepositNonce,
-			account: T::AccountId,
-			in_favour: bool,
-		},
-		/// Voting successful for a proposal
-		ProposalApproved { chain_id: ChainId, nonce: DepositNonce },
-		/// Voting rejected a proposal
-		ProposalRejected { chain_id: ChainId, nonce: DepositNonce },
+		/// Total amount of accounts that can be in the bidder list.
+		#[pallet::constant]
+		type RelayerCountLimit: Get<u32>;
 	}
 
 	/// All whitelisted chains and their respective transaction counts
@@ -106,7 +103,8 @@ pub mod pallet {
 	/// Tracks current relayer set
 	#[pallet::storage]
 	#[pallet::getter(fn relayers)]
-	pub type Relayers<T: Config> = StorageValue<_, Vec<T::AccountId>, ValueQuery>;
+	pub type Relayers<T: Config> =
+		StorageValue<_, BoundedVec<T::AccountId, T::RelayerCountLimit>, ValueQuery>;
 
 	/// All known proposals.
 	/// The key is the hash of the call and the deposit ID, to ensure it's unique.
@@ -117,10 +115,55 @@ pub mod pallet {
 		Blake2_256,
 		ChainId,
 		Blake2_256,
-		DepositNonce,
-		ProposalVotes<T::AccountId, T::BlockNumber>,
+		(DepositNonce, T::AccountId, BalanceOf<T>),
+		Proposal<T::AccountId, T::BlockNumber, T::RelayerCountLimit>,
 		OptionQuery,
 	>;
+
+	/// Host much does it cost to transfer Native through the bridge (extra fee on top of the tx
+	/// fees)
+	#[pallet::storage]
+	#[pallet::getter(fn bridge_fee)]
+	pub type BridgeFee<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
+
+	#[pallet::event]
+	#[pallet::generate_deposit(pub(super) fn deposit_event)]
+	pub enum Event<T: Config> {
+		/// Vote threshold has changed (new_threshold)
+		RelayerThresholdUpdated {
+			threshold: u32,
+		},
+		/// Chain now available for transfers (chain_id)
+		ChainWhitelisted {
+			chain_id: ChainId,
+		},
+		/// Relayer added to set
+		RelayersUpdated {
+			relayers: BoundedVec<T::AccountId, T::RelayerCountLimit>,
+		},
+		/// FunglibleTransfer is for relaying fungibles (dest_id, nonce, amount, recipient)
+		FungibleTransfer(ChainId, DepositNonce, U256, Vec<u8>),
+		/// Vote submitted in favour of proposal
+		RelayerVoted {
+			chain_id: ChainId,
+			nonce: DepositNonce,
+			account: T::AccountId,
+			in_favour: bool,
+		},
+		/// Voting successful for a proposal
+		ProposalApproved {
+			chain_id: ChainId,
+			nonce: DepositNonce,
+		},
+		/// Voting rejected a proposal
+		ProposalRejected {
+			chain_id: ChainId,
+			nonce: DepositNonce,
+		},
+		BridgeFeeUpdated {
+			fee: BalanceOf<T>,
+		},
+	}
 
 	#[pallet::error]
 	pub enum Error<T> {
@@ -142,6 +185,12 @@ pub mod pallet {
 		ProposalAlreadyComplete,
 		/// Lifetime of proposal has been exceeded
 		ProposalExpired,
+		/// MaximumVoteLimitExceeded
+		MaximumVoteLimitExceeded,
+		/// TODO!
+		InvalidTransfer,
+		/// TODO!
+		RemovalImpossible,
 	}
 
 	#[pallet::call]
@@ -156,7 +205,7 @@ pub mod pallet {
 			ensure!(threshold > 0, Error::<T>::ThresholdCannotBeZero);
 
 			RelayerVoteThreshold::<T>::put(threshold);
-			Self::deposit_event(Event::RelayerThresholdChanged { threshold });
+			Self::deposit_event(Event::RelayerThresholdUpdated { threshold });
 
 			Ok(().into())
 		}
@@ -179,39 +228,15 @@ pub mod pallet {
 		}
 
 		/// Adds a new relayer to the relayer set.
-		#[pallet::weight(<T as Config>::WeightInfo::add_relayer())]
-		pub fn add_relayer(
+		#[pallet::weight(100)]
+		pub fn set_relayers(
 			origin: OriginFor<T>,
-			account: T::AccountId,
+			relayers: BoundedVec<T::AccountId, T::RelayerCountLimit>,
 		) -> DispatchResultWithPostInfo {
 			T::ExternalOrigin::ensure_origin(origin)?;
 
-			Relayers::<T>::mutate(|relayers| {
-				let found = relayers.iter().find(|x| **x == account);
-				if found.is_none() {
-					Relayers::<T>::mutate(|relayers| relayers.push(account.clone()));
-					Self::deposit_event(Event::RelayerAdded { account });
-				}
-			});
-
-			Ok(().into())
-		}
-
-		/// Removes an existing relayer from the set.
-		#[pallet::weight(<T as pallet::Config>::WeightInfo::remove_relayer())]
-		pub fn remove_relayer(
-			origin: OriginFor<T>,
-			account: T::AccountId,
-		) -> DispatchResultWithPostInfo {
-			T::ExternalOrigin::ensure_origin(origin)?;
-
-			Relayers::<T>::mutate(|relayers| {
-				let pos = relayers.iter().position(|x| *x == account);
-				if let Some(pos) = pos {
-					relayers.remove(pos);
-					Self::deposit_event(Event::RelayerRemoved { account });
-				}
-			});
+			Relayers::<T>::put(relayers.clone());
+			Self::deposit_event(Event::RelayersUpdated { relayers });
 
 			Ok(().into())
 		}
@@ -223,11 +248,15 @@ pub mod pallet {
 		#[pallet::weight(1000)]
 		pub fn vote_proposal(
 			origin: OriginFor<T>,
-			nonce: DepositNonce,
 			chain_id: ChainId,
+			nonce: DepositNonce,
+			recipient: <T::Lookup as StaticLookup>::Source,
+			amount: BalanceOf<T>,
 			in_favour: bool,
 		) -> DispatchResultWithPostInfo {
 			let account = ensure_signed(origin)?;
+			let recipient = T::Lookup::lookup(recipient)?;
+
 			ensure!(Self::is_relayer(&account), Error::<T>::MustBeRelayer);
 			ensure!(Self::chain_whitelisted(chain_id), Error::<T>::ChainNotWhitelisted);
 
@@ -235,32 +264,43 @@ pub mod pallet {
 			let threshold = Self::relayer_vote_threshold();
 			let mut result = None;
 
-			Votes::<T>::try_mutate(chain_id, nonce, |proposal| -> DispatchResult {
-				if let Some(proposal) = proposal {
-					ensure!(!proposal.is_complete(), Error::<T>::ProposalAlreadyComplete);
-					ensure!(!proposal.is_expired(now), Error::<T>::ProposalExpired);
-					ensure!(!proposal.has_voted(&account), Error::<T>::RelayerAlreadyVoted);
-					proposal.votes.push((account.clone(), in_favour));
-					result = proposal.try_to_complete(threshold);
-				} else {
-					let lifetime = T::ProposalLifetime::get();
-					let mut new_proposal =
-						ProposalVotes::new(vec![(account.clone(), in_favour)], now + lifetime);
-					result = new_proposal.try_to_complete(threshold);
-					*proposal = Some(new_proposal);
-				}
+			Votes::<T>::try_mutate(
+				chain_id,
+				(nonce, recipient.clone(), amount.clone()),
+				|proposal| -> DispatchResult {
+					if let Some(proposal) = proposal {
+						ensure!(!proposal.is_complete(), Error::<T>::ProposalAlreadyComplete);
+						ensure!(!proposal.is_expired(now), Error::<T>::ProposalExpired);
+						ensure!(!proposal.has_voted(&account), Error::<T>::RelayerAlreadyVoted);
+						proposal
+							.votes
+							.try_push((account.clone(), in_favour))
+							.map_err(|_| Error::<T>::MaximumVoteLimitExceeded)?;
+						result = proposal.try_to_complete(threshold);
+					} else {
+						let lifetime = T::ProposalLifetime::get();
+						let mut new_proposal = Proposal::new(
+							bounded_vec![(account.clone(), in_favour)],
+							now + lifetime,
+						);
+						result = new_proposal.try_to_complete(threshold);
+						*proposal = Some(new_proposal);
+					}
 
-				// Send Vote Event
-				let event = Event::RelayerVoted { chain_id, nonce, account, in_favour };
-				Self::deposit_event(event);
+					// Send Vote Event
+					let event = Event::RelayerVoted { chain_id, nonce, account, in_favour };
+					Self::deposit_event(event);
 
-				Ok(())
-			})?;
+					Ok(())
+				},
+			)?;
 
 			// Let's see if the proposal is already completed
 			if let Some(result) = result {
 				match result {
 					ProposalStatus::Approved => {
+						let negative_imbalance = <T as Config>::Currency::issue(amount);
+						<T as Config>::Currency::resolve_creating(&recipient, negative_imbalance);
 						Self::deposit_event(Event::ProposalApproved { chain_id, nonce });
 					},
 					ProposalStatus::Rejected => {
@@ -269,6 +309,55 @@ pub mod pallet {
 					_ => {},
 				}
 			}
+
+			Ok(().into())
+		}
+
+		/// Transfers some amount of the native token to some recipient on a (whitelisted)
+		/// destination chain.
+		#[pallet::weight(100)]
+		#[transactional]
+		pub fn transfer_native(
+			origin: OriginFor<T>,
+			amount: BalanceOf<T>,
+			recipient: Vec<u8>,
+			dest_id: ChainId,
+		) -> DispatchResultWithPostInfo {
+			let source = ensure_signed(origin)?;
+			ensure!(Self::chain_whitelisted(dest_id), Error::<T>::ChainNotWhitelisted);
+
+			ensure!(
+				T::Currency::free_balance(&source) >= Self::bridge_fee() + amount,
+				Error::<T>::RemovalImpossible
+			);
+
+			let fee = Self::bridge_fee();
+			let imbalance = T::Currency::withdraw(&source, fee, WithdrawReasons::all(), KeepAlive)?;
+			T::FeesCollector::on_unbalanced(imbalance);
+
+			T::Currency::withdraw(&source, amount, WithdrawReasons::TRANSFER, AllowDeath)?;
+			T::Currency::burn(amount);
+
+			// Bump nonce
+			let nonce = Self::chain_nonces(dest_id).unwrap_or_default() + 1;
+			<ChainNonces<T>>::insert(dest_id, nonce);
+
+			let amount = U256::from(amount.saturated_into::<u128>());
+			Self::deposit_event(Event::FungibleTransfer(dest_id, nonce, amount, recipient));
+
+			Ok(().into())
+		}
+
+		/// Update the bridge fee value
+		#[pallet::weight(100)]
+		pub fn set_bridge_fee(
+			origin: OriginFor<T>,
+			bridge_fee: BalanceOf<T>,
+		) -> DispatchResultWithPostInfo {
+			T::ExternalOrigin::ensure_origin(origin)?;
+
+			BridgeFee::<T>::put(bridge_fee);
+			Self::deposit_event(Event::BridgeFeeUpdated { fee: bridge_fee });
 
 			Ok(().into())
 		}
@@ -292,18 +381,5 @@ impl<T: Config> Pallet<T> {
 	/// Checks if a chain exists as a whitelisted destination
 	pub fn chain_whitelisted(id: ChainId) -> bool {
 		Self::chain_nonces(id) != None
-	}
-
-	/// Initiates a transfer of a fungible asset out of the chain. This should be called by another
-	/// pallet.
-	pub fn bridge_funds(dest_id: ChainId, to: Vec<u8>, amount: U256) -> DispatchResult {
-		ensure!(Self::chain_whitelisted(dest_id), Error::<T>::ChainNotWhitelisted);
-
-		// Bump nonce
-		let nonce = Self::chain_nonces(dest_id).unwrap_or_default() + 1;
-		<ChainNonces<T>>::insert(dest_id, nonce);
-
-		Self::deposit_event(Event::FungibleTransfer(dest_id, nonce, amount, to));
-		Ok(())
 	}
 }

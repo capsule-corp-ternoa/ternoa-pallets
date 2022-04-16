@@ -10,5 +10,4 @@ members = [
     'mandate',
     'staking-rewards',
     'chainbridge',
-    'erc20-bridge'
 ]
