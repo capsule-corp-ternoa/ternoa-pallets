@@ -87,6 +87,10 @@ pub mod pallet {
 		/// Total amount of accounts that can be in the bidder list.
 		#[pallet::constant]
 		type RelayerCountLimit: Get<u32>;
+
+		/// Total amount of accounts that can be in the bidder list.
+		#[pallet::constant]
+		type InitialBridgeFee: Get<BalanceOf<Self>>;
 	}
 
 	/// All whitelisted chains and their respective transaction counts
@@ -124,7 +128,7 @@ pub mod pallet {
 	/// fees)
 	#[pallet::storage]
 	#[pallet::getter(fn bridge_fee)]
-	pub type BridgeFee<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
+	pub type BridgeFee<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery, T::InitialBridgeFee>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
