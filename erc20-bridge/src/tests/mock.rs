@@ -1,7 +1,4 @@
-use crate::{
-	self as ternoa_erc20_bridge, Config as PalletERC20BridgeConfig,
-	NegativeImbalanceOf,
-};
+use crate::{self as ternoa_erc20_bridge, Config as PalletERC20BridgeConfig, NegativeImbalanceOf};
 
 use frame_support::{
 	parameter_types,

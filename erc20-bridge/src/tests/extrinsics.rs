@@ -1,9 +1,11 @@
 use super::mock::*;
 
 use crate::{
-	tests::mock,
-	tests::mock::helpers::{expect_event, assert_events, make_transfer_proposal},
-	Error, Event as ERC20BridgeEvent
+	tests::{
+		mock,
+		mock::helpers::{assert_events, expect_event, make_transfer_proposal},
+	},
+	Event as ERC20BridgeEvent,
 };
 use frame_support::assert_ok;
 use frame_system::RawOrigin;
@@ -17,7 +19,7 @@ fn root() -> mock::Origin {
 }
 
 mod transfer_native {
-    use super::*;
+	use super::*;
 
 	#[test]
 	fn transfer_native() {
@@ -27,15 +29,15 @@ mod transfer_native {
 			let resource_id = NativeTokenId::get();
 			let amount: u64 = 100;
 			let recipient = vec![99];
-            let bridge_fee = 3;
+			let bridge_fee = 3;
 
 			assert_ok!(ChainBridge::whitelist_chain(Origin::root(), dest_chain.clone()));
 
-            assert_ok!(ERC20Bridge::set_bridge_fee(root(), bridge_fee));
+			assert_ok!(ERC20Bridge::set_bridge_fee(root(), bridge_fee));
 
 			let origin_balance_before = Balances::free_balance(RELAYER_A);
 			let total_issuance_before = Balances::total_issuance();
-            let treasury_before = Balances::free_balance(COLLECTOR);
+			let treasury_before = Balances::free_balance(COLLECTOR);
 
 			assert_ok!(ERC20Bridge::transfer_native(
 				origin.clone(),
@@ -44,9 +46,12 @@ mod transfer_native {
 				dest_chain,
 			));
 
-			assert_eq!(Balances::free_balance(RELAYER_A), origin_balance_before - amount - bridge_fee);
+			assert_eq!(
+				Balances::free_balance(RELAYER_A),
+				origin_balance_before - amount - bridge_fee
+			);
 			assert_eq!(Balances::total_issuance(), total_issuance_before - amount);
-            assert_eq!(Balances::free_balance(COLLECTOR), treasury_before + bridge_fee);
+			assert_eq!(Balances::free_balance(COLLECTOR), treasury_before + bridge_fee);
 
 			expect_event(chainbridge::Event::FungibleTransfer(
 				dest_chain,
@@ -174,6 +179,8 @@ mod transfer {
 }
 
 mod set_bridge_fee {
+	use frame_support::{assert_noop, error::BadOrigin};
+
 	use super::*;
 
 	#[test]
@@ -182,18 +189,27 @@ mod set_bridge_fee {
 			let old_bridge_fee = ERC20Bridge::bridge_fee();
 			let new_bridge_fee = 3u64;
 			assert!(old_bridge_fee != new_bridge_fee);
-	
+
 			// Change the bridge fee
 			let ok = ERC20Bridge::set_bridge_fee(root(), new_bridge_fee);
 			assert_ok!(ok);
-	
+
 			// Final state checks
 			assert_eq!(ERC20Bridge::bridge_fee(), new_bridge_fee);
-	
+
 			// Events checks
 			let event = ERC20BridgeEvent::BridgeFeeUpdated { fee: new_bridge_fee };
 			let event = Event::ERC20Bridge(event);
 			assert_eq!(System::events().last().unwrap().event, event);
+		})
+	}
+
+	#[test]
+	fn bad_origin() {
+		TestExternalitiesBuilder::default().build().execute_with(|| {
+			// Try to change bridge fee as not root
+			// Should fail and storage should remain empty
+			assert_noop!(ERC20Bridge::set_bridge_fee(origin(RELAYER_A), 3), BadOrigin);
 		})
 	}
 }
