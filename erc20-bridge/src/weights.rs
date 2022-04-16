@@ -11,7 +11,7 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 
-//! Extrinsincs weight information for example pallet.
+//! Extrinsincs weight information for ERC20Bridge pallet.
 //!
 //! Note that the following weights are used only for development.
 //! In fact, weights shoudl be calculated using runtime benchmarking.
@@ -22,30 +22,48 @@
 
 use frame_support::weights::Weight;
 
-use crate::traits::WeightInfo;
+pub trait WeightInfo {
+	fn transfer_hash() -> Weight;
+
+	fn transfer_native() -> Weight;
+
+	fn transfer_erc721() -> Weight;
+
+	fn transfer() -> Weight;
+
+	fn remark() -> Weight;
+
+	fn mint_erc721() -> Weight;
+
+	fn set_bridge_fee() -> Weight;
+}
 
 impl WeightInfo for () {
-    fn transfer_hash() -> Weight {
-        195_000_000 as Weight
-    }
+	fn transfer_hash() -> Weight {
+		195_000_000 as Weight
+	}
 
-    fn transfer_native() -> Weight {
-        195_000_000 as Weight
-    }
+	fn transfer_native() -> Weight {
+		195_000_000 as Weight
+	}
 
-    fn transfer_erc721() -> Weight {
-        195_000_000 as Weight
-    }
+	fn transfer_erc721() -> Weight {
+		195_000_000 as Weight
+	}
 
-    fn transfer() -> Weight {
-        195_000_000 as Weight
-    }
+	fn transfer() -> Weight {
+		195_000_000 as Weight
+	}
 
-    fn remark() -> Weight {
-        195_000_000 as Weight
-    }
+	fn remark() -> Weight {
+		195_000_000 as Weight
+	}
 
-    fn mint_erc721() -> Weight {
-        195_000_000 as Weight
-    }
+	fn mint_erc721() -> Weight {
+		195_000_000 as Weight
+	}
+
+	fn set_bridge_fee() -> Weight {
+		0 as Weight
+	}
 }
