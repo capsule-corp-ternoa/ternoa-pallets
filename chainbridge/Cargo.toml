@@ -2,7 +2,7 @@
 name = 'chainbridge'
 version = '0.0.2'
 authors = ['david@chainsafe.io']
-edition = '2018'
+edition = '2021'
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
@@ -10,31 +10,27 @@ targets = ["x86_64-unknown-linux-gnu"]
 [dependencies]
 # third-party dependencies
 serde = { optional = true, version = "1.0.132" }
-codec = { package = "parity-scale-codec", default-features = false, features = [
-	"derive",
-], version = "2.3.1" }
-scale-info = { version = "1.0", default-features = false, features = [
-	"derive",
-] }
+codec = { package = "parity-scale-codec", default-features = false, features = ["derive", "max-encoded-len"], version = "3.1.2" }
+scale-info = { version = "2.0.1", default-features = false, features = ["derive"] }
 
 # primitives
-sp-core = { git = "https://github.com/paritytech/substrate.git", default-features = false, version = "4.0.0-dev", branch = "master" }
-sp-io = { git = "https://github.com/paritytech/substrate.git", default-features = false, version = "4.0.0-dev", branch = "master" }
-sp-runtime = { git = "https://github.com/paritytech/substrate.git", default-features = false, version = "4.0.0-dev", branch = "master" }
-sp-std = { git = "https://github.com/paritytech/substrate.git", default-features = false, version = "4.0.0-dev", branch = "master" }
+sp-core = { git = "https://github.com/capsule-corp-ternoa/substrate", default-features = false, branch = "ternoa-substrate-2022-03-24" }
+sp-io = { git = "https://github.com/capsule-corp-ternoa/substrate", default-features = false, branch = "ternoa-substrate-2022-03-24" }
+sp-runtime = { git = "https://github.com/capsule-corp-ternoa/substrate", default-features = false, branch = "ternoa-substrate-2022-03-24" }
+sp-std = { git = "https://github.com/capsule-corp-ternoa/substrate", default-features = false, branch = "ternoa-substrate-2022-03-24" }
 
 # frame dependencies
-frame-support = { git = "https://github.com/paritytech/substrate.git", default-features = false, version = "4.0.0-dev", branch = "master" }
-frame-system = { git = "https://github.com/paritytech/substrate.git", default-features = false, version = "4.0.0-dev", branch = "master" }
+frame-support = { git = "https://github.com/capsule-corp-ternoa/substrate", default-features = false, branch = "ternoa-substrate-2022-03-24" }
+frame-system = { git = "https://github.com/capsule-corp-ternoa/substrate", default-features = false, branch = "ternoa-substrate-2022-03-24" }
 
 # Benchmarking primitives
-frame-benchmarking = { git = "https://github.com/paritytech/substrate.git", default-features = false, optional = true, version = "4.0.0-dev", branch = "master" }
+frame-benchmarking = { git = "https://github.com/capsule-corp-ternoa/substrate", default-features = false, optional = true, branch = "ternoa-substrate-2022-03-24" }
 
 [build-dependencies]
 wasm-builder-runner = { version = "3.0.0", package = "substrate-wasm-builder-runner" }
 
 [dev-dependencies]
-pallet-balances = { git = "https://github.com/paritytech/substrate.git", version = "4.0.0-dev", branch = "master" }
+pallet-balances = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-03-24" }
 
 [features]
 default = ["std"]
