@@ -9,5 +9,5 @@ members = [
     'primitives',
     'mandate',
     'staking-rewards',
-    'chainbridge',
+    'eth-ter-bridge',
 ]

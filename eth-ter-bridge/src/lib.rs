@@ -260,7 +260,7 @@ pub mod pallet {
 			ensure!(Self::is_relayer(&account), Error::<T>::MustBeRelayer);
 			ensure!(Self::chain_whitelisted(chain_id), Error::<T>::ChainNotWhitelisted);
 
-			let now = <frame_system::Pallet<T>>::block_number();
+			let now = frame_system::Pallet::<T>::block_number();
 			let threshold = Self::relayer_vote_threshold();
 			let mut result = None;
 
@@ -317,22 +317,21 @@ pub mod pallet {
 		/// destination chain.
 		#[pallet::weight(100)]
 		#[transactional]
-		pub fn transfer_native(
+		pub fn transfer(
 			origin: OriginFor<T>,
 			amount: BalanceOf<T>,
 			recipient: Vec<u8>,
 			dest_id: ChainId,
 		) -> DispatchResultWithPostInfo {
 			let source = ensure_signed(origin)?;
+			let bridge_fee = Self::bridge_fee();
+			let total = bridge_fee + amount;
+
 			ensure!(Self::chain_whitelisted(dest_id), Error::<T>::ChainNotWhitelisted);
+			ensure!(T::Currency::free_balance(&source) >= total, Error::<T>::RemovalImpossible);
 
-			ensure!(
-				T::Currency::free_balance(&source) >= Self::bridge_fee() + amount,
-				Error::<T>::RemovalImpossible
-			);
-
-			let fee = Self::bridge_fee();
-			let imbalance = T::Currency::withdraw(&source, fee, WithdrawReasons::all(), KeepAlive)?;
+			let imbalance =
+				T::Currency::withdraw(&source, bridge_fee, WithdrawReasons::all(), KeepAlive)?;
 			T::FeesCollector::on_unbalanced(imbalance);
 
 			T::Currency::withdraw(&source, amount, WithdrawReasons::TRANSFER, AllowDeath)?;
@@ -340,7 +339,7 @@ pub mod pallet {
 
 			// Bump nonce
 			let nonce = Self::chain_nonces(dest_id).unwrap_or_default() + 1;
-			<ChainNonces<T>>::insert(dest_id, nonce);
+			ChainNonces::<T>::insert(dest_id, nonce);
 
 			let amount = U256::from(amount.saturated_into::<u128>());
 			Self::deposit_event(Event::FungibleTransfer(dest_id, nonce, amount, recipient));
