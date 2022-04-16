@@ -10,7 +10,6 @@ pub mod types;
 mod weights;
 
 use frame_support::{
-	bounded_vec,
 	dispatch::DispatchResult,
 	ensure,
 	traits::{
@@ -18,7 +17,7 @@ use frame_support::{
 		ExistenceRequirement::{AllowDeath, KeepAlive},
 		Get, OnUnbalanced, WithdrawReasons,
 	},
-	transactional, PalletId,
+	transactional, BoundedVec, PalletId,
 };
 use frame_system::ensure_signed;
 use sp_core::U256;
@@ -189,7 +188,7 @@ pub mod pallet {
 		ProposalAlreadyComplete,
 		/// Lifetime of proposal has been exceeded
 		ProposalExpired,
-		/// MaximumVoteLimitExceeded
+		/// TODO!
 		MaximumVoteLimitExceeded,
 		/// TODO!
 		InvalidTransfer,
@@ -267,6 +266,7 @@ pub mod pallet {
 			let now = frame_system::Pallet::<T>::block_number();
 			let threshold = Self::relayer_vote_threshold();
 			let mut result = None;
+			let error = Error::<T>::MaximumVoteLimitExceeded;
 
 			Votes::<T>::try_mutate(
 				chain_id,
@@ -276,17 +276,14 @@ pub mod pallet {
 						ensure!(!proposal.is_complete(), Error::<T>::ProposalAlreadyComplete);
 						ensure!(!proposal.is_expired(now), Error::<T>::ProposalExpired);
 						ensure!(!proposal.has_voted(&account), Error::<T>::RelayerAlreadyVoted);
-						proposal
-							.votes
-							.try_push((account.clone(), in_favour))
-							.map_err(|_| Error::<T>::MaximumVoteLimitExceeded)?;
+
+						proposal.votes.try_push((account.clone(), in_favour)).map_err(|_| error)?;
 						result = proposal.try_to_complete(threshold);
 					} else {
 						let lifetime = T::ProposalLifetime::get();
-						let mut new_proposal = Proposal::new(
-							bounded_vec![(account.clone(), in_favour)],
-							now + lifetime,
-						);
+						let initial = BoundedVec::try_from(vec![(account.clone(), in_favour)])
+							.map_err(|_| error)?;
+						let mut new_proposal = Proposal::new(initial, now + lifetime);
 						result = new_proposal.try_to_complete(threshold);
 						*proposal = Some(new_proposal);
 					}
