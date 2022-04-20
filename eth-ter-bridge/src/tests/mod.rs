@@ -16,8 +16,5 @@
 
 mod constants;
 mod extrinsics;
-mod genesis;
-mod hooks;
-mod types;
 
 pub mod mock;

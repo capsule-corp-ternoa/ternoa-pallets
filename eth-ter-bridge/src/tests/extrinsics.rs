@@ -17,17 +17,26 @@
 // Module imports and re-exports
 // ----------------------------------------------------------------------------
 
-use super::mock::*;
-use frame_support::{assert_ok, bounded_vec};
+use super::mock::{self, *};
+use frame_support::{assert_noop, assert_ok, bounded_vec, error::BadOrigin};
+use frame_system::RawOrigin;
 
 use crate::{
 	types::{Proposal, ProposalStatus},
-	Event as ChainBridgeEvent,
+	Error, Event as ChainBridgeEvent,
 };
 
 use crate::tests::mock::{
-	ChainBridge, Origin, ProposalLifetime, System, TestExternalitiesBuilder, RELAYER_A, RELAYER_B,
+	ChainBridge, ProposalLifetime, System, TestExternalitiesBuilder, RELAYER_A, RELAYER_B,
 };
+
+fn origin(account: u64) -> mock::Origin {
+	RawOrigin::Signed(account).into()
+}
+
+fn root() -> mock::Origin {
+	RawOrigin::Root.into()
+}
 
 pub mod try_to_complete {
 	pub use super::*;
@@ -83,7 +92,7 @@ pub mod whitelist_chain {
 		TestExternalitiesBuilder::default().build().execute_with(|| {
 			assert!(!ChainBridge::chain_whitelisted(0));
 
-			assert_ok!(ChainBridge::whitelist_chain(Origin::root(), 0));
+			assert_ok!(ChainBridge::whitelist_chain(root(), 0));
 
 			let event = ChainBridgeEvent::ChainWhitelisted { chain_id: 0 };
 			let event = Event::ChainBridge(event);
@@ -93,47 +102,62 @@ pub mod whitelist_chain {
 
 	#[test]
 	fn whitelist_chain_bad_origin() {
-		TestExternalitiesBuilder::default().build().execute_with(|| {});
+		TestExternalitiesBuilder::default().build().execute_with(|| {
+			assert!(!ChainBridge::chain_whitelisted(0));
+
+			assert_noop!(ChainBridge::whitelist_chain(origin(RELAYER_A), 0), BadOrigin);
+		});
 	}
 
 	#[test]
 	fn whitelist_chain_invalid_chain_id() {
 		TestExternalitiesBuilder::default().build().execute_with(|| {
-			// assert_noop!(
-			// 	ChainBridge::whitelist_chain(
-			// 		Origin::root(),
-			// 		<MockRuntime as pallet_chainbridge::Config>::ChainId::get()
-			// 	),
-			// 	Error::<MockRuntime>::InvalidChainId
-			// );
+			assert!(!ChainBridge::chain_whitelisted(0));
+
+			assert_noop!(
+				ChainBridge::whitelist_chain(root(), MockChainId::get()),
+				Error::<MockRuntime>::InvalidChainId
+			);
 		});
 	}
 
 	#[test]
 	fn whitelist_chain_chain_already_whitelisted() {
-		TestExternalitiesBuilder::default().build().execute_with(|| {});
+		TestExternalitiesBuilder::default().build().execute_with(|| {
+			assert!(!ChainBridge::chain_whitelisted(0));
+
+			assert_ok!(ChainBridge::whitelist_chain(root(), 0));
+			assert_noop!(
+				ChainBridge::whitelist_chain(root(), 0),
+				Error::<MockRuntime>::ChainAlreadyWhitelisted
+			);
+		});
 	}
 }
 
-// #[test]
-// fn set_get_threshold() {
-// 	TestExternalitiesBuilder::default().build().execute_with(|| {
-// 		assert_eq!(ChainBridge::get_threshold(), DEFAULT_RELAYER_VOTE_THRESHOLD);
+pub mod set_threshold {
+	pub use super::*;
 
-// 		assert_ok!(ChainBridge::set_threshold(Origin::root(), TEST_RELAYER_VOTE_THRESHOLD));
-// 		assert_eq!(ChainBridge::get_threshold(), TEST_RELAYER_VOTE_THRESHOLD);
+	// #[test]
+	// fn set_get_threshold() {
+	// 	TestExternalitiesBuilder::default().build().execute_with(|| {
+	// 		assert_eq!(ChainBridge::get_threshold(), DEFAULT_RELAYER_VOTE_THRESHOLD);
 
-// 		assert_ok!(ChainBridge::set_threshold(Origin::root(), 5));
-// 		assert_eq!(ChainBridge::get_threshold(), 5);
+	// 		assert_ok!(ChainBridge::set_threshold(root(), TEST_RELAYER_VOTE_THRESHOLD));
+	// 		assert_eq!(ChainBridge::get_threshold(), TEST_RELAYER_VOTE_THRESHOLD);
 
-// 		assert_events(vec![
-// 			Event::ChainBridge(pallet::Event::<MockRuntime>::RelayerThresholdChanged(
-// 				TEST_RELAYER_VOTE_THRESHOLD,
-// 			)),
-// 			Event::ChainBridge(pallet::Event::<MockRuntime>::RelayerThresholdChanged(5)),
-// 		]);
-// 	})
-// }
+	// 		assert_ok!(ChainBridge::set_threshold(root(), 5));
+	// 		assert_eq!(ChainBridge::get_threshold(), 5);
+
+	// 		assert_events(vec![
+	// 			Event::ChainBridge(pallet::Event::<MockRuntime>::RelayerThresholdChanged(
+	// 				TEST_RELAYER_VOTE_THRESHOLD,
+	// 			)),
+	// 			Event::ChainBridge(pallet::Event::<MockRuntime>::RelayerThresholdChanged(5)),
+	// 		]);
+	// 	})
+	// }
+}
 
 // #[test]
 // fn asset_transfer_success() {
@@ -143,9 +167,9 @@ pub mod whitelist_chain {
 // 		let resource_id = [1; 32];
 // 		let amount = 100;
 
-// 		assert_ok!(ChainBridge::set_threshold(Origin::root(), TEST_RELAYER_VOTE_THRESHOLD));
+// 		assert_ok!(ChainBridge::set_threshold(root(), TEST_RELAYER_VOTE_THRESHOLD));
 
-// 		assert_ok!(ChainBridge::whitelist_chain(Origin::root(), dest_id.clone()));
+// 		assert_ok!(ChainBridge::whitelist_chain(root(), dest_id.clone()));
 // 		assert_ok!(ChainBridge::transfer_fungible(
 // 			dest_id.clone(),
 // 			resource_id.clone(),
@@ -173,7 +197,7 @@ pub mod whitelist_chain {
 // 		let bad_dest_id = 3;
 // 		let resource_id = [4; 32];
 
-// 		assert_ok!(ChainBridge::whitelist_chain(Origin::root(), chain_id.clone()));
+// 		assert_ok!(ChainBridge::whitelist_chain(root(), chain_id.clone()));
 // 		assert_events(vec![Event::ChainBridge(pallet::Event::<MockRuntime>::ChainWhitelisted(
 // 			chain_id.clone(),
 // 		))]);
@@ -188,25 +212,25 @@ pub mod whitelist_chain {
 // #[test]
 // fn add_remove_relayer() {
 // 	TestExternalitiesBuilder::default().build().execute_with(|| {
-// 		assert_ok!(ChainBridge::set_threshold(Origin::root(), TEST_RELAYER_VOTE_THRESHOLD,));
+// 		assert_ok!(ChainBridge::set_threshold(root(), TEST_RELAYER_VOTE_THRESHOLD,));
 // 		assert_eq!(ChainBridge::get_relayer_count(), 0);
 
-// 		assert_ok!(ChainBridge::add_relayer(Origin::root(), RELAYER_A));
-// 		assert_ok!(ChainBridge::add_relayer(Origin::root(), RELAYER_B));
-// 		assert_ok!(ChainBridge::add_relayer(Origin::root(), RELAYER_C));
+// 		assert_ok!(ChainBridge::add_relayer(root(), RELAYER_A));
+// 		assert_ok!(ChainBridge::add_relayer(root(), RELAYER_B));
+// 		assert_ok!(ChainBridge::add_relayer(root(), RELAYER_C));
 // 		assert_eq!(ChainBridge::get_relayer_count(), 3);
 
 // 		// Already exists
 // 		assert_noop!(
-// 			ChainBridge::add_relayer(Origin::root(), RELAYER_A),
+// 			ChainBridge::add_relayer(root(), RELAYER_A),
 // 			Error::<MockRuntime>::RelayerAlreadyExists
 // 		);
 
 // 		// Confirm removal
-// 		assert_ok!(ChainBridge::remove_relayer(Origin::root(), RELAYER_B));
+// 		assert_ok!(ChainBridge::remove_relayer(root(), RELAYER_B));
 // 		assert_eq!(ChainBridge::get_relayer_count(), 2);
 // 		assert_noop!(
-// 			ChainBridge::remove_relayer(Origin::root(), RELAYER_B),
+// 			ChainBridge::remove_relayer(root(), RELAYER_B),
 // 			Error::<MockRuntime>::RelayerInvalid
 // 		);
 // 		assert_eq!(ChainBridge::get_relayer_count(), 2);
@@ -420,7 +444,7 @@ pub mod whitelist_chain {
 // 			assert_eq!(prop, expected);
 
 // 			// Change threshold
-// 			assert_ok!(ChainBridge::set_threshold(Origin::root(), 1));
+// 			assert_ok!(ChainBridge::set_threshold(root(), 1));
 
 // 			// Attempt to execute
 // 			assert_ok!(ChainBridge::eval_vote_state(
