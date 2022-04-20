@@ -15,3 +15,5 @@
 
 /// Default number of votes required for a proposal to be executed.
 pub const DEFAULT_RELAYER_VOTE_THRESHOLD: u32 = 1;
+pub const DEFAULT_RELAYER_COUNT_LIMIT: u32 = 3;
+pub const DEFAULT_INITIAL_BRIDGE_FEE: u32 = 1;

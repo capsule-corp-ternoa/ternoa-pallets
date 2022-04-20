@@ -22,7 +22,15 @@
 
 use frame_support::weights::Weight;
 
-use crate::traits::WeightInfo;
+pub trait WeightInfo {
+	fn set_threshold() -> Weight;
+	fn whitelist_chain() -> Weight;
+	fn add_relayer() -> Weight;
+	fn remove_relayer() -> Weight;
+	fn acknowledge_proposal(dispatch_weight: Weight) -> Weight;
+	fn reject_proposal() -> Weight;
+	fn eval_vote_state(dispatch_weight: Weight) -> Weight;
+}
 
 impl WeightInfo for () {
 	fn set_threshold() -> Weight {

@@ -22,8 +22,8 @@
 
 // Import crate types, traits and constants
 use crate::{
-	self as pallet_chainbridge, constants::DEFAULT_RELAYER_VOTE_THRESHOLD, ChainId,
-	Config as ChainBridgePalletConfig, ResourceId, WeightInfo,
+	self as pallet_chainbridge, tests::constants::*, ChainId, Config as ChainBridgePalletConfig,
+	WeightInfo,
 };
 
 // Import Substrate primitives and components
@@ -31,10 +31,13 @@ use frame_support::{
 	assert_ok, parameter_types,
 	traits::{ConstU32, Everything, SortedMembers},
 	weights::Weight,
-	PalletId,
+	BoundedVec, PalletId,
 };
 
-use frame_system::mocking::{MockBlock, MockUncheckedExtrinsic};
+use frame_system::{
+	mocking::{MockBlock, MockUncheckedExtrinsic},
+	EnsureRoot,
+};
 
 use sp_core::H256;
 
@@ -62,14 +65,6 @@ pub type SystemCall = frame_system::Call<MockRuntime>;
 pub struct MockWeightInfo;
 impl WeightInfo for MockWeightInfo {
 	fn set_threshold() -> Weight {
-		0 as Weight
-	}
-
-	fn set_resource() -> Weight {
-		0 as Weight
-	}
-
-	fn remove_resource() -> Weight {
 		0 as Weight
 	}
 
@@ -117,9 +112,9 @@ frame_support::construct_runtime!(
 		NodeBlock = Block,
 		UncheckedExtrinsic = UncheckedExtrinsic
 	{
-		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-		ChainBridge: pallet_chainbridge::{Pallet, Call, Storage, Event<T>},
+		System: frame_system,
+		Balances: pallet_balances,
+		ChainBridge: pallet_chainbridge,
 	}
 );
 
@@ -195,18 +190,23 @@ parameter_types! {
 	pub const ChainBridgePalletId: PalletId = PalletId(*b"cb/bridg");
 	pub const ProposalLifetime: u64 = 10;
 	pub const RelayerVoteThreshold: u32 = DEFAULT_RELAYER_VOTE_THRESHOLD;
+	pub const RelayerCountLimit: u32 = DEFAULT_RELAYER_COUNT_LIMIT;
+	pub const InitialBridgeFee: u32 = DEFAULT_INITIAL_BRIDGE_FEE;
 }
 
 // Implement chainbridge pallet configuration trait for the mock runtime
 impl ChainBridgePalletConfig for MockRuntime {
 	type Event = Event;
-	type Proposal = Call;
+	type WeightInfo = MockWeightInfo;
+	type Currency = Balances;
+	type FeesCollector = ();
+	type ExternalOrigin = EnsureRoot<Self::AccountId>;
 	type ChainId = MockChainId;
 	type PalletId = ChainBridgePalletId;
-	type AdminOrigin = frame_system::EnsureRoot<Self::AccountId>;
 	type ProposalLifetime = ProposalLifetime;
 	type RelayerVoteThreshold = RelayerVoteThreshold;
-	type WeightInfo = MockWeightInfo;
+	type RelayerCountLimit = RelayerCountLimit;
+	type InitialBridgeFee = InitialBridgeFee;
 }
 
 // ----------------------------------------------------------------------------
@@ -247,27 +247,28 @@ impl TestExternalitiesBuilder {
 	}
 
 	// Build a genesis storage with a pre-configured chainbridge
-	pub(crate) fn build_with(
-		self,
-		src_id: ChainId,
-		r_id: ResourceId,
-		resource: Vec<u8>,
-	) -> TestExternalities {
+	pub(crate) fn build_with(self, src_id: ChainId, resource: Vec<u8>) -> TestExternalities {
 		let mut externalities = Self::build(self);
 
 		externalities.execute_with(|| {
 			// Set and check threshold
 			assert_ok!(ChainBridge::set_threshold(Origin::root(), TEST_RELAYER_VOTE_THRESHOLD));
-			assert_eq!(ChainBridge::get_threshold(), TEST_RELAYER_VOTE_THRESHOLD);
+			assert_eq!(ChainBridge::relayer_vote_threshold(), TEST_RELAYER_VOTE_THRESHOLD);
 			// Add relayers
-			assert_ok!(ChainBridge::add_relayer(Origin::root(), RELAYER_A));
-			assert_ok!(ChainBridge::add_relayer(Origin::root(), RELAYER_B));
-			assert_ok!(ChainBridge::add_relayer(Origin::root(), RELAYER_C));
+			assert_ok!(ChainBridge::set_relayers(
+				Origin::root(),
+				BoundedVec::try_from(vec![RELAYER_A]).unwrap()
+			));
+			assert_ok!(ChainBridge::set_relayers(
+				Origin::root(),
+				BoundedVec::try_from(vec![RELAYER_B]).unwrap()
+			));
+			assert_ok!(ChainBridge::set_relayers(
+				Origin::root(),
+				BoundedVec::try_from(vec![RELAYER_C]).unwrap()
+			));
 			// Whitelist chain
 			assert_ok!(ChainBridge::whitelist_chain(Origin::root(), src_id));
-			// Set and check resource ID mapped to some junk data
-			assert_ok!(ChainBridge::set_resource(Origin::root(), r_id, resource));
-			assert_eq!(ChainBridge::resource_exists(r_id), true);
 		});
 
 		externalities
