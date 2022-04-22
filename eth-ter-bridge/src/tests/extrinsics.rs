@@ -92,7 +92,10 @@ pub mod whitelist_chain {
 		TestExternalitiesBuilder::default().build().execute_with(|| {
 			assert!(!ChainBridge::chain_whitelisted(0));
 
-			assert_ok!(ChainBridge::whitelist_chain(root(), 0));
+			let ok = ChainBridge::whitelist_chain(root(), 0);
+			assert_ok!(ok);
+
+			assert!(ChainBridge::chain_nonces(0).is_some());
 
 			let event = ChainBridgeEvent::ChainWhitelisted { chain_id: 0 };
 			let event = Event::ChainBridge(event);
@@ -126,7 +129,9 @@ pub mod whitelist_chain {
 		TestExternalitiesBuilder::default().build().execute_with(|| {
 			assert!(!ChainBridge::chain_whitelisted(0));
 
-			assert_ok!(ChainBridge::whitelist_chain(root(), 0));
+			let ok = ChainBridge::whitelist_chain(root(), 0);
+			assert_ok!(ok);
+
 			assert_noop!(
 				ChainBridge::whitelist_chain(root(), 0),
 				Error::<MockRuntime>::ChainAlreadyWhitelisted
@@ -136,425 +141,413 @@ pub mod whitelist_chain {
 }
 
 pub mod set_threshold {
+	use crate::tests::constants::DEFAULT_RELAYER_VOTE_THRESHOLD;
+
 	pub use super::*;
 
-	// #[test]
-	// fn set_get_threshold() {
-	// 	TestExternalitiesBuilder::default().build().execute_with(|| {
-	// 		assert_eq!(ChainBridge::get_threshold(), DEFAULT_RELAYER_VOTE_THRESHOLD);
+	#[test]
+	fn set_threshold() {
+		TestExternalitiesBuilder::default().build().execute_with(|| {
+			assert_eq!(ChainBridge::relayer_vote_threshold(), DEFAULT_RELAYER_VOTE_THRESHOLD);
 
-	// 		assert_ok!(ChainBridge::set_threshold(root(), TEST_RELAYER_VOTE_THRESHOLD));
-	// 		assert_eq!(ChainBridge::get_threshold(), TEST_RELAYER_VOTE_THRESHOLD);
+			let ok = ChainBridge::set_threshold(root(), 3);
+			assert_ok!(ok);
 
-	// 		assert_ok!(ChainBridge::set_threshold(root(), 5));
-	// 		assert_eq!(ChainBridge::get_threshold(), 5);
+			assert_eq!(ChainBridge::relayer_vote_threshold(), 3);
 
-	// 		assert_events(vec![
-	// 			Event::ChainBridge(pallet::Event::<MockRuntime>::RelayerThresholdChanged(
-	// 				TEST_RELAYER_VOTE_THRESHOLD,
-	// 			)),
-	// 			Event::ChainBridge(pallet::Event::<MockRuntime>::RelayerThresholdChanged(5)),
-	// 		]);
-	// 	})
-	// }
+			let event = ChainBridgeEvent::RelayerThresholdUpdated { threshold: 3 };
+			let event = Event::ChainBridge(event);
+			assert_eq!(System::events().last().unwrap().event, event);
+		})
+	}
+
+	#[test]
+	fn set_threshold_bad_origin() {
+		TestExternalitiesBuilder::default().build().execute_with(|| {
+			assert_eq!(ChainBridge::relayer_vote_threshold(), DEFAULT_RELAYER_VOTE_THRESHOLD);
+
+			assert_noop!(ChainBridge::set_threshold(origin(RELAYER_A), 3), BadOrigin);
+		});
+	}
+
+	#[test]
+	fn set_threshold_treshold_cannot_be_zero() {
+		TestExternalitiesBuilder::default().build().execute_with(|| {
+			assert_eq!(ChainBridge::relayer_vote_threshold(), DEFAULT_RELAYER_VOTE_THRESHOLD);
+
+			assert_noop!(
+				ChainBridge::set_threshold(root(), 0),
+				Error::<MockRuntime>::ThresholdCannotBeZero
+			);
+		});
+	}
 }
 
-// #[test]
-// fn asset_transfer_success() {
-// 	TestExternalitiesBuilder::default().build().execute_with(|| {
-// 		let dest_id = 2;
-// 		let to = vec![2];
-// 		let resource_id = [1; 32];
-// 		let amount = 100;
+pub mod vote_proposal {
+	pub use super::*;
 
-// 		assert_ok!(ChainBridge::set_threshold(root(), TEST_RELAYER_VOTE_THRESHOLD));
+	#[test]
+	fn vote_proposal_not_existing() {
+		let chain_id = 0;
+		let treshold = 3;
 
-// 		assert_ok!(ChainBridge::whitelist_chain(root(), dest_id.clone()));
-// 		assert_ok!(ChainBridge::transfer_fungible(
-// 			dest_id.clone(),
-// 			resource_id.clone(),
-// 			to.clone(),
-// 			amount.into()
-// 		));
+		TestExternalitiesBuilder::default()
+			.build_with(chain_id, treshold)
+			.execute_with(|| {
+				let recipient = RELAYER_C;
+				let amount = 100;
+				let deposit_nonce = ChainBridge::chain_nonces(chain_id).unwrap();
 
-// 		assert_events(vec![
-// 			Event::ChainBridge(pallet::Event::<MockRuntime>::ChainWhitelisted(dest_id.clone())),
-// 			Event::ChainBridge(pallet::Event::<MockRuntime>::FungibleTransfer(
-// 				dest_id.clone(),
-// 				1,
-// 				resource_id.clone(),
-// 				amount.into(),
-// 				to.clone(),
-// 			)),
-// 		]);
-// 	})
-// }
+				let proposal = ChainBridge::get_votes(chain_id, (deposit_nonce, recipient, amount));
+				assert!(proposal.is_none());
 
-// #[test]
-// fn asset_transfer_invalid_chain() {
-// 	TestExternalitiesBuilder::default().build().execute_with(|| {
-// 		let chain_id = 2;
-// 		let bad_dest_id = 3;
-// 		let resource_id = [4; 32];
+				let ok = ChainBridge::vote_proposal(
+					origin(RELAYER_A),
+					chain_id,
+					deposit_nonce,
+					recipient,
+					amount,
+					true,
+				);
+				assert_ok!(ok);
 
-// 		assert_ok!(ChainBridge::whitelist_chain(root(), chain_id.clone()));
-// 		assert_events(vec![Event::ChainBridge(pallet::Event::<MockRuntime>::ChainWhitelisted(
-// 			chain_id.clone(),
-// 		))]);
+				let proposal = ChainBridge::get_votes(chain_id, (deposit_nonce, recipient, amount));
+				assert!(proposal.is_some());
+				let count = proposal.unwrap().votes.iter().filter(|x| x.1 == true).count() as u32;
+				assert_eq!(count, 1);
 
-// 		assert_noop!(
-// 			ChainBridge::transfer_fungible(bad_dest_id, resource_id.clone(), vec![], U256::zero()),
-// 			Error::<MockRuntime>::ChainNotWhitelisted
-// 		);
-// 	})
-// }
+				let event = ChainBridgeEvent::RelayerVoted {
+					chain_id,
+					nonce: deposit_nonce,
+					account: RELAYER_A,
+					in_favour: true,
+				};
+				let event = Event::ChainBridge(event);
+				assert_eq!(System::events().last().unwrap().event, event);
+			});
+	}
 
-// #[test]
-// fn add_remove_relayer() {
-// 	TestExternalitiesBuilder::default().build().execute_with(|| {
-// 		assert_ok!(ChainBridge::set_threshold(root(), TEST_RELAYER_VOTE_THRESHOLD,));
-// 		assert_eq!(ChainBridge::get_relayer_count(), 0);
+	#[test]
+	fn vote_proposal_existing() {
+		let chain_id = 0;
+		let treshold = 3;
 
-// 		assert_ok!(ChainBridge::add_relayer(root(), RELAYER_A));
-// 		assert_ok!(ChainBridge::add_relayer(root(), RELAYER_B));
-// 		assert_ok!(ChainBridge::add_relayer(root(), RELAYER_C));
-// 		assert_eq!(ChainBridge::get_relayer_count(), 3);
+		TestExternalitiesBuilder::default()
+			.build_with(chain_id, treshold)
+			.execute_with(|| {
+				let recipient = RELAYER_C;
+				let amount = 100;
+				let deposit_nonce = ChainBridge::chain_nonces(chain_id).unwrap();
 
-// 		// Already exists
-// 		assert_noop!(
-// 			ChainBridge::add_relayer(root(), RELAYER_A),
-// 			Error::<MockRuntime>::RelayerAlreadyExists
-// 		);
+				let proposal = ChainBridge::get_votes(chain_id, (deposit_nonce, recipient, amount));
+				assert!(proposal.is_none());
 
-// 		// Confirm removal
-// 		assert_ok!(ChainBridge::remove_relayer(root(), RELAYER_B));
-// 		assert_eq!(ChainBridge::get_relayer_count(), 2);
-// 		assert_noop!(
-// 			ChainBridge::remove_relayer(root(), RELAYER_B),
-// 			Error::<MockRuntime>::RelayerInvalid
-// 		);
-// 		assert_eq!(ChainBridge::get_relayer_count(), 2);
-// 		assert_events(vec![
-// 			Event::ChainBridge(pallet::Event::<MockRuntime>::RelayerAdded(RELAYER_A)),
-// 			Event::ChainBridge(pallet::Event::<MockRuntime>::RelayerAdded(RELAYER_B)),
-// 			Event::ChainBridge(pallet::Event::<MockRuntime>::RelayerAdded(RELAYER_C)),
-// 			Event::ChainBridge(pallet::Event::<MockRuntime>::RelayerRemoved(RELAYER_B)),
-// 		]);
-// 	})
-// }
+				let ok = ChainBridge::vote_proposal(
+					origin(RELAYER_A),
+					chain_id,
+					deposit_nonce,
+					recipient,
+					amount,
+					true,
+				);
+				assert_ok!(ok);
 
-// #[test]
-// fn create_successful_remark_proposal() {
-// 	let src_id: ChainId = 1;
-// 	let r_id = derive_resource_id(src_id, b"remark");
+				let ok = ChainBridge::vote_proposal(
+					origin(RELAYER_B),
+					chain_id,
+					deposit_nonce,
+					recipient,
+					amount,
+					true,
+				);
+				assert_ok!(ok);
 
-// 	TestExternalitiesBuilder::default()
-// 		.build_with(src_id, r_id, b"System.remark".to_vec())
-// 		.execute_with(|| {
-// 			let prop_id = 1;
+				let proposal = ChainBridge::get_votes(chain_id, (deposit_nonce, recipient, amount));
+				assert!(proposal.is_some());
+				let count = proposal.unwrap().votes.iter().filter(|x| x.1 == true).count() as u32;
+				assert_eq!(count, 2);
 
-// 			// Create a dummy system remark proposal
-// 			let proposal = Call::System(SystemCall::remark { remark: vec![10] });
+				let event = ChainBridgeEvent::RelayerVoted {
+					chain_id,
+					nonce: deposit_nonce,
+					account: RELAYER_B,
+					in_favour: true,
+				};
+				let event = Event::ChainBridge(event);
+				assert_eq!(System::events().last().unwrap().event, event);
+			});
+	}
 
-// 			// Create proposal (& vote)
-// 			assert_ok!(ChainBridge::acknowledge_proposal(
-// 				Origin::signed(RELAYER_A),
-// 				prop_id,
-// 				src_id,
-// 				r_id,
-// 				Box::new(proposal.clone())
-// 			));
+	#[test]
+	fn vote_proposal_existing_and_reach_treshold() {
+		let chain_id = 0;
+		let treshold = 2;
 
-// 			let prop = ChainBridge::get_votes(src_id, (prop_id.clone(), proposal.clone())).unwrap();
+		TestExternalitiesBuilder::default()
+			.build_with(chain_id, treshold)
+			.execute_with(|| {
+				let recipient = RELAYER_C;
+				let amount = 100;
+				let deposit_nonce = ChainBridge::chain_nonces(chain_id).unwrap();
+				let relayer_c_before = Balances::free_balance(RELAYER_C);
 
-// 			let expected = Proposal {
-// 				votes_for: vec![RELAYER_A],
-// 				votes_against: vec![],
-// 				status: ProposalStatus::Initiated,
-// 				expiry: ProposalLifetime::get() + 1,
-// 			};
-// 			assert_eq!(prop, expected);
+				let proposal = ChainBridge::get_votes(chain_id, (deposit_nonce, recipient, amount));
+				assert!(proposal.is_none());
 
-// 			// Second relayer votes against
-// 			assert_ok!(ChainBridge::reject_proposal(
-// 				Origin::signed(RELAYER_B),
-// 				prop_id,
-// 				src_id,
-// 				r_id,
-// 				Box::new(proposal.clone())
-// 			));
+				let ok = ChainBridge::vote_proposal(
+					origin(RELAYER_A),
+					chain_id,
+					deposit_nonce,
+					recipient,
+					amount,
+					true,
+				);
+				assert_ok!(ok);
 
-// 			let prop = ChainBridge::get_votes(src_id, (prop_id.clone(), proposal.clone())).unwrap();
+				let ok = ChainBridge::vote_proposal(
+					origin(RELAYER_B),
+					chain_id,
+					deposit_nonce,
+					recipient,
+					amount,
+					true,
+				);
+				assert_ok!(ok);
 
-// 			let expected = Proposal {
-// 				votes_for: vec![RELAYER_A],
-// 				votes_against: vec![RELAYER_B],
-// 				status: ProposalStatus::Initiated,
-// 				expiry: ProposalLifetime::get() + 1,
-// 			};
-// 			assert_eq!(prop, expected);
+				let proposal = ChainBridge::get_votes(chain_id, (deposit_nonce, recipient, amount));
+				assert!(proposal.is_some());
+				let count = proposal.unwrap().votes.iter().filter(|x| x.1 == true).count() as u32;
+				assert_eq!(count, 2);
+				assert_eq!(relayer_c_before + amount, Balances::free_balance(RELAYER_C));
 
-// 			// Third relayer votes in favour
-// 			assert_ok!(ChainBridge::acknowledge_proposal(
-// 				Origin::signed(RELAYER_C),
-// 				prop_id,
-// 				src_id,
-// 				r_id,
-// 				Box::new(proposal.clone())
-// 			));
+				let event = ChainBridgeEvent::ProposalApproved { chain_id, nonce: deposit_nonce };
+				let event = Event::ChainBridge(event);
+				assert_eq!(System::events().last().unwrap().event, event);
+			});
+	}
 
-// 			let prop = ChainBridge::get_votes(src_id, (prop_id.clone(), proposal.clone())).unwrap();
-// 			let expected = Proposal {
-// 				votes_for: vec![RELAYER_A, RELAYER_C],
-// 				votes_against: vec![RELAYER_B],
-// 				status: ProposalStatus::Approved,
-// 				expiry: ProposalLifetime::get() + 1,
-// 			};
+	#[test]
+	fn vote_proposal_must_be_relayer() {
+		TestExternalitiesBuilder::default().build().execute_with(|| {
+			assert_noop!(
+				ChainBridge::vote_proposal(origin(5), 0, 0, RELAYER_C, 100, true),
+				Error::<MockRuntime>::MustBeRelayer
+			);
+		});
+	}
 
-// 			assert_eq!(prop, expected);
+	#[test]
+	fn vote_proposal_chain_not_whitelisted() {
+		let chain_id = 0;
+		let treshold = 3;
 
-// 			assert_events(vec![
-// 				Event::ChainBridge(pallet::Event::<MockRuntime>::VoteFor(
-// 					src_id, prop_id, RELAYER_A,
-// 				)),
-// 				Event::ChainBridge(pallet::Event::<MockRuntime>::VoteAgainst(
-// 					src_id, prop_id, RELAYER_B,
-// 				)),
-// 				Event::ChainBridge(pallet::Event::<MockRuntime>::VoteFor(
-// 					src_id, prop_id, RELAYER_C,
-// 				)),
-// 				Event::ChainBridge(pallet::Event::<MockRuntime>::ProposalApproved(src_id, prop_id)),
-// 				Event::ChainBridge(pallet::Event::<MockRuntime>::ProposalSucceeded(
-// 					src_id, prop_id,
-// 				)),
-// 			]);
-// 		})
-// }
+		TestExternalitiesBuilder::default()
+			.build_with(chain_id, treshold)
+			.execute_with(|| {
+				assert_noop!(
+					ChainBridge::vote_proposal(origin(RELAYER_A), 1, 0, RELAYER_C, 100, true),
+					Error::<MockRuntime>::ChainNotWhitelisted
+				);
+			});
+	}
 
-// #[test]
-// fn create_unsuccessful_transfer_proposal() {
-// 	let src_id = 1;
-// 	let r_id = derive_resource_id(src_id, b"transfer");
+	#[test]
+	fn vote_proposal_proposal_already_complete() {
+		let chain_id = 0;
+		let treshold = 1;
 
-// 	TestExternalitiesBuilder::default()
-// 		.build_with(src_id, r_id, b"System.remark".to_vec())
-// 		.execute_with(|| {
-// 			let prop_id = 1;
+		TestExternalitiesBuilder::default()
+			.build_with(chain_id, treshold)
+			.execute_with(|| {
+				let ok = ChainBridge::vote_proposal(
+					origin(RELAYER_A),
+					chain_id,
+					0,
+					RELAYER_C,
+					100,
+					true,
+				);
+				assert_ok!(ok);
 
-// 			// Create a dummy system remark proposal
-// 			let proposal = Call::System(SystemCall::remark { remark: vec![11] });
+				assert_noop!(
+					ChainBridge::vote_proposal(
+						origin(RELAYER_B),
+						chain_id,
+						0,
+						RELAYER_C,
+						100,
+						true
+					),
+					Error::<MockRuntime>::ProposalAlreadyComplete
+				);
+			});
+	}
 
-// 			// Create proposal (& vote)
-// 			assert_ok!(ChainBridge::acknowledge_proposal(
-// 				Origin::signed(RELAYER_A),
-// 				prop_id,
-// 				src_id,
-// 				r_id,
-// 				Box::new(proposal.clone())
-// 			));
-// 			let prop = ChainBridge::get_votes(src_id, (prop_id.clone(), proposal.clone())).unwrap();
-// 			let expected = Proposal {
-// 				votes_for: vec![RELAYER_A],
-// 				votes_against: vec![],
-// 				status: ProposalStatus::Initiated,
-// 				expiry: ProposalLifetime::get() + 1,
-// 			};
-// 			assert_eq!(prop, expected);
+	#[test]
+	fn vote_proposal_proposal_expired() {
+		let chain_id = 0;
+		let treshold = 3;
 
-// 			// Second relayer votes against
-// 			assert_ok!(ChainBridge::reject_proposal(
-// 				Origin::signed(RELAYER_B),
-// 				prop_id,
-// 				src_id,
-// 				r_id,
-// 				Box::new(proposal.clone())
-// 			));
-// 			let prop = ChainBridge::get_votes(src_id, (prop_id.clone(), proposal.clone())).unwrap();
-// 			let expected = Proposal {
-// 				votes_for: vec![RELAYER_A],
-// 				votes_against: vec![RELAYER_B],
-// 				status: ProposalStatus::Initiated,
-// 				expiry: ProposalLifetime::get() + 1,
-// 			};
-// 			assert_eq!(prop, expected);
+		TestExternalitiesBuilder::default()
+			.build_with(chain_id, treshold)
+			.execute_with(|| {
+				let ok = ChainBridge::vote_proposal(
+					origin(RELAYER_A),
+					chain_id,
+					0,
+					RELAYER_C,
+					100,
+					true,
+				);
+				assert_ok!(ok);
 
-// 			// Third relayer votes against
-// 			assert_ok!(ChainBridge::reject_proposal(
-// 				Origin::signed(RELAYER_C),
-// 				prop_id,
-// 				src_id,
-// 				r_id,
-// 				Box::new(proposal.clone())
-// 			));
-// 			let prop = ChainBridge::get_votes(src_id, (prop_id.clone(), proposal.clone())).unwrap();
-// 			let expected = Proposal {
-// 				votes_for: vec![RELAYER_A],
-// 				votes_against: vec![RELAYER_B, RELAYER_C],
-// 				status: ProposalStatus::Rejected,
-// 				expiry: ProposalLifetime::get() + 1,
-// 			};
-// 			assert_eq!(prop, expected);
+				System::set_block_number(
+					frame_system::Pallet::<MockRuntime>::block_number() +
+						ProposalLifetime::get() + 1,
+				);
 
-// 			assert_eq!(Balances::free_balance(RELAYER_B), 0);
-// 			assert_eq!(Balances::free_balance(ChainBridge::account_id()), ENDOWED_BALANCE);
+				assert_noop!(
+					ChainBridge::vote_proposal(
+						origin(RELAYER_B),
+						chain_id,
+						0,
+						RELAYER_C,
+						100,
+						true
+					),
+					Error::<MockRuntime>::ProposalExpired
+				);
+			});
+	}
 
-// 			assert_events(vec![
-// 				Event::ChainBridge(pallet::Event::<MockRuntime>::VoteFor(
-// 					src_id, prop_id, RELAYER_A,
-// 				)),
-// 				Event::ChainBridge(pallet::Event::<MockRuntime>::VoteAgainst(
-// 					src_id, prop_id, RELAYER_B,
-// 				)),
-// 				Event::ChainBridge(pallet::Event::<MockRuntime>::VoteAgainst(
-// 					src_id, prop_id, RELAYER_C,
-// 				)),
-// 				Event::ChainBridge(pallet::Event::<MockRuntime>::ProposalRejected(src_id, prop_id)),
-// 			]);
-// 		})
-// }
+	#[test]
+	fn vote_proposal_relayer_already_voted() {
+		let chain_id = 0;
+		let treshold = 3;
 
-// #[test]
-// fn execute_after_threshold_change() {
-// 	let src_id = 1;
-// 	let r_id = derive_resource_id(src_id, b"transfer");
+		TestExternalitiesBuilder::default()
+			.build_with(chain_id, treshold)
+			.execute_with(|| {
+				let ok = ChainBridge::vote_proposal(
+					origin(RELAYER_A),
+					chain_id,
+					0,
+					RELAYER_C,
+					100,
+					true,
+				);
+				assert_ok!(ok);
 
-// 	TestExternalitiesBuilder::default()
-// 		.build_with(src_id, r_id, b"System.remark".to_vec())
-// 		.execute_with(|| {
-// 			let prop_id = 1;
+				assert_noop!(
+					ChainBridge::vote_proposal(
+						origin(RELAYER_A),
+						chain_id,
+						0,
+						RELAYER_C,
+						100,
+						true
+					),
+					Error::<MockRuntime>::RelayerAlreadyVoted
+				);
+			});
+	}
+}
 
-// 			// Create a dummy system remark proposal
-// 			let proposal = Call::System(SystemCall::remark { remark: vec![11] });
+pub mod set_relayers {
+	use frame_support::BoundedVec;
 
-// 			// Create proposal (& vote)
-// 			assert_ok!(ChainBridge::acknowledge_proposal(
-// 				Origin::signed(RELAYER_A),
-// 				prop_id,
-// 				src_id,
-// 				r_id,
-// 				Box::new(proposal.clone())
-// 			));
-// 			let prop = ChainBridge::get_votes(src_id, (prop_id.clone(), proposal.clone())).unwrap();
-// 			let expected = Proposal {
-// 				votes_for: vec![RELAYER_A],
-// 				votes_against: vec![],
-// 				status: ProposalStatus::Initiated,
-// 				expiry: ProposalLifetime::get() + 1,
-// 			};
-// 			assert_eq!(prop, expected);
+	pub use super::*;
 
-// 			// Change threshold
-// 			assert_ok!(ChainBridge::set_threshold(root(), 1));
+	#[test]
+	fn set_relayers() {
+		let chain_id = 0;
+		let treshold = 3;
 
-// 			// Attempt to execute
-// 			assert_ok!(ChainBridge::eval_vote_state(
-// 				Origin::signed(RELAYER_A),
-// 				prop_id,
-// 				src_id,
-// 				Box::new(proposal.clone())
-// 			));
+		TestExternalitiesBuilder::default()
+			.build_with(chain_id, treshold)
+			.execute_with(|| {
+				let raw_relayers: BoundedVec<u64, RelayerCountLimit> =
+					bounded_vec![RELAYER_A, RELAYER_B];
 
-// 			let prop = ChainBridge::get_votes(src_id, (prop_id.clone(), proposal.clone())).unwrap();
-// 			let expected = Proposal {
-// 				votes_for: vec![RELAYER_A],
-// 				votes_against: vec![],
-// 				status: ProposalStatus::Approved,
-// 				expiry: ProposalLifetime::get() + 1,
-// 			};
-// 			assert_eq!(prop, expected);
+				let ok = ChainBridge::set_relayers(root(), raw_relayers.clone());
+				assert_ok!(ok);
 
-// 			assert_eq!(Balances::free_balance(RELAYER_B), 0);
-// 			assert_eq!(Balances::free_balance(ChainBridge::account_id()), ENDOWED_BALANCE);
+				let relayers = ChainBridge::relayers();
+				assert_eq!(relayers.clone(), raw_relayers);
 
-// 			assert_events(vec![
-// 				Event::ChainBridge(pallet::Event::<MockRuntime>::VoteFor(
-// 					src_id, prop_id, RELAYER_A,
-// 				)),
-// 				Event::ChainBridge(pallet::Event::<MockRuntime>::RelayerThresholdChanged(1)),
-// 				Event::ChainBridge(pallet::Event::<MockRuntime>::ProposalApproved(src_id, prop_id)),
-// 				Event::ChainBridge(pallet::Event::<MockRuntime>::ProposalSucceeded(
-// 					src_id, prop_id,
-// 				)),
-// 			]);
-// 		})
-// }
+				let event = ChainBridgeEvent::RelayersUpdated { relayers };
+				let event = Event::ChainBridge(event);
+				assert_eq!(System::events().last().unwrap().event, event);
+			});
+	}
 
-// #[test]
-// fn proposal_expires() {
-// 	let src_id = 1;
-// 	let r_id = derive_resource_id(src_id, b"remark");
+	#[test]
+	fn set_relayers_bad_origin() {
+		let chain_id = 0;
+		let treshold = 3;
 
-// 	TestExternalitiesBuilder::default()
-// 		.build_with(src_id, r_id, b"System.remark".to_vec())
-// 		.execute_with(|| {
-// 			let prop_id = 1;
+		TestExternalitiesBuilder::default()
+			.build_with(chain_id, treshold)
+			.execute_with(|| {
+				assert_noop!(
+					ChainBridge::set_relayers(
+						origin(RELAYER_A),
+						bounded_vec![RELAYER_A, RELAYER_B]
+					),
+					BadOrigin
+				);
+			});
+	}
+}
 
-// 			// Create a dummy system remark proposal
-// 			let proposal = Call::System(SystemCall::remark { remark: vec![10] });
+pub mod transfer {
+	pub use super::*;
 
-// 			// Create proposal (& vote)
-// 			assert_ok!(ChainBridge::acknowledge_proposal(
-// 				Origin::signed(RELAYER_A),
-// 				prop_id,
-// 				src_id,
-// 				r_id,
-// 				Box::new(proposal.clone())
-// 			));
-// 			let prop = ChainBridge::get_votes(src_id, (prop_id.clone(), proposal.clone())).unwrap();
-// 			let expected = Proposal {
-// 				votes_for: vec![RELAYER_A],
-// 				votes_against: vec![],
-// 				status: ProposalStatus::Initiated,
-// 				expiry: ProposalLifetime::get() + 1,
-// 			};
-// 			assert_eq!(prop, expected);
+	#[test]
+	fn transfer() {
+		let chain_id = 0;
+		let treshold = 3;
 
-// 			// Increment enough blocks such that now == expiry
-// 			System::set_block_number(ProposalLifetime::get() + 1);
+		TestExternalitiesBuilder::default()
+			.build_with(chain_id, treshold)
+			.execute_with(|| {
+				// code here
+			});
+	}
+}
 
-// 			// Attempt to submit a vote should fail
-// 			assert_noop!(
-// 				ChainBridge::reject_proposal(
-// 					Origin::signed(RELAYER_B),
-// 					prop_id,
-// 					src_id,
-// 					r_id,
-// 					Box::new(proposal.clone())
-// 				),
-// 				Error::<MockRuntime>::ProposalExpired
-// 			);
+pub mod set_bridge_fee {
+	pub use super::*;
 
-// 			// Proposal state should remain unchanged
-// 			let prop = ChainBridge::get_votes(src_id, (prop_id.clone(), proposal.clone())).unwrap();
-// 			let expected = Proposal {
-// 				votes_for: vec![RELAYER_A],
-// 				votes_against: vec![],
-// 				status: ProposalStatus::Initiated,
-// 				expiry: ProposalLifetime::get() + 1,
-// 			};
-// 			assert_eq!(prop, expected);
+	#[test]
+	fn set_bridge_fee() {
+		let chain_id = 0;
+		let treshold = 3;
 
-// 			// eval_vote_state should have no effect
-// 			assert_noop!(
-// 				ChainBridge::eval_vote_state(
-// 					Origin::signed(RELAYER_C),
-// 					prop_id,
-// 					src_id,
-// 					Box::new(proposal.clone())
-// 				),
-// 				Error::<MockRuntime>::ProposalExpired
-// 			);
-// 			let prop = ChainBridge::get_votes(src_id, (prop_id.clone(), proposal.clone())).unwrap();
-// 			let expected = Proposal {
-// 				votes_for: vec![RELAYER_A],
-// 				votes_against: vec![],
-// 				status: ProposalStatus::Initiated,
-// 				expiry: ProposalLifetime::get() + 1,
-// 			};
-// 			assert_eq!(prop, expected);
+		TestExternalitiesBuilder::default()
+			.build_with(chain_id, treshold)
+			.execute_with(|| {
+				let ok = ChainBridge::set_bridge_fee(root(), 100);
+				assert_ok!(ok);
 
-// 			assert_events(vec![mock::Event::ChainBridge(pallet::Event::<MockRuntime>::VoteFor(
-// 				src_id, prop_id, RELAYER_A,
-// 			))]);
-// 		})
-// }
+				let fee = ChainBridge::bridge_fee();
+				assert_eq!(fee.clone(), 100);
+
+				let event = ChainBridgeEvent::BridgeFeeUpdated { fee };
+				let event = Event::ChainBridge(event);
+				assert_eq!(System::events().last().unwrap().event, event);
+			});
+	}
+
+	#[test]
+	fn set_bridge_fee_bad_origin() {
+		let chain_id = 0;
+		let treshold = 3;
+
+		TestExternalitiesBuilder::default()
+			.build_with(chain_id, treshold)
+			.execute_with(|| {
+				assert_noop!(ChainBridge::set_bridge_fee(origin(RELAYER_A), 100), BadOrigin);
+			});
+	}
+}

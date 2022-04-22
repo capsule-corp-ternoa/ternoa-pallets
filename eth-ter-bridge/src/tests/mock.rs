@@ -59,8 +59,6 @@ type Balance = u64;
 type UncheckedExtrinsic = MockUncheckedExtrinsic<MockRuntime>;
 type Block = MockBlock<MockRuntime>;
 
-pub type SystemCall = frame_system::Call<MockRuntime>;
-
 // Implement testing extrinsic weights for the pallet
 pub struct MockWeightInfo;
 impl WeightInfo for MockWeightInfo {
@@ -98,7 +96,6 @@ pub(crate) const RELAYER_A: u64 = 0x2;
 pub(crate) const RELAYER_B: u64 = 0x3;
 pub(crate) const RELAYER_C: u64 = 0x4;
 pub(crate) const ENDOWED_BALANCE: u64 = 100_000_000;
-pub(crate) const TEST_RELAYER_VOTE_THRESHOLD: u32 = 2;
 
 // ----------------------------------------------------------------------------
 // Mock runtime configuration
@@ -247,25 +244,17 @@ impl TestExternalitiesBuilder {
 	}
 
 	// Build a genesis storage with a pre-configured chainbridge
-	pub(crate) fn build_with(self, src_id: ChainId, resource: Vec<u8>) -> TestExternalities {
+	pub(crate) fn build_with(self, src_id: ChainId, treshold: u32) -> TestExternalities {
 		let mut externalities = Self::build(self);
 
 		externalities.execute_with(|| {
 			// Set and check threshold
-			assert_ok!(ChainBridge::set_threshold(Origin::root(), TEST_RELAYER_VOTE_THRESHOLD));
-			assert_eq!(ChainBridge::relayer_vote_threshold(), TEST_RELAYER_VOTE_THRESHOLD);
+			assert_ok!(ChainBridge::set_threshold(Origin::root(), treshold));
+			assert_eq!(ChainBridge::relayer_vote_threshold(), treshold);
 			// Add relayers
 			assert_ok!(ChainBridge::set_relayers(
 				Origin::root(),
-				BoundedVec::try_from(vec![RELAYER_A]).unwrap()
-			));
-			assert_ok!(ChainBridge::set_relayers(
-				Origin::root(),
-				BoundedVec::try_from(vec![RELAYER_B]).unwrap()
-			));
-			assert_ok!(ChainBridge::set_relayers(
-				Origin::root(),
-				BoundedVec::try_from(vec![RELAYER_C]).unwrap()
+				BoundedVec::try_from(vec![RELAYER_A, RELAYER_B, RELAYER_C]).unwrap()
 			));
 			// Whitelist chain
 			assert_ok!(ChainBridge::whitelist_chain(Origin::root(), src_id));
@@ -274,28 +263,3 @@ impl TestExternalitiesBuilder {
 		externalities
 	}
 }
-
-// ----------------------------------------------------------------------------
-// Helper functions
-// ----------------------------------------------------------------------------
-
-pub mod helpers {
-
-	use super::{Event, MockRuntime};
-
-	// Checks events against the latest. A contiguous set of events must be provided. They must
-	// include the most recent event, but do not have to include every past event.
-	pub fn assert_events(mut expected: Vec<Event>) {
-		let mut actual: Vec<Event> = frame_system::Pallet::<MockRuntime>::events()
-			.iter()
-			.map(|e| e.event.clone())
-			.collect();
-
-		expected.reverse();
-
-		for evt in expected {
-			let next = actual.pop().expect("event expected");
-			assert_eq!(next, evt.into(), "Events don't match (actual,expected)");
-		}
-	}
-} // end of 'helpers' inner module

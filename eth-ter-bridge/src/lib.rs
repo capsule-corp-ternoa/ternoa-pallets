@@ -294,7 +294,7 @@ pub mod pallet {
 						ensure!(!proposal.is_expired(now), Error::<T>::ProposalExpired);
 						ensure!(!proposal.has_voted(&account), Error::<T>::RelayerAlreadyVoted);
 
-						proposal.votes.try_push((account.clone(), in_favour)).map_err(|_| error)?;
+						proposal.votes.try_push((account.clone(), in_favour)).map_err(|_| error)?; // can't reach error anyway
 						result = proposal.try_to_complete(threshold);
 					} else {
 						let lifetime = T::ProposalLifetime::get();
