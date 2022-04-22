@@ -149,20 +149,14 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		/// Vote threshold has changed (new_threshold)
-		RelayerThresholdUpdated {
-			threshold: u32,
-		},
-		/// Chain now available for transfers (chain_id)
-		ChainWhitelisted {
-			chain_id: ChainId,
-		},
-		/// Relayer added to set
-		RelayersUpdated {
-			relayers: BoundedVec<T::AccountId, T::RelayerCountLimit>,
-		},
-		/// FunglibleTransfer is for relaying fungibles (dest_id, nonce, amount, recipient)
-		FungibleTransfer(ChainId, DepositNonce, U256, Vec<u8>),
+		/// Vote threshold has changed
+		RelayerThresholdUpdated { threshold: u32 },
+		/// Chain now available for transfers
+		ChainWhitelisted { chain_id: ChainId },
+		/// Relayers has been updated
+		RelayersUpdated { relayers: BoundedVec<T::AccountId, T::RelayerCountLimit> },
+		/// Make a deposit from Native to ERC20
+		DepositEventSent(ChainId, DepositNonce, U256, Vec<u8>),
 		/// Vote submitted in favour of proposal
 		RelayerVoted {
 			chain_id: ChainId,
@@ -171,28 +165,19 @@ pub mod pallet {
 			in_favour: bool,
 		},
 		/// Voting successful for a proposal
-		ProposalApproved {
-			chain_id: ChainId,
-			nonce: DepositNonce,
-		},
+		ProposalApproved { chain_id: ChainId, nonce: DepositNonce },
 		/// Voting rejected a proposal
-		ProposalRejected {
-			chain_id: ChainId,
-			nonce: DepositNonce,
-		},
-		BridgeFeeUpdated {
-			fee: BalanceOf<T>,
-		},
+		ProposalRejected { chain_id: ChainId, nonce: DepositNonce },
+		/// Bridge fee changed
+		BridgeFeeUpdated { fee: BalanceOf<T> },
 	}
 
 	#[pallet::error]
 	pub enum Error<T> {
-		/// TODO!
+		/// Relayer threshold cannot be 0
 		ThresholdCannotBeZero,
 		/// Provided chain Id is not valid
 		InvalidChainId,
-		/// Relayer threshold cannot be 0
-		InvalidThreshold,
 		/// Interactions with this chain is not permitted
 		ChainNotWhitelisted,
 		/// Chain has already been enabled
@@ -205,12 +190,10 @@ pub mod pallet {
 		ProposalAlreadyComplete,
 		/// Lifetime of proposal has been exceeded
 		ProposalExpired,
-		/// TODO!
+		/// Vote limit has already been reached
 		MaximumVoteLimitExceeded,
-		/// TODO!
-		InvalidTransfer,
-		/// TODO!
-		RemovalImpossible,
+		/// Insufficient balance for transfer
+		InsufficientBalance,
 	}
 
 	#[pallet::call]
@@ -261,12 +244,12 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		/// Commits a vote in favour of the provided proposal.
+		/// Commits a vote in favour or against the provided proposal.
 		///
 		/// If a proposal with the given nonce and source chain ID does not already exist, it will
 		/// be created with an initial vote in favour from the caller.
 		#[pallet::weight(1000)]
-		pub fn vote_proposal(
+		pub fn vote_for_propsal(
 			origin: OriginFor<T>,
 			chain_id: ChainId,
 			nonce: DepositNonce,
@@ -335,7 +318,7 @@ pub mod pallet {
 		/// destination chain.
 		#[pallet::weight(100)]
 		#[transactional]
-		pub fn transfer(
+		pub fn deposit(
 			origin: OriginFor<T>,
 			amount: BalanceOf<T>,
 			recipient: Vec<u8>,
@@ -346,7 +329,7 @@ pub mod pallet {
 			let total = bridge_fee + amount;
 
 			ensure!(Self::chain_whitelisted(dest_id), Error::<T>::ChainNotWhitelisted);
-			ensure!(T::Currency::free_balance(&source) >= total, Error::<T>::RemovalImpossible);
+			ensure!(T::Currency::free_balance(&source) >= total, Error::<T>::InsufficientBalance);
 
 			let imbalance =
 				T::Currency::withdraw(&source, bridge_fee, WithdrawReasons::all(), KeepAlive)?;
@@ -360,7 +343,7 @@ pub mod pallet {
 			ChainNonces::<T>::insert(dest_id, nonce);
 
 			let amount = U256::from(amount.saturated_into::<u128>());
-			Self::deposit_event(Event::FungibleTransfer(dest_id, nonce, amount, recipient));
+			Self::deposit_event(Event::DepositEventSent(dest_id, nonce, amount, recipient));
 
 			Ok(().into())
 		}
