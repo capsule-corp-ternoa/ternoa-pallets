@@ -23,13 +23,13 @@
 // Import crate types, traits and constants
 use crate::{
 	self as pallet_chainbridge, tests::constants::*, ChainId, Config as ChainBridgePalletConfig,
-	WeightInfo,
+	NegativeImbalanceOf, WeightInfo,
 };
 
 // Import Substrate primitives and components
 use frame_support::{
 	assert_ok, parameter_types,
-	traits::{ConstU32, Everything, SortedMembers},
+	traits::{ConstU32, Currency, Everything, SortedMembers},
 	weights::Weight,
 	BoundedVec, PalletId,
 };
@@ -96,6 +96,7 @@ pub(crate) const RELAYER_A: u64 = 0x2;
 pub(crate) const RELAYER_B: u64 = 0x3;
 pub(crate) const RELAYER_C: u64 = 0x4;
 pub(crate) const ENDOWED_BALANCE: u64 = 100_000_000;
+pub const COLLECTOR: u64 = 99;
 
 // ----------------------------------------------------------------------------
 // Mock runtime configuration
@@ -191,12 +192,19 @@ parameter_types! {
 	pub const InitialBridgeFee: u32 = DEFAULT_INITIAL_BRIDGE_FEE;
 }
 
+pub struct MockFeeCollector;
+impl frame_support::traits::OnUnbalanced<NegativeImbalanceOf<MockRuntime>> for MockFeeCollector {
+	fn on_nonzero_unbalanced(amount: NegativeImbalanceOf<MockRuntime>) {
+		Balances::resolve_creating(&COLLECTOR, amount);
+	}
+}
+
 // Implement chainbridge pallet configuration trait for the mock runtime
 impl ChainBridgePalletConfig for MockRuntime {
 	type Event = Event;
 	type WeightInfo = MockWeightInfo;
 	type Currency = Balances;
-	type FeesCollector = ();
+	type FeesCollector = MockFeeCollector;
 	type ExternalOrigin = EnsureRoot<Self::AccountId>;
 	type ChainId = MockChainId;
 	type PalletId = ChainBridgePalletId;
@@ -233,7 +241,12 @@ impl TestExternalitiesBuilder {
 
 		// pre-fill balances
 		pallet_balances::GenesisConfig::<MockRuntime> {
-			balances: vec![(bridge_id, ENDOWED_BALANCE)],
+			balances: vec![
+				(bridge_id, ENDOWED_BALANCE),
+				(RELAYER_A, ENDOWED_BALANCE),
+				(RELAYER_B, ENDOWED_BALANCE),
+				(RELAYER_C, ENDOWED_BALANCE),
+			],
 		}
 		.assimilate_storage(&mut storage)
 		.unwrap();

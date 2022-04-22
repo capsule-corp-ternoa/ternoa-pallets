@@ -290,6 +290,7 @@ pub mod vote_proposal {
 				let amount = 100;
 				let deposit_nonce = ChainBridge::chain_nonces(chain_id).unwrap();
 				let relayer_c_before = Balances::free_balance(RELAYER_C);
+				let total_issuance = Balances::total_issuance();
 
 				let proposal = ChainBridge::get_votes(chain_id, (deposit_nonce, recipient, amount));
 				assert!(proposal.is_none());
@@ -316,9 +317,12 @@ pub mod vote_proposal {
 
 				let proposal = ChainBridge::get_votes(chain_id, (deposit_nonce, recipient, amount));
 				assert!(proposal.is_some());
-				let count = proposal.unwrap().votes.iter().filter(|x| x.1 == true).count() as u32;
-				assert_eq!(count, 2);
+				assert_eq!(
+					proposal.unwrap().votes.iter().filter(|x| x.1 == true).count() as u32,
+					2
+				);
 				assert_eq!(relayer_c_before + amount, Balances::free_balance(RELAYER_C));
+				assert_eq!(Balances::total_issuance(), total_issuance + amount);
 
 				let event = ChainBridgeEvent::ProposalApproved { chain_id, nonce: deposit_nonce };
 				let event = Event::ChainBridge(event);
@@ -511,7 +515,63 @@ pub mod transfer {
 		TestExternalitiesBuilder::default()
 			.build_with(chain_id, treshold)
 			.execute_with(|| {
-				// code here
+				let amount = 10;
+				let recipient = vec![0];
+				let relayer_a_balance_before = Balances::free_balance(RELAYER_A);
+				let bridge_fee = 100;
+				let deposit_nonce = ChainBridge::chain_nonces(chain_id);
+				let total_issuance = Balances::total_issuance();
+				let collector_before = Balances::free_balance(COLLECTOR);
+
+				let ok = ChainBridge::set_bridge_fee(root(), bridge_fee);
+				assert_ok!(ok);
+
+				let ok =
+					ChainBridge::transfer(origin(RELAYER_A), amount, recipient.clone(), chain_id);
+				assert_ok!(ok);
+
+				assert_eq!(
+					Balances::free_balance(RELAYER_A),
+					relayer_a_balance_before - amount - bridge_fee
+				);
+				assert_eq!(Balances::total_issuance(), total_issuance - amount);
+				assert_eq!(Balances::free_balance(COLLECTOR), collector_before + bridge_fee);
+				let new_deposit_nonce = ChainBridge::chain_nonces(chain_id);
+				assert_eq!(new_deposit_nonce.unwrap(), deposit_nonce.unwrap() + 1);
+
+				let event = ChainBridgeEvent::FungibleTransfer(
+					chain_id,
+					new_deposit_nonce.unwrap(),
+					amount.into(),
+					recipient,
+				);
+				let event = Event::ChainBridge(event);
+				assert_eq!(System::events().last().unwrap().event, event);
+			});
+	}
+
+	#[test]
+	fn transfer_chain_not_whitelisted() {
+		TestExternalitiesBuilder::default().build().execute_with(|| {
+			assert_noop!(
+				ChainBridge::transfer(origin(RELAYER_A), 10, vec![0], 0),
+				Error::<MockRuntime>::ChainNotWhitelisted
+			);
+		});
+	}
+
+	#[test]
+	fn transfer_removal_impossible() {
+		let chain_id = 0;
+		let treshold = 3;
+
+		TestExternalitiesBuilder::default()
+			.build_with(chain_id, treshold)
+			.execute_with(|| {
+				assert_noop!(
+					ChainBridge::transfer(origin(RELAYER_A), 200000000, vec![0], chain_id),
+					Error::<MockRuntime>::RemovalImpossible
+				);
 			});
 	}
 }
