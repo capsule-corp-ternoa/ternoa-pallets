@@ -19,7 +19,7 @@ use sp_std::marker::PhantomData;
 
 pub trait WeightInfo {
 	fn set_threshold() -> Weight;
-	fn whitelist_chain() -> Weight;
+	fn add_chain() -> Weight;
 	fn set_relayers() -> Weight;
 	fn vote_for_proposal() -> Weight;
 	fn deposit() -> Weight;
@@ -33,7 +33,7 @@ impl<T: frame_system::Config> WeightInfo for TernoaWeight<T> {
 		195_000_000 as Weight
 	}
 
-	fn whitelist_chain() -> Weight {
+	fn add_chain() -> Weight {
 		195_000_000 as Weight
 	}
 

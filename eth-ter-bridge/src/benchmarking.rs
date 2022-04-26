@@ -52,7 +52,7 @@ benchmarks! {
 		assert_eq!(RelayerVoteThreshold::<T>::get(), threshold);
 	}
 
-	whitelist_chain {
+	add_chain {
 		prepare_benchmarks::<T>();
 
 		let root = RawOrigin::Root;
@@ -87,7 +87,7 @@ benchmarks! {
 		let recipient: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(get_account::<T>("RELAYER_C"));
 		let chain_id = 0;
 
-		assert_ok!(Bridge::<T>::whitelist_chain(root.clone().into(), chain_id));
+		assert_ok!(Bridge::<T>::add_chain(root.clone().into(), chain_id));
 
 		let amount = 100u32;
 		let deposit_nonce = ChainNonces::<T>::get(chain_id).unwrap();
@@ -116,7 +116,7 @@ benchmarks! {
 		// let collector_before = Balances::free_balance(&collector);
 		// let relayer_a_balance_before: BalanceOf<T> = BalanceOf::<T>::free_balance(&relayer_a);
 
-		assert_ok!(Bridge::<T>::whitelist_chain(root.clone().into(), chain_id));
+		assert_ok!(Bridge::<T>::add_chain(root.clone().into(), chain_id));
 		assert_ok!(Bridge::<T>::set_bridge_fee(root.into(), bridge_fee));
 
 	}: _(RawOrigin::Signed(relayer_a), amount.clone().into(), recipient, chain_id)
@@ -150,8 +150,4 @@ benchmarks! {
 	}
 }
 
-impl_benchmark_test_suite!(
-	Bridge,
-	crate::tests::mock::new_test_ext(),
-	crate::tests::mock::MockRuntime
-);
+impl_benchmark_test_suite!(Bridge, crate::tests::mock::new_test_ext(), crate::tests::mock::Test);

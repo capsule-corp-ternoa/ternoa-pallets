@@ -33,8 +33,8 @@ use crate::{self as ternoa_bridge, ChainId, Config, NegativeImbalanceOf};
 
 pub type AccountId = u64;
 pub type Balance = u64;
-type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<MockRuntime>;
-type Block = frame_system::mocking::MockBlock<MockRuntime>;
+type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
+type Block = frame_system::mocking::MockBlock<Test>;
 
 pub const DEFAULT_RELAYER_VOTE_THRESHOLD: u32 = 1;
 pub const DEFAULT_RELAYER_COUNT_LIMIT: u32 = 3;
@@ -47,7 +47,7 @@ pub const COLLECTOR: u64 = 99;
 
 // Build mock runtime
 frame_support::construct_runtime!(
-	pub enum MockRuntime where
+	pub enum Test where
 		Block = Block,
 		NodeBlock = Block,
 		UncheckedExtrinsic = UncheckedExtrinsic
@@ -66,7 +66,7 @@ parameter_types! {
 	pub const MaxLocks: u32 = 100;
 }
 
-impl frame_system::Config for MockRuntime {
+impl frame_system::Config for Test {
 	type BaseCallFilter = Everything;
 	type Origin = Origin;
 	type Call = Call;
@@ -97,7 +97,7 @@ parameter_types! {
 	pub const ExistentialDeposit: u64 = 1;
 }
 
-impl pallet_balances::Config for MockRuntime {
+impl pallet_balances::Config for Test {
 	type Balance = Balance;
 	type DustRemoval = ();
 	type Event = Event;
@@ -119,15 +119,15 @@ parameter_types! {
 }
 
 pub struct MockFeeCollector;
-impl frame_support::traits::OnUnbalanced<NegativeImbalanceOf<MockRuntime>> for MockFeeCollector {
-	fn on_nonzero_unbalanced(amount: NegativeImbalanceOf<MockRuntime>) {
+impl frame_support::traits::OnUnbalanced<NegativeImbalanceOf<Test>> for MockFeeCollector {
+	fn on_nonzero_unbalanced(amount: NegativeImbalanceOf<Test>) {
 		Balances::resolve_creating(&COLLECTOR, amount);
 	}
 }
 
-impl Config for MockRuntime {
+impl Config for Test {
 	type Event = Event;
-	type WeightInfo = ternoa_bridge::weights::TernoaWeight<MockRuntime>;
+	type WeightInfo = ternoa_bridge::weights::TernoaWeight<Test>;
 	type Currency = Balances;
 	type FeesCollector = MockFeeCollector;
 	type ExternalOrigin = EnsureRoot<Self::AccountId>;
@@ -150,10 +150,9 @@ impl ExtBuilder {
 	pub fn build(self) -> TestExternalities {
 		let bridge_id = Bridge::account_id();
 
-		let mut storage =
-			frame_system::GenesisConfig::default().build_storage::<MockRuntime>().unwrap();
+		let mut storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
-		pallet_balances::GenesisConfig::<MockRuntime> {
+		pallet_balances::GenesisConfig::<Test> {
 			balances: vec![
 				(bridge_id, ENDOWED_BALANCE),
 				(RELAYER_A, ENDOWED_BALANCE),
@@ -182,7 +181,7 @@ impl ExtBuilder {
 				BoundedVec::try_from(vec![RELAYER_A, RELAYER_B, RELAYER_C]).unwrap()
 			));
 			// Whitelist chain
-			assert_ok!(Bridge::whitelist_chain(Origin::root(), src_id));
+			assert_ok!(Bridge::add_chain(Origin::root(), src_id));
 		});
 
 		externalities
@@ -191,7 +190,7 @@ impl ExtBuilder {
 
 #[allow(dead_code)]
 pub fn new_test_ext() -> sp_io::TestExternalities {
-	let t = frame_system::GenesisConfig::default().build_storage::<MockRuntime>().unwrap();
+	let t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
 	let mut ext = sp_io::TestExternalities::new(t);
 	ext.execute_with(|| System::set_block_number(1));

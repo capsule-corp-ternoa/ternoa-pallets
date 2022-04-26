@@ -33,7 +33,7 @@ use frame_support::{
 	traits::{
 		Currency, EnsureOrigin,
 		ExistenceRequirement::{AllowDeath, KeepAlive},
-		Get, OnUnbalanced, WithdrawReasons,
+		Get, OnUnbalanced, StorageVersion, WithdrawReasons,
 	},
 	transactional, BoundedVec, PalletId,
 };
@@ -55,6 +55,8 @@ pub type NegativeImbalanceOf<T> = <<T as Config>::Currency as Currency<
 	<T as frame_system::Config>::AccountId,
 >>::NegativeImbalance;
 
+const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
+
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
@@ -63,6 +65,7 @@ pub mod pallet {
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
+	#[pallet::storage_version(STORAGE_VERSION)]
 	pub struct Pallet<T>(_);
 
 	#[pallet::config]
@@ -149,14 +152,20 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		/// Vote threshold has changed
-		RelayerThresholdUpdated { threshold: u32 },
-		/// Chain now available for deposits
-		ChainWhitelisted { chain_id: ChainId },
-		/// Relayers has been updated
-		RelayersUpdated { relayers: BoundedVec<T::AccountId, T::RelayerCountLimit> },
+		/// Bridge fee changed
+		BridgeFeeUpdated { fee: BalanceOf<T> },
 		/// Make a deposit from Native to ERC20
 		DepositMade { chain_id: ChainId, nonce: DepositNonce, amount: U256, recipient: Vec<u8> },
+		/// Deposit Nonce Updated
+		DepositNonceUpdated { chain_id: ChainId, nonce: DepositNonce },
+		/// Chain allowed to be used
+		NewChainAllowed { chain_id: ChainId },
+		/// Voting successful for a proposal
+		ProposalApproved { chain_id: ChainId, nonce: DepositNonce },
+		/// Voting rejected a proposal
+		ProposalRejected { chain_id: ChainId, nonce: DepositNonce },
+		/// Vote threshold has changed
+		RelayerThresholdUpdated { threshold: u32 },
 		/// Vote submitted in favour of proposal
 		RelayerVoted {
 			chain_id: ChainId,
@@ -164,40 +173,36 @@ pub mod pallet {
 			account: T::AccountId,
 			in_favour: bool,
 		},
-		/// Voting successful for a proposal
-		ProposalApproved { chain_id: ChainId, nonce: DepositNonce },
-		/// Voting rejected a proposal
-		ProposalRejected { chain_id: ChainId, nonce: DepositNonce },
-		/// Bridge fee changed
-		BridgeFeeUpdated { fee: BalanceOf<T> },
-		/// Deposit Nonce Updated
-		DepositNonceUpdated { chain_id: ChainId, nonce: DepositNonce },
+		/// Relayers has been updated
+		RelayersUpdated { relayers: BoundedVec<T::AccountId, T::RelayerCountLimit> },
 	}
 
 	#[pallet::error]
 	pub enum Error<T> {
-		/// Relayer threshold cannot be 0
-		ThresholdCannotBeZero,
-		/// Provided chain Id is not valid
-		InvalidChainId,
-		/// Interactions with this chain is not permitted
-		ChainNotWhitelisted,
-		/// Chain has already been enabled
+		/// Chain has already been enabled.
+		CannotAccept,
+		/// Chain has already been enabled.
 		ChainAlreadyWhitelisted,
-		/// Protected operation, must be performed by relayer
-		MustBeRelayer,
-		/// Relayer has already submitted some vote for this proposal
-		RelayerAlreadyVoted,
-		/// Proposal has either failed or succeeded
-		ProposalAlreadyComplete,
-		/// Lifetime of proposal has been exceeded
-		ProposalExpired,
-		/// Vote limit has already been reached
-		MaximumVoteLimitExceeded,
-		/// Insufficient balance for deposit
+		/// Provided chain does not exist.
+		ChainNotFound,
+		/// Interactions with this chain is not permitted.
+		ChainNotWhitelisted,
+		/// Insufficient balance for deposit.
 		InsufficientBalance,
-		/// New nonce needs to be bigger
-		NewNonceNeedsToBeBigger,
+		/// Vote limit has already been reached.
+		MaximumVoteLimitExceeded,
+		/// Protected operation, must be performed by relayer.
+		MustBeRelayer,
+		/// New nonce needs to be bigger.
+		NewNonceTooLow,
+		/// Proposal has either failed or succeeded.
+		ProposalAlreadyComplete,
+		/// Lifetime of proposal has been exceeded.
+		ProposalExpired,
+		/// Relayer has already submitted some vote for this proposal.
+		RelayerAlreadyVoted,
+		/// Relayer threshold cannot be 0.
+		ThresholdCannotBeZero,
 	}
 
 	#[pallet::call]
@@ -218,18 +223,15 @@ pub mod pallet {
 		}
 
 		/// Enables a chain ID as a source or destination for a bridge deposit.
-		#[pallet::weight(<T as pallet::Config>::WeightInfo::whitelist_chain())]
-		pub fn whitelist_chain(
-			origin: OriginFor<T>,
-			chain_id: ChainId,
-		) -> DispatchResultWithPostInfo {
+		#[pallet::weight(<T as pallet::Config>::WeightInfo::add_chain())]
+		pub fn add_chain(origin: OriginFor<T>, chain_id: ChainId) -> DispatchResultWithPostInfo {
 			T::ExternalOrigin::ensure_origin(origin)?;
 
-			ensure!(chain_id != T::ChainId::get(), Error::<T>::InvalidChainId);
-			ensure!(!Self::chain_whitelisted(chain_id), Error::<T>::ChainAlreadyWhitelisted);
+			ensure!(chain_id != T::ChainId::get(), Error::<T>::ChainNotFound);
+			ensure!(!Self::chain_allowed(chain_id), Error::<T>::ChainAlreadyWhitelisted);
 
 			ChainNonces::<T>::insert(&chain_id, 0);
-			Self::deposit_event(Event::ChainWhitelisted { chain_id });
+			Self::deposit_event(Event::NewChainAllowed { chain_id });
 
 			Ok(().into())
 		}
@@ -258,8 +260,8 @@ pub mod pallet {
 			T::ExternalOrigin::ensure_origin(origin)?;
 
 			ChainNonces::<T>::try_mutate(chain_id, |cur_nonce| -> DispatchResult {
-				let cur_nonce = cur_nonce.as_mut().ok_or(Error::<T>::InvalidChainId)?;
-				ensure!(*cur_nonce < nonce, Error::<T>::NewNonceNeedsToBeBigger);
+				let cur_nonce = cur_nonce.as_mut().ok_or(Error::<T>::ChainNotFound)?;
+				ensure!(*cur_nonce < nonce, Error::<T>::NewNonceTooLow);
 				*cur_nonce = nonce;
 
 				Ok(().into())
@@ -287,7 +289,7 @@ pub mod pallet {
 			let recipient = T::Lookup::lookup(recipient)?;
 
 			ensure!(Self::is_relayer(&account), Error::<T>::MustBeRelayer);
-			ensure!(Self::chain_whitelisted(chain_id), Error::<T>::ChainNotWhitelisted);
+			ensure!(Self::chain_allowed(chain_id), Error::<T>::ChainNotWhitelisted);
 
 			let now = frame_system::Pallet::<T>::block_number();
 			let threshold = Self::relayer_vote_threshold();
@@ -354,7 +356,7 @@ pub mod pallet {
 			let bridge_fee = Self::bridge_fee();
 			let total = bridge_fee + amount;
 
-			ensure!(Self::chain_whitelisted(dest_id), Error::<T>::ChainNotWhitelisted);
+			ensure!(Self::chain_allowed(dest_id), Error::<T>::ChainNotWhitelisted);
 			ensure!(T::Currency::free_balance(&source) >= total, Error::<T>::InsufficientBalance);
 
 			let imbalance =
@@ -404,7 +406,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	/// Checks if a chain exists as a whitelisted destination
-	pub fn chain_whitelisted(id: ChainId) -> bool {
+	pub fn chain_allowed(id: ChainId) -> bool {
 		Self::chain_nonces(id) != None
 	}
 }
