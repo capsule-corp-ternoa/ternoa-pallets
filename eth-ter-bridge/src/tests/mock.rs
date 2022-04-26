@@ -53,11 +53,16 @@ use sp_runtime::{
 // Types and constants declaration
 // ----------------------------------------------------------------------------
 
-type Balance = u64;
+pub type AccountId = u64;
+pub type Balance = u64;
 
 // Runtime mocking types definition
 type UncheckedExtrinsic = MockUncheckedExtrinsic<MockRuntime>;
 type Block = MockBlock<MockRuntime>;
+
+// ----------------------------------------------------------------------------
+// Weights
+// ----------------------------------------------------------------------------
 
 // Implement testing extrinsic weights for the pallet
 pub struct MockWeightInfo;
@@ -145,7 +150,7 @@ impl frame_system::Config for MockRuntime {
 	type BlockNumber = u64;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
-	type AccountId = u64;
+	type AccountId = AccountId;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
 	type Event = Event;
@@ -257,13 +262,13 @@ impl TestExternalitiesBuilder {
 	}
 
 	// Build a genesis storage with a pre-configured chainbridge
-	pub(crate) fn build_with(self, src_id: ChainId, treshold: u32) -> TestExternalities {
+	pub(crate) fn build_with(self, src_id: ChainId, threshold: u32) -> TestExternalities {
 		let mut externalities = Self::build(self);
 
 		externalities.execute_with(|| {
 			// Set and check threshold
-			assert_ok!(ChainBridge::set_threshold(Origin::root(), treshold));
-			assert_eq!(ChainBridge::relayer_vote_threshold(), treshold);
+			assert_ok!(ChainBridge::set_threshold(Origin::root(), threshold));
+			assert_eq!(ChainBridge::relayer_vote_threshold(), threshold);
 			// Add relayers
 			assert_ok!(ChainBridge::set_relayers(
 				Origin::root(),
@@ -275,4 +280,13 @@ impl TestExternalitiesBuilder {
 
 		externalities
 	}
+}
+
+#[allow(dead_code)]
+pub fn new_test_ext() -> sp_io::TestExternalities {
+	let t = frame_system::GenesisConfig::default().build_storage::<MockRuntime>().unwrap();
+
+	let mut ext = sp_io::TestExternalities::new(t);
+	ext.execute_with(|| System::set_block_number(1));
+	ext
 }

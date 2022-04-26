@@ -171,7 +171,7 @@ pub mod set_threshold {
 	}
 
 	#[test]
-	fn set_threshold_treshold_cannot_be_zero() {
+	fn set_threshold_threshold_cannot_be_zero() {
 		TestExternalitiesBuilder::default().build().execute_with(|| {
 			assert_eq!(ChainBridge::relayer_vote_threshold(), DEFAULT_RELAYER_VOTE_THRESHOLD);
 
@@ -189,10 +189,10 @@ pub mod vote_for_propsal {
 	#[test]
 	fn vote_for_propsal_not_existing() {
 		let chain_id = 0;
-		let treshold = 3;
+		let threshold = 3;
 
 		TestExternalitiesBuilder::default()
-			.build_with(chain_id, treshold)
+			.build_with(chain_id, threshold)
 			.execute_with(|| {
 				let recipient = RELAYER_C;
 				let amount = 100;
@@ -230,10 +230,10 @@ pub mod vote_for_propsal {
 	#[test]
 	fn vote_for_propsal_existing() {
 		let chain_id = 0;
-		let treshold = 3;
+		let threshold = 3;
 
 		TestExternalitiesBuilder::default()
-			.build_with(chain_id, treshold)
+			.build_with(chain_id, threshold)
 			.execute_with(|| {
 				let recipient = RELAYER_C;
 				let amount = 100;
@@ -279,12 +279,12 @@ pub mod vote_for_propsal {
 	}
 
 	#[test]
-	fn vote_for_propsal_existing_and_reach_treshold() {
+	fn vote_for_propsal_existing_and_reach_threshold() {
 		let chain_id = 0;
-		let treshold = 2;
+		let threshold = 2;
 
 		TestExternalitiesBuilder::default()
-			.build_with(chain_id, treshold)
+			.build_with(chain_id, threshold)
 			.execute_with(|| {
 				let recipient = RELAYER_C;
 				let amount = 100;
@@ -343,10 +343,10 @@ pub mod vote_for_propsal {
 	#[test]
 	fn vote_for_propsal_chain_not_whitelisted() {
 		let chain_id = 0;
-		let treshold = 3;
+		let threshold = 3;
 
 		TestExternalitiesBuilder::default()
-			.build_with(chain_id, treshold)
+			.build_with(chain_id, threshold)
 			.execute_with(|| {
 				assert_noop!(
 					ChainBridge::vote_for_propsal(origin(RELAYER_A), 1, 0, RELAYER_C, 100, true),
@@ -358,10 +358,10 @@ pub mod vote_for_propsal {
 	#[test]
 	fn vote_for_propsal_proposal_already_complete() {
 		let chain_id = 0;
-		let treshold = 1;
+		let threshold = 1;
 
 		TestExternalitiesBuilder::default()
-			.build_with(chain_id, treshold)
+			.build_with(chain_id, threshold)
 			.execute_with(|| {
 				let ok = ChainBridge::vote_for_propsal(
 					origin(RELAYER_A),
@@ -390,10 +390,10 @@ pub mod vote_for_propsal {
 	#[test]
 	fn vote_for_propsal_proposal_expired() {
 		let chain_id = 0;
-		let treshold = 3;
+		let threshold = 3;
 
 		TestExternalitiesBuilder::default()
-			.build_with(chain_id, treshold)
+			.build_with(chain_id, threshold)
 			.execute_with(|| {
 				let ok = ChainBridge::vote_for_propsal(
 					origin(RELAYER_A),
@@ -427,10 +427,10 @@ pub mod vote_for_propsal {
 	#[test]
 	fn vote_for_propsal_relayer_already_voted() {
 		let chain_id = 0;
-		let treshold = 3;
+		let threshold = 3;
 
 		TestExternalitiesBuilder::default()
-			.build_with(chain_id, treshold)
+			.build_with(chain_id, threshold)
 			.execute_with(|| {
 				let ok = ChainBridge::vote_for_propsal(
 					origin(RELAYER_A),
@@ -465,10 +465,10 @@ pub mod set_relayers {
 	#[test]
 	fn set_relayers() {
 		let chain_id = 0;
-		let treshold = 3;
+		let threshold = 3;
 
 		TestExternalitiesBuilder::default()
-			.build_with(chain_id, treshold)
+			.build_with(chain_id, threshold)
 			.execute_with(|| {
 				let raw_relayers: BoundedVec<u64, RelayerCountLimit> =
 					bounded_vec![RELAYER_A, RELAYER_B];
@@ -488,10 +488,10 @@ pub mod set_relayers {
 	#[test]
 	fn set_relayers_bad_origin() {
 		let chain_id = 0;
-		let treshold = 3;
+		let threshold = 3;
 
 		TestExternalitiesBuilder::default()
-			.build_with(chain_id, treshold)
+			.build_with(chain_id, threshold)
 			.execute_with(|| {
 				assert_noop!(
 					ChainBridge::set_relayers(
@@ -504,16 +504,16 @@ pub mod set_relayers {
 	}
 }
 
-pub mod transfer {
+pub mod deposit {
 	pub use super::*;
 
 	#[test]
-	fn transfer() {
+	fn deposit() {
 		let chain_id = 0;
-		let treshold = 3;
+		let threshold = 3;
 
 		TestExternalitiesBuilder::default()
-			.build_with(chain_id, treshold)
+			.build_with(chain_id, threshold)
 			.execute_with(|| {
 				let amount = 10;
 				let recipient = vec![0];
@@ -551,7 +551,7 @@ pub mod transfer {
 	}
 
 	#[test]
-	fn transfer_chain_not_whitelisted() {
+	fn deposit_chain_not_whitelisted() {
 		TestExternalitiesBuilder::default().build().execute_with(|| {
 			assert_noop!(
 				ChainBridge::deposit(origin(RELAYER_A), 10, vec![0], 0),
@@ -561,12 +561,12 @@ pub mod transfer {
 	}
 
 	#[test]
-	fn transfer_removal_impossible() {
+	fn deposit_removal_impossible() {
 		let chain_id = 0;
-		let treshold = 3;
+		let threshold = 3;
 
 		TestExternalitiesBuilder::default()
-			.build_with(chain_id, treshold)
+			.build_with(chain_id, threshold)
 			.execute_with(|| {
 				assert_noop!(
 					ChainBridge::deposit(origin(RELAYER_A), 200000000, vec![0], chain_id),
@@ -582,10 +582,10 @@ pub mod set_bridge_fee {
 	#[test]
 	fn set_bridge_fee() {
 		let chain_id = 0;
-		let treshold = 3;
+		let threshold = 3;
 
 		TestExternalitiesBuilder::default()
-			.build_with(chain_id, treshold)
+			.build_with(chain_id, threshold)
 			.execute_with(|| {
 				let ok = ChainBridge::set_bridge_fee(root(), 100);
 				assert_ok!(ok);
@@ -602,10 +602,10 @@ pub mod set_bridge_fee {
 	#[test]
 	fn set_bridge_fee_bad_origin() {
 		let chain_id = 0;
-		let treshold = 3;
+		let threshold = 3;
 
 		TestExternalitiesBuilder::default()
-			.build_with(chain_id, treshold)
+			.build_with(chain_id, threshold)
 			.execute_with(|| {
 				assert_noop!(ChainBridge::set_bridge_fee(origin(RELAYER_A), 100), BadOrigin);
 			});

@@ -140,7 +140,7 @@ pub mod pallet {
 		OptionQuery,
 	>;
 
-	/// Host much does it cost to transfer Native through the bridge (extra fee on top of the tx
+	/// Host much does it cost to deposit through the bridge (extra fee on top of the tx
 	/// fees)
 	#[pallet::storage]
 	#[pallet::getter(fn bridge_fee)]
@@ -151,7 +151,7 @@ pub mod pallet {
 	pub enum Event<T: Config> {
 		/// Vote threshold has changed
 		RelayerThresholdUpdated { threshold: u32 },
-		/// Chain now available for transfers
+		/// Chain now available for deposits
 		ChainWhitelisted { chain_id: ChainId },
 		/// Relayers has been updated
 		RelayersUpdated { relayers: BoundedVec<T::AccountId, T::RelayerCountLimit> },
@@ -192,7 +192,7 @@ pub mod pallet {
 		ProposalExpired,
 		/// Vote limit has already been reached
 		MaximumVoteLimitExceeded,
-		/// Insufficient balance for transfer
+		/// Insufficient balance for deposit
 		InsufficientBalance,
 	}
 
@@ -213,7 +213,7 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		/// Enables a chain ID as a source or destination for a bridge transfer.
+		/// Enables a chain ID as a source or destination for a bridge deposit.
 		#[pallet::weight(<T as pallet::Config>::WeightInfo::whitelist_chain())]
 		pub fn whitelist_chain(
 			origin: OriginFor<T>,
@@ -230,7 +230,7 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		/// Adds a new relayer to the relayer set.
+		/// Update the set of relayers.
 		#[pallet::weight(100)]
 		pub fn set_relayers(
 			origin: OriginFor<T>,
@@ -314,7 +314,7 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		/// Transfers some amount of the native token to some recipient on a (whitelisted)
+		/// Deposit some amount of the native token to some recipient on a (whitelisted)
 		/// destination chain.
 		#[pallet::weight(100)]
 		#[transactional]
@@ -338,7 +338,6 @@ pub mod pallet {
 			T::Currency::withdraw(&source, amount, WithdrawReasons::TRANSFER, AllowDeath)?;
 			T::Currency::burn(amount);
 
-			// Bump nonce
 			let nonce = Self::chain_nonces(dest_id).unwrap_or_default() + 1;
 			ChainNonces::<T>::insert(dest_id, nonce);
 
