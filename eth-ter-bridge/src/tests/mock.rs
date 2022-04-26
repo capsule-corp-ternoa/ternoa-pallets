@@ -75,23 +75,19 @@ impl WeightInfo for MockWeightInfo {
 		0 as Weight
 	}
 
-	fn add_relayer() -> Weight {
+	fn set_relayers() -> Weight {
 		0 as Weight
 	}
 
-	fn remove_relayer() -> Weight {
+	fn vote_for_proposal() -> Weight {
 		0 as Weight
 	}
 
-	fn acknowledge_proposal(_: Weight) -> Weight {
+	fn deposit() -> Weight {
 		0 as Weight
 	}
 
-	fn reject_proposal() -> Weight {
-		0 as Weight
-	}
-
-	fn eval_vote_state(_: Weight) -> Weight {
+	fn set_bridge_fee() -> Weight {
 		0 as Weight
 	}
 }

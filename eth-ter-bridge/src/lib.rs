@@ -231,7 +231,7 @@ pub mod pallet {
 		}
 
 		/// Update the set of relayers.
-		#[pallet::weight(100)]
+		#[pallet::weight(<T as pallet::Config>::WeightInfo::set_relayers())]
 		pub fn set_relayers(
 			origin: OriginFor<T>,
 			relayers: BoundedVec<T::AccountId, T::RelayerCountLimit>,
@@ -248,8 +248,8 @@ pub mod pallet {
 		///
 		/// If a proposal with the given nonce and source chain ID does not already exist, it will
 		/// be created with an initial vote in favour from the caller.
-		#[pallet::weight(1000)]
-		pub fn vote_for_propsal(
+		#[pallet::weight(<T as pallet::Config>::WeightInfo::vote_for_proposal())]
+		pub fn vote_for_proposal(
 			origin: OriginFor<T>,
 			chain_id: ChainId,
 			nonce: DepositNonce,
@@ -316,7 +316,7 @@ pub mod pallet {
 
 		/// Deposit some amount of the native token to some recipient on a (whitelisted)
 		/// destination chain.
-		#[pallet::weight(100)]
+		#[pallet::weight(<T as pallet::Config>::WeightInfo::deposit())]
 		#[transactional]
 		pub fn deposit(
 			origin: OriginFor<T>,
@@ -348,7 +348,7 @@ pub mod pallet {
 		}
 
 		/// Update the bridge fee value
-		#[pallet::weight(100)]
+		#[pallet::weight(<T as pallet::Config>::WeightInfo::set_bridge_fee())]
 		pub fn set_bridge_fee(
 			origin: OriginFor<T>,
 			bridge_fee: BalanceOf<T>,

@@ -25,11 +25,10 @@ use frame_support::weights::Weight;
 pub trait WeightInfo {
 	fn set_threshold() -> Weight;
 	fn whitelist_chain() -> Weight;
-	fn add_relayer() -> Weight;
-	fn remove_relayer() -> Weight;
-	fn acknowledge_proposal(dispatch_weight: Weight) -> Weight;
-	fn reject_proposal() -> Weight;
-	fn eval_vote_state(dispatch_weight: Weight) -> Weight;
+	fn set_relayers() -> Weight;
+	fn vote_for_proposal() -> Weight;
+	fn deposit() -> Weight;
+	fn set_bridge_fee() -> Weight;
 }
 
 impl WeightInfo for () {
@@ -41,23 +40,19 @@ impl WeightInfo for () {
 		195_000_000 as Weight
 	}
 
-	fn add_relayer() -> Weight {
+	fn set_relayers() -> Weight {
 		195_000_000 as Weight
 	}
 
-	fn remove_relayer() -> Weight {
+	fn vote_for_proposal() -> Weight {
 		195_000_000 as Weight
 	}
 
-	fn acknowledge_proposal(dispatch_weight: Weight) -> Weight {
-		(195_000_000 as Weight).saturating_add(dispatch_weight)
-	}
-
-	fn reject_proposal() -> Weight {
+	fn deposit() -> Weight {
 		195_000_000 as Weight
 	}
 
-	fn eval_vote_state(dispatch_weight: Weight) -> Weight {
-		(195_000_000 as Weight).saturating_add(dispatch_weight)
+	fn set_bridge_fee() -> Weight {
+		195_000_000 as Weight
 	}
 }

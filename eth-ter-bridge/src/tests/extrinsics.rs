@@ -183,11 +183,11 @@ pub mod set_threshold {
 	}
 }
 
-pub mod vote_for_propsal {
+pub mod vote_for_proposal {
 	pub use super::*;
 
 	#[test]
-	fn vote_for_propsal_not_existing() {
+	fn vote_for_proposal_not_existing() {
 		let chain_id = 0;
 		let threshold = 3;
 
@@ -201,7 +201,7 @@ pub mod vote_for_propsal {
 				let proposal = ChainBridge::get_votes(chain_id, (deposit_nonce, recipient, amount));
 				assert!(proposal.is_none());
 
-				let ok = ChainBridge::vote_for_propsal(
+				let ok = ChainBridge::vote_for_proposal(
 					origin(RELAYER_A),
 					chain_id,
 					deposit_nonce,
@@ -228,7 +228,7 @@ pub mod vote_for_propsal {
 	}
 
 	#[test]
-	fn vote_for_propsal_existing() {
+	fn vote_for_proposal_existing() {
 		let chain_id = 0;
 		let threshold = 3;
 
@@ -242,7 +242,7 @@ pub mod vote_for_propsal {
 				let proposal = ChainBridge::get_votes(chain_id, (deposit_nonce, recipient, amount));
 				assert!(proposal.is_none());
 
-				let ok = ChainBridge::vote_for_propsal(
+				let ok = ChainBridge::vote_for_proposal(
 					origin(RELAYER_A),
 					chain_id,
 					deposit_nonce,
@@ -252,7 +252,7 @@ pub mod vote_for_propsal {
 				);
 				assert_ok!(ok);
 
-				let ok = ChainBridge::vote_for_propsal(
+				let ok = ChainBridge::vote_for_proposal(
 					origin(RELAYER_B),
 					chain_id,
 					deposit_nonce,
@@ -279,7 +279,7 @@ pub mod vote_for_propsal {
 	}
 
 	#[test]
-	fn vote_for_propsal_existing_and_reach_threshold() {
+	fn vote_for_proposal_existing_and_reach_threshold() {
 		let chain_id = 0;
 		let threshold = 2;
 
@@ -295,7 +295,7 @@ pub mod vote_for_propsal {
 				let proposal = ChainBridge::get_votes(chain_id, (deposit_nonce, recipient, amount));
 				assert!(proposal.is_none());
 
-				let ok = ChainBridge::vote_for_propsal(
+				let ok = ChainBridge::vote_for_proposal(
 					origin(RELAYER_A),
 					chain_id,
 					deposit_nonce,
@@ -305,7 +305,7 @@ pub mod vote_for_propsal {
 				);
 				assert_ok!(ok);
 
-				let ok = ChainBridge::vote_for_propsal(
+				let ok = ChainBridge::vote_for_proposal(
 					origin(RELAYER_B),
 					chain_id,
 					deposit_nonce,
@@ -331,17 +331,17 @@ pub mod vote_for_propsal {
 	}
 
 	#[test]
-	fn vote_for_propsal_must_be_relayer() {
+	fn vote_for_proposal_must_be_relayer() {
 		TestExternalitiesBuilder::default().build().execute_with(|| {
 			assert_noop!(
-				ChainBridge::vote_for_propsal(origin(5), 0, 0, RELAYER_C, 100, true),
+				ChainBridge::vote_for_proposal(origin(5), 0, 0, RELAYER_C, 100, true),
 				Error::<MockRuntime>::MustBeRelayer
 			);
 		});
 	}
 
 	#[test]
-	fn vote_for_propsal_chain_not_whitelisted() {
+	fn vote_for_proposal_chain_not_whitelisted() {
 		let chain_id = 0;
 		let threshold = 3;
 
@@ -349,21 +349,21 @@ pub mod vote_for_propsal {
 			.build_with(chain_id, threshold)
 			.execute_with(|| {
 				assert_noop!(
-					ChainBridge::vote_for_propsal(origin(RELAYER_A), 1, 0, RELAYER_C, 100, true),
+					ChainBridge::vote_for_proposal(origin(RELAYER_A), 1, 0, RELAYER_C, 100, true),
 					Error::<MockRuntime>::ChainNotWhitelisted
 				);
 			});
 	}
 
 	#[test]
-	fn vote_for_propsal_proposal_already_complete() {
+	fn vote_for_proposal_proposal_already_complete() {
 		let chain_id = 0;
 		let threshold = 1;
 
 		TestExternalitiesBuilder::default()
 			.build_with(chain_id, threshold)
 			.execute_with(|| {
-				let ok = ChainBridge::vote_for_propsal(
+				let ok = ChainBridge::vote_for_proposal(
 					origin(RELAYER_A),
 					chain_id,
 					0,
@@ -374,7 +374,7 @@ pub mod vote_for_propsal {
 				assert_ok!(ok);
 
 				assert_noop!(
-					ChainBridge::vote_for_propsal(
+					ChainBridge::vote_for_proposal(
 						origin(RELAYER_B),
 						chain_id,
 						0,
@@ -388,14 +388,14 @@ pub mod vote_for_propsal {
 	}
 
 	#[test]
-	fn vote_for_propsal_proposal_expired() {
+	fn vote_for_proposal_proposal_expired() {
 		let chain_id = 0;
 		let threshold = 3;
 
 		TestExternalitiesBuilder::default()
 			.build_with(chain_id, threshold)
 			.execute_with(|| {
-				let ok = ChainBridge::vote_for_propsal(
+				let ok = ChainBridge::vote_for_proposal(
 					origin(RELAYER_A),
 					chain_id,
 					0,
@@ -411,7 +411,7 @@ pub mod vote_for_propsal {
 				);
 
 				assert_noop!(
-					ChainBridge::vote_for_propsal(
+					ChainBridge::vote_for_proposal(
 						origin(RELAYER_B),
 						chain_id,
 						0,
@@ -425,14 +425,14 @@ pub mod vote_for_propsal {
 	}
 
 	#[test]
-	fn vote_for_propsal_relayer_already_voted() {
+	fn vote_for_proposal_relayer_already_voted() {
 		let chain_id = 0;
 		let threshold = 3;
 
 		TestExternalitiesBuilder::default()
 			.build_with(chain_id, threshold)
 			.execute_with(|| {
-				let ok = ChainBridge::vote_for_propsal(
+				let ok = ChainBridge::vote_for_proposal(
 					origin(RELAYER_A),
 					chain_id,
 					0,
@@ -443,7 +443,7 @@ pub mod vote_for_propsal {
 				assert_ok!(ok);
 
 				assert_noop!(
-					ChainBridge::vote_for_propsal(
+					ChainBridge::vote_for_proposal(
 						origin(RELAYER_A),
 						chain_id,
 						0,

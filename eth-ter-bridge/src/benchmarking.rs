@@ -18,7 +18,7 @@
 
 use super::*;
 use frame_benchmarking::{account as benchmark_account, benchmarks, impl_benchmark_test_suite};
-use frame_support::{bounded_vec, traits::Currency};
+use frame_support::{assert_ok, bounded_vec, traits::Currency};
 use frame_system::RawOrigin;
 use sp_runtime::traits::Bounded;
 use sp_std::prelude::*;
@@ -67,63 +67,72 @@ benchmarks! {
 		prepare_benchmarks::<T>();
 
 		let root = RawOrigin::Root;
-        let relayer_a = get_account::<T>("RELAYER_A");
-        let relayer_b = get_account::<T>("RELAYER_B");
-        let relayer_c = get_account::<T>("RELAYER_C");
+		let relayer_a = get_account::<T>("RELAYER_A");
+		let relayer_b = get_account::<T>("RELAYER_B");
+		let relayer_c = get_account::<T>("RELAYER_C");
 		let relayers: BoundedVec<T::AccountId, T::RelayerCountLimit> = bounded_vec![relayer_a, relayer_b, relayer_c];
-    
+
 	}: _(root, relayers.clone())
 	verify {
 		assert_eq!(Relayers::<T>::get(), relayers);
 	}
 
-	// TODO: case creating + vote or vote + execute
-	// vote_for_propsal {
-	// 	prepare_benchmarks::<T>();
+	vote_for_proposal {
+		prepare_benchmarks::<T>();
 
-	//     let chain_id = 0;
-	//     let relayer_a: T::AccountId = get_account::<T>("RELAYER_A");
-	//     let recipient: T::AccountId = get_account::<T>("RELAYER_C");
-	//     let amount = 100;
-	//     let deposit_nonce = ChainBridge::chain_nonces(chain_id).unwrap();
-	//     let proposal = ChainBridge::get_votes(chain_id, (deposit_nonce, recipient, amount));
-	// }: _(relayer_a, chain_id, deposit_nonce, recipient, amount, true)
-	// verify {
-	//     let proposal = ChainBridge::get_votes(chain_id, (deposit_nonce, recipient, amount));
-	//     assert!(proposal.is_some());
-	//     let count = proposal.unwrap().votes.iter().filter(|x| x.1 == true).count() as u32;
-	//     assert_eq!(count, 1);
-	// }
+		let root = RawOrigin::Root;
+		let relayer_a: T::AccountId = get_account::<T>("RELAYER_A");
+		assert_ok!(ChainBridge::<T>::set_relayers(root.clone().into(), bounded_vec![relayer_a.clone()]));
 
-	// deposit {
-	// 	prepare_benchmarks::<T>();
+		let recipient: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(get_account::<T>("RELAYER_C"));
+		let chain_id = 0;
 
-	//     let collector: T::AccountId = get_account::<T>("COLLECTOR");
-	// 	let relayer_a: T::AccountId = get_account::<T>("RELAYER_A");
-	// 	let amount: BalanceOf<T> = 10.into();
-	//     let chain_id = 1;
-	// 	let bridge_fee = 100;
-	// 	let recipient = vec![0];
-	// 	let deposit_nonce = ChainBridge::chain_nonces(chain_id);
-	// 	let total_issuance = BalanceOf::total_issuance();
-	// 	let collector_before = BalanceOf::free_balance(&collector);
-	// 	let relayer_a_balance_before = BalanceOf::free_balance(&relayer_a);
+		assert_ok!(ChainBridge::<T>::whitelist_chain(root.clone().into(), chain_id));
 
-	// 	ChainBridge::set_bridge_fee(RawOrigin::Root, bridge_fee);
-	// }: _(relayer_a, amount, recipient, chain_id)
-	// verify {
-	// 	assert_eq!(BalanceOf::free_balance(&relayer_a), relayer_a_balance_before - amount - bridge_fee);
-	// 	assert_eq!(BalanceOf::total_issuance(), total_issuance - amount);
-	// 	assert_eq!(BalanceOf::free_balance(&collector), collector_before + bridge_fee);
-	// 	assert_eq!(ChainBridge::chain_nonces(chain_id).unwrap(), deposit_nonce.unwrap() + 1);
-	// }
+		let amount = 100u32;
+		let deposit_nonce = ChainNonces::<T>::get(chain_id).unwrap();
+		// let proposal = ChainBridge::get_votes(chain_id, (deposit_nonce, recipient, amount));
+
+	}: _(RawOrigin::Signed(relayer_a), chain_id, deposit_nonce, recipient, amount.into(), true)
+	verify {
+		// let proposal = ChainBridge::get_votes(chain_id, (deposit_nonce, recipient, amount));
+		// assert!(proposal.is_some());
+		// let count = proposal.unwrap().votes.iter().filter(|x| x.1 == true).count() as u32;
+		// assert_eq!(count, 1);
+	}
+
+	deposit {
+		prepare_benchmarks::<T>();
+
+		let root = RawOrigin::Root;
+		let relayer_a: T::AccountId = get_account::<T>("RELAYER_A");
+		let collector: T::AccountId = get_account::<T>("COLLECTOR");
+		let amount: BalanceOf<T> = 10u32.into();
+		let chain_id = 1;
+		let bridge_fee: BalanceOf<T> = 100u32.into();
+		let recipient = vec![0];
+		let deposit_nonce = ChainBridge::<T>::chain_nonces(chain_id);
+		// let total_issuance: BalanceOf<T> = BalanceOf::total_issuance();
+		// let collector_before = Balances::free_balance(&collector);
+		// let relayer_a_balance_before: BalanceOf<T> = BalanceOf::<T>::free_balance(&relayer_a);
+
+		assert_ok!(ChainBridge::<T>::whitelist_chain(root.clone().into(), chain_id));
+		assert_ok!(ChainBridge::<T>::set_bridge_fee(root.into(), bridge_fee));
+
+	}: _(RawOrigin::Signed(relayer_a), amount.clone().into(), recipient, chain_id)
+	verify {
+		// assert_eq!(BalanceOf::total_issuance(), total_issuance.into() - amount.into());
+		// assert_eq!(BalanceOf::free_balance(&relayer_a), relayer_a_balance_before - amount - bridge_fee);
+		// assert_eq!(BalanceOf::free_balance(&collector), collector_before + bridge_fee.into());
+		// assert_eq!(ChainBridge::chain_nonces(chain_id).unwrap(), deposit_nonce.unwrap() + 1);
+	}
 
 	set_bridge_fee {
 		prepare_benchmarks::<T>();
 
-        let root = RawOrigin::Root;
+		let root = RawOrigin::Root;
 		let bridge_fee = 100u32;
-    
+
 	}: _(root, bridge_fee.clone().into())
 	verify {
 		assert_eq!(BridgeFee::<T>::get(), bridge_fee.into());
