@@ -1,111 +1,52 @@
-// Copyright 2021 Centrifuge Foundation (centrifuge.io).
-// This file is part of Centrifuge chain project.
+// Copyright 2022 Capsule Corp (France) SAS.
+// This file is part of Ternoa.
 
-// Centrifuge is free software: you can redistribute it and/or modify
+// Ternoa is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version (see http://www.gnu.org/licenses).
+// (at your option) any later version.
 
-// Centrifuge is distributed in the hope that it will be useful,
+// Ternoa is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 
-//! Mocking runtime for testing the Substrate/Ethereum chains bridging pallet.
-//!
-//! The main components implemented in this mock module is a mock runtime
-//! and some helper functions.
+// You should have received a copy of the GNU General Public License
+// along with Ternoa.  If not, see <http://www.gnu.org/licenses/>.
 
-// ----------------------------------------------------------------------------
-// Module imports and re-exports
-// ----------------------------------------------------------------------------
-
-// Import crate types, traits and constants
-use crate::{
-	self as pallet_chainbridge, tests::constants::*, ChainId, Config as ChainBridgePalletConfig,
-	NegativeImbalanceOf, WeightInfo,
-};
-
-// Import Substrate primitives and components
 use frame_support::{
 	assert_ok, parameter_types,
-	traits::{ConstU32, Currency, Everything, SortedMembers},
+	traits::{ConstU32, Currency, Everything},
 	weights::Weight,
 	BoundedVec, PalletId,
 };
-
-use frame_system::{
-	mocking::{MockBlock, MockUncheckedExtrinsic},
-	EnsureRoot,
-};
-
+use frame_system::EnsureRoot;
 use sp_core::H256;
-
 use sp_io::TestExternalities;
-
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
 	Perbill,
 };
 
-// ----------------------------------------------------------------------------
-// Types and constants declaration
-// ----------------------------------------------------------------------------
+use crate::{self as ternoa_bridge, ChainId, Config, NegativeImbalanceOf};
 
 pub type AccountId = u64;
 pub type Balance = u64;
+type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<MockRuntime>;
+type Block = frame_system::mocking::MockBlock<MockRuntime>;
 
-// Runtime mocking types definition
-type UncheckedExtrinsic = MockUncheckedExtrinsic<MockRuntime>;
-type Block = MockBlock<MockRuntime>;
-
-// ----------------------------------------------------------------------------
-// Weights
-// ----------------------------------------------------------------------------
-
-// Implement testing extrinsic weights for the pallet
-pub struct MockWeightInfo;
-impl WeightInfo for MockWeightInfo {
-	fn set_threshold() -> Weight {
-		0 as Weight
-	}
-
-	fn whitelist_chain() -> Weight {
-		0 as Weight
-	}
-
-	fn set_relayers() -> Weight {
-		0 as Weight
-	}
-
-	fn vote_for_proposal() -> Weight {
-		0 as Weight
-	}
-
-	fn deposit() -> Weight {
-		0 as Weight
-	}
-
-	fn set_bridge_fee() -> Weight {
-		0 as Weight
-	}
-}
-
-// Constants definition
-pub(crate) const RELAYER_A: u64 = 0x2;
-pub(crate) const RELAYER_B: u64 = 0x3;
-pub(crate) const RELAYER_C: u64 = 0x4;
-pub(crate) const ENDOWED_BALANCE: u64 = 100_000_000;
+pub const DEFAULT_RELAYER_VOTE_THRESHOLD: u32 = 1;
+pub const DEFAULT_RELAYER_COUNT_LIMIT: u32 = 3;
+pub const DEFAULT_INITIAL_BRIDGE_FEE: u32 = 1;
+pub const RELAYER_A: u64 = 0x2;
+pub const RELAYER_B: u64 = 0x3;
+pub const RELAYER_C: u64 = 0x4;
+pub const ENDOWED_BALANCE: u64 = 100_000_000;
 pub const COLLECTOR: u64 = 99;
-
-// ----------------------------------------------------------------------------
-// Mock runtime configuration
-// ----------------------------------------------------------------------------
 
 // Build mock runtime
 frame_support::construct_runtime!(
-
 	pub enum MockRuntime where
 		Block = Block,
 		NodeBlock = Block,
@@ -113,22 +54,10 @@ frame_support::construct_runtime!(
 	{
 		System: frame_system,
 		Balances: pallet_balances,
-		ChainBridge: pallet_chainbridge,
+		Bridge: ternoa_bridge,
 	}
 );
 
-// Parameterize default test user identifier (with id 1)
-parameter_types! {
-	pub const TestUserId: u64 = 1;
-}
-
-impl SortedMembers<u64> for TestUserId {
-	fn sorted_members() -> Vec<u64> {
-		vec![1]
-	}
-}
-
-// Parameterize FRAME system pallet
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
 	pub const MaximumBlockWeight: Weight = 1024;
@@ -137,7 +66,6 @@ parameter_types! {
 	pub const MaxLocks: u32 = 100;
 }
 
-// Implement FRAME system pallet configuration trait for the mock runtime
 impl frame_system::Config for MockRuntime {
 	type BaseCallFilter = Everything;
 	type Origin = Origin;
@@ -165,12 +93,10 @@ impl frame_system::Config for MockRuntime {
 	type MaxConsumers = ConstU32<16>;
 }
 
-// Parameterize FRAME balances pallet
 parameter_types! {
 	pub const ExistentialDeposit: u64 = 1;
 }
 
-// Implement FRAME balances pallet configuration trait for the mock runtime
 impl pallet_balances::Config for MockRuntime {
 	type Balance = Balance;
 	type DustRemoval = ();
@@ -183,7 +109,6 @@ impl pallet_balances::Config for MockRuntime {
 	type WeightInfo = ();
 }
 
-// Parameterize chainbridge pallet
 parameter_types! {
 	pub const MockChainId: ChainId = 5;
 	pub const ChainBridgePalletId: PalletId = PalletId(*b"cb/bridg");
@@ -200,10 +125,9 @@ impl frame_support::traits::OnUnbalanced<NegativeImbalanceOf<MockRuntime>> for M
 	}
 }
 
-// Implement chainbridge pallet configuration trait for the mock runtime
-impl ChainBridgePalletConfig for MockRuntime {
+impl Config for MockRuntime {
 	type Event = Event;
-	type WeightInfo = MockWeightInfo;
+	type WeightInfo = ternoa_bridge::weights::TernoaWeight<MockRuntime>;
 	type Currency = Balances;
 	type FeesCollector = MockFeeCollector;
 	type ExternalOrigin = EnsureRoot<Self::AccountId>;
@@ -215,32 +139,20 @@ impl ChainBridgePalletConfig for MockRuntime {
 	type InitialBridgeFee = InitialBridgeFee;
 }
 
-// ----------------------------------------------------------------------------
-// Test externalities
-// ----------------------------------------------------------------------------
-
-// Test externalities builder type declaraction.
-//
-// This type is mainly used for mocking storage in tests. It is the type alias
-// for an in-memory, hashmap-based externalities implementation.
-pub struct TestExternalitiesBuilder {}
-
-// Default trait implementation for test externalities builder
-impl Default for TestExternalitiesBuilder {
+pub struct ExtBuilder {}
+impl Default for ExtBuilder {
 	fn default() -> Self {
 		Self {}
 	}
 }
 
-impl TestExternalitiesBuilder {
-	// Build a genesis storage key/value store
-	pub(crate) fn build(self) -> TestExternalities {
-		let bridge_id = ChainBridge::account_id();
+impl ExtBuilder {
+	pub fn build(self) -> TestExternalities {
+		let bridge_id = Bridge::account_id();
 
 		let mut storage =
 			frame_system::GenesisConfig::default().build_storage::<MockRuntime>().unwrap();
 
-		// pre-fill balances
 		pallet_balances::GenesisConfig::<MockRuntime> {
 			balances: vec![
 				(bridge_id, ENDOWED_BALANCE),
@@ -257,21 +169,20 @@ impl TestExternalitiesBuilder {
 		externalities
 	}
 
-	// Build a genesis storage with a pre-configured chainbridge
-	pub(crate) fn build_with(self, src_id: ChainId, threshold: u32) -> TestExternalities {
+	pub fn build_with(self, src_id: ChainId, threshold: u32) -> TestExternalities {
 		let mut externalities = Self::build(self);
 
 		externalities.execute_with(|| {
 			// Set and check threshold
-			assert_ok!(ChainBridge::set_threshold(Origin::root(), threshold));
-			assert_eq!(ChainBridge::relayer_vote_threshold(), threshold);
+			assert_ok!(Bridge::set_threshold(Origin::root(), threshold));
+			assert_eq!(Bridge::relayer_vote_threshold(), threshold);
 			// Add relayers
-			assert_ok!(ChainBridge::set_relayers(
+			assert_ok!(Bridge::set_relayers(
 				Origin::root(),
 				BoundedVec::try_from(vec![RELAYER_A, RELAYER_B, RELAYER_C]).unwrap()
 			));
 			// Whitelist chain
-			assert_ok!(ChainBridge::whitelist_chain(Origin::root(), src_id));
+			assert_ok!(Bridge::whitelist_chain(Origin::root(), src_id));
 		});
 
 		externalities

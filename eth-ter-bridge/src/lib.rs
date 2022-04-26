@@ -25,7 +25,7 @@ mod tests;
 mod benchmarking;
 
 mod types;
-mod weights;
+pub mod weights;
 
 use frame_support::{
 	dispatch::DispatchResult,
@@ -156,7 +156,7 @@ pub mod pallet {
 		/// Relayers has been updated
 		RelayersUpdated { relayers: BoundedVec<T::AccountId, T::RelayerCountLimit> },
 		/// Make a deposit from Native to ERC20
-		DepositEventSent(ChainId, DepositNonce, U256, Vec<u8>),
+		DepositMade { chain_id: ChainId, nonce: DepositNonce, amount: U256, recipient: Vec<u8> },
 		/// Vote submitted in favour of proposal
 		RelayerVoted {
 			chain_id: ChainId,
@@ -170,6 +170,8 @@ pub mod pallet {
 		ProposalRejected { chain_id: ChainId, nonce: DepositNonce },
 		/// Bridge fee changed
 		BridgeFeeUpdated { fee: BalanceOf<T> },
+		/// Deposit Nonce Updated
+		DepositNonceUpdated { chain_id: ChainId, nonce: DepositNonce },
 	}
 
 	#[pallet::error]
@@ -194,6 +196,8 @@ pub mod pallet {
 		MaximumVoteLimitExceeded,
 		/// Insufficient balance for deposit
 		InsufficientBalance,
+		/// New nonce needs to be bigger
+		NewNonceNeedsToBeBigger,
 	}
 
 	#[pallet::call]
@@ -240,6 +244,28 @@ pub mod pallet {
 
 			Relayers::<T>::put(relayers.clone());
 			Self::deposit_event(Event::RelayersUpdated { relayers });
+
+			Ok(().into())
+		}
+
+		/// Update the set of relayers.
+		#[pallet::weight(<T as pallet::Config>::WeightInfo::set_relayers())]
+		pub fn set_deposit_nonce(
+			origin: OriginFor<T>,
+			chain_id: ChainId,
+			nonce: DepositNonce,
+		) -> DispatchResultWithPostInfo {
+			T::ExternalOrigin::ensure_origin(origin)?;
+
+			ChainNonces::<T>::try_mutate(chain_id, |cur_nonce| -> DispatchResult {
+				let cur_nonce = cur_nonce.as_mut().ok_or(Error::<T>::InvalidChainId)?;
+				ensure!(*cur_nonce < nonce, Error::<T>::NewNonceNeedsToBeBigger);
+				*cur_nonce = nonce;
+
+				Ok(().into())
+			})?;
+
+			Self::deposit_event(Event::DepositNonceUpdated { chain_id, nonce });
 
 			Ok(().into())
 		}
@@ -342,7 +368,7 @@ pub mod pallet {
 			ChainNonces::<T>::insert(dest_id, nonce);
 
 			let amount = U256::from(amount.saturated_into::<u128>());
-			Self::deposit_event(Event::DepositEventSent(dest_id, nonce, amount, recipient));
+			Self::deposit_event(Event::DepositMade { chain_id: dest_id, nonce, amount, recipient });
 
 			Ok(().into())
 		}

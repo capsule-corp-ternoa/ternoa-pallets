@@ -1,26 +1,21 @@
-// Copyright 2021 Centrifuge Foundation (centrifuge.io).
-// This file is part of Centrifuge chain project.
+// Copyright 2022 Capsule Corp (France) SAS.
+// This file is part of Ternoa.
 
-// Centrifuge is free software: you can redistribute it and/or modify
+// Ternoa is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version (see http://www.gnu.org/licenses).
+// (at your option) any later version.
 
-// Centrifuge is distributed in the hope that it will be useful,
+// Ternoa is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 
-//! Extrinsincs weight information for Substrate/Ethereum chains bridging pallet.
-//!
-//! Note that the following weights are used only for development.
-//! In fact, weights shoudl be calculated using runtime benchmarking.
-
-// ----------------------------------------------------------------------------
-// Module imports and re-exports
-// ----------------------------------------------------------------------------
+// You should have received a copy of the GNU General Public License
+// along with Ternoa.  If not, see <http://www.gnu.org/licenses/>.
 
 use frame_support::weights::Weight;
+use sp_std::marker::PhantomData;
 
 pub trait WeightInfo {
 	fn set_threshold() -> Weight;
@@ -29,9 +24,11 @@ pub trait WeightInfo {
 	fn vote_for_proposal() -> Weight;
 	fn deposit() -> Weight;
 	fn set_bridge_fee() -> Weight;
+	fn set_deposit_nonce() -> Weight;
 }
 
-impl WeightInfo for () {
+pub struct TernoaWeight<T>(PhantomData<T>);
+impl<T: frame_system::Config> WeightInfo for TernoaWeight<T> {
 	fn set_threshold() -> Weight {
 		195_000_000 as Weight
 	}
@@ -53,6 +50,10 @@ impl WeightInfo for () {
 	}
 
 	fn set_bridge_fee() -> Weight {
+		195_000_000 as Weight
+	}
+
+	fn set_deposit_nonce() -> Weight {
 		195_000_000 as Weight
 	}
 }
