@@ -37,8 +37,8 @@ pub enum ProposalStatus {
 #[scale_info(skip_type_params(VoteCountLimit))]
 pub struct Proposal<AccountId, BlockNumber, VoteCountLimit>
 where
-	AccountId: PartialEq + std::fmt::Debug,
-	BlockNumber: PartialOrd + Default + std::fmt::Debug,
+	AccountId: PartialEq + sp_std::fmt::Debug,
+	BlockNumber: PartialOrd + Default + sp_std::fmt::Debug,
 	VoteCountLimit: Get<u32>,
 {
 	pub votes: BoundedVec<AccountId, VoteCountLimit>,
@@ -48,8 +48,8 @@ where
 
 impl<AccountId, BlockNumber, VoteCountLimit> Proposal<AccountId, BlockNumber, VoteCountLimit>
 where
-	AccountId: PartialEq + std::fmt::Debug,
-	BlockNumber: PartialOrd + Default + std::fmt::Debug,
+	AccountId: PartialEq + sp_std::fmt::Debug,
+	BlockNumber: PartialOrd + Default + sp_std::fmt::Debug,
 	VoteCountLimit: Get<u32>,
 {
 	pub fn new(
