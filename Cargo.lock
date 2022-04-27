@@ -2376,6 +2376,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "ternoa-bridge"
+version = "1.0.0"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "substrate-wasm-builder-runner",
+]
+
+[[package]]
 name = "ternoa-capsule"
 version = "1.0.0"
 dependencies = [
@@ -2403,24 +2421,6 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "ternoa-pallets-primitives",
-]
-
-[[package]]
-name = "ternoa-eth-ter-bridge"
-version = "1.0.0"
-dependencies = [
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "pallet-balances",
- "parity-scale-codec",
- "scale-info",
- "serde",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
- "substrate-wasm-builder-runner",
 ]
 
 [[package]]
