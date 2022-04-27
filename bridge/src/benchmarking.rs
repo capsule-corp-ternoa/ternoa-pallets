@@ -16,7 +16,7 @@
 
 use super::*;
 use frame_benchmarking::{account as benchmark_account, benchmarks, impl_benchmark_test_suite};
-use frame_support::{assert_ok, bounded_vec, traits::Currency};
+use frame_support::{assert_ok, traits::Currency, BoundedVec};
 use frame_system::RawOrigin;
 use sp_runtime::traits::Bounded;
 use sp_std::prelude::*;
@@ -66,7 +66,7 @@ benchmarks! {
 		let relayer_a = get_account::<T>("RELAYER_A");
 		let relayer_b = get_account::<T>("RELAYER_B");
 		let relayer_c = get_account::<T>("RELAYER_C");
-		let relayers: BoundedVec<T::AccountId, T::RelayerCountLimit> = bounded_vec![relayer_a, relayer_b, relayer_c];
+		let relayers: BoundedVec<T::AccountId, T::RelayerCountLimit> = BoundedVec::try_from(vec![relayer_a, relayer_b, relayer_c]).expect("It will never happen.");
 
 	}: _(RawOrigin::Root, relayers.clone())
 	verify {
@@ -76,7 +76,8 @@ benchmarks! {
 	vote_for_proposal {
 		prepare_benchmarks::<T>();
 		let relayer_a: T::AccountId = get_account::<T>("RELAYER_A");
-		assert_ok!(Bridge::<T>::set_relayers(RawOrigin::Root.into(), bounded_vec![relayer_a.clone()]));
+		let relayers: BoundedVec<T::AccountId, T::RelayerCountLimit> = BoundedVec::try_from(vec![relayer_a.clone()]).expect("It will never happen.");
+		assert_ok!(Bridge::<T>::set_relayers(RawOrigin::Root.into(), relayers));
 
 		let recipient: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(get_account::<T>("RELAYER_C"));
 		let amount: BalanceOf<T> = 100u32.into();
