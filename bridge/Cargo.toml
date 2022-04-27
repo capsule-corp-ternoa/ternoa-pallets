@@ -1,0 +1,48 @@
+[package]
+name = 'ternoa-bridge'
+version = '1.0.0'
+edition = '2021'
+license = "GPL-3.0-or-later WITH Classpath-exception-2.0"
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+
+[dependencies]
+# Substrate Frame
+frame-benchmarking = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-03-24", default-features = false, optional = true }
+frame-support = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-03-24", default-features = false }
+frame-system = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-03-24", default-features = false }
+
+# Substrate Primitives
+sp-core = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-03-24", default-features = false }
+sp-io = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-03-24", default-features = false }
+sp-runtime = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-03-24", default-features = false }
+sp-std = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-03-24", default-features = false }
+
+# Rest
+parity-scale-codec = { default-features = false, features = ["derive", "max-encoded-len"], version = "3.1.2" }
+serde = { optional = true, version = "1.0.132" }
+scale-info = { version = "2.0.1", default-features = false, features = ["derive"] }
+
+[build-dependencies]
+wasm-builder-runner = { version = "3.0.0", package = "substrate-wasm-builder-runner" }
+
+[dev-dependencies]
+pallet-balances = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-03-24" }
+
+[features]
+default = ["std"]
+std = [
+	"parity-scale-codec/std",
+	"serde",
+	"scale-info/std",
+	"sp-std/std",
+	"sp-runtime/std",
+	"sp-io/std",
+	"sp-core/std",
+	"frame-benchmarking/std",
+	"frame-support/std",
+	"frame-system/std",
+]
+
+runtime-benchmarks = ["frame-benchmarking"]
