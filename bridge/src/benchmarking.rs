@@ -103,9 +103,6 @@ benchmarks! {
 	}: _(RawOrigin::Signed(relayer_a.clone()), amount.clone().into(), recipient, CHAIN_ID)
 	verify {
 		assert_eq!(T::Currency::free_balance(&relayer_a), relayer_a_old_balance - amount - bridge_fee);
-		assert_ne!(T::Currency::free_balance(&relayer_a), relayer_a_old_balance);
-		assert_ne!(amount, 0u32.into());
-		assert_ne!(bridge_fee, 0u32.into());
 	}
 
 	set_bridge_fee {
