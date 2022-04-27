@@ -159,7 +159,7 @@ pub mod pallet {
 		/// Deposit Nonce Updated
 		DepositNonceUpdated { chain_id: ChainId, nonce: DepositNonce },
 		/// Chain allowed to be used
-		NewChainAllowed { chain_id: ChainId },
+		ChainAllowed { chain_id: ChainId },
 		/// Voting successful for a proposal
 		ProposalApproved { chain_id: ChainId, nonce: DepositNonce },
 		/// Vote threshold has changed
@@ -224,7 +224,7 @@ pub mod pallet {
 			ensure!(!Self::chain_allowed(chain_id), Error::<T>::ChainAlreadyWhitelisted);
 
 			ChainNonces::<T>::insert(&chain_id, 0);
-			Self::deposit_event(Event::NewChainAllowed { chain_id });
+			Self::deposit_event(Event::ChainAllowed { chain_id });
 
 			Ok(().into())
 		}

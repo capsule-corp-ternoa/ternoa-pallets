@@ -83,7 +83,7 @@ pub mod add_chain {
 
 			assert_eq!(Bridge::chain_nonces(CHAIN_ID), Some(0));
 
-			let event = BridgeEvent::NewChainAllowed { chain_id: CHAIN_ID };
+			let event = BridgeEvent::ChainAllowed { chain_id: CHAIN_ID };
 			let event = Event::Bridge(event);
 			assert_eq!(System::events().last().unwrap().event, event);
 		})
