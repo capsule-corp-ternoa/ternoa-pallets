@@ -54,7 +54,7 @@ benchmarks! {
 
 	add_chain {
 		prepare_benchmarks::<T>();
-		let chain_id = 0;
+		let chain_id = 14;
 
 	}: _(RawOrigin::Root, chain_id)
 	verify {
