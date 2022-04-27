@@ -147,7 +147,7 @@ impl Default for ExtBuilder {
 }
 
 impl ExtBuilder {
-	pub fn build(self) -> TestExternalities {
+	pub fn build() -> TestExternalities {
 		let bridge_id = Bridge::account_id();
 
 		let mut storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
@@ -168,8 +168,8 @@ impl ExtBuilder {
 		externalities
 	}
 
-	pub fn build_with(self, src_id: ChainId, threshold: u32) -> TestExternalities {
-		let mut externalities = Self::build(self);
+	pub fn build_with(src_id: ChainId, threshold: u32) -> TestExternalities {
+		let mut externalities = Self::build();
 
 		externalities.execute_with(|| {
 			// Set and check threshold

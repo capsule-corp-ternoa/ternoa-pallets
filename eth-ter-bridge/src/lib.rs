@@ -162,17 +162,10 @@ pub mod pallet {
 		NewChainAllowed { chain_id: ChainId },
 		/// Voting successful for a proposal
 		ProposalApproved { chain_id: ChainId, nonce: DepositNonce },
-		/// Voting rejected a proposal
-		ProposalRejected { chain_id: ChainId, nonce: DepositNonce },
 		/// Vote threshold has changed
 		RelayerThresholdUpdated { threshold: u32 },
 		/// Vote submitted in favour of proposal
-		RelayerVoted {
-			chain_id: ChainId,
-			nonce: DepositNonce,
-			account: T::AccountId,
-			in_favour: bool,
-		},
+		RelayerVoted { chain_id: ChainId, nonce: DepositNonce, account: T::AccountId },
 		/// Relayers has been updated
 		RelayersUpdated { relayers: BoundedVec<T::AccountId, T::RelayerCountLimit> },
 	}
@@ -180,13 +173,13 @@ pub mod pallet {
 	#[pallet::error]
 	pub enum Error<T> {
 		/// Chain has already been enabled.
-		CannotAccept,
+		CannotAddSelfToAllowedChainList,
 		/// Chain has already been enabled.
 		ChainAlreadyWhitelisted,
 		/// Provided chain does not exist.
 		ChainNotFound,
 		/// Interactions with this chain is not permitted.
-		ChainNotWhitelisted,
+		ChainNotAllowed,
 		/// Insufficient balance for deposit.
 		InsufficientBalance,
 		/// Vote limit has already been reached.
@@ -196,7 +189,7 @@ pub mod pallet {
 		/// New nonce needs to be bigger.
 		NewNonceTooLow,
 		/// Proposal has either failed or succeeded.
-		ProposalAlreadyComplete,
+		ProposalAlreadyCompleted,
 		/// Lifetime of proposal has been exceeded.
 		ProposalExpired,
 		/// Relayer has already submitted some vote for this proposal.
@@ -227,7 +220,7 @@ pub mod pallet {
 		pub fn add_chain(origin: OriginFor<T>, chain_id: ChainId) -> DispatchResultWithPostInfo {
 			T::ExternalOrigin::ensure_origin(origin)?;
 
-			ensure!(chain_id != T::ChainId::get(), Error::<T>::ChainNotFound);
+			ensure!(chain_id != T::ChainId::get(), Error::<T>::CannotAddSelfToAllowedChainList);
 			ensure!(!Self::chain_allowed(chain_id), Error::<T>::ChainAlreadyWhitelisted);
 
 			ChainNonces::<T>::insert(&chain_id, 0);
@@ -283,13 +276,12 @@ pub mod pallet {
 			nonce: DepositNonce,
 			recipient: <T::Lookup as StaticLookup>::Source,
 			amount: BalanceOf<T>,
-			in_favour: bool,
 		) -> DispatchResultWithPostInfo {
 			let account = ensure_signed(origin)?;
 			let recipient = T::Lookup::lookup(recipient)?;
 
 			ensure!(Self::is_relayer(&account), Error::<T>::MustBeRelayer);
-			ensure!(Self::chain_allowed(chain_id), Error::<T>::ChainNotWhitelisted);
+			ensure!(Self::chain_allowed(chain_id), Error::<T>::ChainNotAllowed);
 
 			let now = frame_system::Pallet::<T>::block_number();
 			let threshold = Self::relayer_vote_threshold();
@@ -301,23 +293,23 @@ pub mod pallet {
 				(nonce, recipient.clone(), amount.clone()),
 				|proposal| -> DispatchResult {
 					if let Some(proposal) = proposal {
-						ensure!(!proposal.is_complete(), Error::<T>::ProposalAlreadyComplete);
+						ensure!(!proposal.is_complete(), Error::<T>::ProposalAlreadyCompleted);
 						ensure!(!proposal.is_expired(now), Error::<T>::ProposalExpired);
 						ensure!(!proposal.has_voted(&account), Error::<T>::RelayerAlreadyVoted);
 
-						proposal.votes.try_push((account.clone(), in_favour)).map_err(|_| error)?; // can't reach error anyway
+						proposal.votes.try_push(account.clone()).map_err(|_| error)?; // can't reach error anyway
 						result = proposal.try_to_complete(threshold);
 					} else {
 						let lifetime = T::ProposalLifetime::get();
-						let initial = BoundedVec::try_from(vec![(account.clone(), in_favour)])
-							.map_err(|_| error)?;
+						let initial =
+							BoundedVec::try_from(vec![account.clone()]).map_err(|_| error)?;
 						let mut new_proposal = Proposal::new(initial, now + lifetime);
 						result = new_proposal.try_to_complete(threshold);
 						*proposal = Some(new_proposal);
 					}
 
 					// Send Vote Event
-					let event = Event::RelayerVoted { chain_id, nonce, account, in_favour };
+					let event = Event::RelayerVoted { chain_id, nonce, account };
 					Self::deposit_event(event);
 
 					Ok(())
@@ -331,9 +323,6 @@ pub mod pallet {
 						let negative_imbalance = <T as Config>::Currency::issue(amount);
 						<T as Config>::Currency::resolve_creating(&recipient, negative_imbalance);
 						Self::deposit_event(Event::ProposalApproved { chain_id, nonce });
-					},
-					ProposalStatus::Rejected => {
-						Self::deposit_event(Event::ProposalRejected { chain_id, nonce });
 					},
 					_ => {},
 				}
@@ -356,7 +345,7 @@ pub mod pallet {
 			let bridge_fee = Self::bridge_fee();
 			let total = bridge_fee + amount;
 
-			ensure!(Self::chain_allowed(dest_id), Error::<T>::ChainNotWhitelisted);
+			ensure!(Self::chain_allowed(dest_id), Error::<T>::ChainNotAllowed);
 			ensure!(T::Currency::free_balance(&source) >= total, Error::<T>::InsufficientBalance);
 
 			let imbalance =

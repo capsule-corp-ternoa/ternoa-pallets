@@ -15,5 +15,6 @@
 // along with Ternoa.  If not, see <http://www.gnu.org/licenses/>.
 
 mod extrinsics;
+mod types;
 
 pub mod mock;
