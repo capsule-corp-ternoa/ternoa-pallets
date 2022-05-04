@@ -42,12 +42,13 @@ pub fn prepare_benchmarks<T: Config>() -> (NFTId, NFTId) {
 		bounded_vec![1],
 		bounded_vec![2],
 		None,
+		0
 	));
 
 	// Create default NFT and series
 	let series_id = vec![SERIES_ID];
 	let nft_id =
-		T::NFTExt::create_nft(alice.clone(), bounded_vec![1], Some(series_id.clone())).unwrap();
+		T::NFTExt::create_nft(alice.clone(), bounded_vec![1], Some(series_id.clone()), 0).unwrap();
 
 	// Lock series
 	T::NFTExt::benchmark_lock_series(series_id.clone());
@@ -74,7 +75,7 @@ benchmarks! {
 		let nft_id = nft_id + 1;
 		let capsule = CapsuleData::new(alice.clone(), capsule_reference.clone());
 
-	}: _(RawOrigin::Signed(alice.clone()), nft_reference, capsule_reference, None)
+	}: _(RawOrigin::Signed(alice.clone()), nft_reference, capsule_reference, None, 0)
 	verify {
 		assert_eq!(Capsule::<T>::capsules(nft_id), Some(capsule));
 	}

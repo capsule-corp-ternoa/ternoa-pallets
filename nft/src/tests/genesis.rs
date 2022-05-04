@@ -26,7 +26,7 @@ fn register_nfts() {
 
 	let nft_id = 100;
 	let mint_fee = 10;
-	let data_original = NFTData::new_default(ALICE, bounded_vec![1], vec![48]);
+	let data_original = NFTData::new_default(ALICE, bounded_vec![1], vec![48], 0);
 	let data = data_original.clone();
 
 	let genesis_nfts: NFTsGenesis<u64> = (
@@ -40,7 +40,7 @@ fn register_nfts() {
 		data.is_capsule,
 		data.is_secret,
 		data.is_delegated,
-		data.royalties,
+		data.royaltie_fee,
 	);
 
 	GenesisConfig::<Test> { nfts: vec![genesis_nfts], series: vec![], nft_mint_fee: mint_fee }

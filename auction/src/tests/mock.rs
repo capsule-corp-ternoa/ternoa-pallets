@@ -241,9 +241,9 @@ impl ExtBuilder {
 
 	fn build_nfts(t: &mut sp_runtime::Storage) {
 		let alice_nft: NFTData<AccountId, IPFSLengthLimit> =
-			NFTData::new_default(ALICE, bounded_vec![10], vec![ALICE_SERIES_ID]);
+			NFTData::new_default(ALICE, bounded_vec![10], vec![ALICE_SERIES_ID], 15);
 		let bob_nft: NFTData<AccountId, IPFSLengthLimit> =
-			NFTData::new_default(BOB, bounded_vec![10], vec![BOB_SERIES_ID]);
+			NFTData::new_default(BOB, bounded_vec![10], vec![BOB_SERIES_ID], 25);
 
 		let alice_series = NFTSeriesDetails::new(ALICE, false);
 		let bob_series = NFTSeriesDetails::new(ALICE, false);

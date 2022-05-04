@@ -39,7 +39,7 @@ pub fn prepare_benchmarks<T: Config>() -> (MarketplaceId, MarketplaceId, NFTId) 
 	// Create default NFT and series
 	let series_id = vec![SERIES_ID];
 	let nft_id =
-		T::NFTExt::create_nft(alice.clone(), bounded_vec![1], Some(series_id.clone())).unwrap();
+		T::NFTExt::create_nft(alice.clone(), bounded_vec![1], Some(series_id.clone()), 0).unwrap();
 
 	// Lock series
 	T::NFTExt::benchmark_lock_series(series_id.clone());

@@ -35,7 +35,7 @@ fn create_happy() {
 		assert_eq!(Capsule::ledgers(&ALICE), None);
 
 		// Happy path
-		let ok = Capsule::create(alice.clone(), bounded_vec![50], ipfs_reference, None);
+		let ok = Capsule::create(alice.clone(), bounded_vec![50], ipfs_reference, None, 0);
 		assert_ok!(ok);
 		assert_eq!(Capsule::capsules(&nft_id), Some(data));
 		assert_eq!(Capsule::ledgers(&ALICE), Some(ledger));
@@ -48,7 +48,7 @@ fn create_unhappy() {
 		let bob: mock::Origin = RawOrigin::Signed(BOB).into();
 
 		// Unhappy not enough caps to reserve a capsule
-		let ok = Capsule::create(bob.clone(), bounded_vec![], bounded_vec![1], None);
+		let ok = Capsule::create(bob.clone(), bounded_vec![], bounded_vec![1], None, 0);
 		assert_noop!(ok, BalanceError::<Test>::InsufficientBalance);
 	})
 }
@@ -66,7 +66,7 @@ fn create_caps_transfer() {
 		assert_eq!(Balances::free_balance(pallet_id), 0);
 
 		// Funds are transferred
-		let ok = Capsule::create(alice.clone(), bounded_vec![50], bounded_vec![25], None);
+		let ok = Capsule::create(alice.clone(), bounded_vec![50], bounded_vec![25], None, 0);
 		assert_ok!(ok);
 		assert_eq!(Balances::free_balance(ALICE), balance - capsule_fee - nft_fee);
 		assert_eq!(Balances::free_balance(pallet_id), capsule_fee);
@@ -89,11 +89,11 @@ fn create_transactional() {
 			assert!(balance > (capsule_fee + nft_fee));
 
 			let series_id = Some("AAA".into());
-			let ok = NFT::create_nft(BOB, bounded_vec![], series_id.clone());
+			let ok = NFT::create_nft(BOB, bounded_vec![], series_id.clone(), 0);
 			assert_ok!(ok);
 
 			// Trigger an error
-			let ok = Capsule::create(alice.clone(), bounded_vec![], bounded_vec![], series_id);
+			let ok = Capsule::create(alice.clone(), bounded_vec![], bounded_vec![], series_id, 0);
 			assert_noop!(ok, ternoa_nft::Error::<Test>::NotTheSeriesOwner);
 
 			// She should not have lost any caps

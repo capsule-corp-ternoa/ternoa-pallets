@@ -19,7 +19,7 @@ use frame_support::{assert_noop, assert_ok, bounded_vec, error::BadOrigin};
 use frame_system::RawOrigin;
 use pallet_balances::Error as BalanceError;
 use primitives::marketplace::MarketplaceType;
-use ternoa_common::traits::NFTExt;
+use ternoa_common::traits::{MarketplaceExt, NFTExt};
 
 use crate::{tests::mock, DescriptionVec, Error, MarketplaceData, NameVec, SaleData, URIVec};
 
@@ -37,7 +37,8 @@ fn list_happy() {
 			// Happy path Public marketplace
 			let price = 50;
 			let series_id = vec![50];
-			let nft_id = NFT::create_nft(ALICE, bounded_vec![50], Some(series_id.clone())).unwrap();
+			let nft_id =
+				NFT::create_nft(ALICE, bounded_vec![50], Some(series_id.clone()), 0).unwrap();
 			let sale_info = SaleData::new(ALICE, price.clone(), 0);
 
 			help::finish_series(alice.clone(), series_id);
@@ -50,7 +51,8 @@ fn list_happy() {
 			let mkp_id =
 				help::create_mkp(bob.clone(), MPT::Private, 0, bounded_vec![1], vec![ALICE]);
 			let sale_info = SaleData::new(ALICE, price.clone(), mkp_id);
-			let nft_id = NFT::create_nft(ALICE, bounded_vec![50], Some(series_id.clone())).unwrap();
+			let nft_id =
+				NFT::create_nft(ALICE, bounded_vec![50], Some(series_id.clone()), 0).unwrap();
 
 			help::finish_series(alice.clone(), series_id);
 			let ok = Marketplace::list_nft(alice.clone(), nft_id, price, Some(mkp_id));
@@ -75,13 +77,14 @@ fn list_unhappy() {
 			assert_noop!(ok, Error::<Test>::NFTNotFound);
 
 			// Unhappy not the NFT owner
-			let nft_id = NFT::create_nft(BOB, bounded_vec![50], None).unwrap();
+			let nft_id = NFT::create_nft(BOB, bounded_vec![50], None, 0).unwrap();
 			let ok = Marketplace::list_nft(alice.clone(), nft_id, price, Some(0));
 			assert_noop!(ok, Error::<Test>::NotTheNFTOwner);
 
 			// Unhappy series not completed
 			let series_id = vec![50];
-			let nft_id = NFT::create_nft(ALICE, bounded_vec![50], Some(series_id.clone())).unwrap();
+			let nft_id =
+				NFT::create_nft(ALICE, bounded_vec![50], Some(series_id.clone()), 0).unwrap();
 			let ok = Marketplace::list_nft(alice.clone(), nft_id, price, Some(0));
 			assert_noop!(ok, Error::<Test>::CannotListNFTsInUncompletedSeries);
 
@@ -115,13 +118,27 @@ fn list_unhappy() {
 }
 
 #[test]
+fn cumulated_fees_to_high() {
+	ExtBuilder::default().caps(vec![(ALICE, 1000)]).build().execute_with(|| {
+		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
+		let mkp_id = help::create_mkp(alice.clone(), MPT::Public, 70, bounded_vec![50], vec![]);
+		let nft_id = help::create_nft(alice.clone(), bounded_vec![1], Some(vec![2]), 50);
+		help::finish_series(alice.clone(), vec![2]);
+
+		// Should fail and storage should remains empty
+		let response = Marketplace::list_nft(alice.clone(), nft_id, 0, Some(mkp_id));
+		assert_noop!(response, Error::<Test>::CumulatedFeesToHigh);
+	})
+}
+
+#[test]
 fn unlist_happy() {
 	ExtBuilder::default().caps(vec![(ALICE, 1000)]).build().execute_with(|| {
 		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
 
 		let price = 50;
 		let series_id = vec![50];
-		let nft_id = NFT::create_nft(ALICE, bounded_vec![50], Some(series_id.clone())).unwrap();
+		let nft_id = NFT::create_nft(ALICE, bounded_vec![50], Some(series_id.clone()), 0).unwrap();
 
 		// Happy path
 		help::finish_series(alice.clone(), series_id);
@@ -142,7 +159,7 @@ fn unlist_unhappy() {
 		assert_noop!(ok, Error::<Test>::NotTheNFTOwner);
 
 		// Unhappy not listed NFT
-		let nft_id = NFT::create_nft(ALICE, bounded_vec![50], None).unwrap();
+		let nft_id = NFT::create_nft(ALICE, bounded_vec![50], None, 0).unwrap();
 		let ok = Marketplace::unlist_nft(alice.clone(), nft_id);
 		assert_noop!(ok, Error::<Test>::NFTNotForSale);
 	})
@@ -159,9 +176,9 @@ fn buy_happy() {
 			let dave: mock::Origin = RawOrigin::Signed(DAVE).into();
 
 			let nft_id_1 =
-				help::create_nft_and_lock_series(alice.clone(), bounded_vec![50], vec![50]);
+				help::create_nft_and_lock_series(alice.clone(), bounded_vec![50], vec![50], 0);
 			let nft_id_2 =
-				help::create_nft_and_lock_series(alice.clone(), bounded_vec![50], vec![51]);
+				help::create_nft_and_lock_series(alice.clone(), bounded_vec![50], vec![51], 0);
 			let mkt_id =
 				help::create_mkp(dave.clone(), MPT::Private, 10, bounded_vec![0], vec![ALICE]);
 
@@ -200,6 +217,75 @@ fn buy_happy() {
 }
 
 #[test]
+fn buy_happy_with_royalties() {
+	ExtBuilder::default()
+		.caps(vec![(ALICE, 1000), (BOB, 1000), (DAVE, 1000), (JACK, 1000)])
+		.build()
+		.execute_with(|| {
+			let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
+			let bob: mock::Origin = RawOrigin::Signed(BOB).into();
+			let dave: mock::Origin = RawOrigin::Signed(DAVE).into();
+			let jack: mock::Origin = RawOrigin::Signed(JACK).into();
+			let mkp_id = help::create_mkp(alice.clone(), MPT::Public, 0, bounded_vec![0], vec![]);
+			let commission_fee = Marketplace::get_marketplace(mkp_id).unwrap().commission_fee;
+			let nft_id =
+				help::create_nft_and_lock_series(bob.clone(), bounded_vec![50], vec![50], 20);
+			let royaltie_fee = NFT::get_nft(nft_id).unwrap().royaltie_fee;
+
+			let price = 150;
+			assert_ok!(Marketplace::list_nft(bob.clone(), nft_id, price, Some(mkp_id)));
+
+			let bob_before = Balances::free_balance(BOB);
+			let alice_before = Balances::free_balance(ALICE);
+			let dave_before = Balances::free_balance(DAVE);
+			assert_ok!(Marketplace::buy_nft(dave.clone(), nft_id));
+
+			// mkp owner
+			assert_eq!(
+				Balances::free_balance(ALICE),
+				alice_before + (price.saturating_mul(commission_fee.into()) / 100)
+			);
+			// nft creator and owner
+			assert_eq!(
+				Balances::free_balance(BOB),
+				bob_before + price - (price.saturating_mul(commission_fee.into()) / 100)
+			);
+			// nft buyer
+			assert_eq!(Balances::free_balance(DAVE), dave_before - price);
+
+			let price = 260;
+			assert_ok!(Marketplace::list_nft(dave, nft_id, price, Some(mkp_id)));
+
+			let bob_before = Balances::free_balance(BOB);
+			let alice_before = Balances::free_balance(ALICE);
+			let dave_before = Balances::free_balance(DAVE);
+			let jack_before = Balances::free_balance(JACK);
+
+			assert_ok!(Marketplace::buy_nft(jack, nft_id));
+
+			// mkp owner
+			assert_eq!(
+				Balances::free_balance(ALICE),
+				alice_before + (price.saturating_mul(commission_fee.into()) / 100)
+			);
+			// nft creator
+			assert_eq!(
+				Balances::free_balance(BOB),
+				bob_before + price.saturating_mul(royaltie_fee.into()) / 100
+			);
+			// nft owner
+			assert_eq!(
+				Balances::free_balance(DAVE),
+				dave_before + price -
+					(price.saturating_mul(commission_fee.into()) / 100) -
+					(price.saturating_mul(royaltie_fee.into()) / 100)
+			);
+			// nft buyer
+			assert_eq!(Balances::free_balance(JACK), jack_before - price);
+		})
+}
+
+#[test]
 fn buy_unhappy() {
 	ExtBuilder::default()
 		.caps(vec![(ALICE, 100), (BOB, 100)])
@@ -210,7 +296,7 @@ fn buy_unhappy() {
 
 			let price = 5000;
 			let nft_id =
-				help::create_nft_and_lock_series(alice.clone(), bounded_vec![50], vec![50]);
+				help::create_nft_and_lock_series(alice.clone(), bounded_vec![50], vec![50], 0);
 			assert_ok!(Marketplace::list_nft(alice.clone(), nft_id, price, None));
 
 			// Unhappy nft not on sale

@@ -890,6 +890,74 @@ pub mod buy_it_now {
 	}
 
 	#[test]
+	fn buy_it_now_with_royalties() {
+		ExtBuilder::new_build(
+			vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000), (DAVE, 1000)],
+			Some(InProgress),
+		)
+		.execute_with(|| {
+			let mkp_id = ALICE_MARKET_ID;
+			let commission_fee = Marketplace::get_marketplace(mkp_id).unwrap().commission_fee;
+			let nft_id = BOB_NFT_ID;
+			let royaltie_fee = NFT::get_nft(nft_id).unwrap().royaltie_fee;
+
+			let price = 150;
+			assert_ok!(Marketplace::list_nft(origin(BOB), nft_id, price, Some(mkp_id)));
+			assert_ok!(Marketplace::buy_nft(origin(CHARLIE), nft_id));
+
+			let start_block = 1;
+			let auction: AuctionData<_, _, _, BidderListLengthLimit> = AuctionData {
+				creator: CHARLIE,
+				start_block,
+				end_block: start_block + MIN_AUCTION_DURATION,
+				start_price: 100,
+				buy_it_price: Some(200),
+				bidders: BidderList::new(),
+				marketplace_id: mkp_id,
+				is_extended: false,
+			};
+			let ok = Auction::create_auction(
+				origin(auction.creator),
+				nft_id,
+				auction.marketplace_id,
+				auction.start_block,
+				auction.end_block,
+				auction.start_price,
+				auction.buy_it_price.clone(),
+			);
+			assert_ok!(ok);
+
+			let alice_before = Balances::free_balance(ALICE);
+			let bob_before = Balances::free_balance(BOB);
+			let charlie_before = Balances::free_balance(CHARLIE);
+			let dave_before = Balances::free_balance(DAVE);
+
+			let price = auction.buy_it_price.clone().unwrap();
+			assert_ok!(Auction::buy_it_now(origin(DAVE), nft_id));
+
+			// mkp owner
+			assert_eq!(
+				Balances::free_balance(ALICE),
+				alice_before + (price.saturating_mul(commission_fee.into()) / 100)
+			);
+			// nft creator
+			assert_eq!(
+				Balances::free_balance(BOB),
+				bob_before + price.saturating_mul(royaltie_fee.into()) / 100
+			);
+			// nft owner
+			assert_eq!(
+				Balances::free_balance(CHARLIE),
+				charlie_before + price -
+					(price.saturating_mul(commission_fee.into()) / 100) -
+					(price.saturating_mul(royaltie_fee.into()) / 100)
+			);
+			// nft buyer
+			assert_eq!(Balances::free_balance(DAVE), dave_before - price);
+		})
+	}
+
+	#[test]
 	fn buy_it_now_with_existing_bids() {
 		ExtBuilder::new_build(vec![(BOB, 1000), (CHARLIE, 1000)], Some(InProgress)).execute_with(
 			|| {

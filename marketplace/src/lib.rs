@@ -140,6 +140,11 @@ pub mod pallet {
 
 			let market = Marketplaces::<T>::get(mkp_id).ok_or(Error::<T>::MarketplaceNotFound)?;
 
+			ensure!(
+				market.commission_fee + nft.royaltie_fee <= 100,
+				Error::<T>::CumulatedFeesToHigh
+			);
+
 			if market.kind == MarketplaceType::Private {
 				let is_on_list = market.allow_list.contains(&account_id);
 				ensure!(is_on_list, Error::<T>::AccountNotAllowedToList);
@@ -183,12 +188,12 @@ pub mod pallet {
 			let sale = NFTsForSale::<T>::get(nft_id).ok_or(Error::<T>::NFTNotForSale)?;
 			ensure!(sale.account_id != caller, Error::<T>::CannotBuyAlreadyOwnedNFTs);
 
+			let mut price = sale.price;
+
 			// Check if there is any commission fee.
 			let market = Marketplaces::<T>::get(sale.marketplace_id)
 				.ok_or(Error::<T>::MarketplaceNotFound)?;
-
 			let commission_fee = market.commission_fee;
-			let mut price = sale.price;
 
 			// KeepAlive because they need to be able to use the NFT later on
 			if commission_fee != 0 {
@@ -199,6 +204,21 @@ pub mod pallet {
 				price = price.checked_sub(&fee).ok_or(Error::<T>::InternalMathError)?;
 
 				T::Currency::transfer(&caller, &market.owner, fee, KeepAlive)?;
+			}
+
+			// Check if there is any royaltie fee.
+			let nft = T::NFTExt::get_nft(nft_id).ok_or(Error::<T>::NFTNotFound)?;
+			let royaltie_fee = nft.royaltie_fee;
+
+			if royaltie_fee != 0 {
+				let tmp = 100u8.checked_div(royaltie_fee).ok_or(Error::<T>::InternalMathError)?;
+
+				let fee =
+					sale.price.checked_div(&(tmp.into())).ok_or(Error::<T>::InternalMathError)?;
+
+				price = price.checked_sub(&fee).ok_or(Error::<T>::InternalMathError)?;
+
+				T::Currency::transfer(&caller, &nft.creator, fee, KeepAlive)?;
 			}
 
 			T::Currency::transfer(&caller, &sale.account_id, price, KeepAlive)?;
@@ -622,6 +642,8 @@ pub mod pallet {
 		InternalMathError,
 		/// TODO
 		RandomError,
+		/// Invalid sum for fees
+		CumulatedFeesToHigh,
 	}
 
 	/// Nfts listed on the marketplace

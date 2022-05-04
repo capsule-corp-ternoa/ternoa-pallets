@@ -186,21 +186,22 @@ pub mod help {
 	use primitives::nfts::{NFTId, NFTSeriesId};
 
 	pub fn create_capsule_fast(owner: Origin) -> NFTId {
-		let nft_id = create_nft(owner.clone(), bounded_vec![50], None);
+		let nft_id = create_nft(owner.clone(), bounded_vec![50], None, 0);
 		assert_ok!(Capsule::create_from_nft(owner, nft_id, bounded_vec![60]));
 		nft_id
 	}
 
 	pub fn create_nft_fast(owner: Origin) -> NFTId {
-		create_nft(owner, bounded_vec![50], None)
+		create_nft(owner, bounded_vec![50], None, 0)
 	}
 
 	pub fn create_nft(
 		owner: Origin,
 		ipfs_reference: BoundedVec<u8, IPFSLengthLimit>,
 		series_id: Option<NFTSeriesId>,
+		royaltie_fee: u8,
 	) -> NFTId {
-		assert_ok!(NFT::create(owner, ipfs_reference, series_id));
+		assert_ok!(NFT::create(owner, ipfs_reference, series_id, royaltie_fee));
 		NFT::nft_id_generator() - 1
 	}
 }

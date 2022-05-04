@@ -543,6 +543,8 @@ pub mod pallet {
 		MarketplaceNotFound,
 		/// The Maximum amount of auctions that can be active at the same time has been reached.
 		MaximumAuctionsLimitReached,
+		/// NFT does no exist
+		NFTNotFound,
 	}
 
 	#[pallet::storage]
@@ -619,19 +621,25 @@ impl<T: Config> Pallet<T> {
 		price: BalanceOf<T>,
 		balance_source: Option<T::AccountId>,
 	) -> DispatchResult {
-		// Handle marketplace fees
+		// Handle fees
 		let marketplace = T::MarketplaceExt::get_marketplace(auction.marketplace_id)
 			.ok_or(Error::<T>::MarketplaceNotFound)?;
 
 		let to_marketplace =
 			price.saturating_mul(marketplace.commission_fee.into()) / 100u32.into();
-		let to_auctioneer = price.saturating_sub(to_marketplace);
+		let nft = T::NFTExt::get_nft(nft_id).ok_or(Error::<T>::NFTNotFound)?;
+		let to_creator = price.saturating_mul(nft.royaltie_fee.into()) / 100u32.into();
+
+		let to_auctioneer = price.saturating_sub(to_marketplace).saturating_sub(to_creator);
 
 		let existence = if balance_source.is_none() { KeepAlive } else { AllowDeath };
 		let balance_source = balance_source.unwrap_or_else(|| Self::account_id());
 
 		// Transfer fee to marketplace
 		T::Currency::transfer(&balance_source, &marketplace.owner, to_marketplace, existence)?;
+
+		// Transfer fee to nft creator
+		T::Currency::transfer(&balance_source, &nft.creator, to_creator, existence)?;
 
 		// Transfer remaining to auction creator
 		T::Currency::transfer(&balance_source, &auction.creator, to_auctioneer, existence)?;

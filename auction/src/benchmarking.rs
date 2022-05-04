@@ -70,8 +70,8 @@ pub fn prepare_benchmarks<T: Config>(state: Option<AuctionState>) -> BenchmarkDa
 	.unwrap();
 
 	// Create NFTs
-	let alice_nft_id = T::NFTExt::create_nft(alice.clone(), bounded_vec![10], None).unwrap();
-	let bob_nft_id = T::NFTExt::create_nft(bob.clone(), bounded_vec![10], None).unwrap();
+	let alice_nft_id = T::NFTExt::create_nft(alice.clone(), bounded_vec![10], None, 0).unwrap();
+	let bob_nft_id = T::NFTExt::create_nft(bob.clone(), bounded_vec![10], None, 0).unwrap();
 
 	let alice_series = T::NFTExt::get_nft(alice_nft_id).unwrap().series_id;
 	let bob_series = T::NFTExt::get_nft(bob_nft_id).unwrap().series_id;

@@ -45,6 +45,7 @@ pub trait NFTExt {
 		owner: Self::AccountId,
 		ipfs_reference: IPFSReference<Self::IPFSLengthLimit>,
 		series_id: Option<NFTSeriesId>,
+		royaltie_fee: u8,
 	) -> Result<NFTId, DispatchErrorWithPostInfo>;
 
 	/// Get NFT data

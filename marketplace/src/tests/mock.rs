@@ -36,6 +36,7 @@ type Block = frame_system::mocking::MockBlock<Test>;
 pub const ALICE: u64 = 1;
 pub const BOB: u64 = 2;
 pub const DAVE: u64 = 3;
+pub const JACK: u64 = 4;
 
 pub type AccountId = u64;
 
@@ -238,8 +239,9 @@ pub mod help {
 		owner: Origin,
 		ipfs_reference: primitives::nfts::IPFSReference<IPFSLengthLimit>,
 		series_id: Option<NFTSeriesId>,
+		royaltie_fee: u8,
 	) -> NFTId {
-		assert_ok!(NFT::create(owner, ipfs_reference, series_id));
+		assert_ok!(NFT::create(owner, ipfs_reference, series_id, royaltie_fee));
 		return NFT::nft_id_generator() - 1
 	}
 
@@ -247,8 +249,10 @@ pub mod help {
 		owner: Origin,
 		ipfs_reference: primitives::nfts::IPFSReference<IPFSLengthLimit>,
 		series_id: NFTSeriesId,
+		royaltie_fee: u8,
 	) -> NFTId {
-		let nft_id = help::create_nft(owner.clone(), ipfs_reference, Some(series_id.clone()));
+		let nft_id =
+			help::create_nft(owner.clone(), ipfs_reference, Some(series_id.clone()), royaltie_fee);
 		help::finish_series(owner.clone(), series_id.clone());
 
 		nft_id

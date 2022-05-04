@@ -37,7 +37,7 @@ mod create {
 	fn create() {
 		ExtBuilder::new_build(vec![(ALICE, 1000)]).execute_with(|| {
 			let alice: mock::Origin = origin(ALICE);
-			let data = NFTData::new_default(ALICE, bounded_vec![1], vec![50]);
+			let data = NFTData::new_default(ALICE, bounded_vec![1], vec![50], 0);
 			let alice_balance = Balances::free_balance(ALICE);
 
 			// Create NFT with new serie id while there is no series already registered
@@ -45,6 +45,7 @@ mod create {
 				alice.clone(),
 				data.ipfs_reference.clone(),
 				Some(data.series_id.clone()),
+				0,
 			);
 			assert_ok!(ok);
 			let nft_id = NFT::nft_id_generator() - 1;
@@ -77,7 +78,7 @@ mod create {
 			let alice_balance = Balances::free_balance(ALICE);
 
 			// Create NFT with new serie id while there is no series already registered
-			let ok = NFT::create(origin(ALICE), ipfs_reference.clone(), None);
+			let ok = NFT::create(origin(ALICE), ipfs_reference.clone(), None, 0);
 			assert_ok!(ok);
 			let nft_id = NFT::nft_id_generator() - 1;
 
@@ -105,7 +106,7 @@ mod create {
 	fn insufficient_balance() {
 		ExtBuilder::new_build(vec![(ALICE, 1)]).execute_with(|| {
 			// Should fail and storage should remain empty
-			let ok = NFT::create(origin(ALICE), bounded_vec![1], None);
+			let ok = NFT::create(origin(ALICE), bounded_vec![1], None, 0);
 			assert_noop!(ok, BalanceError::<Test>::InsufficientBalance);
 		})
 	}
@@ -114,12 +115,12 @@ mod create {
 	fn not_the_series_owner() {
 		ExtBuilder::new_build(vec![(ALICE, 100), (BOB, 100)]).execute_with(|| {
 			let series_id = Some(vec![50]);
-			let ok = NFT::create(origin(ALICE), bounded_vec![50], series_id.clone());
+			let ok = NFT::create(origin(ALICE), bounded_vec![50], series_id.clone(), 0);
 			assert_ok!(ok);
 
 			// Should fail and storage should remain empty
 			assert_noop!(
-				NFT::create(origin(BOB), bounded_vec![1], series_id),
+				NFT::create(origin(BOB), bounded_vec![1], series_id, 0),
 				Error::<Test>::NotTheSeriesOwner
 			);
 			assert_eq!(Balances::free_balance(BOB), 100);
@@ -132,16 +133,25 @@ mod create {
 			let alice: mock::Origin = origin(ALICE);
 
 			let series_id = Some(vec![51]);
-			let ok = NFT::create(alice.clone(), bounded_vec![50], series_id.clone());
+			let ok = NFT::create(alice.clone(), bounded_vec![50], series_id.clone(), 0);
 			assert_ok!(ok);
 			let ok = NFT::finish_series(alice.clone(), series_id.clone().unwrap());
 			assert_ok!(ok);
 
 			// Should fail and storage should remain empty
 			assert_noop!(
-				NFT::create(alice, bounded_vec![1], series_id.clone()),
+				NFT::create(alice, bounded_vec![1], series_id.clone(), 0),
 				Error::<Test>::CannotCreateNFTsWithCompletedSeries
 			);
+		})
+	}
+
+	#[test]
+	fn invalid_royaltie_fee_value() {
+		ExtBuilder::new_build(vec![(ALICE, 100)]).execute_with(|| {
+			// Should fail and storage should remain empty
+			let ok = NFT::create(origin(ALICE), bounded_vec![50], None, 105);
+			assert_noop!(ok, Error::<Test>::InvalidRoyaltieFeeValue);
 		})
 	}
 }
@@ -570,6 +580,62 @@ mod set_nft_mint_fee {
 			// Try to change nft mint fee as not root
 			// Should fail and storage should remain empty
 			assert_noop!(NFT::set_nft_mint_fee(origin(ALICE), 654), BadOrigin);
+		})
+	}
+}
+
+mod set_nft_royaltie_fee {
+	use super::*;
+
+	#[test]
+	fn set_nft_royaltie_fee() {
+		ExtBuilder::new_build(vec![]).execute_with(|| {
+			let new_royaltie_fee = 15;
+			assert_ne!(NFT::data(ALICE_NFT_ID).unwrap().royaltie_fee, new_royaltie_fee);
+
+			let ok = NFT::set_nft_royaltie_fee(origin(ALICE), ALICE_NFT_ID, new_royaltie_fee);
+			assert_ok!(ok);
+
+			// Final state checks
+			assert_eq!(NFT::data(ALICE_NFT_ID).unwrap().royaltie_fee, new_royaltie_fee);
+
+			// Events checks
+			let event = NFTsEvent::NFTRoyaltieFeeUpdated { fee: new_royaltie_fee };
+			let event = Event::NFT(event);
+			assert_eq!(System::events().last().unwrap().event, event);
+		})
+	}
+
+	#[test]
+	fn invalid_royaltie_fee_value() {
+		ExtBuilder::new_build(vec![]).execute_with(|| {
+			let new_royaltie_fee = 205;
+			assert_ne!(NFT::data(ALICE_NFT_ID).unwrap().royaltie_fee, new_royaltie_fee);
+
+			// Try to set invalid royaltie fee
+			// Should fail and storage should remain empty
+			let response = NFT::set_nft_royaltie_fee(origin(ALICE), ALICE_NFT_ID, new_royaltie_fee);
+			assert_noop!(response, Error::<Test>::InvalidRoyaltieFeeValue);
+		})
+	}
+
+	#[test]
+	fn nft_not_found() {
+		ExtBuilder::new_build(vec![]).execute_with(|| {
+			// Try to set invalid royaltie fee
+			// Should fail and storage should remain empty
+			let response = NFT::set_nft_royaltie_fee(origin(ALICE), INVALID_NFT_ID, 10);
+			assert_noop!(response, Error::<Test>::NFTNotFound);
+		})
+	}
+
+	#[test]
+	fn not_the_nft_owner() {
+		ExtBuilder::new_build(vec![]).execute_with(|| {
+			// Try to set invalid royaltie fee
+			// Should fail and storage should remain empty
+			let response = NFT::set_nft_royaltie_fee(origin(ALICE), BOB_NFT_ID, 10);
+			assert_noop!(response, Error::<Test>::NotTheNFTOwner);
 		})
 	}
 }
