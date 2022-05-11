@@ -163,11 +163,17 @@ impl Default for ExtBuilder {
 }
 
 impl ExtBuilder {
-	pub fn caps(mut self, accounts: Vec<(u64, u128)>) -> Self {
-		for account in accounts {
-			self.caps_endowed_accounts.push(account);
+	pub fn new(balances: Vec<(u64, u128)>) -> Self {
+		ExtBuilder {
+			nfts: Vec::new(),
+			series: Vec::new(),
+			caps_endowed_accounts: balances,
+			marketplaces: Vec::new(),
 		}
-		self
+	}
+
+	pub fn new_build(balances: Vec<(u64, u128)>) -> sp_io::TestExternalities {
+		Self::new(balances).build()
 	}
 
 	pub fn build(self) -> sp_io::TestExternalities {
