@@ -40,42 +40,51 @@ pub mod list_nft {
 	pub use super::*;
 
 	#[test]
-	fn list_nft() {
+	fn list_nft_on_public_marketplace() {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			let alice: mock::Origin = origin(ALICE);
-
-			// Happy path Public marketplace
-			let price = 50;
-			let series_id = vec![50];
-			let nft_id = NFT::create_nft(ALICE, bounded_vec![50], Some(series_id.clone())).unwrap();
-			let sale_info = SaleData::new(ALICE, price.clone(), 0);
-			help::finish_series(alice.clone(), series_id);
-
-			let ok = Marketplace::list_nft(alice.clone(), nft_id, price, Some(0));
-			assert_ok!(ok);
-
-			assert_eq!(Marketplace::nft_for_sale(nft_id), Some(sale_info));
-			assert_eq!(<NFT as NFTExt>::is_listed_for_sale(nft_id), Some(true));
-
-			let event = MarketplaceEvent::NFTListed { nft_id, price, marketplace_id: 0 };
-			let event = Event::Marketplace(event);
-			assert_eq!(System::events().last().unwrap().event, event);
-
-			// Happy path Private marketplace
-			let price = 50;
 			let series_id = vec![51];
+			let price = 50;
 			let mkp_id =
 				help::create_mkp(origin(BOB), MPT::Private, 0, bounded_vec![1], vec![ALICE]);
-			let sale_info = SaleData::new(ALICE, price.clone(), mkp_id);
+			let sale_info = SaleData::new(ALICE, price, mkp_id);
 			let nft_id = NFT::create_nft(ALICE, bounded_vec![50], Some(series_id.clone())).unwrap();
 			help::finish_series(alice.clone(), series_id);
 
 			let ok = Marketplace::list_nft(alice, nft_id, price, Some(mkp_id));
 			assert_ok!(ok);
 
+			// Storage
 			assert_eq!(Marketplace::nft_for_sale(nft_id), Some(sale_info));
 			assert_eq!(NFT::is_listed_for_sale(nft_id), Some(true));
 
+			// Event
+			let event = MarketplaceEvent::NFTListed { nft_id, price, marketplace_id: mkp_id };
+			let event = Event::Marketplace(event);
+			assert_eq!(System::events().last().unwrap().event, event);
+		})
+	}
+
+	#[test]
+	fn list_nft_on_private_marketplace() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
+			let alice: mock::Origin = origin(ALICE);
+			let series_id = vec![51];
+			let price = 50;
+			let mkp_id =
+				help::create_mkp(origin(BOB), MPT::Private, 0, bounded_vec![1], vec![ALICE]);
+			let sale_info = SaleData::new(ALICE, price, mkp_id);
+			let nft_id = NFT::create_nft(ALICE, bounded_vec![50], Some(series_id.clone())).unwrap();
+			help::finish_series(alice.clone(), series_id);
+
+			let ok = Marketplace::list_nft(alice, nft_id, price, Some(mkp_id));
+			assert_ok!(ok);
+
+			// Storage
+			assert_eq!(Marketplace::nft_for_sale(nft_id), Some(sale_info));
+			assert_eq!(NFT::is_listed_for_sale(nft_id), Some(true));
+
+			// Event
 			let event = MarketplaceEvent::NFTListed { nft_id, price, marketplace_id: mkp_id };
 			let event = Event::Marketplace(event);
 			assert_eq!(System::events().last().unwrap().event, event);
@@ -191,8 +200,6 @@ pub mod unlist_nft {
 		ExtBuilder::new_build(vec![(ALICE, 1000)]).execute_with(|| {
 			let alice: mock::Origin = origin(ALICE);
 			let series_id = vec![50];
-
-			// Happy path
 			let nft_id = NFT::create_nft(ALICE, bounded_vec![50], Some(series_id.clone())).unwrap();
 			help::finish_series(alice.clone(), series_id);
 			let ok = Marketplace::list_nft(alice.clone(), nft_id, 50, Some(0));
@@ -201,9 +208,11 @@ pub mod unlist_nft {
 			let ok = Marketplace::unlist_nft(alice.clone(), nft_id);
 			assert_ok!(ok);
 
+			// Storage
 			assert_eq!(Marketplace::nft_for_sale(nft_id), None);
 			assert_eq!(NFT::is_listed_for_sale(nft_id), Some(false));
 
+			// Events
 			let event = MarketplaceEvent::NFTUnlisted { nft_id };
 			let event = Event::Marketplace(event);
 			assert_eq!(System::events().last().unwrap().event, event);
@@ -235,51 +244,57 @@ pub mod buy_nft {
 	fn buy_nft() {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (DAVE, 1000)]).execute_with(|| {
 			let alice: mock::Origin = origin(ALICE);
-			let bob: mock::Origin = origin(BOB);
-			let nft_id_1 =
+			let nft_id =
 				help::create_nft_and_lock_series(alice.clone(), bounded_vec![50], vec![50]);
-			let nft_id_2 =
+			let ok = Marketplace::list_nft(alice, nft_id, 50, None);
+			assert_ok!(ok);
+			let bob_balance_before = Balances::free_balance(BOB);
+			let alice_balance_before = Balances::free_balance(ALICE);
+
+			let ok = Marketplace::buy_nft(origin(BOB), nft_id);
+			assert_ok!(ok);
+
+			// Storage
+			assert_eq!(NFT::is_listed_for_sale(nft_id), Some(false));
+			assert_eq!(NFT::owner(nft_id), Some(BOB));
+			assert_eq!(Marketplace::nft_for_sale(nft_id), None);
+			assert_eq!(Balances::free_balance(BOB), bob_balance_before - 50);
+			assert_eq!(Balances::free_balance(ALICE), alice_balance_before + 50);
+
+			// Event
+			let event = MarketplaceEvent::NFTSold { nft_id, owner: BOB };
+			let event = Event::Marketplace(event);
+			assert_eq!(System::events().last().unwrap().event, event);
+		})
+	}
+
+	#[test]
+	fn buy_nft_on_private_marketplace() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (DAVE, 1000)]).execute_with(|| {
+			let alice: mock::Origin = origin(ALICE);
+			let nft_id =
 				help::create_nft_and_lock_series(alice.clone(), bounded_vec![50], vec![51]);
 			let mkt_id =
 				help::create_mkp(origin(DAVE), MPT::Private, 10, bounded_vec![0], vec![ALICE]);
-			let ok = Marketplace::list_nft(alice.clone(), nft_id_1, 50, None);
+			let ok = Marketplace::list_nft(alice, nft_id, 50, Some(mkt_id));
 			assert_ok!(ok);
-			let ok = Marketplace::list_nft(alice, nft_id_2, 50, Some(mkt_id));
-			assert_ok!(ok);
-
-			// Happy path
-			let bob_before = Balances::free_balance(BOB);
-			let alice_before = Balances::free_balance(ALICE);
-
-			let ok = Marketplace::buy_nft(bob.clone(), nft_id_1);
-			assert_ok!(ok);
-
-			assert_eq!(NFT::is_listed_for_sale(nft_id_1), Some(false));
-			assert_eq!(NFT::owner(nft_id_1), Some(BOB));
-			assert_eq!(Marketplace::nft_for_sale(nft_id_1), None);
-			assert_eq!(Balances::free_balance(BOB), bob_before - 50);
-			assert_eq!(Balances::free_balance(ALICE), alice_before + 50);
-
-			let event = MarketplaceEvent::NFTSold { nft_id: nft_id_1, owner: BOB };
-			let event = Event::Marketplace(event);
-			assert_eq!(System::events().last().unwrap().event, event);
-
-			// Happy path PRIVATE (with commission fee)
 			let bob_before = Balances::free_balance(BOB);
 			let alice_before = Balances::free_balance(ALICE);
 			let dave_before = Balances::free_balance(DAVE);
 
-			let ok = Marketplace::buy_nft(bob, nft_id_2);
+			let ok = Marketplace::buy_nft(origin(BOB), nft_id);
 			assert_ok!(ok);
 
-			assert_eq!(NFT::is_listed_for_sale(nft_id_2), Some(false));
-			assert_eq!(NFT::owner(nft_id_2), Some(BOB));
-			assert_eq!(Marketplace::nft_for_sale(nft_id_2), None);
+			// Storage
+			assert_eq!(NFT::is_listed_for_sale(nft_id), Some(false));
+			assert_eq!(NFT::owner(nft_id), Some(BOB));
+			assert_eq!(Marketplace::nft_for_sale(nft_id), None);
 			assert_eq!(Balances::free_balance(BOB), bob_before - 50);
 			assert_eq!(Balances::free_balance(ALICE), alice_before + 45);
 			assert_eq!(Balances::free_balance(DAVE), dave_before + 5);
 
-			let event = MarketplaceEvent::NFTSold { nft_id: nft_id_2, owner: BOB };
+			// Event
+			let event = MarketplaceEvent::NFTSold { nft_id, owner: BOB };
 			let event = Event::Marketplace(event);
 			assert_eq!(System::events().last().unwrap().event, event);
 		})
@@ -339,7 +354,6 @@ pub mod create_marketplace {
 				description.clone(),
 			);
 
-			// Happy path
 			let ok = Marketplace::create_marketplace(
 				origin(ALICE),
 				kind,
@@ -351,6 +365,7 @@ pub mod create_marketplace {
 			);
 			assert_ok!(ok);
 
+			// Storage
 			assert_eq!(Marketplace::marketplace_id_generator(), 1);
 			assert_eq!(Marketplace::marketplaces(1), Some(info));
 			assert_eq!(
@@ -358,6 +373,7 @@ pub mod create_marketplace {
 				alice_balance_before - Marketplace::marketplace_mint_fee()
 			);
 
+			// Event
 			let event = MarketplaceEvent::MarketplaceCreated { marketplace_id: 1, owner: ALICE };
 			let event = Event::Marketplace(event);
 			assert_eq!(System::events().last().unwrap().event, event);
@@ -408,20 +424,19 @@ pub mod add_account_to_allow_list {
 	fn add_account_to_allow_list() {
 		ExtBuilder::new_build(vec![(ALICE, 1000)]).execute_with(|| {
 			let alice: mock::Origin = origin(ALICE);
-
-			// Happy path
 			let list = vec![];
-			let mkp_1 =
+			let mkp_id =
 				help::create_mkp(alice.clone(), MPT::Private, 0, bounded_vec![50], list.clone());
-			assert_eq!(Marketplace::marketplaces(mkp_1).unwrap().allow_list, list);
-
-			let ok = Marketplace::add_account_to_allow_list(alice, mkp_1, BOB);
+			assert_eq!(Marketplace::marketplaces(mkp_id).unwrap().allow_list, list);
+			let ok = Marketplace::add_account_to_allow_list(alice, mkp_id, BOB);
 			assert_ok!(ok);
 
-			assert_eq!(Marketplace::marketplaces(mkp_1).unwrap().allow_list, vec![BOB]);
+			// Storage
+			assert_eq!(Marketplace::marketplaces(mkp_id).unwrap().allow_list, vec![BOB]);
 
+			// Event
 			let event =
-				MarketplaceEvent::AccountAddedToAllowList { marketplace_id: mkp_1, owner: BOB };
+				MarketplaceEvent::AccountAddedToAllowList { marketplace_id: mkp_id, owner: BOB };
 			let event = Event::Marketplace(event);
 			assert_eq!(System::events().last().unwrap().event, event);
 		})
@@ -461,9 +476,7 @@ pub mod remove_account_from_allow_list {
 	#[test]
 	fn remove_account_from_allow_list() {
 		ExtBuilder::new_build(vec![(ALICE, 1000)]).execute_with(|| {
-			let alice: mock::Origin = origin(ALICE);
-
-			// Happy path
+			let alice = origin(ALICE);
 			let list = vec![BOB];
 			let mkp_id =
 				help::create_mkp(alice.clone(), MPT::Private, 0, bounded_vec![50], list.clone());
@@ -472,8 +485,10 @@ pub mod remove_account_from_allow_list {
 			let ok = Marketplace::remove_account_from_allow_list(alice, mkp_id, BOB);
 			assert_ok!(ok);
 
+			// Storage
 			assert_eq!(Marketplace::marketplaces(mkp_id).unwrap().allow_list, vec![]);
 
+			// Event
 			let event = MarketplaceEvent::AccountRemovedFromAllowList {
 				marketplace_id: mkp_id,
 				owner: BOB,
@@ -518,15 +533,14 @@ pub mod set_marketplace_owner {
 	fn set_marketplace_owner() {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			let alice: mock::Origin = origin(ALICE);
-
-			// Happy path
 			let mkp_id = help::create_mkp(alice.clone(), MPT::Private, 0, bounded_vec![50], vec![]);
-
 			let ok = Marketplace::set_marketplace_owner(alice, mkp_id, BOB);
 			assert_ok!(ok);
 
+			// Storage
 			assert_eq!(Marketplace::marketplaces(mkp_id).unwrap().owner, BOB);
 
+			// Event
 			let event =
 				MarketplaceEvent::MarketplaceOwnerChanged { marketplace_id: mkp_id, owner: BOB };
 			let event = Event::Marketplace(event);
@@ -555,34 +569,46 @@ pub mod set_marketplace_type {
 	pub use super::*;
 
 	#[test]
-	fn set_marketplace_type() {
+	fn set_marketplace_type_public_to_private() {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			let alice: mock::Origin = origin(ALICE);
-			let kind = MPT::Public;
 			let mkp_id = help::create_mkp(alice.clone(), MPT::Public, 0, bounded_vec![50], vec![]);
-			assert_eq!(Marketplace::marketplaces(mkp_id).unwrap().kind, kind);
+			assert_eq!(Marketplace::marketplaces(mkp_id).unwrap().kind, MPT::Public);
 
-			// Happy path Public to Private
-			let kind = MPT::Private;
-
-			let ok = Marketplace::set_marketplace_type(alice.clone(), mkp_id, kind);
+			let ok = Marketplace::set_marketplace_type(alice.clone(), mkp_id, MPT::Private);
 			assert_ok!(ok);
 
-			assert_eq!(Marketplace::marketplaces(mkp_id).unwrap().kind, kind);
+			// Storage
+			assert_eq!(Marketplace::marketplaces(mkp_id).unwrap().kind, MPT::Private);
 
-			let event = MarketplaceEvent::MarketplaceTypeChanged { marketplace_id: mkp_id, kind };
+			// Event
+			let event = MarketplaceEvent::MarketplaceTypeChanged {
+				marketplace_id: mkp_id,
+				kind: MPT::Private,
+			};
 			let event = Event::Marketplace(event);
 			assert_eq!(System::events().last().unwrap().event, event);
+		})
+	}
 
-			// Happy path Private to Public
-			let kind = MPT::Public;
+	#[test]
+	fn set_marketplace_type_private_to_public() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
+			let alice: mock::Origin = origin(ALICE);
+			let mkp_id = help::create_mkp(alice.clone(), MPT::Private, 0, bounded_vec![50], vec![]);
+			assert_eq!(Marketplace::marketplaces(mkp_id).unwrap().kind, MPT::Private);
 
-			let ok = Marketplace::set_marketplace_type(alice, mkp_id, kind);
+			let ok = Marketplace::set_marketplace_type(alice, mkp_id, MPT::Public);
 			assert_ok!(ok);
 
-			assert_eq!(Marketplace::marketplaces(mkp_id).unwrap().kind, kind);
+			// Storage
+			assert_eq!(Marketplace::marketplaces(mkp_id).unwrap().kind, MPT::Public);
 
-			let event = MarketplaceEvent::MarketplaceTypeChanged { marketplace_id: mkp_id, kind };
+			// Event
+			let event = MarketplaceEvent::MarketplaceTypeChanged {
+				marketplace_id: mkp_id,
+				kind: MPT::Public,
+			};
 			let event = Event::Marketplace(event);
 			assert_eq!(System::events().last().unwrap().event, event);
 		})
@@ -612,19 +638,20 @@ pub mod set_marketplace_name {
 	fn set_marketplace_name() {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			let alice: mock::Origin = origin(ALICE);
-
-			// Happy path
 			let name: NameVec<Test> = bounded_vec![50];
 			let mkp_id = help::create_mkp(alice.clone(), MPT::Private, 0, name.clone(), vec![]);
 			assert_eq!(Marketplace::marketplaces(mkp_id).unwrap().name, name);
-			let name: NameVec<Test> = bounded_vec![51];
+			let new_name: NameVec<Test> = bounded_vec![51];
 
-			let ok = Marketplace::set_marketplace_name(alice, mkp_id, name.clone());
+			let ok = Marketplace::set_marketplace_name(alice, mkp_id, new_name.clone());
 			assert_ok!(ok);
 
-			assert_eq!(Marketplace::marketplaces(mkp_id).unwrap().name, name);
+			// Storage
+			assert_eq!(Marketplace::marketplaces(mkp_id).unwrap().name, new_name);
 
-			let event = MarketplaceEvent::MarketplaceNameUpdated { marketplace_id: mkp_id, name };
+			// Event
+			let event =
+				MarketplaceEvent::MarketplaceNameUpdated { marketplace_id: mkp_id, name: new_name };
 			let event = Event::Marketplace(event);
 			assert_eq!(System::events().last().unwrap().event, event);
 		})
@@ -653,16 +680,15 @@ pub mod marketplace_mint_fee {
 	#[test]
 	fn marketplace_mint_fee() {
 		ExtBuilder::new_build(vec![]).execute_with(|| {
-			// Happy path
-			let old_mint_fee = Marketplace::marketplace_mint_fee();
 			let new_mint_fee = 654u128;
-			assert_eq!(Marketplace::marketplace_mint_fee(), old_mint_fee);
 
 			let ok = Marketplace::set_marketplace_mint_fee(root(), new_mint_fee);
 			assert_ok!(ok);
 
+			// Storage
 			assert_eq!(Marketplace::marketplace_mint_fee(), new_mint_fee);
 
+			// Event
 			let event = MarketplaceEvent::MarketplaceMintFeeUpdated { fee: new_mint_fee };
 			let event = Event::Marketplace(event);
 			assert_eq!(System::events().last().unwrap().event, event);
@@ -686,18 +712,22 @@ pub mod set_marketplace_commission_fee {
 		ExtBuilder::new_build(vec![(ALICE, 1000)]).execute_with(|| {
 			let alice: mock::Origin = origin(ALICE);
 			let fee = 10;
-			let id = help::create_mkp(alice.clone(), MPT::Public, fee, bounded_vec![50], vec![]);
-			assert_eq!(Marketplace::marketplaces(id).unwrap().commission_fee, fee);
+			let mkp_id =
+				help::create_mkp(alice.clone(), MPT::Public, fee, bounded_vec![50], vec![]);
+			assert_eq!(Marketplace::marketplaces(mkp_id).unwrap().commission_fee, fee);
+			let new_fee = 15;
 
-			// Happy path
-			let fee = 15;
-			let ok = Marketplace::set_marketplace_commission_fee(alice, id, fee);
+			let ok = Marketplace::set_marketplace_commission_fee(alice, mkp_id, new_fee);
 			assert_ok!(ok);
 
-			assert_eq!(Marketplace::marketplaces(id).unwrap().commission_fee, fee);
+			// Storage
+			assert_eq!(Marketplace::marketplaces(mkp_id).unwrap().commission_fee, new_fee);
 
-			let event =
-				MarketplaceEvent::MarketplaceCommissionFeeUpdated { marketplace_id: id, fee };
+			// Event
+			let event = MarketplaceEvent::MarketplaceCommissionFeeUpdated {
+				marketplace_id: mkp_id,
+				fee: new_fee,
+			};
 			let event = Event::Marketplace(event);
 			assert_eq!(System::events().last().unwrap().event, event);
 		})
@@ -740,8 +770,6 @@ pub mod set_marketplace_uri {
 			let kind = MPT::Public;
 			let uri: URIVec<Test> = bounded_vec![66];
 			let updated_uri: URIVec<Test> = bounded_vec![67];
-
-			// Happy path
 			let updated_info = MarketplaceData::new(
 				kind,
 				fee,
@@ -769,8 +797,10 @@ pub mod set_marketplace_uri {
 			let ok = Marketplace::set_marketplace_uri(alice, 1, updated_uri.clone());
 			assert_ok!(ok);
 
+			// Storage
 			assert_eq!(Marketplace::marketplaces(1), Some(updated_info));
 
+			// Event
 			let event =
 				MarketplaceEvent::MarketplaceUriUpdated { marketplace_id: 1, uri: updated_uri };
 			let event = Event::Marketplace(event);
@@ -791,8 +821,6 @@ pub mod set_marketplace_logo_uri {
 			let kind = MPT::Public;
 			let uri: URIVec<Test> = bounded_vec![66];
 			let updated_uri: URIVec<Test> = bounded_vec![67];
-
-			// Happy path
 			let updated_info = MarketplaceData::new(
 				kind,
 				fee,
@@ -804,7 +832,6 @@ pub mod set_marketplace_logo_uri {
 				updated_uri.clone(),
 				bounded_vec![],
 			);
-
 			let ok = Marketplace::create_marketplace(
 				alice.clone(),
 				kind.clone(),
@@ -820,8 +847,10 @@ pub mod set_marketplace_logo_uri {
 			let ok = Marketplace::set_marketplace_logo_uri(alice.clone(), 1, updated_uri.clone());
 			assert_ok!(ok);
 
+			// Storage
 			assert_eq!(Marketplace::marketplaces(1), Some(updated_info));
 
+			// Event
 			let event =
 				MarketplaceEvent::MarketplaceLogoUriUpdated { marketplace_id: 1, uri: updated_uri };
 			let event = Event::Marketplace(event);
@@ -837,8 +866,6 @@ pub mod add_account_to_disallow_list {
 	fn add_account_to_disallow_list() {
 		ExtBuilder::new_build(vec![(ALICE, 1000)]).execute_with(|| {
 			let alice: mock::Origin = origin(ALICE);
-
-			// Happy path
 			let list = vec![];
 			let mkp_id =
 				help::create_mkp(alice.clone(), MPT::Public, 0, bounded_vec![50], list.clone());
@@ -847,8 +874,10 @@ pub mod add_account_to_disallow_list {
 			let ok = Marketplace::add_account_to_disallow_list(alice.clone(), mkp_id, BOB);
 			assert_ok!(ok);
 
+			// Storage
 			assert_eq!(Marketplace::marketplaces(mkp_id).unwrap().disallow_list, vec![BOB]);
 
+			// Event
 			let event = MarketplaceEvent::AccountAddedToDisallowList {
 				marketplace_id: mkp_id,
 				account_id: BOB,
@@ -893,8 +922,6 @@ pub mod remove_account_from_disallow_list {
 	fn remove_account_from_disallow_list() {
 		ExtBuilder::new_build(vec![(ALICE, 1000)]).execute_with(|| {
 			let alice: mock::Origin = origin(ALICE);
-
-			// Happy path
 			let list = vec![BOB];
 			let mkp_id =
 				help::create_mkp(alice.clone(), MPT::Public, 0, bounded_vec![50], list.clone());
@@ -903,8 +930,10 @@ pub mod remove_account_from_disallow_list {
 			let ok = Marketplace::remove_account_from_disallow_list(alice, mkp_id, BOB);
 			assert_ok!(ok);
 
+			// Storage
 			assert_eq!(Marketplace::marketplaces(mkp_id).unwrap().disallow_list, vec![]);
 
+			// Event
 			let event = MarketplaceEvent::AccountRemovedFromDisallowList {
 				marketplace_id: mkp_id,
 				account_id: BOB,
@@ -955,8 +984,6 @@ pub mod set_marketplace_description {
 			let uri: URIVec<Test> = bounded_vec![66];
 			let description: DescriptionVec<Test> = bounded_vec![66];
 			let updated_description: DescriptionVec<Test> = bounded_vec![67];
-
-			// Happy path
 			let updated_info = MarketplaceData::new(
 				kind,
 				fee,
@@ -984,8 +1011,10 @@ pub mod set_marketplace_description {
 				Marketplace::set_marketplace_description(alice, 1, updated_description.clone());
 			assert_ok!(ok);
 
+			// Storage
 			assert_eq!(Marketplace::marketplaces(1), Some(updated_info));
 
+			// Event
 			let event = MarketplaceEvent::MarketplaceDescriptionUpdated {
 				marketplace_id: 1,
 				description: updated_description,
