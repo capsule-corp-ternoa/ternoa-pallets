@@ -217,10 +217,22 @@ pub mod pallet {
 		CannotTransferNFTsToYourself,
 		/// Operation is not allowed because the NFT owner is self.
 		CannotDelegateNFTsToYourself,
-		/// A value is too short.
-		ValueIsTooShort,
-		/// A value is too long.
-		ValueIsTooLong,
+		/// Operation is not allowed because the nft offchain data is too short
+		NFTOffchainDataIsTooShort,
+		/// Operation is not allowed because the nft offchain data is too long
+		NFTOffchainDataIsTooLong,
+		/// Operation is not allowed because the collection name is too short
+		CollectionNameIsTooShort,
+		/// Operation is not allowed because the collection name is too long
+		CollectionNameIsTooLong,
+		/// Operation is not allowed because the collection description is too short
+		CollectionDescriptionIsTooShort,
+		/// Operation is not allowed because the collection description is too long
+		CollectionDescriptionIsTooLong,
+		/// Operation is not allowed because the collection limit is too low
+		CollectionLimitIsTooLow,
+		/// Operation is not allowed because the collection limit is too high
+		CollectionLimitIsTooHigh,
 		/// No NFT was found with that NFT id.
 		NFTNotFound,
 		/// No NFT was found with that NFT id in the specified collection.
@@ -239,6 +251,8 @@ pub mod pallet {
 		CollectionIsClosed,
 		/// Operation is not allowed because the collection has reached limit.
 		CollectionHasReachedLimit,
+		/// Operation is not allowed because the collection has reached hard limit.
+		CollectionHasReachedMax,
 		/// Operation is not allowed because the collection is not empty.
 		CollectionIsNotEmpty,
 		/// Operation is not permitted because the collection does not contains any NFTs.
@@ -272,8 +286,8 @@ pub mod pallet {
 			// Check offchain_data length
 			check_bounds(
 				offchain_data.len(),
-				(1, Error::<T>::ValueIsTooShort),
-				(T::OffchainDataLimit::get(), Error::<T>::ValueIsTooLong),
+				(1, Error::<T>::NFTOffchainDataIsTooShort),
+				(T::OffchainDataLimit::get(), Error::<T>::NFTOffchainDataIsTooLong),
 			)?;
 
 			// The Caller needs to pay the NFT Mint fee.
@@ -282,25 +296,34 @@ pub mod pallet {
 			let imbalance = T::Currency::withdraw(&who, mint_fee, reason, KeepAlive)?;
 			T::FeesCollector::on_unbalanced(imbalance);
 
+			let mut nft_id = None;
+
 			// Check if the collection exists.
 			// Throws an error if specified collection does not exist, signer is now owner,
 			// collection is close, collection has reached limit.
 			if let Some(collection_id) = &collection_id {
-				let collection =
-					Collections::<T>::get(collection_id).ok_or(Error::<T>::CollectionNotFound)?;
+				Collections::<T>::try_mutate(collection_id, |x| -> DispatchResult {
+					let collection = x.as_mut().ok_or(Error::<T>::CollectionNotFound)?;
 
-				ensure!(collection.owner == who, Error::<T>::NotTheCollectionOwner);
-				ensure!(!collection.is_closed, Error::<T>::CollectionIsClosed);
-				if let Some(limit) = &collection.limit {
-					ensure!(
-						collection.nfts.len() < *limit as usize,
-						Error::<T>::CollectionHasReachedLimit
-					);
-				}
+					ensure!(collection.owner == who, Error::<T>::NotTheCollectionOwner);
+					ensure!(!collection.is_closed, Error::<T>::CollectionIsClosed);
+					ensure!(collection.nfts.len() < T::CollectionSizeLimit::get() as usize, Error::<T>::CollectionHasReachedMax);
+					if let Some(limit) = &collection.limit {
+						ensure!(
+							collection.nfts.len() < *limit as usize,
+							Error::<T>::CollectionHasReachedLimit
+						);
+					}
+					// Execute
+					let tmp_nft_id = Self::get_next_nft_id();
+					collection.nfts.try_push(tmp_nft_id).expect("Cannot happen.");
+					nft_id = Some(tmp_nft_id);
+					Ok(().into())
+				})?;
 			}
 
 			// Execute
-			let nft_id = Self::get_next_nft_id();
+			let nft_id = nft_id.unwrap_or_else(|| Self::get_next_nft_id());
 
 			let nft = NFT::new_default(
 				who.clone(),
@@ -508,21 +531,21 @@ pub mod pallet {
 			// Check name length
 			check_bounds(
 				name.len(),
-				(1, Error::<T>::ValueIsTooShort),
-				(T::CollectionNameLimit::get(), Error::<T>::ValueIsTooLong),
+				(1, Error::<T>::CollectionNameIsTooShort),
+				(T::CollectionNameLimit::get(), Error::<T>::CollectionNameIsTooLong),
 			)?;
 			// Check description length
 			check_bounds(
 				description.len(),
-				(1, Error::<T>::ValueIsTooShort),
-				(T::CollectionDescriptionLimit::get(), Error::<T>::ValueIsTooLong),
+				(1, Error::<T>::CollectionDescriptionIsTooShort),
+				(T::CollectionDescriptionLimit::get(), Error::<T>::CollectionDescriptionIsTooLong),
 			)?;
 			// Check size limit if it exists
 			if let Some(limit) = &limit {
 				check_bounds(
 					*limit as usize,
-					(1, Error::<T>::ValueIsTooShort),
-					(T::CollectionSizeLimit::get(), Error::<T>::ValueIsTooLong),
+					(1, Error::<T>::CollectionLimitIsTooLow),
+					(T::CollectionSizeLimit::get(), Error::<T>::CollectionLimitIsTooHigh),
 				)?;
 			}
 
@@ -623,8 +646,8 @@ pub mod pallet {
 				);
 				check_bounds(
 					limit as usize,
-					(1, Error::<T>::ValueIsTooShort),
-					(T::CollectionSizeLimit::get(), Error::<T>::ValueIsTooLong),
+					(1, Error::<T>::CollectionLimitIsTooLow),
+					(T::CollectionSizeLimit::get(), Error::<T>::CollectionLimitIsTooHigh),
 				)?;
 
 				// Execute
@@ -657,6 +680,7 @@ pub mod pallet {
 				// Checks
 				ensure!(collection.owner == who, Error::<T>::NotTheCollectionOwner);
 				ensure!(!collection.is_closed, Error::<T>::CollectionIsClosed);
+				ensure!(collection.nfts.len() < T::CollectionSizeLimit::get() as usize, Error::<T>::CollectionHasReachedMax);
 				if let Some(limit) = &collection.limit {
 					ensure!(
 						collection.nfts.len() < *limit as usize,
