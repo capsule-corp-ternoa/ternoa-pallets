@@ -213,7 +213,7 @@ mod transfer {
 			// Should fail and storage should remain empty
 			assert_noop!(
 				NFT::transfer(origin(ALICE), ALICE_NFT_ID, BOB),
-				Error::<Test>::CannotTransferNFTsListedForSale
+				Error::<Test>::CannotTransferListedNFTs
 			);
 		})
 	}
@@ -315,7 +315,7 @@ mod burn {
 			// Should fail and storage should remain empty
 			assert_noop!(
 				NFT::burn(origin(ALICE), ALICE_NFT_ID),
-				Error::<Test>::CannotBurnNFTsListedForSale
+				Error::<Test>::CannotBurnListedNFTs
 			);
 		})
 	}
