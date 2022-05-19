@@ -820,7 +820,7 @@ impl<T: Config> Pallet<T> {
 		let next_id = collection_id
 			.checked_add(1)
 			.expect("If u32 is not enough we should crash for safety; qed.");
-		NextNFTId::<T>::put(next_id);
+		NextCollectionId::<T>::put(next_id);
 
 		return collection_id
 	}
