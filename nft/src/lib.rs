@@ -73,7 +73,7 @@ pub mod pallet {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
 		/// Weight information for pallet.
-		type WeightInfo: WeightInfo;
+		// type WeightInfo: WeightInfo;
 
 		/// Currency type.
 		type Currency: Currency<Self::AccountId>;
