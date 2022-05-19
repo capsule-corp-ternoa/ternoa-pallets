@@ -33,6 +33,7 @@ pub trait NFTExt {
 	// type CollectionSizeLimit: Get<u32>;
 	// type CollectionNameLimit: Get<u32>;
 	// type CollectionDescriptionLimit: Get<u32>;
+	// type InitialMintFee: Get<u128>;
 
 
 	/*

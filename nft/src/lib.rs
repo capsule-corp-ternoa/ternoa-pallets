@@ -82,6 +82,10 @@ pub mod pallet {
 		type FeesCollector: OnUnbalanced<NegativeImbalanceOf<Self>>;
 
 		// Constants
+		/// Default fee for minting NFTs.
+		#[pallet::constant]
+		type InitialMintFee: Get<BalanceOf<Self>>;
+
 		/// Maximum offchain data length.
 		#[pallet::constant]
 		type OffchainDataLimit: Get<u32>;
@@ -101,6 +105,11 @@ pub mod pallet {
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
+
+	/// Host much does it cost to mint a NFT (extra fee on top of the tx fees)
+	#[pallet::storage]
+	#[pallet::getter(fn nft_mint_fee)]
+	pub(super) type NFTMintFee<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery, T::InitialMintFee>;
 
 	/// The number of NFTs managed by this pallet
 	#[pallet::storage]
@@ -138,11 +147,6 @@ pub mod pallet {
 		>,
 		OptionQuery,
 	>;
-
-	/// Host much does it cost to mint a NFT (extra fee on top of the tx fees)
-	#[pallet::storage]
-	#[pallet::getter(fn nft_mint_fee)]
-	pub type NFTMintFee<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
 
 	/// Host a map of delegated NFTs and the recipient
 	#[pallet::storage]
@@ -720,6 +724,7 @@ impl<T: Config> traits::NFTExt for Pallet<T> {
 	// type CollectionSizeLimit: T::CollectionSizeLimit;
 	// type CollectionNameLimit: T::CollectionNameLimit;
 	// type CollectionDescriptionLimit: T::CollectionDescriptionLimit;
+	// type InitialMintFee: T::InitialMintFee;
 
 	// fn set_owner(id: NFTId, owner: &Self::AccountId) -> DispatchResult {
 	// 	Data::<T>::try_mutate(id, |data| -> DispatchResult {
