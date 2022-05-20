@@ -36,7 +36,7 @@ use frame_support::{
 };
 use frame_system::pallet_prelude::*;
 use primitives::{
-	nfts::{Collection, CollectionId, NFTId, NFT},
+	nfts::{Collection, CollectionId, NFTId, NFTData},
 	U8BoundedVec,
 };
 use sp_arithmetic::per_things::Permill;
@@ -88,19 +88,15 @@ pub mod pallet {
 
 		/// Maximum offchain data length.
 		#[pallet::constant]
-		type OffchainDataLimit: Get<u32>;
+		type NFTOffchainDataLimit: Get<u32>;
 
 		/// Maximum collection length.
 		#[pallet::constant]
 		type CollectionSizeLimit: Get<u32>;
 
-		/// Maximum collection name length.
+		/// Maximum collection offchain data limit length.
 		#[pallet::constant]
-		type CollectionNameLimit: Get<u32>;
-
-		/// Maximum collection description length.
-		#[pallet::constant]
-		type CollectionDescriptionLimit: Get<u32>;
+		type CollectionOffchainDataLimit: Get<u32>;
 	}
 
 	#[pallet::hooks]
@@ -128,7 +124,7 @@ pub mod pallet {
 		_,
 		Blake2_128Concat,
 		NFTId,
-		NFT<T::AccountId, T::OffchainDataLimit>,
+		NFTData<T::AccountId, T::NFTOffchainDataLimit>,
 		OptionQuery,
 	>;
 
@@ -141,8 +137,7 @@ pub mod pallet {
 		CollectionId,
 		Collection<
 			T::AccountId,
-			T::CollectionNameLimit,
-			T::CollectionDescriptionLimit,
+			T::CollectionOffchainDataLimit,
 			T::CollectionSizeLimit,
 		>,
 		OptionQuery,
@@ -161,9 +156,10 @@ pub mod pallet {
 		NFTCreated {
 			nft_id: NFTId,
 			owner: T::AccountId,
-			offchain_data: U8BoundedVec<T::OffchainDataLimit>,
-			collection_id: Option<CollectionId>,
+			offchain_data: U8BoundedVec<T::NFTOffchainDataLimit>,
 			royalty: Permill,
+			collection_id: Option<CollectionId>,
+			mint_fee: BalanceOf<T>,
 		},
 		/// An NFT was burned.
 		NFTBurned { nft_id: NFTId },
@@ -179,8 +175,7 @@ pub mod pallet {
 		CollectionCreated {
 			collection_id: CollectionId,
 			owner: T::AccountId,
-			name: U8BoundedVec<T::CollectionNameLimit>,
-			description: U8BoundedVec<T::CollectionDescriptionLimit>,
+			offchain_data: U8BoundedVec<T::CollectionOffchainDataLimit>,
 			limit: Option<u32>,
 		},
 		/// A collection was burned
@@ -221,18 +216,6 @@ pub mod pallet {
 		CannotTransferNFTsToYourself,
 		/// Operation is not allowed because the NFT owner is self.
 		CannotDelegateNFTsToYourself,
-		/// Operation is not allowed because the nft offchain data is too short
-		NFTOffchainDataIsTooShort,
-		/// Operation is not allowed because the nft offchain data is too long
-		NFTOffchainDataIsTooLong,
-		/// Operation is not allowed because the collection name is too short
-		CollectionNameIsTooShort,
-		/// Operation is not allowed because the collection name is too long
-		CollectionNameIsTooLong,
-		/// Operation is not allowed because the collection description is too short
-		CollectionDescriptionIsTooShort,
-		/// Operation is not allowed because the collection description is too long
-		CollectionDescriptionIsTooLong,
 		/// Operation is not allowed because the collection limit is too low
 		CollectionLimitIsTooLow,
 		/// Operation is not allowed because the collection limit is too high
@@ -259,8 +242,6 @@ pub mod pallet {
 		CollectionHasReachedMax,
 		/// Operation is not allowed because the collection is not empty.
 		CollectionIsNotEmpty,
-		/// Operation is not permitted because the collection does not contains any NFTs.
-		CollectionIsEmpty,
 		/// Operation is not permitted because the collection's limit is already set.
 		CollectionLimitAlreadySet,
 		/// Operation is not permitted because the nfts number in the collection are greater than
@@ -280,20 +261,13 @@ pub mod pallet {
 		#[transactional]
 		pub fn create_nft(
 			origin: OriginFor<T>,
-			offchain_data: U8BoundedVec<T::OffchainDataLimit>,
+			offchain_data: U8BoundedVec<T::NFTOffchainDataLimit>,
 			royalty: Permill,
 			collection_id: Option<CollectionId>,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
 			// Checks
-			// Check offchain_data length
-			check_bounds(
-				offchain_data.len(),
-				(1, Error::<T>::NFTOffchainDataIsTooShort),
-				(T::OffchainDataLimit::get(), Error::<T>::NFTOffchainDataIsTooLong),
-			)?;
-
 			// The Caller needs to pay the NFT Mint fee.
 			let mint_fee = NFTMintFee::<T>::get();
 			let reason = WithdrawReasons::FEE;
@@ -329,7 +303,7 @@ pub mod pallet {
 			// Execute
 			let nft_id = nft_id.unwrap_or_else(|| Self::get_next_nft_id());
 
-			let nft = NFT::new_default(
+			let nft = NFTData::new_default(
 				who.clone(),
 				offchain_data.clone(),
 				royalty,
@@ -340,7 +314,7 @@ pub mod pallet {
 			NFTs::<T>::insert(nft_id, nft);
 
 			let event =
-				Event::NFTCreated { nft_id, owner: who, offchain_data, collection_id, royalty };
+				Event::NFTCreated { nft_id, owner: who, offchain_data, royalty, collection_id, mint_fee };
 
 			Self::deposit_event(event);
 
@@ -525,25 +499,12 @@ pub mod pallet {
 		#[pallet::weight(100_000)]
 		pub fn create_collection(
 			origin: OriginFor<T>,
-			name: U8BoundedVec<T::CollectionNameLimit>,
-			description: U8BoundedVec<T::CollectionDescriptionLimit>,
+			offchain_data: U8BoundedVec<T::CollectionOffchainDataLimit>,
 			limit: Option<u32>,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
 			// Checks
-			// Check name length
-			check_bounds(
-				name.len(),
-				(1, Error::<T>::CollectionNameIsTooShort),
-				(T::CollectionNameLimit::get(), Error::<T>::CollectionNameIsTooLong),
-			)?;
-			// Check description length
-			check_bounds(
-				description.len(),
-				(1, Error::<T>::CollectionDescriptionIsTooShort),
-				(T::CollectionDescriptionLimit::get(), Error::<T>::CollectionDescriptionIsTooLong),
-			)?;
 			// Check size limit if it exists
 			if let Some(limit) = &limit {
 				check_bounds(
@@ -556,13 +517,13 @@ pub mod pallet {
 			// Execute
 			let collection_id = Self::get_next_collection_id();
 
-			let collection = Collection::new(who.clone(), name.clone(), description.clone(), limit);
+			let collection = Collection::new(who.clone(), offchain_data.clone(), limit);
 
 			// Save
 			Collections::<T>::insert(collection_id, collection);
 
 			let event =
-				Event::CollectionCreated { collection_id, owner: who, name, description, limit };
+				Event::CollectionCreated { collection_id, owner: who, offchain_data, limit };
 
 			Self::deposit_event(event);
 
@@ -612,7 +573,6 @@ pub mod pallet {
 
 				// Checks
 				ensure!(collection.owner == who, Error::<T>::NotTheCollectionOwner);
-				ensure!(collection.nfts.len() != 0, Error::<T>::CollectionIsEmpty);
 
 				// Execute
 				collection.is_closed = true;
@@ -720,10 +680,9 @@ pub mod pallet {
 
 impl<T: Config> traits::NFTExt for Pallet<T> {
 	type AccountId = T::AccountId;
-	// type OffchainDataLimit: T::OffchainDataLimit;
+	// type NFTOffchainDataLimit: T::NFTOffchainDataLimit;
+	// type CollectionOffchainDataLimit: T::CollectionOffchainDataLimit;
 	// type CollectionSizeLimit: T::CollectionSizeLimit;
-	// type CollectionNameLimit: T::CollectionNameLimit;
-	// type CollectionDescriptionLimit: T::CollectionDescriptionLimit;
 	// type InitialMintFee: T::InitialMintFee;
 
 	// fn set_owner(id: NFTId, owner: &Self::AccountId) -> DispatchResult {

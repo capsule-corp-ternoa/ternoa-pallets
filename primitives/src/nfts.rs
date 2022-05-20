@@ -76,21 +76,21 @@ impl NFTState
 #[derive(
 	Encode, Decode, Eq, Default, TypeInfo, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound,
 )]
-#[scale_info(skip_type_params(OffchainDataLimit))]
+#[scale_info(skip_type_params(NFTOffchainDataLimit))]
 #[codec(mel_bound(AccountId: MaxEncodedLen))]
-pub struct NFT<
+pub struct NFTData<
 	AccountId, 
-	OffchainDataLimit,
+	NFTOffchainDataLimit,
 > where
 	AccountId: Clone + PartialEq + Debug,
-	OffchainDataLimit: Get<u32>,
+	NFTOffchainDataLimit: Get<u32>,
 {
 	/// NFT owner
 	pub owner: AccountId,
 	/// NFT creator
 	pub creator: AccountId,
 	/// NFT offchain_data
-	pub offchain_data: U8BoundedVec<OffchainDataLimit>,
+	pub offchain_data: U8BoundedVec<NFTOffchainDataLimit>,
 	/// Collection ID
 	pub collection_id: Option<CollectionId>,
 	/// Royalty
@@ -101,18 +101,18 @@ pub struct NFT<
 
 impl<
 	AccountId, 
-	OffchainDataLimit,
-> NFT<
+	NFTOffchainDataLimit,
+> NFTData<
 	AccountId, 
-	OffchainDataLimit,
+	NFTOffchainDataLimit,
 > where
 	AccountId: Clone + PartialEq + Debug,
-	OffchainDataLimit: Get<u32>,
+	NFTOffchainDataLimit: Get<u32>,
 {
 	pub fn new(
 		owner: AccountId,
 		creator: AccountId,
-		offchain_data: U8BoundedVec<OffchainDataLimit>,
+		offchain_data: U8BoundedVec<NFTOffchainDataLimit>,
 		royalty: Permill,
 		state: NFTState,
 		collection_id: Option<CollectionId>,
@@ -129,7 +129,7 @@ impl<
 
 	pub fn new_default(
 		owner: AccountId,
-		offchain_data: U8BoundedVec<OffchainDataLimit>,
+		offchain_data: U8BoundedVec<NFTOffchainDataLimit>,
 		royalty: Permill,
 		collection_id: Option<CollectionId>,
 	) -> Self {
@@ -149,28 +149,23 @@ impl<
 	Encode, Decode, Eq, Default, TypeInfo, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound,
 )]
 #[scale_info(skip_type_params(
-	CollectionNameLimit,
-	CollectionDescriptionLimit,
+	CollectionOffChainDataLimit,
 	CollectionSizeLimit,
 ))]
 #[codec(mel_bound(AccountId: MaxEncodedLen))]
 pub struct Collection<
 	AccountId,
-	CollectionNameLimit,
-	CollectionDescriptionLimit,
+	CollectionOffChainDataLimit,
 	CollectionSizeLimit,
 > where
 	AccountId: Clone + PartialEq + Debug,
-	CollectionNameLimit: Get<u32>,
-	CollectionDescriptionLimit: Get<u32>,
+	CollectionOffChainDataLimit: Get<u32>,
 	CollectionSizeLimit: Get<u32>,
 {
 	/// Collection owner
 	pub owner: AccountId,
-	/// Collection name
-	pub name: U8BoundedVec<CollectionNameLimit>,
-	/// Collection description
-	pub description: U8BoundedVec<CollectionDescriptionLimit>,
+	/// Collection offchain_data
+	pub offchain_data: U8BoundedVec<CollectionOffChainDataLimit>,
 	/// NFTs in that collection
 	pub nfts: BoundedVec<NFTId, CollectionSizeLimit>,
 	/// Maximum length of the collection
@@ -182,30 +177,25 @@ pub struct Collection<
 
 impl<
 	AccountId, 
-	CollectionNameLimit, 
-	CollectionDescriptionLimit, 
+	CollectionOffChainDataLimit, 
 	CollectionSizeLimit,
 > Collection<
 	AccountId, 
-	CollectionNameLimit,
-	CollectionDescriptionLimit,
+	CollectionOffChainDataLimit,
 	CollectionSizeLimit,
 > where
 	AccountId: Clone + PartialEq + Debug,
-	CollectionNameLimit: Get<u32>,
-	CollectionDescriptionLimit: Get<u32>,
+	CollectionOffChainDataLimit: Get<u32>,
 	CollectionSizeLimit: Get<u32>,
 {
 	pub fn new(
 		owner: AccountId,
-		name: U8BoundedVec<CollectionNameLimit>, 
-		description: U8BoundedVec<CollectionDescriptionLimit>, 
+		offchain_data: U8BoundedVec<CollectionOffChainDataLimit>, 
 		limit: Option<u32>,
 	) -> Self {
 		Self { 
 			owner,
-			name, 
-			description,
+			offchain_data, 
 			nfts: BoundedVec::default(),
 			limit,
 			is_closed: false

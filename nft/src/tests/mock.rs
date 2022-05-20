@@ -16,10 +16,10 @@
 
 use crate::{self as ternoa_nft, weights, Config, NegativeImbalanceOf};
 use frame_support::{
-	bounded_vec, parameter_types,
-	traits::{ConstU32, Contains, Currency, GenesisBuild},
+	parameter_types,
+	traits::{ConstU32, Contains, Currency},
 };
-use primitives::nfts::{NFTData, NFTId, NFTSeriesDetails};
+use primitives::nfts::NFTId;
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
@@ -123,15 +123,21 @@ impl pallet_balances::Config for Test {
 }
 
 parameter_types! {
-	pub const IPFSLengthLimit: u32 = 5;
+	pub const InitialMintFee: Balance = NFT_MINT_FEE;
+	pub const NFTOffchainDataLimit: u32 = 10;
+	pub const CollectionOffchainDataLimit: u32 = 10;
+	pub const CollectionSizeLimit: u32 = 10;
 }
 
 impl Config for Test {
 	type Event = Event;
-	type WeightInfo = weights::TernoaWeight<Test>;
+	// type WeightInfo = weights::TernoaWeight<Test>;
 	type Currency = Balances;
 	type FeesCollector = MockFeeCollector;
-	type IPFSLengthLimit = IPFSLengthLimit;
+	type InitialMintFee = InitialMintFee;
+	type NFTOffchainDataLimit = NFTOffchainDataLimit;
+	type CollectionOffchainDataLimit = CollectionOffchainDataLimit;
+	type CollectionSizeLimit = CollectionSizeLimit;
 }
 
 pub struct MockFeeCollector;
@@ -174,31 +180,9 @@ impl ExtBuilder {
 			.assimilate_storage(&mut t)
 			.unwrap();
 
-		Self::build_nfts(&mut t);
-
 		let mut ext = sp_io::TestExternalities::new(t);
 		ext.execute_with(|| System::set_block_number(1));
 		ext
-	}
-
-	fn build_nfts(t: &mut sp_runtime::Storage) {
-		let alice_nft: NFTData<_, IPFSLengthLimit> =
-			NFTData::new_default(ALICE, bounded_vec![100], vec![ALICE_SERIES_ID]);
-		let bob_nft: NFTData<_, IPFSLengthLimit> =
-			NFTData::new_default(BOB, bounded_vec![101], vec![BOB_SERIES_ID]);
-
-		let alice_series = NFTSeriesDetails::new(ALICE, true);
-		let bob_series = NFTSeriesDetails::new(BOB, true);
-
-		let nfts = vec![alice_nft.to_raw(ALICE_NFT_ID), bob_nft.to_raw(BOB_NFT_ID)];
-		let series = vec![
-			alice_series.to_raw(vec![ALICE_SERIES_ID]),
-			bob_series.to_raw(vec![BOB_SERIES_ID]),
-		];
-
-		ternoa_nft::GenesisConfig::<Test> { nfts, series, nft_mint_fee: NFT_MINT_FEE }
-			.assimilate_storage(t)
-			.unwrap();
 	}
 }
 
