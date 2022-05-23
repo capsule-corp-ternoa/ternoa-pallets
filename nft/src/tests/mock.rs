@@ -14,12 +14,11 @@
 // You should have received a copy of the GNU General Public License
 // along with Ternoa.  If not, see <http://www.gnu.org/licenses/>.
 
-use crate::{self as ternoa_nft, weights, Config, NegativeImbalanceOf};
+use crate::{self as ternoa_nft, /*weights,*/ Config, NegativeImbalanceOf};
 use frame_support::{
 	parameter_types,
 	traits::{ConstU32, Contains, Currency},
 };
-use primitives::nfts::NFTId;
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
@@ -34,15 +33,7 @@ type Block = frame_system::mocking::MockBlock<Test>;
 pub const ALICE: u64 = 1;
 pub const BOB: u64 = 2;
 pub const COLLECTOR: u64 = 99;
-
-pub const ALICE_NFT_ID: u32 = 1;
-pub const ALICE_SERIES_ID: u8 = 1;
-
-pub const BOB_NFT_ID: u32 = 2;
-pub const BOB_SERIES_ID: u8 = 2;
-
 pub const NFT_MINT_FEE: Balance = 10;
-pub const INVALID_NFT_ID: NFTId = 1001;
 
 frame_support::construct_runtime!(
 	pub enum Test where
@@ -158,12 +149,12 @@ impl Default for ExtBuilder {
 }
 
 impl ExtBuilder {
-	pub fn caps(mut self, accounts: Vec<(u64, Balance)>) -> Self {
-		for account in accounts {
-			self.balances.push(account);
-		}
-		self
-	}
+	// pub fn caps(mut self, accounts: Vec<(u64, Balance)>) -> Self {
+	// 	for account in accounts {
+	// 		self.balances.push(account);
+	// 	}
+	// 	self
+	// }
 
 	pub fn new(balances: Vec<(u64, Balance)>) -> Self {
 		Self { balances }

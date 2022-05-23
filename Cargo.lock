@@ -2377,6 +2377,7 @@ name = "ternoa-common"
 version = "1.0.0"
 dependencies = [
  "frame-support",
+ "sp-arithmetic",
  "sp-runtime",
  "sp-std",
  "ternoa-pallets-primitives",

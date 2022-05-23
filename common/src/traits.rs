@@ -16,25 +16,22 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-// use frame_support::{
-// 	dispatch::{DispatchErrorWithPostInfo, DispatchResult},
-// 	traits::Get,
-// 	BoundedVec,
-// };
-// use primitives::{
-// 	marketplace::{MarketplaceData, MarketplaceId, MarketplaceType},
-// 	nfts::{NFT, NFTId, CollectionId},
-// };
+use frame_support::{
+	dispatch::{DispatchErrorWithPostInfo, DispatchResult},
+	traits::Get,
+};
+use primitives::{
+	nfts::{NFTData, NFTId, NFTState},
+	U8BoundedVec,
+};
+use sp_arithmetic::per_things::Permill;
 use sp_std::fmt::Debug;
 
 pub trait NFTExt {
 	type AccountId: Clone + PartialEq + Debug;
-	// type OffchainDataLimit: Get<u32>;
-	// type CollectionSizeLimit: Get<u32>;
-	// type CollectionNameLimit: Get<u32>;
-	// type CollectionDescriptionLimit: Get<u32>;
-	// type InitialMintFee: Get<u128>;
-
+	type NFTOffchainDataLimit: Get<u32>;
+	type CollectionSizeLimit: Get<u32>;
+	type CollectionOffchainDataLimit: Get<u32>;
 
 	/*
 		create nft
@@ -53,7 +50,7 @@ pub trait NFTExt {
 		benchmark_limit_collection ?
 	*/
 
-//OR ?
+	//OR ?
 
 	/*
 		create nft
@@ -71,6 +68,32 @@ pub trait NFTExt {
 		benchmark_limit_collection ?
 	*/
 
+	fn get_nft_state(id: NFTId) -> NFTState;
+
+	fn set_nft_state(
+		id: NFTId,
+		is_capsule: bool,
+		listed_for_sale: bool,
+		is_secret: bool,
+		is_delegated: bool,
+	) -> DispatchResult;
+
+	fn get_nft(id: NFTId) -> NFTData<Self::AccountId, Self::NFTOffchainDataLimit>;
+
+	fn create_nft(
+		owner: Self::AccountId,
+		offchain_data: U8BoundedVec<Self::NFTOffchainDataLimit>,
+		royalty: Permill,
+		collection_id: Option<u32>,
+	) -> Result<NFTId, DispatchErrorWithPostInfo>;
+
+	fn set_nft(
+		id: NFTId,
+		owner: Self::AccountId,
+		offchain_data: U8BoundedVec<Self::NFTOffchainDataLimit>,
+		royalty: Permill,
+		collection_id: Option<u32>,
+	) -> DispatchResult;
 
 	// /// Change the owner of an NFT.
 	// fn set_owner(id: NFTId, owner: &Self::AccountId) -> DispatchResult;

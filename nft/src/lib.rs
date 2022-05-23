@@ -30,13 +30,13 @@ use frame_support::{
 	dispatch::DispatchResult,
 	ensure,
 	traits::{
-		Currency, ExistenceRequirement::KeepAlive, OnUnbalanced, StorageVersion, WithdrawReasons,
+		Currency, ExistenceRequirement::KeepAlive, OnUnbalanced, StorageVersion, WithdrawReasons, Get,
 	},
 	transactional,
 };
-use frame_system::pallet_prelude::*;
+use frame_system::{pallet_prelude::*, Origin};
 use primitives::{
-	nfts::{Collection, CollectionId, NFTId, NFTData},
+	nfts::{Collection, CollectionId, NFTId, NFTData, NFTState},
 	U8BoundedVec,
 };
 use sp_arithmetic::per_things::Permill;
@@ -183,7 +183,7 @@ pub mod pallet {
 		/// A collection was closed
 		CollectionClosed { collection_id: CollectionId },
 		/// A collection has limit set
-		CollectionLimited { collection_id: CollectionId },
+		CollectionLimited { collection_id: CollectionId, limit: u32 },
 		/// An NFT has been added to a collection
 		NFTAddedToCollection { nft_id: NFTId, collection_id: CollectionId },
 	}
@@ -605,7 +605,7 @@ pub mod pallet {
 				ensure!(collection.limit == None, Error::<T>::CollectionLimitAlreadySet);
 				ensure!(!collection.is_closed, Error::<T>::CollectionIsClosed);
 				ensure!(
-					collection.nfts.len() > limit as usize,
+					collection.nfts.len() <= limit as usize,
 					Error::<T>::CollectionNFTsNumberGreaterThanLimit
 				);
 				check_bounds(
@@ -620,7 +620,7 @@ pub mod pallet {
 				Ok(().into())
 			})?;
 
-			Self::deposit_event(Event::CollectionLimited { collection_id });
+			Self::deposit_event(Event::CollectionLimited { collection_id, limit });
 
 			Ok(().into())
 		}
@@ -680,42 +680,59 @@ pub mod pallet {
 
 impl<T: Config> traits::NFTExt for Pallet<T> {
 	type AccountId = T::AccountId;
-	// type NFTOffchainDataLimit: T::NFTOffchainDataLimit;
-	// type CollectionOffchainDataLimit: T::CollectionOffchainDataLimit;
-	// type CollectionSizeLimit: T::CollectionSizeLimit;
-	// type InitialMintFee: T::InitialMintFee;
+	type NFTOffchainDataLimit = T::NFTOffchainDataLimit;
+	type CollectionOffchainDataLimit = T::CollectionOffchainDataLimit;
+	type CollectionSizeLimit = T::CollectionSizeLimit;
 
-	// fn set_owner(id: NFTId, owner: &Self::AccountId) -> DispatchResult {
-	// 	Data::<T>::try_mutate(id, |data| -> DispatchResult {
-	// 		let data = data.as_mut().ok_or(Error::<T>::NFTNotFound)?;
-	// 		data.owner = owner.clone();
-	// 		Ok(())
-	// 	})?;
+	fn get_nft_state(nft_id: NFTId) -> NFTState {
+		let nft = NFTs::<T>::get(nft_id).unwrap();
+		nft.state
+	}
 
-	// 	Ok(())
-	// }
+	fn set_nft_state(nft_id: NFTId, is_capsule: bool, listed_for_sale: bool, is_secret: bool, is_delegated: bool) -> DispatchResult {
+        NFTs::<T>::try_mutate(nft_id, |data| -> DispatchResult {
+			let data = data.as_mut().ok_or(Error::<T>::NFTNotFound)?;
+			data.state = NFTState::new(is_capsule, listed_for_sale, is_secret, is_delegated);
+			Ok(())
+		})?;
 
-	// fn owner(id: NFTId) -> Option<Self::AccountId> {
-	// 	Some(Data::<T>::get(id)?.owner)
-	// }
+		Ok(())
+    }
 
-	// fn is_nft_in_completed_series(id: NFTId) -> Option<bool> {
-	// 	let series_id = Data::<T>::get(id)?.series_id;
-	// 	Some(!Series::<T>::get(series_id)?.draft)
-	// }
+	fn get_nft(nft_id: NFTId) -> NFTData<Self::AccountId, Self::NFTOffchainDataLimit> {
+		let nft = NFTs::<T>::get(nft_id).unwrap();
+		nft
+	}
 
-	// fn create_nft(
-	// 	owner: Self::AccountId,
-	// 	ipfs_reference: IPFSReference<T>,
-	// 	series_id: Option<NFTSeriesId>,
-	// ) -> Result<NFTId, DispatchErrorWithPostInfo> {
-	// 	Self::create(Origin::<T>::Signed(owner).into(), ipfs_reference, series_id)?;
-	// 	return Ok(Self::nft_id_generator() - 1)
-	// }
+	fn create_nft(
+		owner: Self::AccountId,
+		offchain_data: U8BoundedVec<Self::NFTOffchainDataLimit>,
+		royalty: Permill,
+		collection_id: Option<u32>,
+	) -> Result<NFTId, frame_support::dispatch::DispatchErrorWithPostInfo> {
+        Self::create_nft(Origin::<T>::Signed(owner).into(), offchain_data, royalty, collection_id)?;
+		return Ok(Self::get_next_nft_id() - 1)
+    }
 
-	// fn get_nft(id: NFTId) -> Option<NFTData<Self::AccountId, Self::IPFSLengthLimit>> {
-	// 	Data::<T>::get(id)
-	// }
+	fn set_nft(
+		nft_id: NFTId,
+		owner: Self::AccountId,
+		offchain_data: U8BoundedVec<Self::NFTOffchainDataLimit>,
+		royalty: Permill,
+		collection_id: Option<u32>,
+	) -> DispatchResult {
+        NFTs::<T>::try_mutate(nft_id, |data| -> DispatchResult {
+			let data = data.as_mut().ok_or(Error::<T>::NFTNotFound)?;
+			data.owner = owner;
+			data.offchain_data = offchain_data;
+			data.royalty = royalty;
+			data.collection_id = collection_id;
+			Ok(())
+		})?;
+
+		Ok(())
+    }
+
 
 	// fn benchmark_lock_series(series_id: NFTSeriesId) {
 	// 	Series::<T>::mutate(&series_id, |x| {
@@ -723,34 +740,6 @@ impl<T: Config> traits::NFTExt for Pallet<T> {
 	// 	});
 	// }
 
-	// fn set_listed_for_sale(id: NFTId, value: bool) -> DispatchResult {
-	// 	Data::<T>::try_mutate(id, |data| -> DispatchResult {
-	// 		let data = data.as_mut().ok_or(Error::<T>::NFTNotFound)?;
-	// 		data.listed_for_sale = value;
-	// 		Ok(())
-	// 	})?;
-
-	// 	Ok(())
-	// }
-
-	// fn is_listed_for_sale(id: NFTId) -> Option<bool> {
-	// 	let nft = Data::<T>::get(id);
-	// 	if let Some(nft) = nft {
-	// 		return Some(nft.listed_for_sale)
-	// 	}
-
-	// 	return None
-	// }
-
-	// fn set_series_completion(series_id: &NFTSeriesId, value: bool) -> DispatchResult {
-	// 	Series::<T>::try_mutate(series_id, |x| -> DispatchResult {
-	// 		let series = x.as_mut().ok_or(Error::<T>::SeriesNotFound)?;
-	// 		series.draft = !value;
-	// 		Ok(())
-	// 	})?;
-
-	// 	Ok(())
-	// }
 
 	// fn set_viewer(id: NFTId, value: Option<Self::AccountId>) -> DispatchResult {
 	// 	Data::<T>::try_mutate(id, |maybe_data| -> DispatchResult {
