@@ -62,7 +62,7 @@ pub fn prepare_benchmarks<T: Config>() {
 }
 
 benchmarks! {
-	create {
+	create_nft {
 		prepare_benchmarks::<T>();
 		let alice: T::AccountId = get_account::<T>("ALICE");
 		let nft_id = 1;
