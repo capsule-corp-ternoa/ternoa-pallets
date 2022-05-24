@@ -145,10 +145,11 @@ benchmarks! {
 	limit_collection {
 		prepare_benchmarks::<T>();
 		let alice: T::AccountId = get_account::<T>("ALICE");
+		let alice_origin = origin::<T>("ALICE");
 		let limit = T::CollectionSizeLimit::get();
 		for _i in 0..limit {
 			NFT::<T>::create_nft(
-				RawOrigin::Signed(alice.clone()),
+				alice_origin.into(),
 				BoundedVec::default(),
 				Permill::from_parts(0),
 				Some(COLLECTION_ID),
@@ -168,7 +169,7 @@ benchmarks! {
 		let limit = T::CollectionSizeLimit::get() - 1;
 		for _i in 0..limit {
 			NFT::<T>::create_nft(
-				alice_origin,
+				alice_origin.into(),
 				BoundedVec::default(),
 				Permill::from_parts(0),
 				Some(COLLECTION_ID),
