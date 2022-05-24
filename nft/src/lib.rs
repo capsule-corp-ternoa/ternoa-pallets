@@ -159,6 +159,7 @@ pub mod pallet {
 			offchain_data: U8BoundedVec<T::NFTOffchainDataLimit>,
 			royalty: Permill,
 			collection_id: Option<CollectionId>,
+			is_soulbound: bool,
 			mint_fee: BalanceOf<T>,
 		},
 		/// An NFT was burned.
@@ -210,6 +211,8 @@ pub mod pallet {
 		CannotBurnCapsuleNFTs,
 		/// Operation is not allowed because the NFT is a capsule.
 		CannotDelegateCapsuleNFTs,
+		/// Operation is not allowed because the NFT is soulbound.
+		CannotTransferSoulboundNFTs,
 		/// Operation is not allowed because the NFT is a capsule.
 		CannotSetRoyaltyForCapsuleNFTs,
 		/// Operation is not allowed because the NFT owner is self.
@@ -264,6 +267,7 @@ pub mod pallet {
 			offchain_data: U8BoundedVec<T::NFTOffchainDataLimit>,
 			royalty: Permill,
 			collection_id: Option<CollectionId>,
+			is_soulbound: bool,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
@@ -308,13 +312,14 @@ pub mod pallet {
 				offchain_data.clone(),
 				royalty,
 				collection_id.clone(),
+				is_soulbound,
 			);
 
 			// Save
 			NFTs::<T>::insert(nft_id, nft);
 
 			let event =
-				Event::NFTCreated { nft_id, owner: who, offchain_data, royalty, collection_id, mint_fee };
+				Event::NFTCreated { nft_id, owner: who, offchain_data, royalty, collection_id, is_soulbound, mint_fee };
 
 			Self::deposit_event(event);
 
@@ -382,6 +387,7 @@ pub mod pallet {
 				ensure!(!nft.state.listed_for_sale, Error::<T>::CannotTransferListedNFTs);
 				ensure!(!nft.state.is_capsule, Error::<T>::CannotTransferCapsuleNFTs);
 				ensure!(!nft.state.is_delegated, Error::<T>::CannotTransferDelegatedNFTs);
+				ensure!(!nft.state.is_soulbound, Error::<T>::CannotTransferSoulboundNFTs);
 
 				// Execute
 				nft.owner = recipient.clone();
@@ -689,10 +695,10 @@ impl<T: Config> traits::NFTExt for Pallet<T> {
 		nft.state
 	}
 
-	fn set_nft_state(nft_id: NFTId, is_capsule: bool, listed_for_sale: bool, is_secret: bool, is_delegated: bool) -> DispatchResult {
+	fn set_nft_state(nft_id: NFTId, is_capsule: bool, listed_for_sale: bool, is_secret: bool, is_delegated: bool, is_soulbound: bool) -> DispatchResult {
         NFTs::<T>::try_mutate(nft_id, |data| -> DispatchResult {
 			let data = data.as_mut().ok_or(Error::<T>::NFTNotFound)?;
-			data.state = NFTState::new(is_capsule, listed_for_sale, is_secret, is_delegated);
+			data.state = NFTState::new(is_capsule, listed_for_sale, is_secret, is_delegated, is_soulbound);
 			Ok(())
 		})?;
 
@@ -709,8 +715,9 @@ impl<T: Config> traits::NFTExt for Pallet<T> {
 		offchain_data: U8BoundedVec<Self::NFTOffchainDataLimit>,
 		royalty: Permill,
 		collection_id: Option<u32>,
+		is_soulbound: bool,
 	) -> Result<NFTId, frame_support::dispatch::DispatchErrorWithPostInfo> {
-        Self::create_nft(Origin::<T>::Signed(owner).into(), offchain_data, royalty, collection_id)?;
+        Self::create_nft(Origin::<T>::Signed(owner).into(), offchain_data, royalty, collection_id, is_soulbound)?;
 		return Ok(Self::get_next_nft_id() - 1)
     }
 

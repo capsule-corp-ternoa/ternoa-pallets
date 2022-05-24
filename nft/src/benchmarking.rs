@@ -18,15 +18,20 @@
 
 use super::*;
 use frame_benchmarking::{account as benchmark_account, benchmarks, impl_benchmark_test_suite};
-use frame_support::{assert_ok, bounded_vec, traits::Currency};
+use frame_support::{assert_ok, BoundedVec, traits::Currency};
 use frame_system::RawOrigin;
 use sp_runtime::traits::{Bounded, StaticLookup};
 use sp_std::prelude::*;
+use sp_arithmetic::per_things::Permill;
 
 use crate::Pallet as NFT;
 
-const SERIES_ID: u8 = 20;
 const NFT_ID: u32 = 0;
+const COLLECTION_ID: u32 = 0;
+
+fn origin(account: u64) -> mock::Origin {
+	RawOrigin::Signed(account).into()
+}
 
 pub fn prepare_benchmarks<T: Config>() {
 	let alice: T::AccountId = get_account::<T>("ALICE");
@@ -36,12 +41,17 @@ pub fn prepare_benchmarks<T: Config>() {
 	T::Currency::make_free_balance_be(&alice, BalanceOf::<T>::max_value());
 	T::Currency::make_free_balance_be(&bob, BalanceOf::<T>::max_value());
 
-	// Create default NFT and series
-	let series_id = vec![SERIES_ID];
-	assert_ok!(NFT::<T>::create(
-		RawOrigin::Signed(alice.clone()).into(),
-		bounded_vec![1],
-		Some(series_id.clone()),
+	// Create default NFT and collection
+	assert_ok!(NFT::<T>::create_nft(
+		origin(alice.clone()),
+		BoundedVec::try_from(vec![1]).unwrap(),
+		Permill::from_parts(100000),
+		None,
+	));
+	assert_ok!(NFT::<T>::create_collection(
+		origin(alice),
+		BoundedVec::try_from(vec![1]).unwrap(),
+		None,
 	));
 }
 
@@ -58,13 +68,32 @@ benchmarks! {
 	create {
 		prepare_benchmarks::<T>();
 		let alice: T::AccountId = get_account::<T>("ALICE");
-		let nft_id = NFT::<T>::nft_id_generator();
-
-	}: _(RawOrigin::Signed(alice.clone()), bounded_vec![55], None)
-	verify {
-		assert_eq!(NFT::<T>::data(nft_id).unwrap().owner, alice);
+		let nft_id = 1;
+	}: _(
+		origin(alice.clone()), 
+		BoundedVec::try_from(vec![1]).unwrap(),
+		Permill::from_parts(100000),
+		COLLECTION_ID,
+	) verify {
+		assert_eq!(NFT::<T>::nfts(nft_id).unwrap().owner, alice);
 	}
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
+	
 	transfer {
 		prepare_benchmarks::<T>();
 
@@ -118,6 +147,7 @@ benchmarks! {
 		assert_eq!(NFT::<T>::data(NFT_ID).unwrap().is_delegated, true);
 		assert_eq!(NFT::<T>::delegated_nfts(NFT_ID), Some(bob));
 	}
+	*/
 }
 
 impl_benchmark_test_suite!(NFT, crate::tests::mock::new_test_ext(), crate::tests::mock::Test);

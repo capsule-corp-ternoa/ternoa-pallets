@@ -44,6 +44,8 @@ pub struct NFTState
 	pub is_secret: bool,
 	/// Is NFT delegated
 	pub is_delegated: bool,
+	/// Is NFT soulbound
+	pub is_soulbound: bool,
 }
 
 impl NFTState
@@ -53,21 +55,24 @@ impl NFTState
 		listed_for_sale: bool,
 		is_secret: bool,
 		is_delegated: bool,
+		is_soulbound: bool,
 	) -> Self {
 		Self {
 			is_capsule,
 			listed_for_sale,
 			is_secret,
 			is_delegated,
+			is_soulbound,
 		}
 	}
 
-	pub fn new_default() -> Self {
+	pub fn new_default(is_soulbound: bool) -> Self {
 		Self::new(
 			false,
 			false,
 			false,
 			false,
+			is_soulbound,
 		)
 	}
 }
@@ -132,13 +137,14 @@ impl<
 		offchain_data: U8BoundedVec<NFTOffchainDataLimit>,
 		royalty: Permill,
 		collection_id: Option<CollectionId>,
+		is_soulbound: bool
 	) -> Self {
 		Self::new(
 			owner.clone(),
 			owner,
 			offchain_data,
 			royalty,
-			NFTState::new_default(),
+			NFTState::new_default(is_soulbound),
 			collection_id,
 		)
 	}

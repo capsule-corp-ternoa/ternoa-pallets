@@ -36,33 +36,17 @@ pub trait NFTExt {
 	/*
 		create nft
 		get nft
-		delegate nft (since it needs updating an other storage)
-		get state
-		set state
-		create collection
-		get collection
-		add nft to collection
-		limit collection
-		close collection
-		set collection limit
-
-		benchmark_close_collection ?
-		benchmark_limit_collection ?
-	*/
-
-	//OR ?
-
-	/*
-		create nft
-		get nft
 		set nft
+		burn nft
 		get state
 		set state
 		get delegated nft
-		set delegated nft
+		set delegated nft (since it needs updating an other storage)
 		create collection
 		get collection
 		set collection
+		burn collection
+		add nft to collection (since it needs updating an other storage)
 
 		benchmark_close_collection ?
 		benchmark_limit_collection ?
@@ -76,6 +60,7 @@ pub trait NFTExt {
 		listed_for_sale: bool,
 		is_secret: bool,
 		is_delegated: bool,
+		is_soulbound: bool,
 	) -> DispatchResult;
 
 	fn get_nft(id: NFTId) -> NFTData<Self::AccountId, Self::NFTOffchainDataLimit>;
@@ -85,6 +70,7 @@ pub trait NFTExt {
 		offchain_data: U8BoundedVec<Self::NFTOffchainDataLimit>,
 		royalty: Permill,
 		collection_id: Option<u32>,
+		is_soulbound: bool,
 	) -> Result<NFTId, DispatchErrorWithPostInfo>;
 
 	fn set_nft(
