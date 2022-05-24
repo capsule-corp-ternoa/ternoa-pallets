@@ -64,7 +64,7 @@ pub fn prepare_benchmarks<T: Config>() {
 benchmarks! {
 	create_nft {
 		prepare_benchmarks::<T>();
-		let alice = origin::<T>("ALICE");
+		let alice: T::AccountId = get_account::<T>("ALICE");
 		let nft_id = 1;
 	}: _(RawOrigin::Signed(alice.clone()), BoundedVec::try_from(vec![1]).unwrap(), Permill::from_parts(100000), Some(COLLECTION_ID), false)
 	verify {
@@ -76,7 +76,7 @@ benchmarks! {
 		let alice = origin::<T>("ALICE");
 	}: _(alice, NFT_ID)
 	verify {
-		assert_eq!(NFT::<T>::data(NFT_ID), None);
+		assert_eq!(NFT::<T>::nfts(NFT_ID), None);
 	}
 
 	transfer_nft {
@@ -94,10 +94,10 @@ benchmarks! {
 		let alice = origin::<T>("ALICE");
 		let bob: T::AccountId = get_account::<T>("BOB");
 		let bob_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(bob.clone());
-	}: _(alice.clone(), NFT_ID, bob_lookup)
+	}: _(alice.clone(), NFT_ID, Some(bob_lookup))
 	verify {
 		assert_eq!(NFT::<T>::nfts(NFT_ID).unwrap().state.is_delegated, true);
-		assert_eq!(NFT::<T>::delegated_nfts(NFT_ID).unwrap(), Some(bob));
+		assert_eq!(NFT::<T>::delegated_nfts(NFT_ID), Some(bob));
 	}
 
 	set_royalty {
@@ -105,7 +105,7 @@ benchmarks! {
 		let alice = origin::<T>("ALICE");
 	}: _(alice.clone(), NFT_ID, Permill::from_parts(1000000))
 	verify {
-		assert_eq!(NFT::<T>::nfts(NFT_ID).unwrap().royalty, Some(Permill::from_parts(1000000)));
+		assert_eq!(NFT::<T>::nfts(NFT_ID).unwrap().royalty, Permill::from_parts(1000000));
 	}
 
 	set_nft_mint_fee {
@@ -119,7 +119,7 @@ benchmarks! {
 
 	create_collection {
 		prepare_benchmarks::<T>();
-		let alice = origin::<T>("ALICE");
+		let alice: T::AccountId = get_account::<T>("ALICE");
 		let collection_id = 1;
 	}: _(alice.clone(), BoundedVec::try_from(vec![1]).unwrap(), Some(10))
 	verify {
@@ -144,8 +144,8 @@ benchmarks! {
 
 	limit_collection {
 		prepare_benchmarks::<T>();
-		let alice = origin::<T>("ALICE");
-		let limit = NFT::<T>::CollectionSizeLimit::get();
+		let alice: T::AccountId = get_account::<T>("ALICE");
+		let limit = <pallet::Pallet<T> as Trait>::CollectionSizeLimit::get();
 		for _i in 0..limit {
 			NFT::<T>::create_nft(
 				alice.clone(),
@@ -163,8 +163,8 @@ benchmarks! {
 
 	add_nft_to_collection {
 		prepare_benchmarks::<T>();
-		let alice = origin::<T>("ALICE");
-		let limit = NFT::<T>::CollectionSizeLimit::get() - 1;
+		let alice: T::AccountId = get_account::<T>("ALICE");
+		let limit = <pallet::Pallet<T> as Trait>::CollectionSizeLimit::get() - 1;
 		for _i in 0..limit {
 			NFT::<T>::create_nft(
 				alice.clone(),
