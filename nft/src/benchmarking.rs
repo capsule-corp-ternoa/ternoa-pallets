@@ -66,7 +66,7 @@ benchmarks! {
 		prepare_benchmarks::<T>();
 		let alice: T::AccountId = get_account::<T>("ALICE");
 		let nft_id = 1;
-	}: _(alice.clone(), BoundedVec::try_from(vec![1]).unwrap(), Permill::from_parts(100000), Some(COLLECTION_ID), false)
+	}: _(RawOrigin::Signed(alice.clone()),, BoundedVec::try_from(vec![1]).unwrap(), Permill::from_parts(100000), Some(COLLECTION_ID), false)
 	verify {
 		assert_eq!(NFT::<T>::nfts(nft_id).unwrap().owner, alice);
 	}
