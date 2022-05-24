@@ -18,11 +18,11 @@
 
 use super::*;
 use frame_benchmarking::{account as benchmark_account, benchmarks, impl_benchmark_test_suite};
-use frame_support::{assert_ok, BoundedVec, traits::Currency};
+use frame_support::{assert_ok, traits::Currency, BoundedVec};
 use frame_system::RawOrigin;
+use sp_arithmetic::per_things::Permill;
 use sp_runtime::traits::{Bounded, StaticLookup};
 use sp_std::prelude::*;
-use sp_arithmetic::per_things::Permill;
 
 use crate::Pallet as NFT;
 
@@ -66,19 +66,13 @@ benchmarks! {
 		prepare_benchmarks::<T>();
 		let alice: T::AccountId = get_account::<T>("ALICE");
 		let nft_id = 1;
-	}: _(
-		RawOrigin::Signed(alice.clone()), 
-		BoundedVec::try_from(vec![1]).unwrap(),
-		Permill::from_parts(100000),
-		COLLECTION_ID,
-		false,
-	) verify {
+	}: _(RawOrigin::Signed(alice.clone()), BoundedVec::try_from(vec![1]).unwrap(), Permill::from_parts(100000), COLLECTION_ID, false)
+	verify {
 		assert_eq!(NFT::<T>::nfts(nft_id).unwrap().owner, alice);
 	}
 }
 
 impl_benchmark_test_suite!(NFT, crate::tests::mock::new_test_ext(), crate::tests::mock::Test);
-
 
 // 	transfer {
 // 		prepare_benchmarks::<T>();
