@@ -39,8 +39,8 @@ pub fn origin<T: Config>(name: &'static str) -> RawOrigin<T::AccountId> {
 }
 
 pub fn prepare_benchmarks<T: Config>() {
-	let alice: T::AccountId = origin::<T>("ALICE");
-	let bob: T::AccountId = origin::<T>("BOB");
+	let alice: T::AccountId = get_account::<T>("ALICE");
+	let bob: T::AccountId = get_account::<T>("BOB");
 
 	// Give them enough caps
 	T::Currency::make_free_balance_be(&alice, BalanceOf::<T>::max_value());
@@ -48,14 +48,14 @@ pub fn prepare_benchmarks<T: Config>() {
 
 	// Create default NFT and collection
 	assert_ok!(NFT::<T>::create_nft(
-		alice.clone(),
+		RawOrigin::Signed(alice.clone()).into(),
 		BoundedVec::try_from(vec![1]).unwrap(),
 		Permill::from_parts(100000),
 		None,
 		false,
 	));
 	assert_ok!(NFT::<T>::create_collection(
-		alice,
+		RawOrigin::Signed(alice).into(),
 		BoundedVec::try_from(vec![1]).unwrap(),
 		None,
 	));
@@ -64,10 +64,10 @@ pub fn prepare_benchmarks<T: Config>() {
 benchmarks! {
 	create {
 		prepare_benchmarks::<T>();
-		let alice: T::AccountId = origin::<T>("ALICE");
+		let alice: T::AccountId = get_account::<T>("ALICE");
 		let nft_id = 1;
 	}: _(
-		alice.clone(), 
+		RawOrigin::Signed(alice.clone()), 
 		BoundedVec::try_from(vec![1]).unwrap(),
 		Permill::from_parts(100000),
 		COLLECTION_ID,
