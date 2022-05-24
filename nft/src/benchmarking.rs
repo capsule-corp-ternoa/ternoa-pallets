@@ -145,7 +145,7 @@ benchmarks! {
 	limit_collection {
 		prepare_benchmarks::<T>();
 		let alice: T::AccountId = get_account::<T>("ALICE");
-		let alice_origin: T::AccountId = origin::<T>("ALICE");
+		let alice_origin = origin::<T>("ALICE");
 		let limit = T::CollectionSizeLimit::get();
 		for _i in 0..limit {
 			NFT::<T>::create_nft(
@@ -165,7 +165,7 @@ benchmarks! {
 	add_nft_to_collection {
 		prepare_benchmarks::<T>();
 		let alice: T::AccountId = get_account::<T>("ALICE");
-		let alice_origin: T::AccountId = origin::<T>("ALICE");
+		let alice_origin = origin::<T>("ALICE");
 		let limit = T::CollectionSizeLimit::get() - 1;
 		for _i in 0..limit {
 			NFT::<T>::create_nft(
