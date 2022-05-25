@@ -132,7 +132,7 @@ benchmarks! {
 		let alice = origin::<T>("ALICE");
 		let bob: T::AccountId = get_account::<T>("BOB");
 		let bob_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(bob.clone());
-	}: _(alice, NFT_ID, bob_lookup)
+	}: _(alice, NFT_ID, Some(bob_lookup))
 	verify {
 		assert_eq!(NFT::<T>::nfts(NFT_ID).unwrap().state.is_delegated, true);
 		assert_eq!(NFT::<T>::delegated_nfts(NFT_ID), Some(bob));
