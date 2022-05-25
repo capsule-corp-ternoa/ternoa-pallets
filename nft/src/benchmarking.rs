@@ -94,13 +94,12 @@ benchmarks! {
 	burn_nft {
 		prepare_benchmarks::<T>();
 		let alice = origin::<T>("ALICE");
-		let alice_origin = origin::<T>("ALICE");
 
 		// Fill the collection
 		let limit = T::CollectionSizeLimit::get() - 1;
 		for _i in 0..limit {
 			NFT::<T>::create_nft(
-				alice_origin.clone().into(),
+				alice.clone().into(),
 				BoundedVec::default(),
 				Permill::from_parts(0),
 				Some(COLLECTION_ID),
@@ -110,7 +109,7 @@ benchmarks! {
 		}
 
 		// Add NFT to collection
-		NFT::<T>::add_nft_to_collection(alice_origin.into(), NFT_ID, COLLECTION_ID).unwrap();
+		NFT::<T>::add_nft_to_collection(alice.clone().into(), NFT_ID, COLLECTION_ID).unwrap();
 	}: _(alice, NFT_ID)
 	verify {
 		assert_eq!(NFT::<T>::nfts(NFT_ID), None);
@@ -158,8 +157,9 @@ benchmarks! {
 	create_collection {
 		prepare_benchmarks::<T>();
 		let alice: T::AccountId = get_account::<T>("ALICE");
+		let alice_origin = origin::<T>("ALICE");
 		let collection_id = 1;
-	}: _(alice.clone(), BoundedVec::try_from(vec![1]).unwrap(), Some(10))
+	}: _(alice_origin.clone(), BoundedVec::try_from(vec![1]).unwrap(), Some(10))
 	verify {
 		assert_eq!(NFT::<T>::collections(collection_id).unwrap().owner, alice);
 	}
