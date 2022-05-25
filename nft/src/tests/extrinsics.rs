@@ -358,7 +358,7 @@ mod burn_nft {
 	fn cannot_burn_capsule_nfts() {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			prepare_tests();
-			// Set listed to true for Alice's NFT
+			// Set capsule to true for Alice's NFT
 			NFT::set_nft_state(ALICE_NFT_ID, true, false, false, false, false).unwrap();
 			// Burning an nft
 			let err = NFT::burn_nft(origin(ALICE), ALICE_NFT_ID);
@@ -371,8 +371,8 @@ mod burn_nft {
 	fn cannot_burn_delegated_nfts() {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			prepare_tests();
-			// Set listed to true for Alice's NFT
-			NFT::set_nft_state(ALICE_NFT_ID, false, false, false, true, false).unwrap();
+			// Set delegated to true for Alice's NFT
+			NFT::delegate_nft(origin(ALICE), ALICE_NFT_ID, Some(BOB)).unwrap();
 			// Burning an nft
 			let err = NFT::burn_nft(origin(ALICE), ALICE_NFT_ID);
 			// Should fail because NFT is delegated
@@ -477,7 +477,7 @@ mod transfer_nft {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 			// Set NFT to delegated
-			NFT::set_nft_state(ALICE_NFT_ID, false, false, false, true, false).unwrap();
+			NFT::delegate_nft(origin(ALICE), ALICE_NFT_ID, Some(BOB)).unwrap();
 			// Try to transfer
 			let err = NFT::transfer_nft(alice, ALICE_NFT_ID, BOB);
 			// Should fail because NFT is delegated
@@ -748,7 +748,7 @@ mod set_royalty {
 			let alice: mock::Origin = origin(ALICE);
 
 			// Set Alice's NFT to delegated
-			NFT::set_nft_state(ALICE_NFT_ID, false, false, false, true, false).unwrap();
+			NFT::delegate_nft(origin(ALICE), ALICE_NFT_ID, Some(BOB)).unwrap();
 
 			// Set royalty
 			let err = NFT::set_royalty(alice, ALICE_NFT_ID, Permill::from_parts(800000));
