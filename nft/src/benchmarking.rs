@@ -110,33 +110,33 @@ benchmarks! {
 		}
 
 		// Add NFT to collection
-		NFT::<T>::add_nft_to_collection(alice_origin.clone().into(), NFT_ID, COLLECTION_ID).unwrap();
+		NFT::<T>::add_nft_to_collection(alice_origin.into(), NFT_ID, COLLECTION_ID).unwrap();
 	}: _(alice, NFT_ID)
 	verify {
 		assert_eq!(NFT::<T>::nfts(NFT_ID), None);
 		assert_eq!(NFT::<T>::collections(COLLECTION_ID).unwrap().nfts.contains(&NFT_ID), false);
 	}
 
-	// transfer_nft {
-	// 	prepare_benchmarks::<T>();
-	// 	let alice = origin::<T>("ALICE");
-	// 	let bob: T::AccountId = get_account::<T>("BOB");
-	// 	let bob_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(bob.clone());
-	// }: _(alice, NFT_ID, bob_lookup)
-	// verify {
-	// 	assert_eq!(NFT::<T>::nfts(NFT_ID).unwrap().owner, bob);
-	// }
+	transfer_nft {
+		prepare_benchmarks::<T>();
+		let alice = origin::<T>("ALICE");
+		let bob: T::AccountId = get_account::<T>("BOB");
+		let bob_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(bob.clone());
+	}: _(alice, NFT_ID, bob_lookup)
+	verify {
+		assert_eq!(NFT::<T>::nfts(NFT_ID).unwrap().owner, bob);
+	}
 
-	// delegate_nft {
-	// 	prepare_benchmarks::<T>();
-	// 	let alice = origin::<T>("ALICE");
-	// 	let bob: T::AccountId = get_account::<T>("BOB");
-	// 	let bob_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(bob.clone());
-	// }: _(alice, NFT_ID, Some(bob_lookup))
-	// verify {
-	// 	assert_eq!(NFT::<T>::nfts(NFT_ID).unwrap().state.is_delegated, true);
-	// 	assert_eq!(NFT::<T>::delegated_nfts(NFT_ID), Some(bob));
-	// }
+	delegate_nft {
+		prepare_benchmarks::<T>();
+		let alice = origin::<T>("ALICE");
+		let bob: T::AccountId = get_account::<T>("BOB");
+		let bob_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(bob.clone());
+	}: _(alice, NFT_ID, bob_lookup)
+	verify {
+		assert_eq!(NFT::<T>::nfts(NFT_ID).unwrap().state.is_delegated, true);
+		assert_eq!(NFT::<T>::delegated_nfts(NFT_ID), Some(bob));
+	}
 
 	// set_royalty {
 	// 	prepare_benchmarks::<T>();
