@@ -71,76 +71,76 @@ benchmarks! {
 		assert_eq!(NFT::<T>::nfts(nft_id).unwrap().owner, alice);
 	}
 
-	burn_nft {
-		prepare_benchmarks::<T>();
-		let alice = origin::<T>("ALICE");
-	}: _(alice, NFT_ID)
-	verify {
-		assert_eq!(NFT::<T>::nfts(NFT_ID), None);
-	}
+	// burn_nft {
+	// 	prepare_benchmarks::<T>();
+	// 	let alice = origin::<T>("ALICE");
+	// }: _(alice, NFT_ID)
+	// verify {
+	// 	assert_eq!(NFT::<T>::nfts(NFT_ID), None);
+	// }
 
-	transfer_nft {
-		prepare_benchmarks::<T>();
-		let alice = origin::<T>("ALICE");
-		let bob: T::AccountId = get_account::<T>("BOB");
-		let bob_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(bob.clone());
-	}: _(alice, NFT_ID, bob_lookup)
-	verify {
-		assert_eq!(NFT::<T>::nfts(NFT_ID).unwrap().owner, bob);
-	}
+	// transfer_nft {
+	// 	prepare_benchmarks::<T>();
+	// 	let alice = origin::<T>("ALICE");
+	// 	let bob: T::AccountId = get_account::<T>("BOB");
+	// 	let bob_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(bob.clone());
+	// }: _(alice, NFT_ID, bob_lookup)
+	// verify {
+	// 	assert_eq!(NFT::<T>::nfts(NFT_ID).unwrap().owner, bob);
+	// }
 
-	delegate_nft {
-		prepare_benchmarks::<T>();
-		let alice = origin::<T>("ALICE");
-		let bob: T::AccountId = get_account::<T>("BOB");
-		let bob_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(bob.clone());
-	}: _(alice, NFT_ID, Some(bob_lookup))
-	verify {
-		assert_eq!(NFT::<T>::nfts(NFT_ID).unwrap().state.is_delegated, true);
-		assert_eq!(NFT::<T>::delegated_nfts(NFT_ID), Some(bob));
-	}
+	// delegate_nft {
+	// 	prepare_benchmarks::<T>();
+	// 	let alice = origin::<T>("ALICE");
+	// 	let bob: T::AccountId = get_account::<T>("BOB");
+	// 	let bob_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(bob.clone());
+	// }: _(alice, NFT_ID, Some(bob_lookup))
+	// verify {
+	// 	assert_eq!(NFT::<T>::nfts(NFT_ID).unwrap().state.is_delegated, true);
+	// 	assert_eq!(NFT::<T>::delegated_nfts(NFT_ID), Some(bob));
+	// }
 
-	set_royalty {
-		prepare_benchmarks::<T>();
-		let alice = origin::<T>("ALICE");
-	}: _(alice, NFT_ID, Permill::from_parts(1000000))
-	verify {
-		assert_eq!(NFT::<T>::nfts(NFT_ID).unwrap().royalty, Permill::from_parts(1000000));
-	}
+	// set_royalty {
+	// 	prepare_benchmarks::<T>();
+	// 	let alice = origin::<T>("ALICE");
+	// }: _(alice, NFT_ID, Permill::from_parts(1000000))
+	// verify {
+	// 	assert_eq!(NFT::<T>::nfts(NFT_ID).unwrap().royalty, Permill::from_parts(1000000));
+	// }
 
-	set_nft_mint_fee {
-		let old_mint_fee = NFT::<T>::nft_mint_fee();
-		let new_mint_fee = 20u32;
-	}: _(RawOrigin::Root, new_mint_fee.clone().into())
-	verify {
-		assert_ne!(old_mint_fee, new_mint_fee.clone().into());
-		assert_eq!(NFT::<T>::nft_mint_fee(), new_mint_fee.into());
-	}
+	// set_nft_mint_fee {
+	// 	let old_mint_fee = NFT::<T>::nft_mint_fee();
+	// 	let new_mint_fee = 20u32;
+	// }: _(RawOrigin::Root, new_mint_fee.clone().into())
+	// verify {
+	// 	assert_ne!(old_mint_fee, new_mint_fee.clone().into());
+	// 	assert_eq!(NFT::<T>::nft_mint_fee(), new_mint_fee.into());
+	// }
 
-	create_collection {
-		prepare_benchmarks::<T>();
-		let alice: T::AccountId = get_account::<T>("ALICE");
-		let collection_id = 1;
-	}: _(alice.clone(), BoundedVec::try_from(vec![1]).unwrap(), Some(10))
-	verify {
-		assert_eq!(NFT::<T>::collections(collection_id).unwrap().owner, alice);
-	}
+	// create_collection {
+	// 	prepare_benchmarks::<T>();
+	// 	let alice: T::AccountId = get_account::<T>("ALICE");
+	// 	let collection_id = 1;
+	// }: _(alice.clone(), BoundedVec::try_from(vec![1]).unwrap(), Some(10))
+	// verify {
+	// 	assert_eq!(NFT::<T>::collections(collection_id).unwrap().owner, alice);
+	// }
 
-	burn_collection {
-		prepare_benchmarks::<T>();
-		let alice = origin::<T>("ALICE");
-	}: _(alice, COLLECTION_ID)
-	verify {
-		assert_eq!(NFT::<T>::collections(COLLECTION_ID), None);
-	}
+	// burn_collection {
+	// 	prepare_benchmarks::<T>();
+	// 	let alice = origin::<T>("ALICE");
+	// }: _(alice, COLLECTION_ID)
+	// verify {
+	// 	assert_eq!(NFT::<T>::collections(COLLECTION_ID), None);
+	// }
 
-	close_collection {
-		prepare_benchmarks::<T>();
-		let alice = origin::<T>("ALICE");
-	}: _(alice, COLLECTION_ID)
-	verify {
-		assert_eq!(NFT::<T>::collections(COLLECTION_ID).unwrap().is_closed, true);
-	}
+	// close_collection {
+	// 	prepare_benchmarks::<T>();
+	// 	let alice = origin::<T>("ALICE");
+	// }: _(alice, COLLECTION_ID)
+	// verify {
+	// 	assert_eq!(NFT::<T>::collections(COLLECTION_ID).unwrap().is_closed, true);
+	// }
 
 	// limit_collection {
 	// 	prepare_benchmarks::<T>();
