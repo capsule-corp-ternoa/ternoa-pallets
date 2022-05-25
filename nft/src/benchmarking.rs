@@ -71,7 +71,7 @@ benchmarks! {
 		let limit = T::CollectionSizeLimit::get() - 1;
 		for _i in 0..limit {
 			NFT::<T>::create_nft(
-				alice_origin.clone(),
+				alice_origin.clone().into(),
 				BoundedVec::default(),
 				Permill::from_parts(0),
 				Some(COLLECTION_ID),
