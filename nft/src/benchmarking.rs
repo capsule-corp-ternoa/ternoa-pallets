@@ -146,14 +146,14 @@ benchmarks! {
 		assert_eq!(NFT::<T>::nfts(NFT_ID).unwrap().royalty, Permill::from_parts(1000000));
 	}
 
-	// set_nft_mint_fee {
-	// 	let old_mint_fee = NFT::<T>::nft_mint_fee();
-	// 	let new_mint_fee = 20u32;
-	// }: _(RawOrigin::Root, new_mint_fee.clone().into())
-	// verify {
-	// 	assert_ne!(old_mint_fee, new_mint_fee.clone().into());
-	// 	assert_eq!(NFT::<T>::nft_mint_fee(), new_mint_fee.into());
-	// }
+	set_nft_mint_fee {
+		let old_mint_fee = NFT::<T>::nft_mint_fee();
+		let new_mint_fee = 20u32;
+	}: _(RawOrigin::Root, new_mint_fee.clone().into())
+	verify {
+		assert_ne!(old_mint_fee, new_mint_fee.clone().into());
+		assert_eq!(NFT::<T>::nft_mint_fee(), new_mint_fee.into());
+	}
 
 	// create_collection {
 	// 	prepare_benchmarks::<T>();
