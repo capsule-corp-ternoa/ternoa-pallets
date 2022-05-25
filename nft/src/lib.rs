@@ -73,7 +73,7 @@ pub mod pallet {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
 		/// Weight information for pallet.
-		// type WeightInfo: WeightInfo;
+		type WeightInfo: WeightInfo;
 
 		/// Currency type.
 		type Currency: Currency<Self::AccountId>;
@@ -257,8 +257,7 @@ pub mod pallet {
 		/// Create a new NFT with the provided details. An ID will be auto
 		/// generated and logged as an event, The caller of this function
 		/// will become the owner of the new NFT.
-		// #[pallet::weight(T::WeightInfo::create_nft())]
-		#[pallet::weight(100_000)]
+		#[pallet::weight(T::WeightInfo::create_nft())]
 		// have to be transactional otherwise we could make people pay the mint
 		// even if the creation fails.
 		#[transactional]
@@ -330,8 +329,7 @@ pub mod pallet {
 		/// once the NFT is removed (burned) from the storage there is no way to
 		/// get it back.
 		/// Must be called by the owner of the NFT.
-		// #[pallet::weight(T::WeightInfo::burn_nft())]
-		#[pallet::weight(100_000)]
+		#[pallet::weight(T::WeightInfo::burn_nft())]
 		pub fn burn_nft(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 			let nft = NFTs::<T>::get(nft_id).ok_or(Error::<T>::NFTNotFound)?;
@@ -368,8 +366,7 @@ pub mod pallet {
 
 		/// Transfer an NFT from an account to another one. Must be called by the
 		/// owner of the NFT.
-		// #[pallet::weight(T::WeightInfo::transfer_nft())]
-		#[pallet::weight(100_000)]
+		#[pallet::weight(T::WeightInfo::transfer_nft())]
 		pub fn transfer_nft(
 			origin: OriginFor<T>,
 			nft_id: NFTId,
@@ -403,8 +400,7 @@ pub mod pallet {
 
 		/// Delegate an NFT to a recipient, does not change ownership
 		/// Must be called by NFT owner
-		// #[pallet::weight(T::WeightInfo::delegate_nft())]
-		#[pallet::weight(100_000)]
+		#[pallet::weight(T::WeightInfo::delegate_nft())]
 		pub fn delegate_nft(
 			origin: OriginFor<T>,
 			nft_id: NFTId,
@@ -447,8 +443,7 @@ pub mod pallet {
 
 		/// Set the royalty of an NFT
 		/// Can only be called from creator if creator is the owner.
-		// #[pallet::weight(T::WeightInfo::set_royalty())]
-		#[pallet::weight(100_000)]
+		#[pallet::weight(T::WeightInfo::set_royalty())]
 		pub fn set_royalty(
 			origin: OriginFor<T>,
 			nft_id: NFTId,
@@ -481,8 +476,7 @@ pub mod pallet {
 
 		/// Set the fee for minting an NFT
 		/// Can only be called from root access.
-		// #[pallet::weight(T::WeightInfo::set_nft_mint_fee())]
-		#[pallet::weight(100_000)]
+		#[pallet::weight(T::WeightInfo::set_nft_mint_fee())]
 		pub fn set_nft_mint_fee(
 			origin: OriginFor<T>,
 			fee: BalanceOf<T>,
@@ -501,8 +495,7 @@ pub mod pallet {
 		/// Create a new collection with the provided details. An ID will be auto
 		/// generated and logged as an event, The caller of this function
 		/// will become the owner of the new collection.
-		// #[pallet::weight(T::WeightInfo::create_collection())]
-		#[pallet::weight(100_000)]
+		#[pallet::weight(T::WeightInfo::create_collection())]
 		pub fn create_collection(
 			origin: OriginFor<T>,
 			offchain_data: U8BoundedVec<T::CollectionOffchainDataLimit>,
@@ -540,8 +533,7 @@ pub mod pallet {
 		/// once the collection is removed (burned) from the storage there is no way to
 		/// get it back.
 		/// Must be called by the owner of the collection and collection must be empty.
-		// #[pallet::weight(T::WeightInfo::burn_collection())]
-		#[pallet::weight(100_000)]
+		#[pallet::weight(T::WeightInfo::burn_collection())]
 		pub fn burn_collection(
 			origin: OriginFor<T>,
 			collection_id: CollectionId,
@@ -566,8 +558,7 @@ pub mod pallet {
 		/// Makes the series closed. This means that it is not anymore
 		/// possible to add new NFTs to the series.
 		/// Can only be called by owner of the collection if collection is not empty
-		// #[pallet::weight(T::WeightInfo::close_collection())]
-		#[pallet::weight(100_000)]
+		#[pallet::weight(T::WeightInfo::close_collection())]
 		pub fn close_collection(
 			origin: OriginFor<T>,
 			collection_id: CollectionId,
@@ -594,8 +585,7 @@ pub mod pallet {
 		/// Set the maximum number (limit) of nfts in the collection
 		/// Can only be called by owner of the collection, if number of nfts is not greater than new
 		/// limit
-		// #[pallet::weight(T::WeightInfo::limit_collection())]
-		#[pallet::weight(100_000)]
+		#[pallet::weight(T::WeightInfo::limit_collection())]
 		pub fn limit_collection(
 			origin: OriginFor<T>,
 			collection_id: CollectionId,
@@ -635,8 +625,7 @@ pub mod pallet {
 		/// Can only be called by owner of the collection and NFT
 		/// NFT must not be in collection
 		/// Collection must not be closed or has reached limit
-		// #[pallet::weight(T::WeightInfo::add_nft_to_collection())]
-		#[pallet::weight(100_000)]
+		#[pallet::weight(T::WeightInfo::add_nft_to_collection())]
 		pub fn add_nft_to_collection(
 			origin: OriginFor<T>,
 			nft_id: NFTId,

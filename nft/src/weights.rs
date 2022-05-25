@@ -18,55 +18,93 @@ use frame_support::{traits::Get, weights::Weight};
 use sp_std::marker::PhantomData;
 
 pub trait WeightInfo {
-	fn create() -> Weight;
-	fn transfer() -> Weight;
-	fn burn() -> Weight;
-	fn finish_series() -> Weight;
+	fn create_nft() -> Weight;
+	fn burn_nft() -> Weight;
+	fn transfer_nft() -> Weight;
+	fn delegate_nft() -> Weight;
+	fn set_royalty() -> Weight;
 	fn set_nft_mint_fee() -> Weight;
-	fn delegate() -> Weight;
+	fn create_collection() -> Weight;
+	fn burn_collection() -> Weight;
+	fn close_collection() -> Weight;
+	fn limit_collection() -> Weight;
+	fn add_nft_to_collection() -> Weight;
 }
 
 /// Weight functions for `ternoa_nfts`.
 pub struct TernoaWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for TernoaWeight<T> {
-	// Storage: Nfts NFTMintFee (r:1 w:0)
+	// Storage: NFT NFTMintFee (r:1 w:0)
 	// Storage: System Account (r:1 w:1)
-	// Storage: Nfts NFTIdGenerator (r:1 w:1)
-	// Storage: Nfts SeriesIdGenerator (r:1 w:1)
-	// Storage: Nfts Series (r:1 w:1)
-	// Storage: Nfts Data (r:0 w:1)
-	fn create() -> Weight {
-		(46_461_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(5 as Weight))
-			.saturating_add(T::DbWeight::get().writes(5 as Weight))
+	// Storage: NFT Collections (r:1 w:1)
+	// Storage: NFT NextNFTId (r:1 w:1)
+	// Storage: NFT NFTs (r:0 w:1)
+	fn create_nft() -> Weight {
+		(52_700_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(4 as Weight))
+			.saturating_add(T::DbWeight::get().writes(4 as Weight))
 	}
-	// Storage: Nfts Data (r:1 w:1)
-	// Storage: Nfts Series (r:1 w:0)
-	fn transfer() -> Weight {
-		(17_960_000 as Weight)
+	// Storage: NFT NFTs (r:1 w:1)
+	// Storage: NFT Collections (r:1 w:1)
+	fn burn_nft() -> Weight {
+		(22_500_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(2 as Weight))
-			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+			.saturating_add(T::DbWeight::get().writes(2 as Weight))
 	}
-	// Storage: Nfts Data (r:1 w:1)
-	fn burn() -> Weight {
-		(14_920_000 as Weight)
+	// Storage: NFT NFTs (r:1 w:1)
+	fn transfer_nft() -> Weight {
+		(17_600_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(1 as Weight))
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))
 	}
-	// Storage: Nfts Series (r:1 w:1)
-	fn finish_series() -> Weight {
-		(14_170_000 as Weight)
+	// Storage: NFT NFTs (r:1 w:1)
+	// Storage: NFT DelegatedNFTs (r:0 w:1)
+	fn delegate_nft() -> Weight {
+		(17_700_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(1 as Weight))
+			.saturating_add(T::DbWeight::get().writes(2 as Weight))
+	}
+	// Storage: NFT NFTs (r:1 w:1)
+	fn set_royalty() -> Weight {
+		(29_900_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(1 as Weight))
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))
 	}
-	// Storage: Nfts NFTMintFee (r:0 w:1)
+	// Storage: NFT NFTMintFee (r:0 w:1)
 	fn set_nft_mint_fee() -> Weight {
-		(10_100_000 as Weight).saturating_add(T::DbWeight::get().writes(1 as Weight))
+		(20_000_000 as Weight)
+			.saturating_add(T::DbWeight::get().writes(1 as Weight))
 	}
-	// Storage: Nfts Data (r:1 w:1)
-	fn delegate() -> Weight {
-		(14_870_000 as Weight)
+	// Storage: NFT NextCollectionId (r:1 w:1)
+	// Storage: NFT Collections (r:0 w:1)
+	fn create_collection() -> Weight {
+		(17_800_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(1 as Weight))
+			.saturating_add(T::DbWeight::get().writes(2 as Weight))
+	}
+	// Storage: NFT Collections (r:1 w:1)
+	fn burn_collection() -> Weight {
+		(16_400_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(1 as Weight))
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+	}
+	// Storage: NFT Collections (r:1 w:1)
+	fn close_collection() -> Weight {
+		(16_100_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(1 as Weight))
+			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+	}
+	// Storage: NFT Collections (r:1 w:1)
+	fn limit_collection() -> Weight {
+		(17_000_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(1 as Weight))
+			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+	}
+	// Storage: NFT Collections (r:1 w:1)
+	// Storage: NFT NFTs (r:1 w:1)
+	fn add_nft_to_collection() -> Weight {
+		(21_800_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(2 as Weight))
+			.saturating_add(T::DbWeight::get().writes(2 as Weight))
 	}
 }

@@ -122,7 +122,7 @@ parameter_types! {
 
 impl Config for Test {
 	type Event = Event;
-	// type WeightInfo = weights::TernoaWeight<Test>;
+	type WeightInfo = ternoa_nft::weights::TernoaWeight<Test>;
 	type Currency = Balances;
 	type FeesCollector = MockFeeCollector;
 	type InitialMintFee = InitialMintFee;
