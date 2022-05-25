@@ -138,13 +138,13 @@ benchmarks! {
 		assert_eq!(NFT::<T>::delegated_nfts(NFT_ID), Some(bob));
 	}
 
-	// set_royalty {
-	// 	prepare_benchmarks::<T>();
-	// 	let alice = origin::<T>("ALICE");
-	// }: _(alice, NFT_ID, Permill::from_parts(1000000))
-	// verify {
-	// 	assert_eq!(NFT::<T>::nfts(NFT_ID).unwrap().royalty, Permill::from_parts(1000000));
-	// }
+	set_royalty {
+		prepare_benchmarks::<T>();
+		let alice = origin::<T>("ALICE");
+	}: _(alice, NFT_ID, Permill::from_parts(1000000))
+	verify {
+		assert_eq!(NFT::<T>::nfts(NFT_ID).unwrap().royalty, Permill::from_parts(1000000));
+	}
 
 	// set_nft_mint_fee {
 	// 	let old_mint_fee = NFT::<T>::nft_mint_fee();
