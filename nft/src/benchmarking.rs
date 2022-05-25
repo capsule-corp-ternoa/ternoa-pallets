@@ -88,7 +88,7 @@ benchmarks! {
 	verify {
 		let nft = NFT::<T>::nfts(nft_id).unwrap();
 		assert_eq!(nft.owner, alice);
-		assert_eq!(nft.collection_id, COLLECTION_ID);
+		assert_eq!(nft.collection_id, Some(COLLECTION_ID));
 		assert_eq!(NFT::<T>::collections(COLLECTION_ID).unwrap().nfts.contains(&nft_id), true);
 	}
 
