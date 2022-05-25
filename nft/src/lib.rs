@@ -34,7 +34,7 @@ use frame_support::{
 	},
 	transactional,
 };
-use frame_system::{pallet_prelude::*, Origin};
+use frame_system::pallet_prelude::*;
 use primitives::{
 	nfts::{Collection, CollectionId, NFTId, NFTData, NFTState},
 	U8BoundedVec,
@@ -679,11 +679,6 @@ impl<T: Config> traits::NFTExt for Pallet<T> {
 	type CollectionOffchainDataLimit = T::CollectionOffchainDataLimit;
 	type CollectionSizeLimit = T::CollectionSizeLimit;
 
-	fn get_nft_state(nft_id: NFTId) -> NFTState {
-		let nft = NFTs::<T>::get(nft_id).unwrap();
-		nft.state
-	}
-
 	fn set_nft_state(nft_id: NFTId, is_capsule: bool, listed_for_sale: bool, is_secret: bool, is_delegated: bool, is_soulbound: bool) -> DispatchResult {
         NFTs::<T>::try_mutate(nft_id, |data| -> DispatchResult {
 			let data = data.as_mut().ok_or(Error::<T>::NFTNotFound)?;
@@ -694,63 +689,6 @@ impl<T: Config> traits::NFTExt for Pallet<T> {
 		Ok(())
     }
 
-	fn get_nft(nft_id: NFTId) -> NFTData<Self::AccountId, Self::NFTOffchainDataLimit> {
-		let nft = NFTs::<T>::get(nft_id).unwrap();
-		nft
-	}
-
-	fn create_nft(
-		owner: Self::AccountId,
-		offchain_data: U8BoundedVec<Self::NFTOffchainDataLimit>,
-		royalty: Permill,
-		collection_id: Option<u32>,
-		is_soulbound: bool,
-	) -> Result<NFTId, frame_support::dispatch::DispatchErrorWithPostInfo> {
-        Self::create_nft(Origin::<T>::Signed(owner).into(), offchain_data, royalty, collection_id, is_soulbound)?;
-		return Ok(Self::get_next_nft_id() - 1)
-    }
-
-	fn set_nft(
-		nft_id: NFTId,
-		owner: Self::AccountId,
-		offchain_data: U8BoundedVec<Self::NFTOffchainDataLimit>,
-		royalty: Permill,
-		collection_id: Option<u32>,
-	) -> DispatchResult {
-        NFTs::<T>::try_mutate(nft_id, |data| -> DispatchResult {
-			let data = data.as_mut().ok_or(Error::<T>::NFTNotFound)?;
-			data.owner = owner;
-			data.offchain_data = offchain_data;
-			data.royalty = royalty;
-			data.collection_id = collection_id;
-			Ok(())
-		})?;
-
-		Ok(())
-    }
-
-
-	// fn benchmark_lock_series(series_id: NFTSeriesId) {
-	// 	Series::<T>::mutate(&series_id, |x| {
-	// 		x.as_mut().unwrap().draft = false;
-	// 	});
-	// }
-
-
-	// fn set_viewer(id: NFTId, value: Option<Self::AccountId>) -> DispatchResult {
-	// 	Data::<T>::try_mutate(id, |maybe_data| -> DispatchResult {
-	// 		let data = maybe_data.as_mut().ok_or(Error::<T>::NFTNotFound)?;
-	// 		data.is_delegated = value.is_some();
-	// 		Ok(().into())
-	// 	})?;
-
-	// 	match value {
-	// 		Some(v) => DelegatedNFTs::<T>::insert(id, v),
-	// 		None => DelegatedNFTs::<T>::remove(id),
-	// 	}
-
-	// 	Ok(())
-	// }
 }
 
 impl<T: Config> Pallet<T> {

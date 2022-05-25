@@ -379,46 +379,6 @@ mod burn_nft {
 			assert_noop!(err, Error::<Test>::CannotBurnDelegatedNFTs);
 		})
 	}
-
-	#[test]
-	fn collection_not_found() {
-		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
-			prepare_tests();
-			//Set Alice's NFT to an unexisting id
-			NFT::set_nft(
-				ALICE_NFT_ID,
-				ALICE,
-				BoundedVec::default(),
-				Permill::from_parts(100000),
-				Some(INVALID_ID),
-			)
-			.unwrap();
-			// Burning an nft
-			let err = NFT::burn_nft(origin(ALICE), ALICE_NFT_ID);
-			// Should fail because NFT's collection does not exist
-			assert_noop!(err, Error::<Test>::CollectionNotFound);
-		})
-	}
-
-	#[test]
-	fn nft_not_found_in_collection() {
-		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
-			prepare_tests();
-			//Set Alice's NFT collection, but without putting the NFTId in the collection object
-			NFT::set_nft(
-				ALICE_NFT_ID,
-				ALICE,
-				BoundedVec::default(),
-				Permill::from_parts(100000),
-				Some(ALICE_COLLECTION_ID),
-			)
-			.unwrap();
-			// Burning an nft
-			let err = NFT::burn_nft(origin(ALICE), ALICE_NFT_ID);
-			// Should fail because the collection associated does not contain the NFT
-			assert_noop!(err, Error::<Test>::NFTNotFoundInCollection);
-		})
-	}
 }
 
 mod transfer_nft {

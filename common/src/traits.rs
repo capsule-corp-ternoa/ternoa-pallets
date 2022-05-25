@@ -17,14 +17,10 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use frame_support::{
-	dispatch::{DispatchErrorWithPostInfo, DispatchResult},
+	dispatch::DispatchResult,
 	traits::Get,
 };
-use primitives::{
-	nfts::{NFTData, NFTId, NFTState},
-	U8BoundedVec,
-};
-use sp_arithmetic::per_things::Permill;
+use primitives::nfts::NFTId;
 use sp_std::fmt::Debug;
 
 pub trait NFTExt {
@@ -32,27 +28,6 @@ pub trait NFTExt {
 	type NFTOffchainDataLimit: Get<u32>;
 	type CollectionSizeLimit: Get<u32>;
 	type CollectionOffchainDataLimit: Get<u32>;
-
-	/*
-		create nft
-		get nft
-		set nft
-		burn nft
-		get state
-		set state
-		get delegated nft
-		set delegated nft (since it needs updating an other storage)
-		create collection
-		get collection
-		set collection
-		burn collection
-		add nft to collection (since it needs updating an other storage)
-
-		benchmark_close_collection ?
-		benchmark_limit_collection ?
-	*/
-
-	fn get_nft_state(id: NFTId) -> NFTState;
 
 	fn set_nft_state(
 		id: NFTId,
@@ -63,57 +38,6 @@ pub trait NFTExt {
 		is_soulbound: bool,
 	) -> DispatchResult;
 
-	fn get_nft(id: NFTId) -> NFTData<Self::AccountId, Self::NFTOffchainDataLimit>;
-
-	fn create_nft(
-		owner: Self::AccountId,
-		offchain_data: U8BoundedVec<Self::NFTOffchainDataLimit>,
-		royalty: Permill,
-		collection_id: Option<u32>,
-		is_soulbound: bool,
-	) -> Result<NFTId, DispatchErrorWithPostInfo>;
-
-	fn set_nft(
-		id: NFTId,
-		owner: Self::AccountId,
-		offchain_data: U8BoundedVec<Self::NFTOffchainDataLimit>,
-		royalty: Permill,
-		collection_id: Option<u32>,
-	) -> DispatchResult;
-
-	// /// Change the owner of an NFT.
-	// fn set_owner(id: NFTId, owner: &Self::AccountId) -> DispatchResult;
-
-	// /// Return the owner of an NFT.
-	// fn owner(id: NFTId) -> Option<Self::AccountId>;
-
-	// /// Is series completed(locked)
-	// fn is_nft_in_completed_series(id: NFTId) -> Option<bool>;
-
-	// /// Create NFT and return its NFTId
-	// fn create_nft(
-	// 	owner: Self::AccountId,
-	// 	offchain_data: BoundedVec<u8, Self::OffchainDataLimit>,
-	// 	collection_id: Option<CollectionId>,
-	// ) -> Result<NFTId, DispatchErrorWithPostInfo>;
-
-	// /// Get NFT data
-	// fn get_nft(id: NFTId) -> Option<NFT<Self::AccountId, Self::OffchainDataLimit>>;
-
-	// // /// Lock series WARNING: Only for benchmark purposes!
-	// // fn benchmark_lock_series(series_id: NFTSeriesId);
-
-	// /// TODO!
-	// fn set_listed_for_sale(id: NFTId, value: bool) -> DispatchResult;
-
-	// /// TODO!
-	// fn is_listed_for_sale(id: NFTId) -> Option<bool>;
-
-	// /// Set a collection to be either close or not-closed.
-	// fn set_collection_completion(collection_id: &CollectionId, value: bool) -> DispatchResult;
-
-	// /// Set the NFT viewer to a value.
-	// fn set_viewer(id: NFTId, value: Option<Self::AccountId>) -> DispatchResult;
 }
 
 // /// Trait that implements basic functionalities related to Ternoa Marketplace
