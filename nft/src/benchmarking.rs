@@ -41,6 +41,7 @@ pub fn origin<T: Config>(name: &'static str) -> RawOrigin<T::AccountId> {
 pub fn prepare_benchmarks<T: Config>() {
 	let alice: T::AccountId = get_account::<T>("ALICE");
 	let bob: T::AccountId = get_account::<T>("BOB");
+	let alice_origin = origin::<T>("ALICE");
 
 	// Give them enough caps
 	T::Currency::make_free_balance_be(&alice, BalanceOf::<T>::max_value());
@@ -48,14 +49,14 @@ pub fn prepare_benchmarks<T: Config>() {
 
 	// Create default NFT and collection
 	assert_ok!(NFT::<T>::create_nft(
-		RawOrigin::Signed(alice.clone()).into(),
+		alice_origin.clone().into(),
 		BoundedVec::try_from(vec![1]).unwrap(),
 		Permill::from_parts(100000),
 		None,
 		false,
 	));
 	assert_ok!(NFT::<T>::create_collection(
-		RawOrigin::Signed(alice).into(),
+		alice_origin.into(),
 		BoundedVec::try_from(vec![1]).unwrap(),
 		None,
 	));
@@ -85,7 +86,10 @@ benchmarks! {
 
 	}: _(alice_origin, BoundedVec::try_from(vec![1]).unwrap(), Permill::from_parts(100000), Some(COLLECTION_ID), false)
 	verify {
-		assert_eq!(NFT::<T>::nfts(nft_id).unwrap().owner, alice);
+		let nft = NFT::<T>::nfts(nft_id).unwrap();
+		assert_eq!(nft.owner, alice);
+		assert_eq!(nft.collection_id, COLLECTION_ID);
+		assert_eq!(NFT::<T>::collections(COLLECTION_ID).unwrap().nfts.contains(&nft_id), true);
 	}
 
 	// burn_nft {
