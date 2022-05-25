@@ -159,7 +159,7 @@ benchmarks! {
 		let alice: T::AccountId = get_account::<T>("ALICE");
 		let alice_origin = origin::<T>("ALICE");
 		let collection_id = 1;
-	}: _(alice_origin.clone(), BoundedVec::try_from(vec![1]).unwrap(), Some(10))
+	}: _(alice_origin, BoundedVec::try_from(vec![1]).unwrap(), Some(10))
 	verify {
 		assert_eq!(NFT::<T>::collections(collection_id).unwrap().owner, alice);
 	}

@@ -132,6 +132,7 @@ mod create_nft {
 			let nft = NFT::nfts(nft_id);
 			assert_eq!(nft, Some(data.clone()));
 			assert_eq!(Balances::free_balance(ALICE), alice_balance - NFT::nft_mint_fee());
+			assert_eq!(NFT::collections(ALICE_COLLECTION_ID).unwrap().nfts.contains(&nft_id), true);
 
 			// Events checks
 			let event = NFTsEvent::NFTCreated {
