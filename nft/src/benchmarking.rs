@@ -180,45 +180,48 @@ benchmarks! {
 		assert_eq!(NFT::<T>::collections(COLLECTION_ID).unwrap().is_closed, true);
 	}
 
-	// limit_collection {
-	// 	prepare_benchmarks::<T>();
-	// 	let alice: T::AccountId = get_account::<T>("ALICE");
-	// 	let alice_origin = origin::<T>("ALICE");
-	// 	let limit = T::CollectionSizeLimit::get();
-	// 	for _i in 0..limit {
-	// 		NFT::<T>::create_nft(
-	// 			alice_origin.into(),
-	// 			BoundedVec::default(),
-	// 			Permill::from_parts(0),
-	// 			Some(COLLECTION_ID),
-	// 			false,
-	// 		)
-	// 		.unwrap();
-	// 	}
-	// }: _(alice, COLLECTION_ID, limit)
-	// verify {
-	// 	assert_eq!(NFT::<T>::collections(COLLECTION_ID).unwrap().limit, Some(limit));
-	// }
+	limit_collection {
+		prepare_benchmarks::<T>();
+		let alice = origin::<T>("ALICE");
 
-	// add_nft_to_collection {
-	// 	prepare_benchmarks::<T>();
-	// 	let alice: T::AccountId = get_account::<T>("ALICE");
-	// 	let alice_origin = origin::<T>("ALICE");
-	// 	let limit = T::CollectionSizeLimit::get() - 1;
-	// 	for _i in 0..limit {
-	// 		NFT::<T>::create_nft(
-	// 			alice_origin.into(),
-	// 			BoundedVec::default(),
-	// 			Permill::from_parts(0),
-	// 			Some(COLLECTION_ID),
-	// 			false,
-	// 		)
-	// 		.unwrap();
-	// 	}
-	// }: _(alice, NFT_ID, COLLECTION_ID)
-	// verify {
-	// 	assert_eq!(NFT::<T>::nfts(NFT_ID).unwrap().collection_id, Some(COLLECTION_ID));
-	// }
+		// Fill the collection
+		let limit = T::CollectionSizeLimit::get();
+		for _i in 0..limit {
+			NFT::<T>::create_nft(
+				alice.clone().into(),
+				BoundedVec::default(),
+				Permill::from_parts(0),
+				Some(COLLECTION_ID),
+				false,
+			)
+			.unwrap();
+		}
+	}: _(alice, COLLECTION_ID, limit)
+	verify {
+		assert_eq!(NFT::<T>::collections(COLLECTION_ID).unwrap().limit, Some(limit));
+	}
+
+	add_nft_to_collection {
+		prepare_benchmarks::<T>();
+		let alice = origin::<T>("ALICE");
+
+		// Fill collection
+		let limit = T::CollectionSizeLimit::get() - 1;
+		for _i in 0..limit {
+			NFT::<T>::create_nft(
+				alice.clone().into(),
+				BoundedVec::default(),
+				Permill::from_parts(0),
+				Some(COLLECTION_ID),
+				false,
+			)
+			.unwrap();
+		}
+	}: _(alice, NFT_ID, COLLECTION_ID)
+	verify {
+		assert_eq!(NFT::<T>::nfts(NFT_ID).unwrap().collection_id, Some(COLLECTION_ID));
+		assert_eq!(NFT::<T>::collections(COLLECTION_ID).unwrap().nfts.contains(&NFT_ID), true);
+	}
 }
 
 impl_benchmark_test_suite!(NFT, crate::tests::mock::new_test_ext(), crate::tests::mock::Test);
