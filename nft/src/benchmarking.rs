@@ -110,7 +110,7 @@ benchmarks! {
 		}
 
 		// Add NFT to collection
-		NFT::<T>::add_nft_to_collection(alice_origin.clone(), NFT_ID, COLLECTION_ID).unwrap();
+		NFT::<T>::add_nft_to_collection(alice_origin.clone().into(), NFT_ID, COLLECTION_ID).unwrap();
 	}: _(alice, NFT_ID)
 	verify {
 		assert_eq!(NFT::<T>::nfts(NFT_ID), None);
