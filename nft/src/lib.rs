@@ -250,6 +250,8 @@ pub mod pallet {
 		/// Operation is not permitted because the nfts number in the collection are greater than
 		/// the new limit.
 		CollectionNFTsNumberGreaterThanLimit,
+		/// Random error
+		RandomError,
 	}
 
 	#[pallet::call]
@@ -297,7 +299,7 @@ pub mod pallet {
 					}
 					// Execute
 					let tmp_nft_id = Self::get_next_nft_id();
-					collection.nfts.try_push(tmp_nft_id).expect("Cannot happen.");
+					collection.nfts.try_push(tmp_nft_id).map_err(|_| Error::<T>::RandomError)?;
 					nft_id = Some(tmp_nft_id);
 					Ok(().into())
 				})?;
@@ -661,7 +663,7 @@ pub mod pallet {
 				})?;
 
 				// Execute
-				collection.nfts.try_push(nft_id).expect("Cannot happen.");
+				collection.nfts.try_push(nft_id).map_err(|_| Error::<T>::RandomError)?;
 
 				Ok(().into())
 			})?;
