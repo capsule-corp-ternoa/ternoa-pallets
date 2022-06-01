@@ -102,7 +102,7 @@ pub mod pallet {
 	/// Host much does it cost to mint a NFT (extra fee on top of the tx fees).
 	#[pallet::storage]
 	#[pallet::getter(fn nft_mint_fee)]
-	pub(super) type NFTMintFee<T: Config> =
+	pub(super) type NftMintFee<T: Config> =
 		StorageValue<_, BalanceOf<T>, ValueQuery, T::InitialMintFee>;
 
 	/// Counter for NFT ids.
@@ -118,7 +118,7 @@ pub mod pallet {
 	/// Data related to NFTs.
 	#[pallet::storage]
 	#[pallet::getter(fn nfts)]
-	pub type NFTs<T: Config> = StorageMap<
+	pub type Nfts<T: Config> = StorageMap<
 		_,
 		Blake2_128Concat,
 		NFTId,
@@ -262,7 +262,7 @@ pub mod pallet {
 
 			// Checks
 			// The Caller needs to pay the NFT Mint fee.
-			let mint_fee = NFTMintFee::<T>::get();
+			let mint_fee = NftMintFee::<T>::get();
 			let reason = WithdrawReasons::FEE;
 			let imbalance = T::Currency::withdraw(&who, mint_fee, reason, KeepAlive)?;
 			T::FeesCollector::on_unbalanced(imbalance);
@@ -306,7 +306,7 @@ pub mod pallet {
 			);
 
 			// Save
-			NFTs::<T>::insert(nft_id, nft);
+			Nfts::<T>::insert(nft_id, nft);
 
 			let event = Event::NFTCreated {
 				nft_id,
@@ -329,7 +329,7 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::burn_nft())]
 		pub fn burn_nft(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
-			let nft = NFTs::<T>::get(nft_id).ok_or(Error::<T>::NFTNotFound)?;
+			let nft = Nfts::<T>::get(nft_id).ok_or(Error::<T>::NFTNotFound)?;
 
 			// Checks
 			ensure!(nft.owner == who, Error::<T>::NotTheNFTOwner);
@@ -353,7 +353,7 @@ pub mod pallet {
 			}
 
 			// Execute
-			NFTs::<T>::remove(nft_id);
+			Nfts::<T>::remove(nft_id);
 			Self::deposit_event(Event::NFTBurned { nft_id });
 			Ok(().into())
 		}
@@ -369,7 +369,7 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 			let recipient = T::Lookup::lookup(recipient)?;
 
-			NFTs::<T>::try_mutate(nft_id, |x| -> DispatchResult {
+			Nfts::<T>::try_mutate(nft_id, |x| -> DispatchResult {
 				let nft = x.as_mut().ok_or(Error::<T>::NFTNotFound)?;
 
 				// Checks
@@ -407,7 +407,7 @@ pub mod pallet {
 			};
 			let is_delegated = recipient_account_id != who;
 
-			NFTs::<T>::try_mutate(nft_id, |maybe_nft| -> DispatchResult {
+			Nfts::<T>::try_mutate(nft_id, |maybe_nft| -> DispatchResult {
 				let nft = maybe_nft.as_mut().ok_or(Error::<T>::NFTNotFound)?;
 
 				// Checks
@@ -445,7 +445,7 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			NFTs::<T>::try_mutate(nft_id, |x| -> DispatchResult {
+			Nfts::<T>::try_mutate(nft_id, |x| -> DispatchResult {
 				let nft = x.as_mut().ok_or(Error::<T>::NFTNotFound)?;
 
 				// Checks
@@ -475,7 +475,7 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
 
-			NFTMintFee::<T>::put(fee);
+			NftMintFee::<T>::put(fee);
 
 			let event = Event::NFTMintFeeSet { fee };
 
@@ -629,7 +629,7 @@ pub mod pallet {
 							as usize,
 					Error::<T>::CollectionHasReachedLimit
 				);
-				NFTs::<T>::try_mutate(nft_id, |y| -> DispatchResult {
+				Nfts::<T>::try_mutate(nft_id, |y| -> DispatchResult {
 					let nft = y.as_mut().ok_or(Error::<T>::NFTNotFound)?;
 
 					//Checks
@@ -671,7 +671,7 @@ impl<T: Config> traits::NFTExt for Pallet<T> {
 		is_delegated: bool,
 		is_soulbound: bool,
 	) -> DispatchResult {
-		NFTs::<T>::try_mutate(nft_id, |data| -> DispatchResult {
+		Nfts::<T>::try_mutate(nft_id, |data| -> DispatchResult {
 			let data = data.as_mut().ok_or(Error::<T>::NFTNotFound)?;
 			data.state =
 				NFTState::new(is_capsule, listed_for_sale, is_secret, is_delegated, is_soulbound);
