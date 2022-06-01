@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Ternoa.  If not, see <http://www.gnu.org/licenses/>.
 
-use crate::{self as ternoa_nft, /*weights,*/ Config, NegativeImbalanceOf};
+use crate::{self as ternoa_nft, Config, NegativeImbalanceOf};
 use frame_support::{
 	parameter_types,
 	traits::{ConstU32, Contains, Currency},

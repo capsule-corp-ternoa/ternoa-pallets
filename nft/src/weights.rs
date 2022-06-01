@@ -72,8 +72,7 @@ impl<T: frame_system::Config> WeightInfo for TernoaWeight<T> {
 	}
 	// Storage: NFT NFTMintFee (r:0 w:1)
 	fn set_nft_mint_fee() -> Weight {
-		(20_000_000 as Weight)
-			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+		(20_000_000 as Weight).saturating_add(T::DbWeight::get().writes(1 as Weight))
 	}
 	// Storage: NFT NextCollectionId (r:1 w:1)
 	// Storage: NFT Collections (r:0 w:1)

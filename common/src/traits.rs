@@ -16,10 +16,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use frame_support::{
-	dispatch::DispatchResult,
-	traits::Get,
-};
+use frame_support::{dispatch::DispatchResult, traits::Get};
 use primitives::nfts::NFTId;
 use sp_std::fmt::Debug;
 
@@ -37,7 +34,6 @@ pub trait NFTExt {
 		is_delegated: bool,
 		is_soulbound: bool,
 	) -> DispatchResult;
-
 }
 
 // /// Trait that implements basic functionalities related to Ternoa Marketplace

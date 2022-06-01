@@ -16,11 +16,13 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use frame_support::{traits::Get, BoundedVec, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, RuntimeDebug};
-use parity_scale_codec::{Decode, Encode};
+use frame_support::{
+	traits::Get, BoundedVec, CloneNoBound, PartialEqNoBound, RuntimeDebug, RuntimeDebugNoBound,
+};
+use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
-use sp_std::fmt::Debug;
 use sp_arithmetic::per_things::Permill;
+use sp_std::fmt::Debug;
 
 use crate::U8BoundedVec;
 
@@ -31,11 +33,8 @@ pub type NFTId = u32;
 pub type CollectionId = u32;
 
 /// Data related to an NFT state, such as if it is listed for sale.
-#[derive(
-	Encode, Decode, Eq, Default, TypeInfo, Clone, PartialEq, RuntimeDebug,
-)]
-pub struct NFTState
-{
+#[derive(Encode, Decode, Eq, Default, TypeInfo, Clone, PartialEq, RuntimeDebug, MaxEncodedLen)]
+pub struct NFTState {
 	/// Is NFT converted to capsule
 	pub is_capsule: bool,
 	/// Is NFT listed for sale
@@ -48,8 +47,7 @@ pub struct NFTState
 	pub is_soulbound: bool,
 }
 
-impl NFTState
-{
+impl NFTState {
 	pub fn new(
 		is_capsule: bool,
 		listed_for_sale: bool,
@@ -57,36 +55,30 @@ impl NFTState
 		is_delegated: bool,
 		is_soulbound: bool,
 	) -> Self {
-		Self {
-			is_capsule,
-			listed_for_sale,
-			is_secret,
-			is_delegated,
-			is_soulbound,
-		}
+		Self { is_capsule, listed_for_sale, is_secret, is_delegated, is_soulbound }
 	}
 
 	pub fn new_default(is_soulbound: bool) -> Self {
-		Self::new(
-			false,
-			false,
-			false,
-			false,
-			is_soulbound,
-		)
+		Self::new(false, false, false, false, is_soulbound)
 	}
 }
 
 /// Data related to an NFT, such as who is its owner.
 #[derive(
-	Encode, Decode, Eq, Default, TypeInfo, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound,
+	Encode,
+	Decode,
+	Eq,
+	Default,
+	TypeInfo,
+	CloneNoBound,
+	PartialEqNoBound,
+	RuntimeDebugNoBound,
+	MaxEncodedLen,
 )]
 #[scale_info(skip_type_params(NFTOffchainDataLimit))]
 #[codec(mel_bound(AccountId: MaxEncodedLen))]
-pub struct NFTData<
-	AccountId, 
-	NFTOffchainDataLimit,
-> where
+pub struct NFTData<AccountId, NFTOffchainDataLimit>
+where
 	AccountId: Clone + PartialEq + Debug,
 	NFTOffchainDataLimit: Get<u32>,
 {
@@ -104,13 +96,8 @@ pub struct NFTData<
 	pub state: NFTState,
 }
 
-impl<
-	AccountId, 
-	NFTOffchainDataLimit,
-> NFTData<
-	AccountId, 
-	NFTOffchainDataLimit,
-> where
+impl<AccountId, NFTOffchainDataLimit> NFTData<AccountId, NFTOffchainDataLimit>
+where
 	AccountId: Clone + PartialEq + Debug,
 	NFTOffchainDataLimit: Get<u32>,
 {
@@ -122,14 +109,7 @@ impl<
 		state: NFTState,
 		collection_id: Option<CollectionId>,
 	) -> Self {
-		Self {
-			owner,
-			creator,
-			offchain_data,
-			royalty,
-			state,
-			collection_id,
-		}
+		Self { owner, creator, offchain_data, royalty, state, collection_id }
 	}
 
 	pub fn new_default(
@@ -137,7 +117,7 @@ impl<
 		offchain_data: U8BoundedVec<NFTOffchainDataLimit>,
 		royalty: Permill,
 		collection_id: Option<CollectionId>,
-		is_soulbound: bool
+		is_soulbound: bool,
 	) -> Self {
 		Self::new(
 			owner.clone(),
@@ -152,18 +132,20 @@ impl<
 
 /// Data related to collections
 #[derive(
-	Encode, Decode, Eq, Default, TypeInfo, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound,
+	Encode,
+	Decode,
+	Eq,
+	Default,
+	TypeInfo,
+	CloneNoBound,
+	PartialEqNoBound,
+	RuntimeDebugNoBound,
+	MaxEncodedLen,
 )]
-#[scale_info(skip_type_params(
-	CollectionOffChainDataLimit,
-	CollectionSizeLimit,
-))]
+#[scale_info(skip_type_params(CollectionOffChainDataLimit, CollectionSizeLimit,))]
 #[codec(mel_bound(AccountId: MaxEncodedLen))]
-pub struct Collection<
-	AccountId,
-	CollectionOffChainDataLimit,
-	CollectionSizeLimit,
-> where
+pub struct Collection<AccountId, CollectionOffChainDataLimit, CollectionSizeLimit>
+where
 	AccountId: Clone + PartialEq + Debug,
 	CollectionOffChainDataLimit: Get<u32>,
 	CollectionSizeLimit: Get<u32>,
@@ -178,33 +160,20 @@ pub struct Collection<
 	pub limit: Option<u32>,
 	/// Is collection closed for adding new NFTs
 	pub is_closed: bool,
-  }
+}
 
-
-impl<
-	AccountId, 
-	CollectionOffChainDataLimit, 
-	CollectionSizeLimit,
-> Collection<
-	AccountId, 
-	CollectionOffChainDataLimit,
-	CollectionSizeLimit,
-> where
+impl<AccountId, CollectionOffChainDataLimit, CollectionSizeLimit>
+	Collection<AccountId, CollectionOffChainDataLimit, CollectionSizeLimit>
+where
 	AccountId: Clone + PartialEq + Debug,
 	CollectionOffChainDataLimit: Get<u32>,
 	CollectionSizeLimit: Get<u32>,
 {
 	pub fn new(
 		owner: AccountId,
-		offchain_data: U8BoundedVec<CollectionOffChainDataLimit>, 
+		offchain_data: U8BoundedVec<CollectionOffChainDataLimit>,
 		limit: Option<u32>,
 	) -> Self {
-		Self { 
-			owner,
-			offchain_data, 
-			nfts: BoundedVec::default(),
-			limit,
-			is_closed: false
-		}
+		Self { owner, offchain_data, nfts: BoundedVec::default(), limit, is_closed: false }
 	}
 }
