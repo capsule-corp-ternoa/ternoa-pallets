@@ -138,7 +138,7 @@ benchmarks! {
 		let alice = origin::<T>("ALICE");
 		let bob: T::AccountId = get_account::<T>("BOB");
 		let bob_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(bob.clone());
-		info!("TRANSFER", s);
+		info!("TRANSFER");
 	}: _(alice, NFT_ID, bob_lookup)
 	verify {
 		assert_eq!(NFT::<T>::nfts(NFT_ID).unwrap().owner, bob);
@@ -149,7 +149,7 @@ benchmarks! {
 		let alice = origin::<T>("ALICE");
 		let bob: T::AccountId = get_account::<T>("BOB");
 		let bob_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(bob.clone());
-		info!("DELEGATE", s);
+		info!("DELEGATE");
 	}: _(alice, NFT_ID, Some(bob_lookup))
 	verify {
 		assert_eq!(NFT::<T>::nfts(NFT_ID).unwrap().state.is_delegated, true);
@@ -159,7 +159,7 @@ benchmarks! {
 	set_royalty {
 		prepare_benchmarks::<T>();
 		let alice = origin::<T>("ALICE");
-		info!("ROYALTY", s);
+		info!("ROYALTY");
 	}: _(alice, NFT_ID, PERCENT_100)
 	verify {
 		assert_eq!(NFT::<T>::nfts(NFT_ID).unwrap().royalty, PERCENT_100);
@@ -168,7 +168,7 @@ benchmarks! {
 	set_nft_mint_fee {
 		let old_mint_fee = NFT::<T>::nft_mint_fee();
 		let new_mint_fee = 20u32;
-		info!("Set nft mint fee", s);
+		info!("Set nft mint fee");
 	}: _(RawOrigin::Root, new_mint_fee.clone().into())
 	verify {
 		assert_ne!(old_mint_fee, new_mint_fee.clone().into());
@@ -181,7 +181,7 @@ benchmarks! {
 		let alice_origin = origin::<T>("ALICE");
 		let collection_id = 1;
 		let collection_offchain_data = BoundedVec::try_from(vec![1; T::CollectionOffchainDataLimit::get().try_into().unwrap()]).expect("It will never happen.");
-		info!("Create collection", s);
+		info!("Create collection");
 	}: _(alice_origin, collection_offchain_data, Some(10))
 	verify {
 		assert_eq!(NFT::<T>::collections(collection_id).unwrap().owner, alice);
@@ -190,7 +190,7 @@ benchmarks! {
 	burn_collection {
 		prepare_benchmarks::<T>();
 		let alice = origin::<T>("ALICE");
-		info!("Burn collection", s);
+		info!("Burn collection");
 	}: _(alice, COLLECTION_ID)
 	verify {
 		assert_eq!(NFT::<T>::collections(COLLECTION_ID), None);
@@ -199,7 +199,7 @@ benchmarks! {
 	close_collection {
 		prepare_benchmarks::<T>();
 		let alice = origin::<T>("ALICE");
-		info!("Close collection", s);
+		info!("Close collection");
 	}: _(alice, COLLECTION_ID)
 	verify {
 		assert_eq!(NFT::<T>::collections(COLLECTION_ID).unwrap().is_closed, true);
@@ -208,7 +208,7 @@ benchmarks! {
 	limit_collection {
 		prepare_benchmarks::<T>();
 		let alice = origin::<T>("ALICE");
-		info!("Limit collection", s);
+		info!("Limit collection");
 	}: _(alice, COLLECTION_ID, 1)
 	verify {
 		assert_eq!(NFT::<T>::collections(COLLECTION_ID).unwrap().limit, Some(1));
