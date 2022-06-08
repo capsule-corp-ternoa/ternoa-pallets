@@ -17,14 +17,14 @@
 #![cfg(feature = "runtime-benchmarks")]
 
 use super::*;
+use crate::Pallet as NFT;
 use frame_benchmarking::{account as benchmark_account, benchmarks, impl_benchmark_test_suite};
 use frame_support::{assert_ok, traits::Currency, BoundedVec};
 use frame_system::RawOrigin;
+use log::info;
 use sp_arithmetic::per_things::Permill;
 use sp_runtime::traits::{Bounded, StaticLookup};
 use sp_std::prelude::*;
-
-use crate::Pallet as NFT;
 
 const NFT_ID: u32 = 0;
 const COLLECTION_ID: u32 = 0;
@@ -50,9 +50,11 @@ pub fn prepare_benchmarks<T: Config>() {
 	T::Currency::make_free_balance_be(&bob, BalanceOf::<T>::max_value());
 
 	let nft_offchain_data =
-		BoundedVec::try_from(vec![1; T::NFTOffchainDataLimit::get().try_into().unwrap()]).expect("It will never happen.");
-	let collection_offchain_data = BoundedVec::try_from(vec![1; T::CollectionOffchainDataLimit::get().try_into().unwrap()])
-		.expect("It will never happen.");
+		BoundedVec::try_from(vec![1; T::NFTOffchainDataLimit::get().try_into().unwrap()])
+			.expect("It will never happen.");
+	let collection_offchain_data =
+		BoundedVec::try_from(vec![1; T::CollectionOffchainDataLimit::get().try_into().unwrap()])
+			.expect("It will never happen.");
 
 	// Create default NFT and collection.
 	assert_ok!(NFT::<T>::create_nft(
@@ -73,9 +75,10 @@ benchmarks! {
 		let alice_origin = origin::<T>("ALICE");
 
 		let nft_offchain_data = BoundedVec::try_from(vec![1; T::NFTOffchainDataLimit::get().try_into().unwrap()]).expect("It will never happen.");
-
+		info!("S value is {:?}", s);
 		// Fill the collection.
 		for _i in 0..s {
+			info!("--- i value is {:?}", _i);
 			NFT::<T>::create_nft(
 				alice_origin.clone().into(),
 				nft_offchain_data.clone(),

@@ -274,15 +274,12 @@ pub mod pallet {
 			if let Some(collection_id) = &collection_id {
 				Collections::<T>::try_mutate(collection_id, |x| -> DispatchResult {
 					let collection = x.as_mut().ok_or(Error::<T>::CollectionNotFound)?;
+					let limit =
+						collection.limit.unwrap_or_else(|| T::CollectionSizeLimit::get()) as usize;
 
 					ensure!(collection.owner == who, Error::<T>::NotTheCollectionOwner);
 					ensure!(!collection.is_closed, Error::<T>::CollectionIsClosed);
-					ensure!(
-						collection.nfts.len() <
-							collection.limit.unwrap_or_else(|| T::CollectionSizeLimit::get())
-								as usize,
-						Error::<T>::CollectionHasReachedLimit
-					);
+					ensure!(collection.nfts.len() < limit, Error::<T>::CollectionHasReachedLimit);
 					// Execute
 					let tmp_nft_id = Self::get_next_nft_id();
 					collection
@@ -552,20 +549,15 @@ pub mod pallet {
 			collection_id: CollectionId,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
-
 			Collections::<T>::try_mutate(collection_id, |x| -> DispatchResult {
 				let collection = x.as_mut().ok_or(Error::<T>::CollectionNotFound)?;
-
-				// Checks
 				ensure!(collection.owner == who, Error::<T>::NotTheCollectionOwner);
-
-				// Execute
 				collection.is_closed = true;
 
 				Ok(().into())
 			})?;
-
 			Self::deposit_event(Event::CollectionClosed { collection_id });
+
 			Ok(().into())
 		}
 
@@ -619,16 +611,13 @@ pub mod pallet {
 
 			Collections::<T>::try_mutate(collection_id, |x| -> DispatchResult {
 				let collection = x.as_mut().ok_or(Error::<T>::CollectionNotFound)?;
+				let limit =
+					collection.limit.unwrap_or_else(|| T::CollectionSizeLimit::get()) as usize;
 
 				// Checks
 				ensure!(collection.owner == who, Error::<T>::NotTheCollectionOwner);
 				ensure!(!collection.is_closed, Error::<T>::CollectionIsClosed);
-				ensure!(
-					collection.nfts.len() <
-						collection.limit.unwrap_or_else(|| T::CollectionSizeLimit::get())
-							as usize,
-					Error::<T>::CollectionHasReachedLimit
-				);
+				ensure!(collection.nfts.len() < limit, Error::<T>::CollectionHasReachedLimit);
 				Nfts::<T>::try_mutate(nft_id, |y| -> DispatchResult {
 					let nft = y.as_mut().ok_or(Error::<T>::NFTNotFound)?;
 
