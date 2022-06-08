@@ -78,7 +78,7 @@ benchmarks! {
 		info!("S value is {:?}", s);
 		// Fill the collection.
 		for _i in 0..s {
-			if _i % 100 == 0 {
+			if _i % 1000 == 0 {
 				info!("--- i value is {:?}", _i);
 			}
 			NFT::<T>::create_nft(
