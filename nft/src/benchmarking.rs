@@ -78,7 +78,9 @@ benchmarks! {
 		info!("S value is {:?}", s);
 		// Fill the collection.
 		for _i in 0..s {
-			info!("--- i value is {:?}", _i);
+			if _i % 100 == 0 {
+				info!("--- i value is {:?}", _i);
+			}
 			NFT::<T>::create_nft(
 				alice_origin.clone().into(),
 				nft_offchain_data.clone(),
