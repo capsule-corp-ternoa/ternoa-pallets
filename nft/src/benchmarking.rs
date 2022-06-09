@@ -29,7 +29,6 @@ use ternoa_common::traits::NFTExt;
 const NFT_ID: u32 = 0;
 const COLLECTION_ID: u32 = 0;
 const PERCENT_100: Permill = Permill::from_parts(1000000);
-const PERCENT_0: Permill = Permill::from_parts(0);
 
 pub fn get_account<T: Config>(name: &'static str) -> T::AccountId {
 	let account: T::AccountId = benchmark_account(name, 0, 0);
@@ -73,7 +72,7 @@ benchmarks! {
 		prepare_benchmarks::<T>();
 		let alice: T::AccountId = get_account::<T>("ALICE");
 		let alice_origin = origin::<T>("ALICE");
-		let nft_offchain_data = BoundedVec::try_from(vec![1; T::NFTOffchainDataLimit::get().try_into().unwrap()]).expect("It will never happen.");
+		let nft_offchain_data: BoundedVec<u8, T::NFTOffchainDataLimit> = BoundedVec::try_from(vec![1; T::NFTOffchainDataLimit::get().try_into().unwrap()]).expect("It will never happen.");
 		// Fill the collection.
 		let collection_id = NFT::<T>::get_next_collection_id();
 		NFT::<T>::create_full_collection(alice.clone(), collection_id, s).unwrap();
@@ -92,10 +91,10 @@ benchmarks! {
 		let s in 0 .. T::CollectionSizeLimit::get() - 1;
 		prepare_benchmarks::<T>();
 		let alice = origin::<T>("ALICE");
-		let nft_offchain_data = BoundedVec::try_from(vec![1; T::NFTOffchainDataLimit::get().try_into().unwrap()]).expect("It will never happen.");
+		let nft_offchain_data: BoundedVec<u8, T::NFTOffchainDataLimit> = BoundedVec::try_from(vec![1; T::NFTOffchainDataLimit::get().try_into().unwrap()]).expect("It will never happen.");
 		// Fill the collection.
 		let collection_id = NFT::<T>::get_next_collection_id();
-		NFT::<T>::create_full_collection(alice.clone(), collection_id, s).unwrap();
+		NFT::<T>::create_full_collection(get_account::<T>("ALICE"), collection_id, s).unwrap();
 		// Add NFT to collection.
 		NFT::<T>::add_nft_to_collection(alice.clone().into(), NFT_ID, collection_id).unwrap();
 	}: _(alice, NFT_ID)
@@ -181,10 +180,10 @@ benchmarks! {
 		let s in 0 .. T::CollectionSizeLimit::get() - 1;
 		prepare_benchmarks::<T>();
 		let alice = origin::<T>("ALICE");
-		let nft_offchain_data = BoundedVec::try_from(vec![1; T::NFTOffchainDataLimit::get().try_into().unwrap()]).expect("It will never happen.");
+		let nft_offchain_data: BoundedVec<u8, T::NFTOffchainDataLimit> = BoundedVec::try_from(vec![1; T::NFTOffchainDataLimit::get().try_into().unwrap()]).expect("It will never happen.");
 		// Fill the collection.
 		let collection_id = NFT::<T>::get_next_collection_id();
-		NFT::<T>::create_full_collection(alice.clone(), collection_id, s).unwrap();
+		NFT::<T>::create_full_collection(get_account::<T>("ALICE"), collection_id, s).unwrap();
 	}: _(alice, NFT_ID, collection_id)
 	verify {
 		assert_eq!(NFT::<T>::nfts(NFT_ID).unwrap().collection_id, Some(collection_id));

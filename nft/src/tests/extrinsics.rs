@@ -15,12 +15,12 @@
 // along with Ternoa.  If not, see <http://www.gnu.org/licenses/>.
 
 use super::mock::*;
+use crate::{tests::mock, Collection, CollectionId, Error, Event as NFTsEvent, NFTData, NFTId};
 use frame_support::{assert_noop, assert_ok, error::BadOrigin, BoundedVec};
 use frame_system::RawOrigin;
 use pallet_balances::Error as BalanceError;
 use sp_arithmetic::per_things::Permill;
 use ternoa_common::traits::NFTExt;
-use crate::{tests::mock, Collection, CollectionId, Error, Event as NFTsEvent, NFTData, NFTId};
 
 const ALICE_NFT_ID: NFTId = 0;
 const BOB_NFT_ID: NFTId = 1;
