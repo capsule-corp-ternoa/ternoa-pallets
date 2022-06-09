@@ -17,7 +17,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use frame_support::{dispatch::DispatchResult, traits::Get};
-use primitives::nfts::NFTId;
+use primitives::nfts::{CollectionId, NFTId};
 use sp_std::fmt::Debug;
 
 pub trait NFTExt {
@@ -33,6 +33,12 @@ pub trait NFTExt {
 		is_secret: bool,
 		is_delegated: bool,
 		is_soulbound: bool,
+	) -> DispatchResult;
+
+	fn create_full_collection(
+		owner: Self::AccountId,
+		collection_id: CollectionId,
+		amount_in_collection: u32,
 	) -> DispatchResult;
 }
 

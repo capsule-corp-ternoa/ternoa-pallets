@@ -25,6 +25,7 @@ use log::info;
 use sp_arithmetic::per_things::Permill;
 use sp_runtime::traits::{Bounded, StaticLookup};
 use sp_std::prelude::*;
+use ternoa_common::traits::NFTExt;
 
 const NFT_ID: u32 = 0;
 const COLLECTION_ID: u32 = 0;
@@ -76,28 +77,30 @@ benchmarks! {
 		let nft_offchain_data = BoundedVec::try_from(vec![1; T::NFTOffchainDataLimit::get().try_into().unwrap()]).expect("It will never happen.");
 		info!("S value is {:?}", s);
 		// Fill the collection.
-		for _i in 0..s {
-			if _i % 100_000 == 0 {
-				info!("--- i value is {:?}", _i);
-			}
-			NFT::<T>::create_nft(
-				alice_origin.clone().into(),
-				nft_offchain_data.clone(),
-				PERCENT_0,
-				Some(COLLECTION_ID),
-				false,
-			)
-			.unwrap();
-		}
-	}: _(alice_origin, nft_offchain_data, PERCENT_100, Some(COLLECTION_ID), false)
+		let collection_id = NFT::<T>::get_next_collection_id();
+		NFT::<T>::create_full_collection(alice.clone(), collection_id, s).unwrap();
+		// for _i in 0..s {
+		// 	if _i % 100_000 == 0 {
+		// 		info!("--- i value is {:?}", _i);
+		// 	}
+		// 	NFT::<T>::create_nft(
+		// 		alice_origin.clone().into(),
+		// 		nft_offchain_data.clone(),
+		// 		PERCENT_0,
+		// 		Some(COLLECTION_ID),
+		// 		false,
+		// 	)
+		// 	.unwrap();
+		// }
+	}: _(alice_origin, nft_offchain_data, PERCENT_100, Some(collection_id), false)
 	verify {
 		// Get The NFT id.
 		let nft_id = NFT::<T>::get_next_nft_id() - 1;
 		// Get The NFT.
 		let nft = NFT::<T>::nfts(nft_id).unwrap();
 		assert_eq!(nft.owner, alice);
-		assert_eq!(NFT::<T>::collections(COLLECTION_ID).unwrap().nfts.contains(&nft_id), true);
-		assert_eq!(nft.collection_id, Some(COLLECTION_ID));
+		assert_eq!(NFT::<T>::collections(collection_id).unwrap().nfts.contains(&nft_id), true);
+		assert_eq!(nft.collection_id, Some(collection_id));
 	}
 
 	burn_nft {

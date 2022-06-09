@@ -33,7 +33,7 @@ use frame_support::{
 		Currency, ExistenceRequirement::KeepAlive, Get, OnUnbalanced, StorageVersion,
 		WithdrawReasons,
 	},
-	transactional,
+	transactional, BoundedVec,
 };
 use frame_system::pallet_prelude::*;
 use primitives::{
@@ -661,6 +661,51 @@ impl<T: Config> traits::NFTExt for Pallet<T> {
 
 			Ok(())
 		})?;
+
+		Ok(())
+	}
+
+	fn create_full_collection(
+		owner: Self::AccountId,
+		collection_id: CollectionId,
+		amount_in_collection: u32,
+	) -> DispatchResult {
+		//Create full collection
+		let collection_offchain_data: U8BoundedVec<Self::CollectionOffchainDataLimit> =
+			U8BoundedVec::try_from(vec![
+				1;
+				Self::CollectionOffchainDataLimit::get()
+					.try_into()
+					.unwrap()
+			])
+			.expect("It will never happen.");
+
+		let mut collection = Collection::<
+			Self::AccountId,
+			Self::CollectionOffchainDataLimit,
+			Self::CollectionSizeLimit,
+		>::new(owner.clone(), collection_offchain_data, None);
+
+		let nft_ids: BoundedVec<u32, Self::CollectionSizeLimit> =
+			BoundedVec::try_from(vec![10; amount_in_collection.try_into().unwrap()])
+				.expect("It will never happen.");
+
+		collection.nfts = nft_ids;
+		Collections::<T>::insert(collection_id, collection);
+
+		// Create nfts
+		let nft_offchain_data: U8BoundedVec<Self::NFTOffchainDataLimit> =
+			U8BoundedVec::try_from(vec![
+				1;
+				Self::NFTOffchainDataLimit::get()
+					.try_into()
+					.unwrap()
+			])
+			.expect("It will never happen.");
+		let nft = NFTData::new_default(owner.clone(), nft_offchain_data, Permill::from_parts(0), Some(collection_id), false);
+		for i in 5..amount_in_collection+5 {
+			Nfts::<T>::insert(i, nft.clone());
+		}
 
 		Ok(())
 	}
