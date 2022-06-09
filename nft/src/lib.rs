@@ -259,6 +259,7 @@ pub mod pallet {
 			is_soulbound: bool,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
+			let mut next_nft_id = None;
 
 			// Checks
 			// The Caller needs to pay the NFT Mint fee.
@@ -267,8 +268,6 @@ pub mod pallet {
 			let imbalance = T::Currency::withdraw(&who, mint_fee, reason, KeepAlive)?;
 			T::FeesCollector::on_unbalanced(imbalance);
 
-			let mut next_nft_id = None;
-
 			// Throws an error if specified collection does not exist, signer is not owner,
 			// collection is close, collection has reached limit.
 			if let Some(collection_id) = &collection_id {
@@ -276,11 +275,10 @@ pub mod pallet {
 					let collection = x.as_mut().ok_or(Error::<T>::CollectionNotFound)?;
 					let limit =
 						collection.limit.unwrap_or_else(|| T::CollectionSizeLimit::get()) as usize;
-
 					ensure!(collection.owner == who, Error::<T>::NotTheCollectionOwner);
 					ensure!(!collection.is_closed, Error::<T>::CollectionIsClosed);
 					ensure!(collection.nfts.len() < limit, Error::<T>::CollectionHasReachedLimit);
-					// Execute
+
 					let tmp_nft_id = Self::get_next_nft_id();
 					collection
 						.nfts
@@ -291,9 +289,7 @@ pub mod pallet {
 				})?;
 			}
 
-			// Execute
 			let nft_id = next_nft_id.unwrap_or_else(|| Self::get_next_nft_id());
-
 			let nft = NFTData::new_default(
 				who.clone(),
 				offchain_data.clone(),
@@ -301,10 +297,8 @@ pub mod pallet {
 				collection_id.clone(),
 				is_soulbound,
 			);
-
-			// Save
+			// Execute
 			Nfts::<T>::insert(nft_id, nft);
-
 			let event = Event::NFTCreated {
 				nft_id,
 				owner: who,
@@ -314,8 +308,8 @@ pub mod pallet {
 				is_soulbound,
 				mint_fee,
 			};
-
 			Self::deposit_event(event);
+
 			Ok(().into())
 		}
 
@@ -348,10 +342,10 @@ pub mod pallet {
 					Ok(().into())
 				})?;
 			}
-
 			// Execute
 			Nfts::<T>::remove(nft_id);
 			Self::deposit_event(Event::NFTBurned { nft_id });
+
 			Ok(().into())
 		}
 
@@ -379,12 +373,13 @@ pub mod pallet {
 
 				// Execute
 				nft.owner = recipient.clone();
+
 				Ok(().into())
 			})?;
-
+			// Execute
 			let event = Event::NFTTransferred { nft_id, sender: who, recipient };
-
 			Self::deposit_event(event);
+
 			Ok(().into())
 		}
 
@@ -425,10 +420,9 @@ pub mod pallet {
 				DelegatedNFTs::<T>::remove(nft_id);
 			}
 			let recipient_event = if is_delegated { Some(recipient_account_id) } else { None };
-
 			let event = Event::NFTDelegated { nft_id, recipient: recipient_event };
-
 			Self::deposit_event(event);
+
 			Ok(().into())
 		}
 
@@ -459,8 +453,8 @@ pub mod pallet {
 			})?;
 
 			let event = Event::NFTRoyaltySet { nft_id, royalty };
-
 			Self::deposit_event(event);
+
 			Ok(().into())
 		}
 
@@ -471,12 +465,10 @@ pub mod pallet {
 			fee: BalanceOf<T>,
 		) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
-
 			NftMintFee::<T>::put(fee);
-
 			let event = Event::NFTMintFeeSet { fee };
-
 			Self::deposit_event(event);
+
 			Ok(().into())
 		}
 
@@ -491,7 +483,6 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			// Checks
 			// Check size limit if it exists.
 			if let Some(limit) = &limit {
 				ensure!(
@@ -502,16 +493,14 @@ pub mod pallet {
 
 			// Execute
 			let collection_id = Self::get_next_collection_id();
-
 			let collection = Collection::new(who.clone(), offchain_data.clone(), limit);
 
 			// Save
 			Collections::<T>::insert(collection_id, collection);
-
 			let event =
 				Event::CollectionCreated { collection_id, owner: who, offchain_data, limit };
-
 			Self::deposit_event(event);
+
 			Ok(().into())
 		}
 
@@ -535,8 +524,8 @@ pub mod pallet {
 			// Execute
 			// Remove collection
 			Collections::<T>::remove(collection_id);
-
 			Self::deposit_event(Event::CollectionBurned { collection_id });
+
 			Ok(().into())
 		}
 
@@ -549,6 +538,7 @@ pub mod pallet {
 			collection_id: CollectionId,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
+
 			Collections::<T>::try_mutate(collection_id, |x| -> DispatchResult {
 				let collection = x.as_mut().ok_or(Error::<T>::CollectionNotFound)?;
 				ensure!(collection.owner == who, Error::<T>::NotTheCollectionOwner);
@@ -556,6 +546,7 @@ pub mod pallet {
 
 				Ok(().into())
 			})?;
+
 			Self::deposit_event(Event::CollectionClosed { collection_id });
 
 			Ok(().into())
@@ -595,6 +586,7 @@ pub mod pallet {
 			})?;
 
 			Self::deposit_event(Event::CollectionLimited { collection_id, limit });
+
 			Ok(().into())
 		}
 
@@ -618,6 +610,7 @@ pub mod pallet {
 				ensure!(collection.owner == who, Error::<T>::NotTheCollectionOwner);
 				ensure!(!collection.is_closed, Error::<T>::CollectionIsClosed);
 				ensure!(collection.nfts.len() < limit, Error::<T>::CollectionHasReachedLimit);
+
 				Nfts::<T>::try_mutate(nft_id, |y| -> DispatchResult {
 					let nft = y.as_mut().ok_or(Error::<T>::NFTNotFound)?;
 
@@ -641,6 +634,7 @@ pub mod pallet {
 			})?;
 
 			Self::deposit_event(Event::NFTAddedToCollection { nft_id, collection_id });
+
 			Ok(().into())
 		}
 	}
@@ -664,6 +658,7 @@ impl<T: Config> traits::NFTExt for Pallet<T> {
 			let data = data.as_mut().ok_or(Error::<T>::NFTNotFound)?;
 			data.state =
 				NFTState::new(is_capsule, listed_for_sale, is_secret, is_delegated, is_soulbound);
+
 			Ok(())
 		})?;
 
@@ -679,7 +674,7 @@ impl<T: Config> Pallet<T> {
 			.expect("If u32 is not enough we should crash for safety; qed.");
 		NextNFTId::<T>::put(next_id);
 
-		return nft_id
+		nft_id
 	}
 
 	fn get_next_collection_id() -> NFTId {
@@ -689,6 +684,6 @@ impl<T: Config> Pallet<T> {
 			.expect("If u32 is not enough we should crash for safety; qed.");
 		NextCollectionId::<T>::put(next_id);
 
-		return collection_id
+		collection_id
 	}
 }

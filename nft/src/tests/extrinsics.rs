@@ -20,17 +20,13 @@ use frame_system::RawOrigin;
 use pallet_balances::Error as BalanceError;
 use sp_arithmetic::per_things::Permill;
 use ternoa_common::traits::NFTExt;
-
 use crate::{tests::mock, Collection, CollectionId, Error, Event as NFTsEvent, NFTData, NFTId};
 
 const ALICE_NFT_ID: NFTId = 0;
 const BOB_NFT_ID: NFTId = 1;
-
 const ALICE_COLLECTION_ID: CollectionId = 0;
 const BOB_COLLECTION_ID: CollectionId = 1;
-
 const INVALID_ID: NFTId = 1001;
-
 const PERCENT_100: Permill = Permill::from_parts(1000000);
 const PERCENT_80: Permill = Permill::from_parts(800000);
 const PERCENT_0: Permill = Permill::from_parts(0);
@@ -74,7 +70,6 @@ mod create_nft {
 		ExtBuilder::new_build(vec![(ALICE, 1000)]).execute_with(|| {
 			let alice: mock::Origin = origin(ALICE);
 			let alice_balance = Balances::free_balance(ALICE);
-
 			let data = NFTData::new_default(ALICE, BoundedVec::default(), PERCENT_100, None, false);
 
 			// Create NFT without a collection.
@@ -86,7 +81,6 @@ mod create_nft {
 				data.state.is_soulbound,
 			)
 			.unwrap();
-
 			let nft_id = NFT::get_next_nft_id() - 1;
 
 			// Final state checks.
@@ -113,10 +107,8 @@ mod create_nft {
 	fn create_nft_with_collection() {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			prepare_tests();
-
 			let alice: mock::Origin = origin(ALICE);
 			let alice_balance = Balances::free_balance(ALICE);
-
 			let data = NFTData::new_default(
 				ALICE,
 				BoundedVec::default(),
@@ -134,7 +126,6 @@ mod create_nft {
 				data.state.is_soulbound,
 			)
 			.unwrap();
-
 			let nft_id = NFT::get_next_nft_id() - 1;
 
 			// Final state checks.
@@ -172,7 +163,6 @@ mod create_nft {
 	fn not_the_collection_owner() {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			prepare_tests();
-
 			let alice: mock::Origin = origin(ALICE);
 
 			// Try to add Alice's NFT to Bob's collection.
@@ -193,9 +183,7 @@ mod create_nft {
 	fn collection_is_closed() {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			prepare_tests();
-
 			let alice: mock::Origin = origin(ALICE);
-
 			// Close alice's collection.
 			NFT::close_collection(alice.clone(), ALICE_COLLECTION_ID).unwrap();
 
@@ -217,7 +205,6 @@ mod create_nft {
 	fn collection_has_reached_max() {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			prepare_tests();
-
 			let alice: mock::Origin = origin(ALICE);
 
 			// Add CollectionSizeLimit NFTs to Alice's collection.
@@ -250,10 +237,8 @@ mod create_nft {
 	fn collection_has_reached_limit() {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			let alice: mock::Origin = origin(ALICE);
-
 			// Create a collection with 1 as limit.
 			NFT::create_collection(alice.clone(), BoundedVec::default(), Some(1)).unwrap();
-
 			let collection_id = NFT::get_next_collection_id() - 1;
 
 			// Add nft to the collection.
@@ -311,7 +296,6 @@ mod burn_nft {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
-
 			// Burning the nft.
 			let ok = NFT::burn_nft(alice, ALICE_NFT_ID);
 			assert_ok!(ok);
@@ -331,12 +315,9 @@ mod burn_nft {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
-
 			let expected_collection = NFT::collections(ALICE_COLLECTION_ID).unwrap();
-
 			// Add alice's NFT to her collection.
 			NFT::add_nft_to_collection(alice.clone(), ALICE_NFT_ID, ALICE_COLLECTION_ID).unwrap();
-
 			// Burning the nft.
 			let ok = NFT::burn_nft(alice, ALICE_NFT_ID);
 			assert_ok!(ok);
@@ -424,7 +405,6 @@ mod transfer_nft {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
-
 			// Transfer nft ownership from ALICE to BOB.
 			let ok = NFT::transfer_nft(alice, ALICE_NFT_ID, BOB);
 			assert_ok!(ok);
@@ -528,9 +508,7 @@ mod transfer_nft {
 			// Create soulbound NFTs.
 			let ok = NFT::create_nft(alice.clone(), BoundedVec::default(), PERCENT_0, None, true);
 			assert_ok!(ok);
-
 			let nft_id = NFT::get_next_nft_id() - 1;
-
 			// Try to transfer.
 			let err = NFT::transfer_nft(alice, nft_id, BOB);
 			// Should fail because NFT is soulbound.
@@ -547,11 +525,9 @@ mod delegate_nft {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
-
 			// Expected data.
 			let mut expected_data = NFT::nfts(ALICE_NFT_ID).unwrap();
 			expected_data.state.is_delegated = true;
-
 			// Delegating NFT to another account.
 			let ok = NFT::delegate_nft(alice, ALICE_NFT_ID, Some(BOB));
 			assert_ok!(ok);
@@ -572,11 +548,9 @@ mod delegate_nft {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
-
 			// Expected data.
 			let mut expected_data = NFT::nfts(ALICE_NFT_ID).unwrap();
 			expected_data.state.is_delegated = false;
-
 			// Delegating NFT to another account.
 			NFT::delegate_nft(alice.clone(), ALICE_NFT_ID, Some(BOB)).unwrap();
 			// Delegate NFT to none.
@@ -599,7 +573,6 @@ mod delegate_nft {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
-
 			// Delegating unexisting NFT.
 			let err = NFT::delegate_nft(alice, INVALID_ID, None);
 			// Should fail because NFT does not exist.
@@ -612,10 +585,8 @@ mod delegate_nft {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
-
 			// Delegating unowned NFT.
 			let err = NFT::delegate_nft(alice, BOB_NFT_ID, None);
-
 			// Should fail because NFT is not owned by Alice.
 			assert_noop!(err, Error::<Test>::NotTheNFTOwner);
 		})
@@ -626,13 +597,10 @@ mod delegate_nft {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
-
 			// Set alice's NFT to listed.
 			NFT::set_nft_state(ALICE_NFT_ID, false, true, false, false, false).unwrap();
-
 			// Delegate listed NFT.
 			let err = NFT::delegate_nft(alice, ALICE_NFT_ID, None);
-
 			// Should fail because NFT is listed.
 			assert_noop!(err, Error::<Test>::CannotDelegateListedNFTs);
 		})
@@ -643,10 +611,8 @@ mod delegate_nft {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
-
 			// Set alice's NFT to capsule.
 			NFT::set_nft_state(ALICE_NFT_ID, true, false, false, false, false).unwrap();
-
 			// Delegate capsule NFT.
 			let err = NFT::delegate_nft(alice, ALICE_NFT_ID, None);
 			// Should fail because NFT is capsule.
@@ -663,11 +629,9 @@ mod set_royalty {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
-
 			// Expected data.
 			let mut expected_data = NFT::nfts(ALICE_NFT_ID).unwrap();
 			expected_data.royalty = PERCENT_80;
-
 			// Set royalty.
 			let ok = NFT::set_royalty(alice, ALICE_NFT_ID, PERCENT_80);
 			assert_ok!(ok);
@@ -687,10 +651,8 @@ mod set_royalty {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
-
 			// Set royalty.
 			let err = NFT::set_royalty(alice, INVALID_ID, PERCENT_80);
-
 			// Should failt because NFT does not exist.
 			assert_noop!(err, Error::<Test>::NFTNotFound);
 		})
@@ -701,10 +663,8 @@ mod set_royalty {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
-
 			// Set royalty.
 			let err = NFT::set_royalty(alice, BOB_NFT_ID, PERCENT_80);
-
 			// Should failt because Alice is not the owner of Bob's NFT.
 			assert_noop!(err, Error::<Test>::NotTheNFTOwner);
 		})
@@ -716,13 +676,10 @@ mod set_royalty {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 			let bob: mock::Origin = origin(BOB);
-
 			// Transfer Bob's NFT to Alice.
 			NFT::transfer_nft(bob, BOB_NFT_ID, ALICE).unwrap();
-
 			// Set royalty.
 			let err = NFT::set_royalty(alice, BOB_NFT_ID, PERCENT_80);
-
 			// Should failt because Alice is not the creator of Bob's NFT.
 			assert_noop!(err, Error::<Test>::NotTheNFTCreator);
 		})
@@ -733,13 +690,10 @@ mod set_royalty {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
-
 			// Set Alice's NFT to listed.
 			NFT::set_nft_state(ALICE_NFT_ID, false, true, false, false, false).unwrap();
-
 			// Set royalty.
 			let err = NFT::set_royalty(alice, ALICE_NFT_ID, PERCENT_80);
-
 			// Should fail because you cannot set royalty for listed NFTs.
 			assert_noop!(err, Error::<Test>::CannotSetRoyaltyForListedNFTs);
 		})
@@ -750,13 +704,10 @@ mod set_royalty {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
-
 			// Set Alice's NFT to capsule.
 			NFT::set_nft_state(ALICE_NFT_ID, true, false, false, false, false).unwrap();
-
 			// Set royalty.
 			let err = NFT::set_royalty(alice, ALICE_NFT_ID, PERCENT_80);
-
 			// Should fail because you cannot set royalty for capsule NFTs.
 			assert_noop!(err, Error::<Test>::CannotSetRoyaltyForCapsuleNFTs);
 		})
@@ -767,13 +718,10 @@ mod set_royalty {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
-
 			// Set Alice's NFT to delegated.
 			NFT::delegate_nft(origin(ALICE), ALICE_NFT_ID, Some(BOB)).unwrap();
-
 			// Set royalty.
 			let err = NFT::set_royalty(alice, ALICE_NFT_ID, PERCENT_80);
-
 			// Should fail because you cannot set royalty for delegated NFTs.
 			assert_noop!(err, Error::<Test>::CannotSetRoyaltyForDelegatedNFTs);
 		})
@@ -787,7 +735,6 @@ mod set_nft_mint_fee {
 	fn set_nft_mint_fee() {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			prepare_tests();
-
 			// Set new mint fee.
 			let ok = NFT::set_nft_mint_fee(root(), 20);
 			assert_ok!(ok);
@@ -820,13 +767,10 @@ mod create_collection {
 	fn create_collection() {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			let alice: mock::Origin = origin(ALICE);
-
 			let data = Collection::new(ALICE, BoundedVec::default(), Some(5));
-
 			// Create collection.
 			let ok = NFT::create_collection(alice, data.offchain_data.clone(), data.limit);
 			assert_ok!(ok);
-
 			let collection_id = NFT::get_next_collection_id() - 1;
 
 			// Final state checks.
@@ -849,12 +793,9 @@ mod create_collection {
 	fn collection_limit_is_too_high() {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			let alice: mock::Origin = origin(ALICE);
-
 			let collection_limit = CollectionSizeLimit::get() + 1;
-
 			// Create NFT without a collection.
 			let err = NFT::create_collection(alice, BoundedVec::default(), Some(collection_limit));
-
 			// Should fail because max + 1 is not a valid limit.
 			assert_noop!(err, Error::<Test>::CollectionLimitExceededMaximumAllowed);
 		})
@@ -869,7 +810,6 @@ mod burn_collection {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
-
 			// Burn collection.
 			let ok = NFT::burn_collection(alice, ALICE_COLLECTION_ID);
 			assert_ok!(ok);
@@ -889,10 +829,8 @@ mod burn_collection {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
-
 			// Burn invalid collection.
 			let err = NFT::burn_collection(alice, INVALID_ID);
-
 			// Should fail because collection does not exist.
 			assert_noop!(err, Error::<Test>::CollectionNotFound);
 		})
@@ -903,10 +841,8 @@ mod burn_collection {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
-
 			// Burn Bob's collection from Alice's account.
 			let err = NFT::burn_collection(alice, BOB_COLLECTION_ID);
-
 			// Should fail because Alice is not the collection owner.
 			assert_noop!(err, Error::<Test>::NotTheCollectionOwner);
 		})
@@ -917,13 +853,10 @@ mod burn_collection {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
-
 			// Add Alice's NFT to her collection.
 			NFT::add_nft_to_collection(alice.clone(), ALICE_NFT_ID, ALICE_COLLECTION_ID).unwrap();
-
 			// Burn non empty collection.
 			let err = NFT::burn_collection(alice, ALICE_COLLECTION_ID);
-
 			// Should fail because collection is not empty.
 			assert_noop!(err, Error::<Test>::CollectionIsNotEmpty);
 		})
@@ -938,7 +871,6 @@ mod close_collection {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
-
 			// Close collection.
 			let ok = NFT::close_collection(alice, ALICE_COLLECTION_ID);
 			assert_ok!(ok);
@@ -958,10 +890,8 @@ mod close_collection {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
-
 			// Close invalid collection.
 			let err = NFT::close_collection(alice, INVALID_ID);
-
 			// Should fail because collection does not exist.
 			assert_noop!(err, Error::<Test>::CollectionNotFound);
 		})
@@ -972,10 +902,8 @@ mod close_collection {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
-
 			// Close invalid collection.
 			let err = NFT::close_collection(alice, BOB_COLLECTION_ID);
-
 			// Should fail because Alice is not the owner of the collection.
 			assert_noop!(err, Error::<Test>::NotTheCollectionOwner);
 		})
@@ -990,7 +918,6 @@ mod limit_collection {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
-
 			// Limit collection.
 			let ok = NFT::limit_collection(alice, ALICE_COLLECTION_ID, 1);
 			assert_ok!(ok);
@@ -1011,10 +938,8 @@ mod limit_collection {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
-
 			// Limit invalid collection.
 			let err = NFT::limit_collection(alice, INVALID_ID, 1);
-
 			// Should fail because the collection does not exist.
 			assert_noop!(err, Error::<Test>::CollectionNotFound);
 		})
@@ -1025,10 +950,8 @@ mod limit_collection {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
-
 			// Limit unowned collection.
 			let err = NFT::limit_collection(alice, BOB_COLLECTION_ID, 1);
-
 			// Should fail because Alice is not the collection owner.
 			assert_noop!(err, Error::<Test>::NotTheCollectionOwner);
 		})
@@ -1039,14 +962,11 @@ mod limit_collection {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
-
 			// Limit once.
 			let ok = NFT::limit_collection(alice.clone(), ALICE_COLLECTION_ID, 1);
 			assert_ok!(ok);
-
 			// Limit again.
 			let err = NFT::limit_collection(alice, ALICE_COLLECTION_ID, 2);
-
 			// Should fail because the collection limit is already set.
 			assert_noop!(err, Error::<Test>::CollectionLimitAlreadySet);
 		})
@@ -1057,14 +977,11 @@ mod limit_collection {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
-
 			// Close collection.
 			let ok = NFT::close_collection(alice.clone(), ALICE_COLLECTION_ID);
 			assert_ok!(ok);
-
 			// Limit.
 			let err = NFT::limit_collection(alice, ALICE_COLLECTION_ID, 1);
-
 			// Should fail because the collection is closed.
 			assert_noop!(err, Error::<Test>::CollectionIsClosed);
 		})
@@ -1075,11 +992,9 @@ mod limit_collection {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
-
 			// Add Alice's NFT to her collection.
 			let ok = NFT::add_nft_to_collection(alice.clone(), ALICE_NFT_ID, ALICE_COLLECTION_ID);
 			assert_ok!(ok);
-
 			// Create a second nft for alice.
 			let ok = NFT::create_nft(
 				alice.clone(),
@@ -1089,10 +1004,8 @@ mod limit_collection {
 				false,
 			);
 			assert_ok!(ok);
-
 			// Limit collection with value 1.
 			let err = NFT::limit_collection(alice, ALICE_COLLECTION_ID, 1);
-
 			// Should fail because the selected limit is lower than the number of NFTs currently in
 			// the collection.
 			assert_noop!(err, Error::<Test>::CollectionHasTooManyNFTs);
@@ -1104,12 +1017,9 @@ mod limit_collection {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
-
 			let limit = CollectionSizeLimit::get() + 1;
-
 			// Limit again.
 			let err = NFT::limit_collection(alice, ALICE_COLLECTION_ID, limit);
-
 			// Should fail because the selected limit is greater than the size limit from config.
 			assert_noop!(err, Error::<Test>::CollectionLimitExceededMaximumAllowed);
 		})
@@ -1124,10 +1034,8 @@ mod add_nft_to_collection {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
-
 			let mut expected_collection = NFT::collections(ALICE_COLLECTION_ID).unwrap();
 			expected_collection.nfts.try_push(ALICE_COLLECTION_ID).unwrap();
-
 			// Add Alice's NFT to her collection.
 			let ok = NFT::add_nft_to_collection(alice, ALICE_NFT_ID, ALICE_COLLECTION_ID);
 			assert_ok!(ok);
@@ -1151,10 +1059,8 @@ mod add_nft_to_collection {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
-
 			// Add Alice's NFT to invalid collection.
 			let err = NFT::add_nft_to_collection(alice, ALICE_NFT_ID, INVALID_ID);
-
 			// Should fail because collection does not exist.
 			assert_noop!(err, Error::<Test>::CollectionNotFound);
 		})
@@ -1165,10 +1071,8 @@ mod add_nft_to_collection {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
-
 			// Add Alice's NFT to Bob's collection.
 			let err = NFT::add_nft_to_collection(alice, ALICE_NFT_ID, BOB_COLLECTION_ID);
-
 			// Should fail because collection belong to Bob.
 			assert_noop!(err, Error::<Test>::NotTheCollectionOwner);
 		})
@@ -1179,13 +1083,10 @@ mod add_nft_to_collection {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
-
 			// Close Alice's collection.
 			NFT::close_collection(alice.clone(), ALICE_COLLECTION_ID).unwrap();
-
 			// Add Alice's NFT to Bob's collection.
 			let err = NFT::add_nft_to_collection(alice, ALICE_NFT_ID, ALICE_COLLECTION_ID);
-
 			// Should fail because collection belong to Bob.
 			assert_noop!(err, Error::<Test>::CollectionIsClosed);
 		})
@@ -1196,7 +1097,6 @@ mod add_nft_to_collection {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
-
 			// Add CollectionSizeLimit NFTs to Alice's collection.
 			for _i in 0..CollectionSizeLimit::get() {
 				NFT::create_nft(
@@ -1208,10 +1108,8 @@ mod add_nft_to_collection {
 				)
 				.unwrap();
 			}
-
 			// Add another nft to the collection.
 			let err = NFT::add_nft_to_collection(alice, ALICE_NFT_ID, ALICE_COLLECTION_ID);
-
 			// Should fail because collection has reached maximum value.
 			assert_noop!(err, Error::<Test>::CollectionHasReachedLimit);
 		})
@@ -1222,12 +1120,9 @@ mod add_nft_to_collection {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
-
 			let limit = 5;
-
 			// Set limit to Alice's NFT.
 			NFT::limit_collection(alice.clone(), ALICE_COLLECTION_ID, limit).unwrap();
-
 			// Add CollectionSizeLimit NFTs to Alice's collection.
 			for _i in 0..limit {
 				NFT::create_nft(
@@ -1239,10 +1134,8 @@ mod add_nft_to_collection {
 				)
 				.unwrap();
 			}
-
 			// Add another nft to the collection.
 			let err = NFT::add_nft_to_collection(alice, ALICE_NFT_ID, ALICE_COLLECTION_ID);
-
 			// Should fail because collection has reached limit value.
 			assert_noop!(err, Error::<Test>::CollectionHasReachedLimit);
 		})
@@ -1253,10 +1146,8 @@ mod add_nft_to_collection {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
-
 			// Add invalid NFT to the collection.
 			let err = NFT::add_nft_to_collection(alice, INVALID_ID, ALICE_COLLECTION_ID);
-
 			// Should fail because NFT does not exist.
 			assert_noop!(err, Error::<Test>::NFTNotFound);
 		})
@@ -1267,10 +1158,8 @@ mod add_nft_to_collection {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
-
 			// Add unowned NFT in collection.
 			let err = NFT::add_nft_to_collection(alice, BOB_NFT_ID, ALICE_COLLECTION_ID);
-
 			// Should fail because the NFT does not belong to Alice.
 			assert_noop!(err, Error::<Test>::NotTheNFTOwner);
 		})
@@ -1281,20 +1170,15 @@ mod add_nft_to_collection {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
-
 			// Add NFT in collection.
 			let ok = NFT::add_nft_to_collection(alice.clone(), ALICE_NFT_ID, ALICE_COLLECTION_ID);
 			assert_ok!(ok);
-
 			// Create new collection.
 			let ok = NFT::create_collection(alice.clone(), BoundedVec::default(), None);
 			assert_ok!(ok);
-
 			let collection_id = NFT::get_next_collection_id() - 1;
-
 			// Add NFT to the new collection.
 			let err = NFT::add_nft_to_collection(alice, ALICE_NFT_ID, collection_id);
-
 			// Should fail because the NFT already belong to an other collection.
 			assert_noop!(err, Error::<Test>::NFTBelongToACollection);
 		})

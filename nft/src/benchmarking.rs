@@ -73,7 +73,6 @@ benchmarks! {
 		prepare_benchmarks::<T>();
 		let alice: T::AccountId = get_account::<T>("ALICE");
 		let alice_origin = origin::<T>("ALICE");
-
 		let nft_offchain_data = BoundedVec::try_from(vec![1; T::NFTOffchainDataLimit::get().try_into().unwrap()]).expect("It will never happen.");
 		info!("S value is {:?}", s);
 		// Fill the collection.
@@ -90,7 +89,6 @@ benchmarks! {
 			)
 			.unwrap();
 		}
-
 	}: _(alice_origin, nft_offchain_data, PERCENT_100, Some(COLLECTION_ID), false)
 	verify {
 		// Get The NFT id.
@@ -106,7 +104,6 @@ benchmarks! {
 		let s in 0 .. T::CollectionSizeLimit::get() - 1;
 		prepare_benchmarks::<T>();
 		let alice = origin::<T>("ALICE");
-
 		let nft_offchain_data = BoundedVec::try_from(vec![1; T::NFTOffchainDataLimit::get().try_into().unwrap()]).expect("It will never happen.");
 		info!("S value is {:?}", s);
 		// Fill the collection.
@@ -124,7 +121,6 @@ benchmarks! {
 			)
 			.unwrap();
 		}
-
 		// Add NFT to collection.
 		NFT::<T>::add_nft_to_collection(alice.clone().into(), NFT_ID, COLLECTION_ID).unwrap();
 	}: _(alice, NFT_ID)
@@ -218,10 +214,8 @@ benchmarks! {
 		let s in 0 .. T::CollectionSizeLimit::get() - 1;
 		prepare_benchmarks::<T>();
 		let alice = origin::<T>("ALICE");
-
 		let nft_offchain_data = BoundedVec::try_from(vec![1; T::NFTOffchainDataLimit::get().try_into().unwrap()]).expect("It will never happen.");
 		info!("S value is {:?}", s);
-
 		// Fill collection.
 		for _i in 0..s {
 			if _i % 100_000 == 0 {
