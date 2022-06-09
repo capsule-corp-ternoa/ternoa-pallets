@@ -21,7 +21,6 @@ use crate::Pallet as NFT;
 use frame_benchmarking::{account as benchmark_account, benchmarks, impl_benchmark_test_suite};
 use frame_support::{assert_ok, traits::Currency, BoundedVec};
 use frame_system::RawOrigin;
-use log::info;
 use sp_arithmetic::per_things::Permill;
 use sp_runtime::traits::{Bounded, StaticLookup};
 use sp_std::prelude::*;
@@ -75,23 +74,9 @@ benchmarks! {
 		let alice: T::AccountId = get_account::<T>("ALICE");
 		let alice_origin = origin::<T>("ALICE");
 		let nft_offchain_data = BoundedVec::try_from(vec![1; T::NFTOffchainDataLimit::get().try_into().unwrap()]).expect("It will never happen.");
-		info!("S value is {:?}", s);
 		// Fill the collection.
 		let collection_id = NFT::<T>::get_next_collection_id();
 		NFT::<T>::create_full_collection(alice.clone(), collection_id, s).unwrap();
-		// for _i in 0..s {
-		// 	if _i % 100_000 == 0 {
-		// 		info!("--- i value is {:?}", _i);
-		// 	}
-		// 	NFT::<T>::create_nft(
-		// 		alice_origin.clone().into(),
-		// 		nft_offchain_data.clone(),
-		// 		PERCENT_0,
-		// 		Some(COLLECTION_ID),
-		// 		false,
-		// 	)
-		// 	.unwrap();
-		// }
 	}: _(alice_origin, nft_offchain_data, PERCENT_100, Some(collection_id), false)
 	verify {
 		// Get The NFT id.
@@ -108,28 +93,15 @@ benchmarks! {
 		prepare_benchmarks::<T>();
 		let alice = origin::<T>("ALICE");
 		let nft_offchain_data = BoundedVec::try_from(vec![1; T::NFTOffchainDataLimit::get().try_into().unwrap()]).expect("It will never happen.");
-		info!("S value is {:?}", s);
 		// Fill the collection.
-		let limit = T::CollectionSizeLimit::get() - 1;
-		for _i in 0..s {
-			if _i % 100_000 == 0 {
-				info!("--- i value is {:?}", _i);
-			}
-			NFT::<T>::create_nft(
-				alice.clone().into(),
-				nft_offchain_data.clone(),
-				PERCENT_0,
-				Some(COLLECTION_ID),
-				false,
-			)
-			.unwrap();
-		}
+		let collection_id = NFT::<T>::get_next_collection_id();
+		NFT::<T>::create_full_collection(alice.clone(), collection_id, s).unwrap();
 		// Add NFT to collection.
-		NFT::<T>::add_nft_to_collection(alice.clone().into(), NFT_ID, COLLECTION_ID).unwrap();
+		NFT::<T>::add_nft_to_collection(alice.clone().into(), NFT_ID, collection_id).unwrap();
 	}: _(alice, NFT_ID)
 	verify {
 		assert_eq!(NFT::<T>::nfts(NFT_ID), None);
-		assert_eq!(NFT::<T>::collections(COLLECTION_ID).unwrap().nfts.contains(&NFT_ID), false);
+		assert_eq!(NFT::<T>::collections(collection_id).unwrap().nfts.contains(&NFT_ID), false);
 	}
 
 	transfer_nft {
@@ -137,7 +109,6 @@ benchmarks! {
 		let alice = origin::<T>("ALICE");
 		let bob: T::AccountId = get_account::<T>("BOB");
 		let bob_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(bob.clone());
-		info!("TRANSFER");
 	}: _(alice, NFT_ID, bob_lookup)
 	verify {
 		assert_eq!(NFT::<T>::nfts(NFT_ID).unwrap().owner, bob);
@@ -148,7 +119,6 @@ benchmarks! {
 		let alice = origin::<T>("ALICE");
 		let bob: T::AccountId = get_account::<T>("BOB");
 		let bob_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(bob.clone());
-		info!("DELEGATE");
 	}: _(alice, NFT_ID, Some(bob_lookup))
 	verify {
 		assert_eq!(NFT::<T>::nfts(NFT_ID).unwrap().state.is_delegated, true);
@@ -158,7 +128,6 @@ benchmarks! {
 	set_royalty {
 		prepare_benchmarks::<T>();
 		let alice = origin::<T>("ALICE");
-		info!("ROYALTY");
 	}: _(alice, NFT_ID, PERCENT_100)
 	verify {
 		assert_eq!(NFT::<T>::nfts(NFT_ID).unwrap().royalty, PERCENT_100);
@@ -167,7 +136,6 @@ benchmarks! {
 	set_nft_mint_fee {
 		let old_mint_fee = NFT::<T>::nft_mint_fee();
 		let new_mint_fee = 20u32;
-		info!("Set nft mint fee");
 	}: _(RawOrigin::Root, new_mint_fee.clone().into())
 	verify {
 		assert_ne!(old_mint_fee, new_mint_fee.clone().into());
@@ -180,7 +148,6 @@ benchmarks! {
 		let alice_origin = origin::<T>("ALICE");
 		let collection_id = 1;
 		let collection_offchain_data = BoundedVec::try_from(vec![1; T::CollectionOffchainDataLimit::get().try_into().unwrap()]).expect("It will never happen.");
-		info!("Create collection");
 	}: _(alice_origin, collection_offchain_data, Some(10))
 	verify {
 		assert_eq!(NFT::<T>::collections(collection_id).unwrap().owner, alice);
@@ -189,7 +156,6 @@ benchmarks! {
 	burn_collection {
 		prepare_benchmarks::<T>();
 		let alice = origin::<T>("ALICE");
-		info!("Burn collection");
 	}: _(alice, COLLECTION_ID)
 	verify {
 		assert_eq!(NFT::<T>::collections(COLLECTION_ID), None);
@@ -198,7 +164,6 @@ benchmarks! {
 	close_collection {
 		prepare_benchmarks::<T>();
 		let alice = origin::<T>("ALICE");
-		info!("Close collection");
 	}: _(alice, COLLECTION_ID)
 	verify {
 		assert_eq!(NFT::<T>::collections(COLLECTION_ID).unwrap().is_closed, true);
@@ -207,7 +172,6 @@ benchmarks! {
 	limit_collection {
 		prepare_benchmarks::<T>();
 		let alice = origin::<T>("ALICE");
-		info!("Limit collection");
 	}: _(alice, COLLECTION_ID, 1)
 	verify {
 		assert_eq!(NFT::<T>::collections(COLLECTION_ID).unwrap().limit, Some(1));
@@ -218,25 +182,13 @@ benchmarks! {
 		prepare_benchmarks::<T>();
 		let alice = origin::<T>("ALICE");
 		let nft_offchain_data = BoundedVec::try_from(vec![1; T::NFTOffchainDataLimit::get().try_into().unwrap()]).expect("It will never happen.");
-		info!("S value is {:?}", s);
-		// Fill collection.
-		for _i in 0..s {
-			if _i % 100_000 == 0 {
-				info!("--- i value is {:?}", _i);
-			}
-			NFT::<T>::create_nft(
-				alice.clone().into(),
-				nft_offchain_data.clone(),
-				PERCENT_0,
-				Some(COLLECTION_ID),
-				false,
-			)
-			.unwrap();
-		}
-	}: _(alice, NFT_ID, COLLECTION_ID)
+		// Fill the collection.
+		let collection_id = NFT::<T>::get_next_collection_id();
+		NFT::<T>::create_full_collection(alice.clone(), collection_id, s).unwrap();
+	}: _(alice, NFT_ID, collection_id)
 	verify {
-		assert_eq!(NFT::<T>::nfts(NFT_ID).unwrap().collection_id, Some(COLLECTION_ID));
-		assert_eq!(NFT::<T>::collections(COLLECTION_ID).unwrap().nfts.contains(&NFT_ID), true);
+		assert_eq!(NFT::<T>::nfts(NFT_ID).unwrap().collection_id, Some(collection_id));
+		assert_eq!(NFT::<T>::collections(collection_id).unwrap().nfts.contains(&NFT_ID), true);
 	}
 }
 
