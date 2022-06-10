@@ -38,6 +38,7 @@ pub trait NFTExt {
 	fn create_filled_collection(
 		owner: Self::AccountId,
 		collection_id: CollectionId,
+		start_nft_id: NFTId,
 		amount_in_collection: u32,
 	) -> DispatchResult;
 }

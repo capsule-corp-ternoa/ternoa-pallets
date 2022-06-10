@@ -31,10 +31,21 @@ fn set_nft_state() {
 		NFT::create_nft(alice, BoundedVec::default(), PERCENT_0, None, false).unwrap();
 		let nft_id = mock::NFT::get_next_nft_id() - 1;
 		<NFT as NFTExt>::set_nft_state(nft_id, true, true, true, true, true).unwrap();
-		assert_eq!(NFT::nfts(nft_id).unwrap().state.is_capsule, true);
-		assert_eq!(NFT::nfts(nft_id).unwrap().state.listed_for_sale, true);
-		assert_eq!(NFT::nfts(nft_id).unwrap().state.is_secret, true);
-		assert_eq!(NFT::nfts(nft_id).unwrap().state.is_delegated, true);
-		assert_eq!(NFT::nfts(nft_id).unwrap().state.is_soulbound, true);
+		let nft = NFT::nfts(nft_id).unwrap();
+		assert_eq!(nft.state.is_capsule, true);
+		assert_eq!(nft.state.listed_for_sale, true);
+		assert_eq!(nft.state.is_secret, true);
+		assert_eq!(nft.state.is_delegated, true);
+		assert_eq!(nft.state.is_soulbound, true);
+	})
+}
+
+#[test]
+fn create_filled_collection() {
+	ExtBuilder::new_build(vec![(ALICE, 1000)]).execute_with(|| {
+		<NFT as NFTExt>::create_filled_collection(ALICE, 0, 0, CollectionSizeLimit::get()).unwrap();
+		let collection = NFT::collections(0).unwrap();
+		assert_eq!(collection.owner, ALICE);
+		assert_eq!(collection.nfts.len(), CollectionSizeLimit::get() as usize);
 	})
 }

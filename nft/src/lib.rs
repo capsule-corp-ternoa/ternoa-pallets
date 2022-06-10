@@ -670,6 +670,7 @@ impl<T: Config> traits::NFTExt for Pallet<T> {
 	fn create_filled_collection(
 		owner: Self::AccountId,
 		collection_id: CollectionId,
+		start_nft_id: NFTId,
 		amount_in_collection: u32,
 	) -> DispatchResult {
 		//Create full collection
@@ -688,12 +689,9 @@ impl<T: Config> traits::NFTExt for Pallet<T> {
 			Self::CollectionSizeLimit,
 		>::new(owner.clone(), collection_offchain_data, None);
 
-		let ids: Vec<u32> = (0..amount_in_collection).collect();
+		let ids: Vec<u32> = (start_nft_id..amount_in_collection + start_nft_id).collect();
 		let nft_ids: BoundedVec<u32, Self::CollectionSizeLimit> =
 			BoundedVec::try_from(ids).expect("It will never happen.");
-		// let nft_ids: BoundedVec<u32, Self::CollectionSizeLimit> =
-		// 	BoundedVec::try_from(vec![10; amount_in_collection as usize])
-		// 		.expect("It will never happen.");
 
 		collection.nfts = nft_ids;
 		info!("collection length {:?}", collection.nfts.len());
@@ -710,7 +708,7 @@ impl<T: Config> traits::NFTExt for Pallet<T> {
 			Some(collection_id),
 			false,
 		);
-		for i in 0..amount_in_collection {
+		for i in start_nft_id..amount_in_collection + start_nft_id {
 			Nfts::<T>::insert(i, nft.clone());
 			if i % 100 == 0 {
 				info!("creating {:?}th nft", i);

@@ -74,7 +74,7 @@ benchmarks! {
 		let nft_offchain_data: BoundedVec<u8, T::NFTOffchainDataLimit> = BoundedVec::try_from(vec![1; T::NFTOffchainDataLimit::get() as usize]).expect("It will never happen.");
 		// Fill the collection.
 		let collection_id = NFT::<T>::get_next_collection_id();
-		NFT::<T>::create_filled_collection(alice.clone(), collection_id, s).unwrap();
+		NFT::<T>::create_filled_collection(alice.clone(), collection_id, 0, s).unwrap();
 	}: _(alice_origin, nft_offchain_data, PERCENT_100, Some(collection_id), false)
 	verify {
 		// Get The NFT id.
@@ -93,7 +93,7 @@ benchmarks! {
 		let nft_offchain_data: BoundedVec<u8, T::NFTOffchainDataLimit> = BoundedVec::try_from(vec![1; T::NFTOffchainDataLimit::get() as usize]).expect("It will never happen.");
 		// Fill the collection.
 		let collection_id = NFT::<T>::get_next_collection_id();
-		NFT::<T>::create_filled_collection(get_account::<T>("ALICE"), collection_id, s).unwrap();
+		NFT::<T>::create_filled_collection(get_account::<T>("ALICE"), collection_id, NFT_ID + 1, s).unwrap();
 		// Add NFT to collection.
 		NFT::<T>::add_nft_to_collection(alice.clone().into(), NFT_ID, collection_id).unwrap();
 	}: _(alice, NFT_ID)
@@ -182,7 +182,7 @@ benchmarks! {
 		let nft_offchain_data: BoundedVec<u8, T::NFTOffchainDataLimit> = BoundedVec::try_from(vec![1; T::NFTOffchainDataLimit::get() as usize]).expect("It will never happen.");
 		// Fill the collection.
 		let collection_id = NFT::<T>::get_next_collection_id();
-		NFT::<T>::create_filled_collection(get_account::<T>("ALICE"), collection_id, s).unwrap();
+		NFT::<T>::create_filled_collection(get_account::<T>("ALICE"), collection_id, NFT_ID + 1, s).unwrap();
 	}: _(alice, NFT_ID, collection_id)
 	verify {
 		assert_eq!(NFT::<T>::nfts(NFT_ID).unwrap().collection_id, Some(collection_id));
