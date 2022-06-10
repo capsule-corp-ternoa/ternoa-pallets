@@ -16,6 +16,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use log::info;
 pub use pallet::*;
 
 #[cfg(test)]
@@ -666,7 +667,7 @@ impl<T: Config> traits::NFTExt for Pallet<T> {
 		Ok(())
 	}
 
-	fn create_full_collection(
+	fn create_filled_collection(
 		owner: Self::AccountId,
 		collection_id: CollectionId,
 		amount_in_collection: u32,
@@ -687,16 +688,20 @@ impl<T: Config> traits::NFTExt for Pallet<T> {
 			Self::CollectionSizeLimit,
 		>::new(owner.clone(), collection_offchain_data, None);
 
+		let ids: Vec<u32> = (0..amount_in_collection).collect();
 		let nft_ids: BoundedVec<u32, Self::CollectionSizeLimit> =
-			BoundedVec::try_from(vec![10; amount_in_collection.try_into().unwrap()])
-				.expect("It will never happen.");
+			BoundedVec::try_from(ids).expect("It will never happen.");
+		// let nft_ids: BoundedVec<u32, Self::CollectionSizeLimit> =
+		// 	BoundedVec::try_from(vec![10; amount_in_collection as usize])
+		// 		.expect("It will never happen.");
 
 		collection.nfts = nft_ids;
+		info!("collection length {:?}", collection.nfts.len());
 		Collections::<T>::insert(collection_id, collection);
 
 		// Create nfts
 		let nft_offchain_data: U8BoundedVec<Self::NFTOffchainDataLimit> =
-			U8BoundedVec::try_from(vec![1; Self::NFTOffchainDataLimit::get().try_into().unwrap()])
+			U8BoundedVec::try_from(vec![1; Self::NFTOffchainDataLimit::get() as usize])
 				.expect("It will never happen.");
 		let nft = NFTData::new_default(
 			owner.clone(),
@@ -705,8 +710,11 @@ impl<T: Config> traits::NFTExt for Pallet<T> {
 			Some(collection_id),
 			false,
 		);
-		for i in 5..amount_in_collection + 5 {
+		for i in 0..amount_in_collection {
 			Nfts::<T>::insert(i, nft.clone());
+			if i % 100 == 0 {
+				info!("creating {:?}th nft", i);
+			}
 		}
 
 		Ok(())

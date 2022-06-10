@@ -35,7 +35,7 @@ pub trait NFTExt {
 		is_soulbound: bool,
 	) -> DispatchResult;
 
-	fn create_full_collection(
+	fn create_filled_collection(
 		owner: Self::AccountId,
 		collection_id: CollectionId,
 		amount_in_collection: u32,
