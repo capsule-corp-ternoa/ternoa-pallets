@@ -16,7 +16,6 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use log::info;
 pub use pallet::*;
 
 #[cfg(test)]
@@ -694,7 +693,6 @@ impl<T: Config> traits::NFTExt for Pallet<T> {
 			BoundedVec::try_from(ids).expect("It will never happen.");
 
 		collection.nfts = nft_ids;
-		info!("collection length {:?}", collection.nfts.len());
 		Collections::<T>::insert(collection_id, collection);
 
 		// Create nfts
@@ -710,9 +708,6 @@ impl<T: Config> traits::NFTExt for Pallet<T> {
 		);
 		for i in start_nft_id..amount_in_collection + start_nft_id {
 			Nfts::<T>::insert(i, nft.clone());
-			if i % 100 == 0 {
-				info!("creating {:?}th nft", i);
-			}
 		}
 
 		Ok(())
