@@ -14,6 +14,7 @@ frame-support = { git = "https://github.com/capsule-corp-ternoa/substrate", bran
 # Sp
 sp-runtime = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-03-24", default-features = false }
 sp-std = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-03-24", default-features = false }
+sp-arithmetic = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-03-24", default-features = false }
 
 # Ternoa
 primitives = { package = "ternoa-pallets-primitives", default-features = false, path = "../primitives" }

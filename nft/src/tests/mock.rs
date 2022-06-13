@@ -14,12 +14,11 @@
 // You should have received a copy of the GNU General Public License
 // along with Ternoa.  If not, see <http://www.gnu.org/licenses/>.
 
-use crate::{self as ternoa_nft, weights, Config, NegativeImbalanceOf};
+use crate::{self as ternoa_nft, Config, NegativeImbalanceOf};
 use frame_support::{
-	bounded_vec, parameter_types,
-	traits::{ConstU32, Contains, Currency, GenesisBuild},
+	parameter_types,
+	traits::{ConstU32, Contains, Currency},
 };
-use primitives::nfts::{NFTData, NFTId, NFTSeriesDetails};
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
@@ -34,15 +33,7 @@ type Block = frame_system::mocking::MockBlock<Test>;
 pub const ALICE: u64 = 1;
 pub const BOB: u64 = 2;
 pub const COLLECTOR: u64 = 99;
-
-pub const ALICE_NFT_ID: u32 = 1;
-pub const ALICE_SERIES_ID: u8 = 1;
-
-pub const BOB_NFT_ID: u32 = 2;
-pub const BOB_SERIES_ID: u8 = 2;
-
 pub const NFT_MINT_FEE: Balance = 10;
-pub const INVALID_NFT_ID: NFTId = 1001;
 
 frame_support::construct_runtime!(
 	pub enum Test where
@@ -123,15 +114,21 @@ impl pallet_balances::Config for Test {
 }
 
 parameter_types! {
-	pub const IPFSLengthLimit: u32 = 5;
+	pub const InitialMintFee: Balance = NFT_MINT_FEE;
+	pub const NFTOffchainDataLimit: u32 = 10;
+	pub const CollectionOffchainDataLimit: u32 = 10;
+	pub const CollectionSizeLimit: u32 = 10;
 }
 
 impl Config for Test {
 	type Event = Event;
-	type WeightInfo = weights::TernoaWeight<Test>;
+	type WeightInfo = ternoa_nft::weights::TernoaWeight<Test>;
 	type Currency = Balances;
 	type FeesCollector = MockFeeCollector;
-	type IPFSLengthLimit = IPFSLengthLimit;
+	type InitialMintFee = InitialMintFee;
+	type NFTOffchainDataLimit = NFTOffchainDataLimit;
+	type CollectionOffchainDataLimit = CollectionOffchainDataLimit;
+	type CollectionSizeLimit = CollectionSizeLimit;
 }
 
 pub struct MockFeeCollector;
@@ -152,12 +149,12 @@ impl Default for ExtBuilder {
 }
 
 impl ExtBuilder {
-	pub fn caps(mut self, accounts: Vec<(u64, Balance)>) -> Self {
-		for account in accounts {
-			self.balances.push(account);
-		}
-		self
-	}
+	// pub fn caps(mut self, accounts: Vec<(u64, Balance)>) -> Self {
+	// 	for account in accounts {
+	// 		self.balances.push(account);
+	// 	}
+	// 	self
+	// }
 
 	pub fn new(balances: Vec<(u64, Balance)>) -> Self {
 		Self { balances }
@@ -174,31 +171,9 @@ impl ExtBuilder {
 			.assimilate_storage(&mut t)
 			.unwrap();
 
-		Self::build_nfts(&mut t);
-
 		let mut ext = sp_io::TestExternalities::new(t);
 		ext.execute_with(|| System::set_block_number(1));
 		ext
-	}
-
-	fn build_nfts(t: &mut sp_runtime::Storage) {
-		let alice_nft: NFTData<_, IPFSLengthLimit> =
-			NFTData::new_default(ALICE, bounded_vec![100], vec![ALICE_SERIES_ID]);
-		let bob_nft: NFTData<_, IPFSLengthLimit> =
-			NFTData::new_default(BOB, bounded_vec![101], vec![BOB_SERIES_ID]);
-
-		let alice_series = NFTSeriesDetails::new(ALICE, true);
-		let bob_series = NFTSeriesDetails::new(BOB, true);
-
-		let nfts = vec![alice_nft.to_raw(ALICE_NFT_ID), bob_nft.to_raw(BOB_NFT_ID)];
-		let series = vec![
-			alice_series.to_raw(vec![ALICE_SERIES_ID]),
-			bob_series.to_raw(vec![BOB_SERIES_ID]),
-		];
-
-		ternoa_nft::GenesisConfig::<Test> { nfts, series, nft_mint_fee: NFT_MINT_FEE }
-			.assimilate_storage(t)
-			.unwrap();
 	}
 }
 

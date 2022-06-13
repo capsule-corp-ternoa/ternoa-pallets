@@ -16,171 +16,164 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use frame_support::{traits::Get, BoundedVec, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound};
-use parity_scale_codec::{Decode, Encode};
+use frame_support::{
+	traits::Get, BoundedVec, CloneNoBound, PartialEqNoBound, RuntimeDebug, RuntimeDebugNoBound,
+};
+use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
-use sp_runtime::RuntimeDebug;
-use sp_std::{fmt::Debug, vec::Vec};
+use sp_arithmetic::per_things::Permill;
+use sp_std::fmt::Debug;
 
 use crate::U8BoundedVec;
 
 /// How NFT IDs are encoded.
 pub type NFTId = u32;
 
-/// How NFT IDs are encoded. In the JSON Types this should be "Text" and not "Vec<8>".
-pub type NFTSeriesId = Vec<u8>;
+/// How collection IDs are encoded.
+pub type CollectionId = u32;
 
-/// IPFS Reference Type
-pub type IPFSReference<S> = U8BoundedVec<S>;
+/// Data related to an NFT state, such as if it is listed for sale.
+#[derive(Encode, Decode, Eq, Default, TypeInfo, Clone, PartialEq, RuntimeDebug, MaxEncodedLen)]
+pub struct NFTState {
+	/// Is NFT converted to capsule
+	pub is_capsule: bool,
+	/// Is NFT listed for sale
+	pub listed_for_sale: bool,
+	/// Is NFT contains secret
+	pub is_secret: bool,
+	/// Is NFT delegated
+	pub is_delegated: bool,
+	/// Is NFT soulbound
+	pub is_soulbound: bool,
+}
+
+impl NFTState {
+	pub fn new(
+		is_capsule: bool,
+		listed_for_sale: bool,
+		is_secret: bool,
+		is_delegated: bool,
+		is_soulbound: bool,
+	) -> Self {
+		Self { is_capsule, listed_for_sale, is_secret, is_delegated, is_soulbound }
+	}
+
+	pub fn new_default(is_soulbound: bool) -> Self {
+		Self::new(false, false, false, false, is_soulbound)
+	}
+}
 
 /// Data related to an NFT, such as who is its owner.
 #[derive(
-	Encode, Decode, Eq, Default, TypeInfo, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound,
+	Encode,
+	Decode,
+	Eq,
+	Default,
+	TypeInfo,
+	CloneNoBound,
+	PartialEqNoBound,
+	RuntimeDebugNoBound,
+	MaxEncodedLen,
 )]
-#[scale_info(skip_type_params(IPFSLengthLimit))]
+#[scale_info(skip_type_params(NFTOffchainDataLimit))]
 #[codec(mel_bound(AccountId: MaxEncodedLen))]
-pub struct NFTData<AccountId, IPFSLengthLimit>
+pub struct NFTData<AccountId, NFTOffchainDataLimit>
 where
 	AccountId: Clone + PartialEq + Debug,
-	IPFSLengthLimit: Get<u32>,
+	NFTOffchainDataLimit: Get<u32>,
 {
-	// NFT owner
+	/// NFT owner
 	pub owner: AccountId,
-	// NFT creator
+	/// NFT creator
 	pub creator: AccountId,
-	// IPFS reference
-	pub ipfs_reference: IPFSReference<IPFSLengthLimit>,
-	// Series ID
-	pub series_id: NFTSeriesId,
-	// Is listed for sale
-	pub listed_for_sale: bool,
-	// Is being transmitted
-	pub is_in_transmission: bool,
-	// Is NFT converted to capsule
-	pub is_capsule: bool,
-	// Is secret
-	pub is_secret: bool,
-	// Delegated
-	pub is_delegated: bool,
-	// Royalties fee
-	pub royalties: u8,
+	/// NFT offchain_data
+	pub offchain_data: U8BoundedVec<NFTOffchainDataLimit>,
+	/// Collection ID
+	pub collection_id: Option<CollectionId>,
+	/// Royalty
+	pub royalty: Permill,
+	/// NFT state
+	pub state: NFTState,
 }
 
-impl<AccountId, IPFSLengthLimit> NFTData<AccountId, IPFSLengthLimit>
+impl<AccountId, NFTOffchainDataLimit> NFTData<AccountId, NFTOffchainDataLimit>
 where
 	AccountId: Clone + PartialEq + Debug,
-	IPFSLengthLimit: Get<u32>,
+	NFTOffchainDataLimit: Get<u32>,
 {
 	pub fn new(
 		owner: AccountId,
 		creator: AccountId,
-		ipfs_reference: IPFSReference<IPFSLengthLimit>,
-		series_id: NFTSeriesId,
-		listed_for_sale: bool,
-		is_in_transmission: bool,
-		is_capsule: bool,
-		is_secret: bool,
-		is_delegated: bool,
-		royalties: u8,
+		offchain_data: U8BoundedVec<NFTOffchainDataLimit>,
+		royalty: Permill,
+		state: NFTState,
+		collection_id: Option<CollectionId>,
 	) -> Self {
-		Self {
-			owner,
-			creator,
-			ipfs_reference,
-			series_id,
-			listed_for_sale,
-			is_in_transmission,
-			is_capsule,
-			is_secret,
-			is_delegated,
-			royalties,
-		}
+		Self { owner, creator, offchain_data, royalty, state, collection_id }
 	}
 
 	pub fn new_default(
 		owner: AccountId,
-		ipfs_reference: IPFSReference<IPFSLengthLimit>,
-		series_id: NFTSeriesId,
+		offchain_data: U8BoundedVec<NFTOffchainDataLimit>,
+		royalty: Permill,
+		collection_id: Option<CollectionId>,
+		is_soulbound: bool,
 	) -> Self {
 		Self::new(
 			owner.clone(),
 			owner,
-			ipfs_reference,
-			series_id,
-			false,
-			false,
-			false,
-			false,
-			false,
-			0,
+			offchain_data,
+			royalty,
+			NFTState::new_default(is_soulbound),
+			collection_id,
 		)
 	}
-
-	pub fn to_raw(&self, nft_id: NFTId) -> NFTsGenesis<AccountId> {
-		(
-			nft_id,
-			self.owner.clone(),
-			self.creator.clone(),
-			self.ipfs_reference.to_vec(),
-			self.series_id.clone(),
-			self.listed_for_sale,
-			self.is_in_transmission,
-			self.is_capsule,
-			self.is_secret,
-			self.is_delegated,
-			self.royalties,
-		)
-	}
-
-	pub fn from_raw(raw: NFTsGenesis<AccountId>) -> Self {
-		let ipfs_reference = BoundedVec::try_from(raw.3).expect("It will never happen.");
-		Self {
-			owner: raw.1,
-			creator: raw.2,
-			ipfs_reference,
-			series_id: raw.4,
-			listed_for_sale: raw.5,
-			is_in_transmission: raw.6,
-			is_capsule: raw.7,
-			is_secret: raw.8,
-			is_delegated: raw.9,
-			royalties: raw.10,
-		}
-	}
 }
 
-// nft_id, owner, creator, ipfs, series, for sale, in transmission, is capsule, viewer
-pub type NFTsGenesis<AccountId> =
-	(NFTId, AccountId, AccountId, Vec<u8>, Vec<u8>, bool, bool, bool, bool, bool, u8);
-
-/// Data related to an NFT Series.
-#[derive(Encode, Decode, Clone, PartialEq, Eq, Default, RuntimeDebug, TypeInfo)]
-pub struct NFTSeriesDetails<AccountId>
+/// Data related to collections
+#[derive(
+	Encode,
+	Decode,
+	Eq,
+	Default,
+	TypeInfo,
+	CloneNoBound,
+	PartialEqNoBound,
+	RuntimeDebugNoBound,
+	MaxEncodedLen,
+)]
+#[scale_info(skip_type_params(CollectionOffChainDataLimit, CollectionSizeLimit,))]
+#[codec(mel_bound(AccountId: MaxEncodedLen))]
+pub struct Collection<AccountId, CollectionOffChainDataLimit, CollectionSizeLimit>
 where
-	AccountId: Clone,
+	AccountId: Clone + PartialEq + Debug,
+	CollectionOffChainDataLimit: Get<u32>,
+	CollectionSizeLimit: Get<u32>,
 {
-	pub owner: AccountId, // Series Owner
-	pub draft: bool,      /* If Yes, the owner can add new nfts to that series but cannot list
-	                       * that nft for sale */
+	/// Collection owner
+	pub owner: AccountId,
+	/// Collection offchain_data
+	pub offchain_data: U8BoundedVec<CollectionOffChainDataLimit>,
+	/// NFTs in that collection
+	pub nfts: BoundedVec<NFTId, CollectionSizeLimit>,
+	/// Maximum length of the collection
+	pub limit: Option<u32>,
+	/// Is collection closed for adding new NFTs
+	pub is_closed: bool,
 }
 
-impl<AccountId> NFTSeriesDetails<AccountId>
+impl<AccountId, CollectionOffChainDataLimit, CollectionSizeLimit>
+	Collection<AccountId, CollectionOffChainDataLimit, CollectionSizeLimit>
 where
-	AccountId: Clone,
+	AccountId: Clone + PartialEq + Debug,
+	CollectionOffChainDataLimit: Get<u32>,
+	CollectionSizeLimit: Get<u32>,
 {
-	pub fn new(owner: AccountId, draft: bool) -> Self {
-		Self { owner, draft }
-	}
-
-	pub fn to_raw(&self, series_id: NFTSeriesId) -> SeriesGenesis<AccountId> {
-		(series_id, self.owner.clone(), self.draft)
-	}
-
-	pub fn from_raw(raw: SeriesGenesis<AccountId>) -> Self {
-		Self { owner: raw.1, draft: raw.2 }
+	pub fn new(
+		owner: AccountId,
+		offchain_data: U8BoundedVec<CollectionOffChainDataLimit>,
+		limit: Option<u32>,
+	) -> Self {
+		Self { owner, offchain_data, nfts: BoundedVec::default(), limit, is_closed: false }
 	}
 }
-
-/// Data related to an NFT Series.
-// series id, owner, draft
-pub type SeriesGenesis<AccountId> = (Vec<u8>, AccountId, bool);
