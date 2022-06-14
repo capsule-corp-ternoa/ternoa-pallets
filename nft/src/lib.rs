@@ -248,7 +248,22 @@ pub mod pallet {
 		/// Create a new NFT with the provided details. An ID will be auto
 		/// generated and logged as an event, The caller of this function
 		/// will become the owner of the new NFT.
-		#[pallet::weight(T::WeightInfo::create_nft())]
+		#[pallet::weight((
+            {
+				if let Some(collection_id) = &collection_id {
+					let collection = Collections::<T>::get(collection_id).ok_or(Error::<T>::CollectionNotFound);
+					if let Ok(collection) = collection {
+						let s = collection.nfts.len();
+						T::WeightInfo::create_nft(s as u32)
+					} else {
+						T::WeightInfo::create_nft(1)
+					}
+				} else {
+					T::WeightInfo::create_nft(1)
+				}
+            },
+			DispatchClass::Normal
+        ))]
 		// have to be transactional otherwise we could make people pay the mint
 		// even if the creation fails.
 		#[transactional]
@@ -318,7 +333,27 @@ pub mod pallet {
 		/// once the NFT is removed (burned) from the storage there is no way to
 		/// get it back.
 		/// Must be called by the owner of the NFT.
-		#[pallet::weight(T::WeightInfo::burn_nft())]
+		#[pallet::weight((
+            {
+				let nft = Nfts::<T>::get(nft_id).ok_or(Error::<T>::NFTNotFound);
+				if let Ok(nft) = nft {
+					if let Some(collection_id) = &nft.collection_id {
+						let collection = Collections::<T>::get(collection_id).ok_or(Error::<T>::CollectionNotFound);
+						if let Ok(collection) = collection {
+							let s = collection.nfts.len();
+							T::WeightInfo::burn_nft(s as u32)
+						} else {
+							T::WeightInfo::burn_nft(1)
+						}
+					} else {
+						T::WeightInfo::burn_nft(1)
+					}
+				} else {
+					T::WeightInfo::burn_nft(1)
+				}
+            },
+			DispatchClass::Normal
+        ))]
 		pub fn burn_nft(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 			let nft = Nfts::<T>::get(nft_id).ok_or(Error::<T>::NFTNotFound)?;
@@ -594,7 +629,18 @@ pub mod pallet {
 		/// Add an NFT to a collection.
 		/// Can only be called by owner of the collection, NFT
 		/// must not be in collection and collection must not be closed or has reached limit.
-		#[pallet::weight(T::WeightInfo::add_nft_to_collection())]
+		#[pallet::weight((
+            {
+				let collection = Collections::<T>::get(collection_id).ok_or(Error::<T>::CollectionNotFound);
+				if let Ok(collection) = collection {
+					let s = collection.nfts.len();
+					T::WeightInfo::add_nft_to_collection(s as u32)
+				} else {
+					T::WeightInfo::add_nft_to_collection(1)
+				}
+            },
+			DispatchClass::Normal
+        ))]
 		pub fn add_nft_to_collection(
 			origin: OriginFor<T>,
 			nft_id: NFTId,
