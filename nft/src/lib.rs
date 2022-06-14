@@ -33,7 +33,8 @@ use frame_support::{
 		Currency, ExistenceRequirement::KeepAlive, Get, OnUnbalanced, StorageVersion,
 		WithdrawReasons,
 	},
-	transactional, BoundedVec,
+	BoundedVec,
+	transactional,
 };
 use frame_system::pallet_prelude::*;
 use primitives::{
@@ -100,7 +101,7 @@ pub mod pallet {
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
 
-	/// Host much does it cost to mint a NFT (extra fee on top of the tx fees).
+	/// How much does it cost to mint a NFT (extra fee on top of the tx fees).
 	#[pallet::storage]
 	#[pallet::getter(fn nft_mint_fee)]
 	pub(super) type NftMintFee<T: Config> =
@@ -264,7 +265,7 @@ pub mod pallet {
             },
 			DispatchClass::Normal
         ))]
-		// have to be transactional otherwise we could make people pay the mint
+		// have to be transactional otherwise we could make people pay the mint fee
 		// even if the creation fails.
 		#[transactional]
 		pub fn create_nft(
@@ -757,6 +758,10 @@ impl<T: Config> traits::NFTExt for Pallet<T> {
 		}
 
 		Ok(())
+	}
+
+	fn get_nft(id: NFTId) -> Option<NFTData<Self::AccountId, Self::NFTOffchainDataLimit>> {
+		Nfts::<T>::get(id)
 	}
 }
 

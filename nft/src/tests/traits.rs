@@ -49,3 +49,17 @@ fn create_filled_collection() {
 		assert_eq!(collection.nfts.len(), CollectionSizeLimit::get() as usize);
 	})
 }
+
+#[test]
+fn get_nft() {
+	ExtBuilder::new_build(vec![(ALICE, 1000)]).execute_with(|| {
+		let alice: Origin = RawOrigin::Signed(ALICE).into();
+		NFT::create_nft(alice, BoundedVec::default(), PERCENT_0, None, false).unwrap();
+		let nft_id = mock::NFT::get_next_nft_id() - 1;
+		let nft = NFT::get_nft(nft_id).unwrap();
+		assert_eq!(nft.owner, ALICE);
+		let invalid_id = 999;
+		let no_nft = NFT::get_nft(invalid_id);
+		assert_eq!(no_nft, None);
+	})
+}

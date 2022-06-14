@@ -16,6 +16,19 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use frame_support::BoundedVec;
+use frame_support::{dispatch::Codec, BoundedVec};
+use parity_scale_codec::{Decode, Encode};
+use scale_info::TypeInfo;
 
 pub type U8BoundedVec<S> = BoundedVec<u8, S>;
+
+/// Possible operations on the configuration values of this pallet.
+#[derive(TypeInfo, Debug, Clone, Encode, Decode, PartialEq)]
+pub enum ConfigOp<T: Default + Codec> {
+	/// Don't change.
+	Noop,
+	/// Set the given value.
+	Set(T),
+	/// Remove the value.
+	Remove,
+}

@@ -14,47 +14,44 @@
 // You should have received a copy of the GNU General Public License
 // along with Ternoa.  If not, see <http://www.gnu.org/licenses/>.
 
+use frame_support::{CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
-use primitives::{marketplace::MarketplaceId, nfts::NFTId};
 use scale_info::TypeInfo;
-use sp_runtime::RuntimeDebug;
+use sp_std::fmt::Debug;
+use primitives::{
+	marketplace::{
+		MarketplaceId,
+		MarketplaceFee,
+	}, 
+};
 
-#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
-pub struct SaleData<AccountId, Balance>
+#[derive(
+	Encode, Decode, CloneNoBound, Eq, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen,
+)]
+#[codec(mel_bound(AccountId: MaxEncodedLen, Balance: MaxEncodedLen))]
+pub struct Sale<AccountId, Balance>
 where
-	Balance: Clone + Default,
+	AccountId: Clone + PartialEq + Debug,
+	Balance: Clone + PartialEq + Debug + sp_std::cmp::PartialOrd,
 {
 	pub account_id: AccountId,
-	pub price: Balance,
 	pub marketplace_id: MarketplaceId,
+	pub price: Balance,
+	pub commission_fee: Option<MarketplaceFee<Balance>>,
 }
 
-impl<AccountId, Balance> Default for SaleData<AccountId, Balance>
+impl<AccountId, Balance>
+	Sale<AccountId, Balance>
 where
-	AccountId: Clone + Default,
-	Balance: Clone + Default,
-{
-	fn default() -> Self {
-		Self {
-			account_id: Default::default(),
-			price: Default::default(),
-			marketplace_id: Default::default(),
-		}
-	}
-}
-
-impl<AccountId, Balance> SaleData<AccountId, Balance>
-where
-	Balance: Clone + Default,
+	AccountId: Clone + PartialEq + Debug,
+	Balance: Clone + PartialEq + Debug + sp_std::cmp::PartialOrd,
 {
 	pub fn new(
 		account_id: AccountId,
-		price: Balance,
 		marketplace_id: MarketplaceId,
-	) -> SaleData<AccountId, Balance> {
-		Self { account_id, price, marketplace_id }
+		price: Balance,
+		commission_fee: Option<MarketplaceFee<Balance>>,
+	) -> Sale<AccountId, Balance> {
+		Self { account_id, marketplace_id, price, commission_fee }
 	}
 }
-
-// nft_id, account id, price, market id
-pub type NFTsGenesis<AccountId, Balance> = (NFTId, AccountId, Balance, MarketplaceId);
