@@ -124,8 +124,8 @@ parameter_types! {
 	pub const CollectionOffchainDataLimit: u32 = 10;
 	pub const CollectionSizeLimit: u32 = 10;
 	// Marketplace parameter types
-	pub const OffchainDataLimit: u32 = 10;
-	pub const AccountSizeLimit: u32 = 10;
+	pub const OffchainDataLimit: u32 = 150;
+	pub const AccountSizeLimit: u32 = 100;
 
 }
 

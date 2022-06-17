@@ -63,3 +63,26 @@ fn get_nft() {
 		assert_eq!(no_nft, None);
 	})
 }
+
+#[test]
+fn set_owner() {
+	ExtBuilder::new_build(vec![(ALICE, 1000)]).execute_with(|| {
+		let alice: Origin = RawOrigin::Signed(ALICE).into();
+		NFT::create_nft(alice, BoundedVec::default(), PERCENT_0, None, false).unwrap();
+		let nft_id = mock::NFT::get_next_nft_id() - 1;
+		NFT::set_owner(nft_id, &BOB).unwrap();
+		let nft = NFT::get_nft(nft_id).unwrap();
+		assert_eq!(nft.owner, BOB);
+	})
+}
+
+#[test]
+fn create_nft() {
+	ExtBuilder::new_build(vec![(ALICE, 1000)]).execute_with(|| {
+		let nft_id =
+			<NFT as NFTExt>::create_nft(ALICE, BoundedVec::default(), PERCENT_0, None, false)
+				.unwrap();
+		let nft = NFT::get_nft(nft_id).unwrap();
+		assert_eq!(nft.owner, ALICE);
+	})
+}

@@ -772,6 +772,28 @@ impl<T: Config> traits::NFTExt for Pallet<T> {
 
 		Ok(())
 	}
+
+	fn create_nft(
+		owner: Self::AccountId,
+		offchain_data: BoundedVec<u8, Self::NFTOffchainDataLimit>,
+		royalty: Permill,
+		collection_id: Option<CollectionId>,
+		is_soulbound: bool,
+	) -> Result<NFTId, DispatchResult> {
+		let nft_state = NFTState::new(false, false, false, false, is_soulbound);
+		let nft = NFTData::new(
+			owner.clone(),
+			owner.clone(),
+			offchain_data,
+			royalty,
+			nft_state,
+			collection_id,
+		);
+		let nft_id = Self::get_next_nft_id();
+		Nfts::<T>::insert(nft_id, nft);
+
+		Ok(nft_id)
+	}
 }
 
 impl<T: Config> Pallet<T> {

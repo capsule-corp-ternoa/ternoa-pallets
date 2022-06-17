@@ -99,7 +99,7 @@ mod create_nft {
 				mint_fee: NFT::nft_mint_fee(),
 			};
 			let event = Event::NFT(event);
-			assert_eq!(System::events().last().unwrap().event, event);
+			System::assert_last_event(event);
 		})
 	}
 
@@ -145,7 +145,7 @@ mod create_nft {
 				mint_fee: NFT::nft_mint_fee(),
 			};
 			let event = Event::NFT(event);
-			assert_eq!(System::events().last().unwrap().event, event);
+			System::assert_last_event(event);
 		})
 	}
 
@@ -300,7 +300,7 @@ mod burn_nft {
 			// Events checks.
 			let event = NFTsEvent::NFTBurned { nft_id: ALICE_NFT_ID };
 			let event = Event::NFT(event);
-			assert_eq!(System::events().last().unwrap().event, event);
+			System::assert_last_event(event);
 		})
 	}
 
@@ -326,7 +326,7 @@ mod burn_nft {
 			// Events checks.
 			let event = NFTsEvent::NFTBurned { nft_id: ALICE_NFT_ID };
 			let event = Event::NFT(event);
-			assert_eq!(System::events().last().unwrap().event, event);
+			System::assert_last_event(event);
 		})
 	}
 
@@ -412,7 +412,7 @@ mod transfer_nft {
 			let event =
 				NFTsEvent::NFTTransferred { nft_id: ALICE_NFT_ID, sender: ALICE, recipient: BOB };
 			let event = Event::NFT(event);
-			assert_eq!(System::events().last().unwrap().event, event);
+			System::assert_last_event(event);
 		})
 	}
 
@@ -533,7 +533,7 @@ mod delegate_nft {
 			// Events checks.
 			let event = NFTsEvent::NFTDelegated { nft_id: ALICE_NFT_ID, recipient: Some(BOB) };
 			let event = Event::NFT(event);
-			assert_eq!(System::events().last().unwrap().event, event);
+			System::assert_last_event(event);
 		})
 	}
 
@@ -558,7 +558,7 @@ mod delegate_nft {
 			// Events checks.
 			let event = NFTsEvent::NFTDelegated { nft_id: ALICE_NFT_ID, recipient: None };
 			let event = Event::NFT(event);
-			assert_eq!(System::events().last().unwrap().event, event);
+			System::assert_last_event(event);
 		})
 	}
 
@@ -636,7 +636,7 @@ mod set_royalty {
 			// Events checks.
 			let event = NFTsEvent::NFTRoyaltySet { nft_id: ALICE_NFT_ID, royalty: PERCENT_80 };
 			let event = Event::NFT(event);
-			assert_eq!(System::events().last().unwrap().event, event);
+			System::assert_last_event(event);
 		})
 	}
 
@@ -739,7 +739,7 @@ mod set_nft_mint_fee {
 			// Events checks.
 			let event = NFTsEvent::NFTMintFeeSet { fee: 20 };
 			let event = Event::NFT(event);
-			assert_eq!(System::events().last().unwrap().event, event);
+			System::assert_last_event(event);
 		})
 	}
 
@@ -779,7 +779,7 @@ mod create_collection {
 				limit: data.limit,
 			};
 			let event = Event::NFT(event);
-			assert_eq!(System::events().last().unwrap().event, event);
+			System::assert_last_event(event);
 		})
 	}
 
@@ -814,7 +814,7 @@ mod burn_collection {
 			// Events checks.
 			let event = NFTsEvent::CollectionBurned { collection_id: ALICE_COLLECTION_ID };
 			let event = Event::NFT(event);
-			assert_eq!(System::events().last().unwrap().event, event);
+			System::assert_last_event(event);
 		})
 	}
 
@@ -875,7 +875,7 @@ mod close_collection {
 			// Events checks.
 			let event = NFTsEvent::CollectionClosed { collection_id: ALICE_COLLECTION_ID };
 			let event = Event::NFT(event);
-			assert_eq!(System::events().last().unwrap().event, event);
+			System::assert_last_event(event);
 		})
 	}
 
@@ -923,7 +923,7 @@ mod limit_collection {
 			let event =
 				NFTsEvent::CollectionLimited { collection_id: ALICE_COLLECTION_ID, limit: 1 };
 			let event = Event::NFT(event);
-			assert_eq!(System::events().last().unwrap().event, event);
+			System::assert_last_event(event);
 		})
 	}
 
@@ -1044,7 +1044,7 @@ mod add_nft_to_collection {
 				collection_id: ALICE_COLLECTION_ID,
 			};
 			let event = Event::NFT(event);
-			assert_eq!(System::events().last().unwrap().event, event);
+			System::assert_last_event(event);
 		})
 	}
 

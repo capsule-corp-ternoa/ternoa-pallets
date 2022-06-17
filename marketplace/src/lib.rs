@@ -37,7 +37,7 @@ use frame_support::{
 };
 use frame_system::pallet_prelude::*;
 use sp_runtime::traits::{CheckedSub, StaticLookup};
-use sp_std::{cmp::max, prelude::*};
+use sp_std::prelude::*;
 
 use primitives::{
 	marketplace::{MarketplaceData, MarketplaceFee, MarketplaceId, MarketplaceType},
@@ -123,7 +123,7 @@ pub mod pallet {
 
 	/// Data related to sales
 	#[pallet::storage]
-	#[pallet::getter(fn nft_for_sale)]
+	#[pallet::getter(fn nfts_for_sale)]
 	pub type NftsForSale<T: Config> =
 		StorageMap<_, Blake2_128Concat, NFTId, Sale<T::AccountId, BalanceOf<T>>, OptionQuery>;
 
@@ -316,10 +316,7 @@ pub mod pallet {
 
 		/// Set the configuration parameters of the marketplace (eg. commission_fee, listing_fee,
 		/// account_list, offchain_data). Must be called by the owner of the marketplace.
-		#[pallet::weight(max(
-			T::WeightInfo::create_marketplace(),//all set
-			T::WeightInfo::create_marketplace(),//all remove
-		))]
+		#[pallet::weight(T::WeightInfo::create_marketplace())]
 		pub fn set_marketplace_configuration(
 			origin: OriginFor<T>,
 			marketplace_id: MarketplaceId,

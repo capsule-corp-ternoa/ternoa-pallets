@@ -135,7 +135,7 @@ mod create_marketplace {
 				offchain_data: data.offchain_data,
 			};
 			let event = Event::Marketplace(event);
-			assert_eq!(System::events().last().unwrap().event, event);
+			System::assert_last_event(event);
 		})
 	}
 
@@ -187,7 +187,7 @@ mod set_marketplace_owner {
 					owner: BOB,
 				};
 				let event = Event::Marketplace(event);
-				assert_eq!(System::events().last().unwrap().event, event);
+				System::assert_last_event(event);
 			},
 		)
 	}
@@ -263,7 +263,7 @@ mod set_marketplace_kind {
 					kind: MarketplaceType::Private,
 				};
 				let event = Event::Marketplace(event);
-				assert_eq!(System::events().last().unwrap().event, event);
+				System::assert_last_event(event);
 			},
 		)
 	}
@@ -381,7 +381,7 @@ mod set_marketplace_configuration {
 					offchain_data: ConfigOp::Remove,
 				};
 				let event = Event::Marketplace(event);
-				assert_eq!(System::events().last().unwrap().event, event);
+				System::assert_last_event(event);
 			},
 		)
 	}
@@ -475,7 +475,7 @@ mod list_nft {
 					.unwrap();
 
 				// Final state checks.
-				let sale = Marketplace::nft_for_sale(ALICE_NFT_ID).unwrap();
+				let sale = Marketplace::nfts_for_sale(ALICE_NFT_ID).unwrap();
 				assert_eq!(sale, data);
 
 				// Events checks.
@@ -486,7 +486,7 @@ mod list_nft {
 					price: data.price,
 				};
 				let event = Event::Marketplace(event);
-				assert_eq!(System::events().last().unwrap().event, event);
+				System::assert_last_event(event);
 			},
 		)
 	}
@@ -520,7 +520,7 @@ mod list_nft {
 					.unwrap();
 
 				// Final state checks.
-				let sale = Marketplace::nft_for_sale(ALICE_NFT_ID).unwrap();
+				let sale = Marketplace::nfts_for_sale(ALICE_NFT_ID).unwrap();
 				assert_eq!(sale, data);
 				assert_eq!(Balances::free_balance(ALICE), alice_balance - new_listing_fee);
 
@@ -532,7 +532,7 @@ mod list_nft {
 					price: data.price,
 				};
 				let event = Event::Marketplace(event);
-				assert_eq!(System::events().last().unwrap().event, event);
+				System::assert_last_event(event);
 			},
 		)
 	}
@@ -566,7 +566,7 @@ mod list_nft {
 					.unwrap();
 
 				// Final state checks.
-				let sale = Marketplace::nft_for_sale(ALICE_NFT_ID).unwrap();
+				let sale = Marketplace::nfts_for_sale(ALICE_NFT_ID).unwrap();
 				assert_eq!(sale, data);
 				assert_eq!(
 					Balances::free_balance(ALICE),
@@ -581,7 +581,7 @@ mod list_nft {
 					price: data.price,
 				};
 				let event = Event::Marketplace(event);
-				assert_eq!(System::events().last().unwrap().event, event);
+				System::assert_last_event(event);
 			},
 		)
 	}
@@ -813,13 +813,13 @@ mod unlist_nft {
 				Marketplace::unlist_nft(alice, ALICE_NFT_ID).unwrap();
 
 				// Final state checks.
-				let sale = Marketplace::nft_for_sale(ALICE_NFT_ID);
+				let sale = Marketplace::nfts_for_sale(ALICE_NFT_ID);
 				assert_eq!(sale, None);
 
 				// Events checks.
 				let event = MarketplaceEvent::NftUnlisted { nft_id: ALICE_NFT_ID };
 				let event = Event::Marketplace(event);
-				assert_eq!(System::events().last().unwrap().event, event);
+				System::assert_last_event(event);
 			},
 		)
 	}
@@ -891,7 +891,7 @@ mod buy_nft {
 
 				// Final state checks.
 				let nft = NFT::nfts(ALICE_NFT_ID).unwrap();
-				let sale = Marketplace::nft_for_sale(ALICE_NFT_ID);
+				let sale = Marketplace::nfts_for_sale(ALICE_NFT_ID);
 				assert_eq!(sale, None);
 				assert_eq!(nft.owner, BOB);
 				assert_eq!(Balances::free_balance(BOB), bob_balance - 10);
@@ -906,7 +906,7 @@ mod buy_nft {
 					price: 10,
 				};
 				let event = Event::Marketplace(event);
-				assert_eq!(System::events().last().unwrap().event, event);
+				System::assert_last_event(event);
 			},
 		)
 	}
@@ -942,7 +942,7 @@ mod buy_nft {
 
 				// Final state checks.
 				let nft = NFT::nfts(ALICE_NFT_ID).unwrap();
-				let sale = Marketplace::nft_for_sale(ALICE_NFT_ID);
+				let sale = Marketplace::nfts_for_sale(ALICE_NFT_ID);
 				assert_eq!(sale, None);
 				assert_eq!(nft.owner, BOB);
 				// Buyer check.
@@ -961,7 +961,7 @@ mod buy_nft {
 					price: 10,
 				};
 				let event = Event::Marketplace(event);
-				assert_eq!(System::events().last().unwrap().event, event);
+				System::assert_last_event(event);
 			},
 		)
 	}
@@ -997,7 +997,7 @@ mod buy_nft {
 
 				// Final state checks.
 				let nft = NFT::nfts(ALICE_NFT_ID).unwrap();
-				let sale = Marketplace::nft_for_sale(ALICE_NFT_ID);
+				let sale = Marketplace::nfts_for_sale(ALICE_NFT_ID);
 				assert_eq!(sale, None);
 				assert_eq!(nft.owner, BOB);
 				// Buyer check.
@@ -1016,7 +1016,7 @@ mod buy_nft {
 					price: 10,
 				};
 				let event = Event::Marketplace(event);
-				assert_eq!(System::events().last().unwrap().event, event);
+				System::assert_last_event(event);
 			},
 		)
 	}
@@ -1047,7 +1047,7 @@ mod buy_nft {
 
 				// Final state checks.
 				let nft = NFT::nfts(ALICE_NFT_ID).unwrap();
-				let sale = Marketplace::nft_for_sale(ALICE_NFT_ID);
+				let sale = Marketplace::nfts_for_sale(ALICE_NFT_ID);
 				assert_eq!(sale, None);
 				assert_eq!(nft.owner, BOB);
 				// Buyer check.
@@ -1066,7 +1066,7 @@ mod buy_nft {
 					price: 10,
 				};
 				let event = Event::Marketplace(event);
-				assert_eq!(System::events().last().unwrap().event, event);
+				System::assert_last_event(event);
 			},
 		)
 	}
@@ -1110,7 +1110,7 @@ mod buy_nft {
 
 				// Final state checks.
 				let nft = NFT::nfts(ALICE_NFT_ID).unwrap();
-				let sale = Marketplace::nft_for_sale(ALICE_NFT_ID);
+				let sale = Marketplace::nfts_for_sale(ALICE_NFT_ID);
 				assert_eq!(sale, None);
 				assert_eq!(nft.owner, BOB);
 				// Buyer check
@@ -1131,7 +1131,7 @@ mod buy_nft {
 					price: 100,
 				};
 				let event = Event::Marketplace(event);
-				assert_eq!(System::events().last().unwrap().event, event);
+				System::assert_last_event(event);
 			},
 		)
 	}
@@ -1175,7 +1175,7 @@ mod buy_nft {
 
 				// Final state checks.
 				let nft = NFT::nfts(ALICE_NFT_ID).unwrap();
-				let sale = Marketplace::nft_for_sale(ALICE_NFT_ID);
+				let sale = Marketplace::nfts_for_sale(ALICE_NFT_ID);
 				assert_eq!(sale, None);
 				assert_eq!(nft.owner, BOB);
 				// Buyer check.
@@ -1196,7 +1196,7 @@ mod buy_nft {
 					price: 100,
 				};
 				let event = Event::Marketplace(event);
-				assert_eq!(System::events().last().unwrap().event, event);
+				System::assert_last_event(event);
 			},
 		)
 	}
@@ -1219,7 +1219,7 @@ mod buy_nft {
 
 				// Nothing should have changed.
 				let nft = NFT::nfts(ALICE_NFT_ID).unwrap();
-				let sale = Marketplace::nft_for_sale(ALICE_NFT_ID);
+				let sale = Marketplace::nfts_for_sale(ALICE_NFT_ID);
 				assert!(sale.is_some());
 				assert_eq!(nft.owner, ALICE);
 				assert_eq!(Balances::free_balance(BOB), bob_balance);
