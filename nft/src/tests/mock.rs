@@ -149,13 +149,6 @@ impl Default for ExtBuilder {
 }
 
 impl ExtBuilder {
-	// pub fn caps(mut self, accounts: Vec<(u64, Balance)>) -> Self {
-	// 	for account in accounts {
-	// 		self.balances.push(account);
-	// 	}
-	// 	self
-	// }
-
 	pub fn new(balances: Vec<(u64, Balance)>) -> Self {
 		Self { balances }
 	}

@@ -17,7 +17,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use frame_support::{dispatch::DispatchResult, traits::Get};
-use primitives::nfts::{CollectionId, NFTId, NFTData};
+use primitives::nfts::{CollectionId, NFTData, NFTId};
 use sp_std::fmt::Debug;
 
 pub trait NFTExt {
@@ -43,6 +43,8 @@ pub trait NFTExt {
 	) -> DispatchResult;
 
 	fn get_nft(id: NFTId) -> Option<NFTData<Self::AccountId, Self::NFTOffchainDataLimit>>;
+
+	fn set_owner(id: NFTId, owner: &Self::AccountId) -> DispatchResult;
 }
 
 // /// Trait that implements basic functionalities related to Ternoa Marketplace

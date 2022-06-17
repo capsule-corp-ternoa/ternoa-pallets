@@ -33,8 +33,7 @@ use frame_support::{
 		Currency, ExistenceRequirement::KeepAlive, Get, OnUnbalanced, StorageVersion,
 		WithdrawReasons,
 	},
-	BoundedVec,
-	transactional,
+	transactional, BoundedVec,
 };
 use frame_system::pallet_prelude::*;
 use primitives::{
@@ -762,6 +761,16 @@ impl<T: Config> traits::NFTExt for Pallet<T> {
 
 	fn get_nft(id: NFTId) -> Option<NFTData<Self::AccountId, Self::NFTOffchainDataLimit>> {
 		Nfts::<T>::get(id)
+	}
+
+	fn set_owner(id: NFTId, owner: &Self::AccountId) -> DispatchResult {
+		Nfts::<T>::try_mutate(id, |data| -> DispatchResult {
+			let data = data.as_mut().ok_or(Error::<T>::NFTNotFound)?;
+			data.owner = owner.clone();
+			Ok(())
+		})?;
+
+		Ok(())
 	}
 }
 

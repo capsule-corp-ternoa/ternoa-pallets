@@ -14,10 +14,13 @@
 // You should have received a copy of the GNU General Public License
 // along with Ternoa.  If not, see <http://www.gnu.org/licenses/>.
 
-#![cfg_attr(not(feature = "std"), no_std)]
-
-pub mod common;
-pub mod marketplace;
-pub mod nfts;
-
-pub use common::{ConfigOp, U8BoundedVec};
+#[macro_export]
+macro_rules! config_op_field_exp {
+    ($($field_path:ident).+, $op:expr) => {
+        match $op {
+            ConfigOp::Noop => (),
+            ConfigOp::Set(v) => $($field_path).+ = Some(v),
+            ConfigOp::Remove => $($field_path).+ = None,
+        }
+    };
+}

@@ -26,7 +26,7 @@ pub use pallet::*;
 pub use types::*;
 
 use frame_support::{
-	dispatch::{DispatchErrorWithPostInfo, DispatchResult},
+	dispatch::{DispatchError, DispatchResult},
 	ensure,
 	pallet_prelude::DispatchResultWithPostInfo,
 	traits::{
@@ -35,8 +35,8 @@ use frame_support::{
 	},
 	transactional, BoundedVec,
 };
-use frame_system::{pallet_prelude::*, Origin};
-use sp_runtime::traits::{CheckedDiv, CheckedSub, StaticLookup};
+use frame_system::pallet_prelude::*;
+use sp_runtime::traits::{CheckedSub, StaticLookup};
 use sp_std::{cmp::max, prelude::*};
 
 use primitives::{
@@ -44,7 +44,7 @@ use primitives::{
 	nfts::NFTId,
 	ConfigOp, U8BoundedVec,
 };
-use ternoa_common::traits::NFTExt;
+use ternoa_common::{config_op_field_exp, traits::NFTExt};
 use weights::WeightInfo;
 
 pub type BalanceOf<T> =
@@ -147,10 +147,10 @@ pub mod pallet {
 		/// Marketplace config set
 		MarketplaceConfigSet {
 			marketplace_id: MarketplaceId,
-			commission_fee: Option<MarketplaceFee<BalanceOf<T>>>,
-			listing_fee: Option<MarketplaceFee<BalanceOf<T>>>,
-			account_list: Option<BoundedVec<T::AccountId, T::AccountSizeLimit>>,
-			offchain_data: Option<U8BoundedVec<T::OffchainDataLimit>>,
+			commission_fee: ConfigOp<MarketplaceFee<BalanceOf<T>>>,
+			listing_fee: ConfigOp<MarketplaceFee<BalanceOf<T>>>,
+			account_list: ConfigOp<BoundedVec<T::AccountId, T::AccountSizeLimit>>,
+			offchain_data: ConfigOp<U8BoundedVec<T::OffchainDataLimit>>,
 		},
 		/// Marketplace mint fee set
 		MarketplaceMintFeeSet { fee: BalanceOf<T> },
@@ -187,8 +187,6 @@ pub mod pallet {
 		CannotBuyOwnedNFT,
 		/// Sender is already the marketplace owner
 		CannotTransferMarketplaceToYourself,
-		/// Not enough funds for listing fee
-		NotEnoughFundsForListingFee,
 		/// The selected price is too low for commission fee
 		PriceTooLowForCommissionFee,
 		/// NFT already listed
@@ -207,6 +205,8 @@ pub mod pallet {
 		MarketpalceIdOverflow,
 		/// Math operations errors
 		InternalMathError,
+		/// Not enough balance for the operation
+		NotEnoughBalanceToBuy,
 	}
 
 	#[pallet::call]
@@ -227,7 +227,7 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			// Checks
+			// Checks.
 			// The Caller needs to pay the Marketplace Mint fee.
 			let mint_fee = MarketplaceMintFee::<T>::get();
 			let reason = WithdrawReasons::FEE;
@@ -244,7 +244,7 @@ pub mod pallet {
 				offchain_data.clone(),
 			);
 
-			//execute
+			// Execute.
 			Marketplaces::<T>::insert(marketplace_id, marketplace);
 			let event = Event::MarketplaceCreated {
 				marketplace_id,
@@ -272,12 +272,12 @@ pub mod pallet {
 			let recipient = T::Lookup::lookup(recipient)?;
 
 			Marketplaces::<T>::try_mutate(marketplace_id, |x| -> DispatchResult {
-				// Checks
+				// Checks.
 				let marketplace = x.as_mut().ok_or(Error::<T>::MarketplaceNotFound)?;
 				ensure!(marketplace.owner == who, Error::<T>::NotTheMarketplaceOwner);
-				ensure!(recipient.clone() == who, Error::<T>::CannotTransferMarketplaceToYourself);
+				ensure!(recipient.clone() != who, Error::<T>::CannotTransferMarketplaceToYourself);
 
-				// Execute
+				// Execute.
 				marketplace.owner = recipient.clone();
 				Ok(())
 			})?;
@@ -299,11 +299,11 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 
 			Marketplaces::<T>::try_mutate(marketplace_id, |x| -> DispatchResult {
-				// Checks
+				// Checks.
 				let marketplace = x.as_mut().ok_or(Error::<T>::MarketplaceNotFound)?;
 				ensure!(marketplace.owner == who, Error::<T>::NotTheMarketplaceOwner);
 
-				// Execute
+				// Execute.
 				marketplace.kind = kind;
 				Ok(())
 			})?;
@@ -314,46 +314,47 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		// /// Set the configuration parameters of the marketplace (eg. commission_fee, listing_fee,
-		// /// account_list, offchain_data). Must be called by the owner of the marketplace.
-		// #[pallet::weight(max(
-		// 	T::WeightInfo::create_marketplace(),//all set
-		// 	T::WeightInfo::create_marketplace(),//all remove
-		// ))]
-		// pub fn set_marketplace_configuration(
-		// 	origin: OriginFor<T>,
-		// 	marketplace_id: MarketplaceId,
-		// 	commission_fee: ConfigOp<MarketplaceFee>,
-		// 	listing_fee: ConfigOp<MarketplaceFee>,
-		// 	account_list: ConfigOp<BoundedVec<T::AccountId, T::AccountSizeLimit>>,
-		// 	offchain_data: ConfigOp<BoundedVec<u8, T::OffchainDataLimit>>
-		// ) -> DispatchResultWithPostInfo {
-		// 	let who = ensure_signed(origin)?;
+		/// Set the configuration parameters of the marketplace (eg. commission_fee, listing_fee,
+		/// account_list, offchain_data). Must be called by the owner of the marketplace.
+		#[pallet::weight(max(
+			T::WeightInfo::create_marketplace(),//all set
+			T::WeightInfo::create_marketplace(),//all remove
+		))]
+		pub fn set_marketplace_configuration(
+			origin: OriginFor<T>,
+			marketplace_id: MarketplaceId,
+			commission_fee: ConfigOp<MarketplaceFee<BalanceOf<T>>>,
+			listing_fee: ConfigOp<MarketplaceFee<BalanceOf<T>>>,
+			account_list: ConfigOp<BoundedVec<T::AccountId, T::AccountSizeLimit>>,
+			offchain_data: ConfigOp<BoundedVec<u8, T::OffchainDataLimit>>,
+		) -> DispatchResultWithPostInfo {
+			let who = ensure_signed(origin)?;
 
-		// 	//??????
-		// 	macro_rules! config_op_exp {
-		//         ($object:ident, $field:ident, $op:ident) => {
-		//             match $op {
-		//                 ConfigOp::Noop => (),
-		//                 ConfigOp::Set(v) => $object[$field] = (Some(v)), // ???
-		//                 ConfigOp::Remove => $object.$field = (None), // ???
-		//             }
-		//         };
-		//     }
+			Marketplaces::<T>::try_mutate(marketplace_id, |x| -> DispatchResult {
+				let marketplace = x.as_mut().ok_or(Error::<T>::MarketplaceNotFound)?;
 
-		// 	Marketplaces::<T>::try_mutate(marketplace_id, |x| -> DispatchResult {
-		// 		let marketplace = x.as_mut().ok_or(Error::<T>::MarketplaceNotFound)?;
-		// 		ensure!(marketplace.owner == who, Error::<T>::NotTheMarketplaceOwner);
+				// Checks
+				ensure!(marketplace.owner == who, Error::<T>::NotTheMarketplaceOwner);
 
-		// 		config_op_exp!(marketplace, "commission_fee", commission_fee);
-		// 		Ok(())
-		// 	})?;
+				// Execute
+				config_op_field_exp!(marketplace.commission_fee, commission_fee);
+				config_op_field_exp!(marketplace.listing_fee, listing_fee);
+				config_op_field_exp!(marketplace.account_list, account_list.clone());
+				config_op_field_exp!(marketplace.offchain_data, offchain_data.clone());
+				Ok(())
+			})?;
 
-		// 	let event = Event::MarketplaceKindSet { marketplace_id, kind };
-		// 	Self::deposit_event(event);
+			let event = Event::MarketplaceConfigSet {
+				marketplace_id,
+				commission_fee,
+				listing_fee,
+				account_list,
+				offchain_data,
+			};
+			Self::deposit_event(event);
 
-		// 	Ok(().into())
-		// }
+			Ok(().into())
+		}
 
 		/// Set the fee for minting a marketplace if the caller is root.
 		#[pallet::weight(T::WeightInfo::create_marketplace())]
@@ -368,7 +369,7 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		/// Put an NFT on sale on a marketplace
+		/// Put an NFT on sale on a marketplace.
 		#[pallet::weight(T::WeightInfo::create_marketplace())]
 		#[transactional]
 		pub fn list_nft(
@@ -390,47 +391,20 @@ pub mod pallet {
 			let marketplace =
 				Marketplaces::<T>::get(marketplace_id).ok_or(Error::<T>::MarketplaceNotFound)?;
 
-			// Check if the user is allowed to list on this marketplace
-			let mut is_allowed_to_list = false;
-			if marketplace.kind == MarketplaceType::Private {
-				if let Some(account_list) = &marketplace.account_list {
-					is_allowed_to_list = account_list.contains(&who);
-				}
-			} else {
-				if let Some(account_list) = &marketplace.account_list {
-					is_allowed_to_list = !account_list.contains(&who);
-				} else {
-					is_allowed_to_list = true;
-				}
-			}
-			ensure!(is_allowed_to_list, Error::<T>::AccountNotAllowedToList);
+			// Check if the user is allowed to list on this marketplace.
+			Self::ensure_is_allowed_to_list(&who, &marketplace)?;
 
-			// Check if the selected price can cover the marketplace commission_fee if it exists
+			// Check if the selected price can cover the marketplace commission_fee if it exists.
 			if let Some(commission_fee) = &marketplace.commission_fee {
 				if let MarketplaceFee::Flat(flat_commission) = commission_fee {
-					ensure!(price > *flat_commission, Error::<T>::PriceTooLowForCommissionFee);
+					ensure!(price >= *flat_commission, Error::<T>::PriceTooLowForCommissionFee);
 				}
 			}
 
 			// The Caller needs to pay the listing fee if it exists.
-			let mut listing_fee_value: BalanceOf<T> = 0u32.into();
-			if let Some(listing_fee) = &marketplace.listing_fee {
-				match *listing_fee {
-					MarketplaceFee::Flat(flat_listing_fee) => {
-						listing_fee_value = flat_listing_fee;
-					},
-					MarketplaceFee::Percentage(percentage_listing_fee) => {
-						listing_fee_value = percentage_listing_fee * price;
-					},
-				}
-				if listing_fee_value > 0u32.into() {
-					let reason = WithdrawReasons::FEE;
-					let imbalance = T::Currency::withdraw(&who, listing_fee_value, reason, KeepAlive)?;
-					T::FeesCollector::on_unbalanced(imbalance);
-				}
-			}
+			Self::pay_listing_fee(&who, &marketplace, price)?;
 
-			// Execute
+			// Execute.
 			let sale = Sale::new(who, marketplace_id, price, marketplace.commission_fee);
 			NftsForSale::<T>::insert(nft_id, sale);
 			T::NFTExt::set_nft_state(
@@ -453,17 +427,17 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		/// Remove an NFT from sale
+		/// Remove an NFT from sale.
 		#[pallet::weight(T::WeightInfo::create_marketplace())]
 		pub fn unlist_nft(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 			let nft = T::NFTExt::get_nft(nft_id).ok_or(Error::<T>::NFTNotFound)?;
 
-			// Checks
+			// Checks.
 			ensure!(nft.owner == who, Error::<T>::NotTheNFTOwner);
 			ensure!(NftsForSale::<T>::contains_key(nft_id), Error::<T>::NFTNotForSale);
 
-			// Execute
+			// Execute.
 			T::NFTExt::set_nft_state(
 				nft_id,
 				nft.state.is_capsule,
@@ -485,130 +459,51 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 			let nft = T::NFTExt::get_nft(nft_id).ok_or(Error::<T>::NFTNotFound)?;
 			let sale = NftsForSale::<T>::get(nft_id).ok_or(Error::<T>::NFTNotForSale)?;
-			let commission_fee = sale.commission_fee;
-			let price = sale.price;
+			let marketplace = Marketplaces::<T>::get(sale.marketplace_id)
+				.ok_or(Error::<T>::MarketplaceNotFound)?;
+			let mut price = sale.price;
 
 			// Checks
 			ensure!(sale.account_id != who, Error::<T>::CannotBuyOwnedNFT);
+			ensure!(T::Currency::free_balance(&who) >= price, Error::<T>::NotEnoughBalanceToBuy);
 
-			
-			let mut commission_fee_value: BalanceOf<T> = 0u32.into();
-			if let Some(commission_fee) = &sale.commission_fee {
-				match *commission_fee {
-					MarketplaceFee::Flat(flat_commission_fee) => {
-						commission_fee_value = flat_commission_fee;
-					},
-					MarketplaceFee::Percentage(percentage_commission_fee) => {
-						commission_fee_value = percentage_commission_fee * price;
-					},
-				}
-				if commission_fee_value > 0u32.into() {
-					let reason = WithdrawReasons::FEE;
-					let imbalance = T::Currency::withdraw(&who, commission_fee_value, reason, KeepAlive)?;
-					T::FeesCollector::on_unbalanced(imbalance);
-				}
+			// Caller pays for commission fee, the price is updated.
+			price = Self::pay_commission_fee(&who, &marketplace, &sale, price)?;
+
+			// Caller pays for royalty, the price is updated.
+			let royalty_value = nft.royalty * price;
+			if royalty_value > 0u32.into() {
+				T::Currency::transfer(&who, &nft.creator, royalty_value, KeepAlive)?;
+				price = price.checked_sub(&royalty_value).ok_or(Error::<T>::InternalMathError)?;
 			}
 
+			// Caller pays the seller the updated price.
+			T::Currency::transfer(&who, &sale.account_id, price, KeepAlive)?;
 
-
-
-
-
-
-
-			// // KeepAlive because they need to be able to use the NFT later on
-			// if commission_fee != 0 {
-			// 	let tmp = 100u8.checked_div(commission_fee).ok_or(Error::<T>::InternalMathError)?;
-
-			// 	let fee = price.checked_div(&(tmp.into())).ok_or(Error::<T>::InternalMathError)?;
-
-			// 	price = price.checked_sub(&fee).ok_or(Error::<T>::InternalMathError)?;
-
-			// 	T::Currency::transfer(&caller, &market.owner, fee, KeepAlive)?;
-			// }
-
-			// T::Currency::transfer(&caller, &sale.account_id, price, KeepAlive)?;
-
-			// T::NFTExt::set_listed_for_sale(nft_id, false)?;
-			// T::NFTExt::set_owner(nft_id, &caller)?;
-
-			// NftsForSale::<T>::remove(nft_id);
-
-			// let event = Event::NFTSold { nft_id, owner: caller };
-			// Self::deposit_event(event);
+			//Execute.
+			T::NFTExt::set_nft_state(
+				nft_id,
+				nft.state.is_capsule,
+				false,
+				nft.state.is_secret,
+				nft.state.is_delegated,
+				nft.state.is_soulbound,
+			)?;
+			T::NFTExt::set_owner(nft_id, &who)?;
+			NftsForSale::<T>::remove(nft_id);
+			let event = Event::NftSold {
+				buyer: who,
+				nft_id,
+				marketplace_id: sale.marketplace_id,
+				price: sale.price,
+				commission_fee: sale.commission_fee,
+			};
+			Self::deposit_event(event);
 
 			Ok(().into())
 		}
 	}
 }
-
-// impl<T: Config> MarketplaceExt for Pallet<T> {
-// 	type AccountId = T::AccountId;
-// 	type AccountCountLimit = T::AccountCountLimit;
-// 	type NameLengthLimit = T::NameLengthLimit;
-// 	type URILengthLimit = T::URILengthLimit;
-// 	type DescriptionLengthLimit = T::DescriptionLengthLimit;
-
-// 	// Return if an account is permitted to list on given marketplace
-// 	fn is_allowed_to_list(
-// 		marketplace_id: MarketplaceId,
-// 		account_id: Self::AccountId,
-// 	) -> DispatchResult {
-// 		let market =
-// 			Marketplaces::<T>::get(marketplace_id).ok_or(Error::<T>::MarketplaceNotFound)?;
-
-// 		if market.kind == MarketplaceType::Private {
-// 			let is_on_list = market.allow_list.contains(&account_id);
-// 			ensure!(is_on_list, Error::<T>::AccountNotAllowedToList);
-// 			Ok(())
-// 		} else {
-// 			let is_on_list = market.disallow_list.contains(&account_id);
-// 			ensure!(!is_on_list, Error::<T>::AccountNotAllowedToList);
-// 			Ok(())
-// 		}
-// 	}
-
-// 	// Return the owner account and commision for marketplace with `marketplace_id`
-// 	fn get_marketplace(
-// 		marketplace_id: MarketplaceId,
-// 	) -> Option<
-// 		MarketplaceData<
-// 			Self::AccountId,
-// 			Self::AccountCountLimit,
-// 			Self::NameLengthLimit,
-// 			Self::URILengthLimit,
-// 			Self::DescriptionLengthLimit,
-// 		>,
-// 	> {
-// 		match Marketplaces::<T>::get(marketplace_id) {
-// 			Some(marketplace) => Some(marketplace),
-// 			None => None,
-// 		}
-// 	}
-
-// 	// create a new marketplace
-// 	fn create(
-// 		caller_id: Self::AccountId,
-// 		kind: MarketplaceType,
-// 		commission_fee: u8,
-// 		name: NameVec<T>,
-// 		uri: URIVec<T>,
-// 		logo_uri: URIVec<T>,
-// 		description: DescriptionVec<T>,
-// 	) -> Result<MarketplaceId, DispatchErrorWithPostInfo> {
-// 		Self::create_marketplace(
-// 			Origin::<T>::Signed(caller_id).into(),
-// 			kind,
-// 			commission_fee,
-// 			name,
-// 			uri,
-// 			logo_uri,
-// 			description,
-// 		)?;
-
-// 		Ok(MarketplaceIdGenerator::<T>::get())
-// 	}
-// }
 
 impl<T: Config> Pallet<T> {
 	fn get_next_marketplace_id() -> MarketplaceId {
@@ -619,5 +514,75 @@ impl<T: Config> Pallet<T> {
 		NextMarketplaceId::<T>::put(next_id);
 
 		marketplace_id
+	}
+
+	fn ensure_is_allowed_to_list(
+		who: &T::AccountId,
+		marketplace: &MarketplaceData<
+			T::AccountId,
+			BalanceOf<T>,
+			T::AccountSizeLimit,
+			T::OffchainDataLimit,
+		>,
+	) -> Result<(), Error<T>> {
+		let mut is_in_account_list = false;
+		if let Some(account_list) = &marketplace.account_list {
+			is_in_account_list = account_list.contains(&who);
+		}
+		let is_allowed = match marketplace.kind {
+			MarketplaceType::Public => !is_in_account_list,
+			MarketplaceType::Private => is_in_account_list,
+		};
+		ensure!(is_allowed, Error::<T>::AccountNotAllowedToList);
+		Ok(())
+	}
+
+	fn pay_listing_fee(
+		who: &T::AccountId,
+		marketplace: &MarketplaceData<
+			T::AccountId,
+			BalanceOf<T>,
+			T::AccountSizeLimit,
+			T::OffchainDataLimit,
+		>,
+		price: BalanceOf<T>,
+	) -> Result<(), DispatchError> {
+		if let Some(listing_fee) = &marketplace.listing_fee {
+			let listing_fee_value = match *listing_fee {
+				MarketplaceFee::Flat(x) => x,
+				MarketplaceFee::Percentage(x) => x * price,
+			};
+			if listing_fee_value > 0u32.into() {
+				T::Currency::transfer(&who, &marketplace.owner, listing_fee_value, KeepAlive)?;
+			}
+		}
+		Ok(())
+	}
+
+	fn pay_commission_fee(
+		who: &T::AccountId,
+		marketplace: &MarketplaceData<
+			T::AccountId,
+			BalanceOf<T>,
+			T::AccountSizeLimit,
+			T::OffchainDataLimit,
+		>,
+		sale: &Sale<T::AccountId, BalanceOf<T>>,
+		price: BalanceOf<T>,
+	) -> Result<BalanceOf<T>, DispatchError> {
+		let mut price = price;
+		if let Some(commission_fee) = &sale.commission_fee {
+			let commission_fee_value = match *commission_fee {
+				MarketplaceFee::Flat(x) => x,
+				MarketplaceFee::Percentage(x) => x * price,
+			};
+			if commission_fee_value > 0u32.into() {
+				T::Currency::transfer(&who, &marketplace.owner, commission_fee_value, KeepAlive)?;
+				price = price
+					.checked_sub(&commission_fee_value)
+					.ok_or(Error::<T>::InternalMathError)?;
+			}
+		}
+		Ok(price)
 	}
 }

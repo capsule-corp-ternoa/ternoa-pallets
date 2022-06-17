@@ -58,8 +58,8 @@ fn prepare_tests() {
 	assert_eq!(NFT::nfts(ALICE_NFT_ID).is_some(), true);
 	assert_eq!(NFT::nfts(BOB_NFT_ID).is_some(), true);
 
-	assert_eq!(NFT::nfts(ALICE_COLLECTION_ID).is_some(), true);
-	assert_eq!(NFT::nfts(BOB_COLLECTION_ID).is_some(), true);
+	assert_eq!(NFT::collections(ALICE_COLLECTION_ID).is_some(), true);
+	assert_eq!(NFT::collections(BOB_COLLECTION_ID).is_some(), true);
 }
 
 mod create_nft {
@@ -265,23 +265,17 @@ mod create_nft {
 	}
 
 	#[test]
-	fn create_nft_fail_balance_revert() {
-		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
+	fn keep_alive() {
+		ExtBuilder::new_build(vec![(ALICE, 2 * NFT_MINT_FEE), (BOB, 1000)]).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 			let alice_balance = Balances::free_balance(ALICE);
 
-			// Try to add Alice's NFT to Bob's collection.
-			let err = NFT::create_nft(
-				alice,
-				BoundedVec::default(),
-				PERCENT_0,
-				Some(BOB_COLLECTION_ID),
-				false,
-			);
+			// Try to create an NFT.
+			let err = NFT::create_nft(alice, BoundedVec::default(), PERCENT_0, None, false);
 
-			// Should fail because Bob is not the collection owner.
-			assert_noop!(err, Error::<Test>::NotTheCollectionOwner);
+			// Should fail because Alice's account must stay alive.
+			assert_noop!(err, BalanceError::<Test>::KeepAlive);
 			// Alice's balance should not have been changed
 			assert_eq!(Balances::free_balance(ALICE), alice_balance);
 		})

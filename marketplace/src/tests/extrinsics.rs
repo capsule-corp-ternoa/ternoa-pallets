@@ -15,728 +15,1280 @@
 // along with Ternoa.  If not, see <http://www.gnu.org/licenses/>.
 
 use super::mock::*;
-use frame_support::{assert_noop, assert_ok, bounded_vec, error::BadOrigin};
+use crate::{
+	tests::mock, Error, Event as MarketplaceEvent, MarketplaceData, MarketplaceFee, MarketplaceId,
+	MarketplaceType, Sale,
+};
+use frame_support::{assert_noop, assert_ok, error::BadOrigin, BoundedVec};
 use frame_system::RawOrigin;
 use pallet_balances::Error as BalanceError;
-use primitives::marketplace::MarketplaceType;
+use primitives::{
+	nfts::{CollectionId, NFTId},
+	ConfigOp,
+};
+use sp_arithmetic::per_things::Permill;
 use ternoa_common::traits::NFTExt;
 
-use crate::{tests::mock, DescriptionVec, Error, MarketplaceData, NameVec, SaleData, URIVec};
+const ALICE_NFT_ID: NFTId = 0;
+const ALICE_COLLECTION_ID: CollectionId = 0;
+const ALICE_MARKETPLACE_ID: MarketplaceId = 0;
+const BOB_NFT_ID: NFTId = 1;
+const BOB_COLLECTION_ID: CollectionId = 1;
+const BOB_MARKETPLACE_ID: MarketplaceId = 1;
+const CHARLIE_MARKETPLACE_ID: MarketplaceId = 2;
+const INVALID_NFT_ID: NFTId = 1001;
+const INVALID_MARKETPLACE_ID: NFTId = 1001;
+const PERCENT_100: Permill = Permill::from_parts(1000000);
+const PERCENT_80: Permill = Permill::from_parts(800000);
+const PERCENT_50: Permill = Permill::from_parts(500000);
+const PERCENT_0: Permill = Permill::from_parts(0);
 
-type MPT = MarketplaceType;
+fn origin(account: u64) -> mock::Origin {
+	RawOrigin::Signed(account).into()
+}
 
-#[test]
-fn list_happy() {
-	ExtBuilder::default()
-		.caps(vec![(ALICE, 1000), (BOB, 1000)])
-		.build()
-		.execute_with(|| {
-			let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
-			let bob: mock::Origin = RawOrigin::Signed(BOB).into();
+fn root() -> mock::Origin {
+	RawOrigin::Root.into()
+}
 
-			// Happy path Public marketplace
-			let price = 50;
-			let series_id = vec![50];
-			let nft_id = NFT::create_nft(ALICE, bounded_vec![50], Some(series_id.clone())).unwrap();
-			let sale_info = SaleData::new(ALICE, price.clone(), 0);
+fn prepare_tests() {
+	let alice: mock::Origin = origin(ALICE);
+	let bob: mock::Origin = origin(BOB);
+	let charlie: mock::Origin = origin(CHARLIE);
 
-			help::finish_series(alice.clone(), series_id);
-			assert_ok!(Marketplace::list_nft(alice.clone(), nft_id, price, Some(0)));
-			assert_eq!(Marketplace::nft_for_sale(nft_id), Some(sale_info));
-			assert_eq!(<NFT as NFTExt>::is_listed_for_sale(nft_id), Some(true));
+	//Create alice NFT.
+	NFT::create_nft(alice.clone(), BoundedVec::default(), PERCENT_0, None, false).unwrap();
 
-			// Happy path Private marketplace
-			let series_id = vec![51];
-			let mkp_id =
-				help::create_mkp(bob.clone(), MPT::Private, 0, bounded_vec![1], vec![ALICE]);
-			let sale_info = SaleData::new(ALICE, price.clone(), mkp_id);
-			let nft_id = NFT::create_nft(ALICE, bounded_vec![50], Some(series_id.clone())).unwrap();
+	// Create alice collection.
+	NFT::create_collection(alice.clone(), BoundedVec::default(), None).unwrap();
 
-			help::finish_series(alice.clone(), series_id);
-			let ok = Marketplace::list_nft(alice.clone(), nft_id, price, Some(mkp_id));
+	// Create alice marketplace.
+	Marketplace::create_marketplace(alice, MarketplaceType::Public, None, None, None).unwrap();
+
+	//Create bob NFT.
+	NFT::create_nft(bob.clone(), BoundedVec::default(), PERCENT_0, None, false).unwrap();
+
+	// Create bob collection.
+	NFT::create_collection(bob.clone(), BoundedVec::default(), None).unwrap();
+
+	// Create bob marketplace.
+	Marketplace::create_marketplace(bob, MarketplaceType::Public, None, None, None).unwrap();
+
+	// Create charlie marketplace.
+	Marketplace::create_marketplace(charlie, MarketplaceType::Public, None, None, None).unwrap();
+
+	assert_eq!(NFT::nfts(ALICE_NFT_ID).is_some(), true);
+	assert_eq!(NFT::nfts(BOB_NFT_ID).is_some(), true);
+
+	assert_eq!(NFT::collections(ALICE_COLLECTION_ID).is_some(), true);
+	assert_eq!(NFT::collections(BOB_COLLECTION_ID).is_some(), true);
+
+	assert_eq!(Marketplace::marketplaces(ALICE_MARKETPLACE_ID).is_some(), true);
+	assert_eq!(Marketplace::marketplaces(BOB_MARKETPLACE_ID).is_some(), true);
+	assert_eq!(Marketplace::marketplaces(CHARLIE_MARKETPLACE_ID).is_some(), true);
+}
+
+mod create_marketplace {
+	use super::*;
+
+	#[test]
+	fn create_marketplace() {
+		ExtBuilder::new_build(vec![(ALICE, 1000)]).execute_with(|| {
+			let alice: mock::Origin = origin(ALICE);
+			let alice_balance = Balances::free_balance(ALICE);
+			let data = MarketplaceData::new(
+				ALICE,
+				MarketplaceType::Public,
+				Some(MarketplaceFee::Percentage(PERCENT_80)),
+				Some(MarketplaceFee::Flat(10)),
+				None,
+				Some(BoundedVec::default()),
+			);
+
+			// Create a marketplace.
+			Marketplace::create_marketplace(
+				alice,
+				data.kind,
+				data.commission_fee,
+				data.listing_fee,
+				data.offchain_data.clone(),
+			)
+			.unwrap();
+			let marketplace_id = Marketplace::get_next_marketplace_id() - 1;
+
+			// Final state checks.
+			let marketplace = Marketplace::marketplaces(marketplace_id);
+			assert_eq!(marketplace, Some(data.clone()));
+			assert_eq!(
+				Balances::free_balance(ALICE),
+				alice_balance - Marketplace::marketplace_mint_fee()
+			);
+
+			// Events checks.
+			let event = MarketplaceEvent::MarketplaceCreated {
+				marketplace_id,
+				owner: data.owner,
+				kind: data.kind,
+				commission_fee: data.commission_fee,
+				listing_fee: data.listing_fee,
+				account_list: data.account_list,
+				offchain_data: data.offchain_data,
+			};
+			let event = Event::Marketplace(event);
+			assert_eq!(System::events().last().unwrap().event, event);
+		})
+	}
+
+	#[test]
+	fn insufficient_balance() {
+		ExtBuilder::new_build(vec![(ALICE, 1)]).execute_with(|| {
+			let alice: mock::Origin = origin(ALICE);
+			// Should fail and storage should remain empty.
+			let err =
+				Marketplace::create_marketplace(alice, MarketplaceType::Public, None, None, None);
+			assert_noop!(err, BalanceError::<Test>::InsufficientBalance);
+		})
+	}
+
+	#[test]
+	fn keep_alive() {
+		ExtBuilder::new_build(vec![(ALICE, MARKETPLACE_MINT_FEE)]).execute_with(|| {
+			let alice: mock::Origin = origin(ALICE);
+			let alice_balance = Balances::free_balance(ALICE);
+			// Should fail and storage should remain empty.
+			let err =
+				Marketplace::create_marketplace(alice, MarketplaceType::Public, None, None, None);
+			assert_noop!(err, BalanceError::<Test>::KeepAlive);
+			assert_eq!(Balances::free_balance(ALICE), alice_balance);
+		})
+	}
+}
+
+mod set_marketplace_owner {
+	use super::*;
+
+	#[test]
+	fn set_marketplace_owner() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
+			|| {
+				prepare_tests();
+				let alice: mock::Origin = origin(ALICE);
+
+				// transfer a marketplace.
+				Marketplace::set_marketplace_owner(alice, ALICE_MARKETPLACE_ID, BOB).unwrap();
+
+				// Final state checks.
+				let marketplace = Marketplace::marketplaces(ALICE_MARKETPLACE_ID).unwrap();
+				assert_eq!(marketplace.owner, BOB);
+
+				// Events checks.
+				let event = MarketplaceEvent::MarketplaceOwnerSet {
+					marketplace_id: ALICE_MARKETPLACE_ID,
+					owner: BOB,
+				};
+				let event = Event::Marketplace(event);
+				assert_eq!(System::events().last().unwrap().event, event);
+			},
+		)
+	}
+
+	#[test]
+	fn marketplace_not_found() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
+			|| {
+				prepare_tests();
+				let alice: mock::Origin = origin(ALICE);
+
+				// transfer a marketplace with invalid marketplace id.
+				let err = Marketplace::set_marketplace_owner(alice, INVALID_MARKETPLACE_ID, BOB);
+				assert_noop!(err, Error::<Test>::MarketplaceNotFound);
+			},
+		)
+	}
+
+	#[test]
+	fn not_the_marketplace_owner() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
+			|| {
+				prepare_tests();
+				let alice: mock::Origin = origin(ALICE);
+
+				// transfer a marketplace with not owned marketplace id.
+				let err = Marketplace::set_marketplace_owner(alice, BOB_MARKETPLACE_ID, BOB);
+				assert_noop!(err, Error::<Test>::NotTheMarketplaceOwner);
+			},
+		)
+	}
+
+	#[test]
+	fn cannot_transfer_marketplace_to_yourself() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
+			|| {
+				prepare_tests();
+				let alice: mock::Origin = origin(ALICE);
+
+				// transfer a marketplace with already owned marketplace id.
+				let err = Marketplace::set_marketplace_owner(alice, ALICE_MARKETPLACE_ID, ALICE);
+				assert_noop!(err, Error::<Test>::CannotTransferMarketplaceToYourself);
+			},
+		)
+	}
+}
+
+mod set_marketplace_kind {
+	use super::*;
+
+	#[test]
+	fn set_marketplace_kind() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
+			|| {
+				prepare_tests();
+				let alice: mock::Origin = origin(ALICE);
+
+				// set marketplace kind.
+				Marketplace::set_marketplace_kind(
+					alice,
+					ALICE_MARKETPLACE_ID,
+					MarketplaceType::Private,
+				)
+				.unwrap();
+
+				// Final state checks.
+				let marketplace = Marketplace::marketplaces(ALICE_MARKETPLACE_ID).unwrap();
+				assert_eq!(marketplace.kind, MarketplaceType::Private);
+
+				// Events checks.
+				let event = MarketplaceEvent::MarketplaceKindSet {
+					marketplace_id: ALICE_MARKETPLACE_ID,
+					kind: MarketplaceType::Private,
+				};
+				let event = Event::Marketplace(event);
+				assert_eq!(System::events().last().unwrap().event, event);
+			},
+		)
+	}
+
+	#[test]
+	fn marketplace_not_found() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
+			|| {
+				prepare_tests();
+				let alice: mock::Origin = origin(ALICE);
+
+				// set marketplace kind for invalid marketplace.
+				let err = Marketplace::set_marketplace_kind(
+					alice,
+					INVALID_MARKETPLACE_ID,
+					MarketplaceType::Private,
+				);
+
+				assert_noop!(err, Error::<Test>::MarketplaceNotFound);
+			},
+		)
+	}
+
+	#[test]
+	fn not_the_marketplace_owner() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
+			|| {
+				prepare_tests();
+				let alice: mock::Origin = origin(ALICE);
+
+				// set marketplace kind for not owned marketplace.
+				let err = Marketplace::set_marketplace_kind(
+					alice,
+					BOB_MARKETPLACE_ID,
+					MarketplaceType::Private,
+				);
+
+				assert_noop!(err, Error::<Test>::NotTheMarketplaceOwner);
+			},
+		)
+	}
+}
+
+mod set_marketplace_configuration {
+	use super::*;
+
+	#[test]
+	fn set_marketplace_configuration() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
+			|| {
+				prepare_tests();
+				let alice: mock::Origin = origin(ALICE);
+				let data = MarketplaceData::new(
+					ALICE,
+					MarketplaceType::Public,
+					Some(MarketplaceFee::Percentage(PERCENT_100)),
+					Some(MarketplaceFee::Percentage(PERCENT_100)),
+					Some(BoundedVec::try_from(vec![ALICE, BOB]).unwrap()),
+					Some(BoundedVec::try_from(vec![1]).unwrap()),
+				);
+				let data_none =
+					MarketplaceData::new(ALICE, MarketplaceType::Public, None, None, None, None);
+
+				// set marketplace configuration, all set.
+				Marketplace::set_marketplace_configuration(
+					alice.clone(),
+					ALICE_MARKETPLACE_ID,
+					ConfigOp::Set(data.commission_fee.unwrap()),
+					ConfigOp::Set(data.listing_fee.unwrap()),
+					ConfigOp::Set(data.account_list.clone().unwrap()),
+					ConfigOp::Set(data.offchain_data.clone().unwrap()),
+				)
+				.unwrap();
+
+				// State checks.
+				let marketplace = Marketplace::marketplaces(ALICE_MARKETPLACE_ID).unwrap();
+				assert_eq!(marketplace, data.clone());
+
+				// set marketplace configuration, all noop.
+				Marketplace::set_marketplace_configuration(
+					alice.clone(),
+					ALICE_MARKETPLACE_ID,
+					ConfigOp::Noop,
+					ConfigOp::Noop,
+					ConfigOp::Noop,
+					ConfigOp::Noop,
+				)
+				.unwrap();
+
+				// State checks.
+				let marketplace = Marketplace::marketplaces(ALICE_MARKETPLACE_ID).unwrap();
+				assert_eq!(marketplace, data.clone());
+
+				// set marketplace configuration, all remove.
+				Marketplace::set_marketplace_configuration(
+					alice.clone(),
+					ALICE_MARKETPLACE_ID,
+					ConfigOp::Remove,
+					ConfigOp::Remove,
+					ConfigOp::Remove,
+					ConfigOp::Remove,
+				)
+				.unwrap();
+
+				// State checks.
+				let marketplace = Marketplace::marketplaces(ALICE_MARKETPLACE_ID).unwrap();
+				assert_eq!(marketplace, data_none.clone());
+
+				// Events checks.
+				let event = MarketplaceEvent::MarketplaceConfigSet {
+					marketplace_id: ALICE_MARKETPLACE_ID,
+					commission_fee: ConfigOp::Remove,
+					listing_fee: ConfigOp::Remove,
+					account_list: ConfigOp::Remove,
+					offchain_data: ConfigOp::Remove,
+				};
+				let event = Event::Marketplace(event);
+				assert_eq!(System::events().last().unwrap().event, event);
+			},
+		)
+	}
+
+	#[test]
+	fn marketplace_not_found() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
+			|| {
+				prepare_tests();
+				let alice: mock::Origin = origin(ALICE);
+
+				// set marketplace configuration, all remove.
+				let err = Marketplace::set_marketplace_configuration(
+					alice.clone(),
+					INVALID_MARKETPLACE_ID,
+					ConfigOp::Remove,
+					ConfigOp::Remove,
+					ConfigOp::Remove,
+					ConfigOp::Remove,
+				);
+
+				assert_noop!(err, Error::<Test>::MarketplaceNotFound);
+			},
+		)
+	}
+
+	#[test]
+	fn not_the_marketplace_owner() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
+			|| {
+				prepare_tests();
+				let alice: mock::Origin = origin(ALICE);
+
+				// set marketplace configuration, all remove.
+				let err = Marketplace::set_marketplace_configuration(
+					alice.clone(),
+					BOB_MARKETPLACE_ID,
+					ConfigOp::Remove,
+					ConfigOp::Remove,
+					ConfigOp::Remove,
+					ConfigOp::Remove,
+				);
+
+				assert_noop!(err, Error::<Test>::NotTheMarketplaceOwner);
+			},
+		)
+	}
+}
+
+mod set_marketplace_mint_fee {
+	use super::*;
+
+	#[test]
+	fn set_marketplace_mint_fee() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
+			let old_mint_fee = Marketplace::marketplace_mint_fee();
+			let new_mint_fee = 123u64;
+			assert_eq!(Marketplace::marketplace_mint_fee(), old_mint_fee);
+
+			let ok = Marketplace::set_marketplace_mint_fee(root(), new_mint_fee);
 			assert_ok!(ok);
-			assert_eq!(Marketplace::nft_for_sale(nft_id), Some(sale_info));
-			assert_eq!(NFT::is_listed_for_sale(nft_id), Some(true));
+			assert_eq!(Marketplace::marketplace_mint_fee(), new_mint_fee);
 		})
+	}
+
+	#[test]
+	fn bad_origin() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
+			let alice: mock::Origin = origin(ALICE);
+			let new_mint_fee = 123u64;
+			let err = Marketplace::set_marketplace_mint_fee(alice, new_mint_fee);
+			assert_noop!(err, BadOrigin);
+		})
+	}
 }
 
-#[test]
-fn list_unhappy() {
-	ExtBuilder::default()
-		.caps(vec![(ALICE, 1000), (BOB, 1000)])
-		.build()
+mod list_nft {
+	use super::*;
+
+	#[test]
+	fn list_nft() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
+			|| {
+				prepare_tests();
+				let alice: mock::Origin = origin(ALICE);
+				let marketplace = Marketplace::marketplaces(ALICE_MARKETPLACE_ID).unwrap();
+				let data = Sale::new(ALICE, ALICE_MARKETPLACE_ID, 10, marketplace.commission_fee);
+
+				// List NFT.
+				Marketplace::list_nft(alice, ALICE_NFT_ID, data.price, data.marketplace_id)
+					.unwrap();
+
+				// Final state checks.
+				let sale = Marketplace::nft_for_sale(ALICE_NFT_ID).unwrap();
+				assert_eq!(sale, data);
+
+				// Events checks.
+				let event = MarketplaceEvent::NftListed {
+					marketplace_id: data.marketplace_id,
+					nft_id: ALICE_NFT_ID,
+					commission_fee: data.commission_fee,
+					price: data.price,
+				};
+				let event = Event::Marketplace(event);
+				assert_eq!(System::events().last().unwrap().event, event);
+			},
+		)
+	}
+
+	#[test]
+	fn list_nft_listing_fee_flat() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
+			|| {
+				prepare_tests();
+				let alice: mock::Origin = origin(ALICE);
+				let bob: mock::Origin = origin(BOB);
+				let alice_balance = Balances::free_balance(ALICE);
+				let new_listing_fee = 10;
+
+				// Set listing fee percentage.
+				Marketplace::set_marketplace_configuration(
+					bob.clone(),
+					BOB_MARKETPLACE_ID,
+					ConfigOp::Noop,
+					ConfigOp::Set(MarketplaceFee::Flat(new_listing_fee)),
+					ConfigOp::Noop,
+					ConfigOp::Noop,
+				)
+				.unwrap();
+
+				let marketplace = Marketplace::marketplaces(BOB_MARKETPLACE_ID).unwrap();
+				let data = Sale::new(ALICE, BOB_MARKETPLACE_ID, 10, marketplace.commission_fee);
+
+				// List nft.
+				Marketplace::list_nft(alice, ALICE_NFT_ID, data.price, data.marketplace_id)
+					.unwrap();
+
+				// Final state checks.
+				let sale = Marketplace::nft_for_sale(ALICE_NFT_ID).unwrap();
+				assert_eq!(sale, data);
+				assert_eq!(Balances::free_balance(ALICE), alice_balance - new_listing_fee);
+
+				// Events checks.
+				let event = MarketplaceEvent::NftListed {
+					marketplace_id: data.marketplace_id,
+					nft_id: ALICE_NFT_ID,
+					commission_fee: data.commission_fee,
+					price: data.price,
+				};
+				let event = Event::Marketplace(event);
+				assert_eq!(System::events().last().unwrap().event, event);
+			},
+		)
+	}
+
+	#[test]
+	fn list_nft_listing_fee_percentage() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
+			|| {
+				prepare_tests();
+				let alice: mock::Origin = origin(ALICE);
+				let bob: mock::Origin = origin(BOB);
+				let alice_balance = Balances::free_balance(ALICE);
+				let new_listing_fee = PERCENT_80;
+
+				// Set listing fee percentage.
+				Marketplace::set_marketplace_configuration(
+					bob.clone(),
+					BOB_MARKETPLACE_ID,
+					ConfigOp::Noop,
+					ConfigOp::Set(MarketplaceFee::Percentage(new_listing_fee)),
+					ConfigOp::Noop,
+					ConfigOp::Noop,
+				)
+				.unwrap();
+
+				let marketplace = Marketplace::marketplaces(BOB_MARKETPLACE_ID).unwrap();
+				let data = Sale::new(ALICE, BOB_MARKETPLACE_ID, 10, marketplace.commission_fee);
+
+				// List nft.
+				Marketplace::list_nft(alice, ALICE_NFT_ID, data.price, data.marketplace_id)
+					.unwrap();
+
+				// Final state checks.
+				let sale = Marketplace::nft_for_sale(ALICE_NFT_ID).unwrap();
+				assert_eq!(sale, data);
+				assert_eq!(
+					Balances::free_balance(ALICE),
+					alice_balance - (new_listing_fee * data.price)
+				);
+
+				// Events checks.
+				let event = MarketplaceEvent::NftListed {
+					marketplace_id: data.marketplace_id,
+					nft_id: ALICE_NFT_ID,
+					commission_fee: data.commission_fee,
+					price: data.price,
+				};
+				let event = Event::Marketplace(event);
+				assert_eq!(System::events().last().unwrap().event, event);
+			},
+		)
+	}
+
+	#[test]
+	fn keep_alive() {
+		let new_listing_fee = 10;
+		ExtBuilder::new_build(vec![
+			(ALICE, MARKETPLACE_MINT_FEE + NFT_MINT_FEE + new_listing_fee),
+			(BOB, 1000),
+			(CHARLIE, 1000),
+		])
 		.execute_with(|| {
-			let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
-			let bob: mock::Origin = RawOrigin::Signed(BOB).into();
-			let price = 50;
+			prepare_tests();
+			let alice: mock::Origin = origin(ALICE);
+			let bob: mock::Origin = origin(BOB);
+			let alice_balance = Balances::free_balance(ALICE);
 
-			// Unhappy unknown NFT
-			let ok = Marketplace::list_nft(alice.clone(), 10001, price, Some(0));
-			assert_noop!(ok, Error::<Test>::NFTNotFound);
+			// Set listing fee.
+			Marketplace::set_marketplace_configuration(
+				bob.clone(),
+				BOB_MARKETPLACE_ID,
+				ConfigOp::Noop,
+				ConfigOp::Set(MarketplaceFee::Flat(new_listing_fee)),
+				ConfigOp::Noop,
+				ConfigOp::Noop,
+			)
+			.unwrap();
 
-			// Unhappy not the NFT owner
-			let nft_id = NFT::create_nft(BOB, bounded_vec![50], None).unwrap();
-			let ok = Marketplace::list_nft(alice.clone(), nft_id, price, Some(0));
-			assert_noop!(ok, Error::<Test>::NotTheNFTOwner);
-
-			// Unhappy series not completed
-			let series_id = vec![50];
-			let nft_id = NFT::create_nft(ALICE, bounded_vec![50], Some(series_id.clone())).unwrap();
-			let ok = Marketplace::list_nft(alice.clone(), nft_id, price, Some(0));
-			assert_noop!(ok, Error::<Test>::CannotListNFTsInUncompletedSeries);
-
-			// Unhappy nft is capsulized
-			help::finish_series(alice.clone(), series_id);
-			NFT::set_converted_to_capsule(nft_id, true).unwrap();
-			let ok = Marketplace::list_nft(alice.clone(), nft_id, price, Some(0));
-			assert_noop!(ok, Error::<Test>::CannotListCapsules);
-			NFT::set_converted_to_capsule(nft_id, false).unwrap();
-
-			// Unhappy unknown marketplace
-			let ok = Marketplace::list_nft(alice.clone(), nft_id, price, Some(10001));
-			assert_noop!(ok, Error::<Test>::MarketplaceNotFound);
-
-			// Unhappy not on the private list
-			let mkp_id = help::create_mkp(bob.clone(), MPT::Private, 0, bounded_vec![1], vec![]);
-			let ok = Marketplace::list_nft(alice.clone(), nft_id, price, Some(mkp_id));
-			assert_noop!(ok, Error::<Test>::AccountNotAllowedToList);
-
-			// Unhappy on the disallow list
-			let mkp_id =
-				help::create_mkp(bob.clone(), MPT::Public, 0, bounded_vec![1], vec![ALICE]);
-			let ok = Marketplace::list_nft(alice.clone(), nft_id, price, Some(mkp_id));
-			assert_noop!(ok, Error::<Test>::AccountNotAllowedToList);
-
-			// Unhappy already listed for sale
-			NFT::set_listed_for_sale(nft_id, true).unwrap();
-			let ok = Marketplace::list_nft(alice.clone(), nft_id, price, None);
-			assert_noop!(ok, Error::<Test>::CannotListNFTsThatAreAlreadyListed);
+			let err = Marketplace::list_nft(alice, ALICE_NFT_ID, 10, BOB_MARKETPLACE_ID);
+			assert_noop!(err, BalanceError::<Test>::KeepAlive);
+			assert_eq!(Balances::free_balance(ALICE), alice_balance);
 		})
+	}
+
+	#[test]
+	fn nft_not_found() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
+			|| {
+				prepare_tests();
+				let alice: mock::Origin = origin(ALICE);
+
+				// List invalid nft.
+				let err = Marketplace::list_nft(alice, INVALID_NFT_ID, 10, ALICE_MARKETPLACE_ID);
+				assert_noop!(err, Error::<Test>::NFTNotFound);
+			},
+		)
+	}
+
+	#[test]
+	fn not_the_nft_owner() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
+			|| {
+				prepare_tests();
+				let alice: mock::Origin = origin(ALICE);
+
+				// Try to list unowned nft.
+				let err = Marketplace::list_nft(alice, BOB_NFT_ID, 10, ALICE_MARKETPLACE_ID);
+				assert_noop!(err, Error::<Test>::NotTheNFTOwner);
+			},
+		)
+	}
+
+	#[test]
+	fn nft_already_listed() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
+			|| {
+				prepare_tests();
+				let alice: mock::Origin = origin(ALICE);
+
+				// List twice the same nft.
+				Marketplace::list_nft(alice.clone(), ALICE_NFT_ID, 10, ALICE_MARKETPLACE_ID)
+					.unwrap();
+				let err = Marketplace::list_nft(alice, ALICE_NFT_ID, 10, ALICE_MARKETPLACE_ID);
+				assert_noop!(err, Error::<Test>::NFTAlreadyListed);
+			},
+		)
+	}
+
+	#[test]
+	fn cannot_list_capsule_nfts() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
+			|| {
+				prepare_tests();
+				let alice: mock::Origin = origin(ALICE);
+
+				// Set capsule to true for Alice's NFT.
+				NFT::set_nft_state(ALICE_NFT_ID, true, false, false, false, false).unwrap();
+
+				let err = Marketplace::list_nft(alice, ALICE_NFT_ID, 10, ALICE_MARKETPLACE_ID);
+				assert_noop!(err, Error::<Test>::CannotListCapsuleNFTs);
+			},
+		)
+	}
+
+	#[test]
+	fn cannot_list_delegated_nfts() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
+			|| {
+				prepare_tests();
+				let alice: mock::Origin = origin(ALICE);
+
+				// Set delegated to true for Alice's NFT.
+				NFT::set_nft_state(ALICE_NFT_ID, false, false, false, true, false).unwrap();
+
+				let err = Marketplace::list_nft(alice, ALICE_NFT_ID, 10, ALICE_MARKETPLACE_ID);
+				assert_noop!(err, Error::<Test>::CannotListDelegatedNFTs);
+			},
+		)
+	}
+
+	#[test]
+	fn cannot_list_soulbound_nfts() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
+			|| {
+				prepare_tests();
+				let alice: mock::Origin = origin(ALICE);
+
+				// Set soulbound to true for Alice's NFT.
+				NFT::set_nft_state(ALICE_NFT_ID, false, false, false, false, true).unwrap();
+
+				let err = Marketplace::list_nft(alice, ALICE_NFT_ID, 10, ALICE_MARKETPLACE_ID);
+				assert_noop!(err, Error::<Test>::CannotListSoulboundNFTs);
+			},
+		)
+	}
+
+	#[test]
+	fn marketplace_not_found() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
+			|| {
+				prepare_tests();
+				let alice: mock::Origin = origin(ALICE);
+
+				// List on invalid marketplace.
+				let err = Marketplace::list_nft(alice, ALICE_NFT_ID, 10, INVALID_MARKETPLACE_ID);
+				assert_noop!(err, Error::<Test>::MarketplaceNotFound);
+			},
+		)
+	}
+
+	#[test]
+	fn account_not_allowed_to_list_banned() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
+			|| {
+				prepare_tests();
+				let alice: mock::Origin = origin(ALICE);
+
+				// Set public marketplace account list (ban list) with alice's account.
+				Marketplace::set_marketplace_configuration(
+					alice.clone(),
+					ALICE_MARKETPLACE_ID,
+					ConfigOp::Noop,
+					ConfigOp::Noop,
+					ConfigOp::Set(BoundedVec::try_from(vec![ALICE]).unwrap()),
+					ConfigOp::Noop,
+				)
+				.unwrap();
+
+				let err = Marketplace::list_nft(alice, ALICE_NFT_ID, 10, ALICE_MARKETPLACE_ID);
+				assert_noop!(err, Error::<Test>::AccountNotAllowedToList);
+			},
+		)
+	}
+
+	#[test]
+	fn account_not_allowed_to_list_not_authorized() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
+			|| {
+				prepare_tests();
+				let alice: mock::Origin = origin(ALICE);
+
+				// Set marketplace private (without alice's account in account list / allow list).
+				Marketplace::set_marketplace_kind(
+					alice.clone(),
+					ALICE_MARKETPLACE_ID,
+					MarketplaceType::Private,
+				)
+				.unwrap();
+
+				let err = Marketplace::list_nft(alice, ALICE_NFT_ID, 10, ALICE_MARKETPLACE_ID);
+				assert_noop!(err, Error::<Test>::AccountNotAllowedToList);
+			},
+		)
+	}
+
+	#[test]
+	fn price_too_low_for_commission_fee() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
+			|| {
+				prepare_tests();
+				let alice: mock::Origin = origin(ALICE);
+
+				// Set high commission fee.
+				Marketplace::set_marketplace_configuration(
+					alice.clone(),
+					ALICE_MARKETPLACE_ID,
+					ConfigOp::Set(MarketplaceFee::Flat(10_000)),
+					ConfigOp::Noop,
+					ConfigOp::Noop,
+					ConfigOp::Noop,
+				)
+				.unwrap();
+
+				let err = Marketplace::list_nft(alice, ALICE_NFT_ID, 10, ALICE_MARKETPLACE_ID);
+				assert_noop!(err, Error::<Test>::PriceTooLowForCommissionFee);
+			},
+		)
+	}
 }
 
-#[test]
-fn unlist_happy() {
-	ExtBuilder::default().caps(vec![(ALICE, 1000)]).build().execute_with(|| {
-		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
+mod unlist_nft {
+	use super::*;
 
-		let price = 50;
-		let series_id = vec![50];
-		let nft_id = NFT::create_nft(ALICE, bounded_vec![50], Some(series_id.clone())).unwrap();
+	#[test]
+	fn unlist_nft() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
+			|| {
+				prepare_tests();
+				let alice: mock::Origin = origin(ALICE);
+				let marketplace = Marketplace::marketplaces(ALICE_MARKETPLACE_ID).unwrap();
+				let data = Sale::new(ALICE, ALICE_MARKETPLACE_ID, 10, marketplace.commission_fee);
 
-		// Happy path
-		help::finish_series(alice.clone(), series_id);
-		assert_ok!(Marketplace::list_nft(alice.clone(), nft_id, price, Some(0)));
-		assert_ok!(Marketplace::unlist_nft(alice.clone(), nft_id));
-		assert_eq!(Marketplace::nft_for_sale(nft_id), None);
-		assert_eq!(NFT::is_listed_for_sale(nft_id), Some(false));
-	})
+				// List NFT.
+				Marketplace::list_nft(alice.clone(), ALICE_NFT_ID, data.price, data.marketplace_id)
+					.unwrap();
+
+				// Unlist NFT.
+				Marketplace::unlist_nft(alice, ALICE_NFT_ID).unwrap();
+
+				// Final state checks.
+				let sale = Marketplace::nft_for_sale(ALICE_NFT_ID);
+				assert_eq!(sale, None);
+
+				// Events checks.
+				let event = MarketplaceEvent::NftUnlisted { nft_id: ALICE_NFT_ID };
+				let event = Event::Marketplace(event);
+				assert_eq!(System::events().last().unwrap().event, event);
+			},
+		)
+	}
+
+	#[test]
+	fn nft_not_found() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
+			|| {
+				prepare_tests();
+				let alice: mock::Origin = origin(ALICE);
+
+				// Unlist invalid NFT.
+				let err = Marketplace::unlist_nft(alice, INVALID_NFT_ID);
+				assert_noop!(err, Error::<Test>::NFTNotFound);
+			},
+		)
+	}
+
+	#[test]
+	fn not_the_nft_owner() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
+			|| {
+				prepare_tests();
+				let alice: mock::Origin = origin(ALICE);
+				let bob: mock::Origin = origin(BOB);
+
+				// List bob's nft.
+				Marketplace::list_nft(bob.clone(), BOB_NFT_ID, 0, ALICE_MARKETPLACE_ID).unwrap();
+
+				let err = Marketplace::unlist_nft(alice, BOB_NFT_ID);
+				assert_noop!(err, Error::<Test>::NotTheNFTOwner);
+			},
+		)
+	}
+
+	#[test]
+	fn nft_not_for_sale() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
+			|| {
+				prepare_tests();
+				let alice: mock::Origin = origin(ALICE);
+
+				// Unlist an NFT not for sale.
+				let err = Marketplace::unlist_nft(alice, ALICE_NFT_ID);
+				assert_noop!(err, Error::<Test>::NFTNotForSale);
+			},
+		)
+	}
 }
 
-#[test]
-fn unlist_unhappy() {
-	ExtBuilder::default().caps(vec![(ALICE, 1000)]).build().execute_with(|| {
-		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
-
-		// Unhappy not the NFT owner
-		let ok = Marketplace::unlist_nft(alice.clone(), 10001);
-		assert_noop!(ok, Error::<Test>::NotTheNFTOwner);
-
-		// Unhappy not listed NFT
-		let nft_id = NFT::create_nft(ALICE, bounded_vec![50], None).unwrap();
-		let ok = Marketplace::unlist_nft(alice.clone(), nft_id);
-		assert_noop!(ok, Error::<Test>::NFTNotForSale);
-	})
-}
-
-#[test]
-fn buy_happy() {
-	ExtBuilder::default()
-		.caps(vec![(ALICE, 1000), (BOB, 1000), (DAVE, 1000)])
-		.build()
-		.execute_with(|| {
-			let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
-			let bob: mock::Origin = RawOrigin::Signed(BOB).into();
-			let dave: mock::Origin = RawOrigin::Signed(DAVE).into();
-
-			let nft_id_1 =
-				help::create_nft_and_lock_series(alice.clone(), bounded_vec![50], vec![50]);
-			let nft_id_2 =
-				help::create_nft_and_lock_series(alice.clone(), bounded_vec![50], vec![51]);
-			let mkt_id =
-				help::create_mkp(dave.clone(), MPT::Private, 10, bounded_vec![0], vec![ALICE]);
-
-			let price = 50;
-			assert_ok!(Marketplace::list_nft(alice.clone(), nft_id_1, price, None));
-
-			let ok = Marketplace::list_nft(alice.clone(), nft_id_2, price, Some(mkt_id));
-			assert_ok!(ok);
-
-			// Happy path CAPS
-			let bob_before = Balances::free_balance(BOB);
-			let alice_before = Balances::free_balance(ALICE);
-
-			assert_ok!(Marketplace::buy_nft(bob.clone(), nft_id_1));
-			assert_eq!(NFT::is_listed_for_sale(nft_id_1), Some(false));
-			assert_eq!(NFT::owner(nft_id_1), Some(BOB));
-			assert_eq!(Marketplace::nft_for_sale(nft_id_1), None);
-
-			assert_eq!(Balances::free_balance(BOB), bob_before - 50);
-			assert_eq!(Balances::free_balance(ALICE), alice_before + 50);
-
-			// Happy path PRIVATE (with commission fee)
-			let bob_before = Balances::free_balance(BOB);
-			let alice_before = Balances::free_balance(ALICE);
-			let dave_before = Balances::free_balance(DAVE);
-
-			assert_ok!(Marketplace::buy_nft(bob.clone(), nft_id_2));
-			assert_eq!(NFT::is_listed_for_sale(nft_id_2), Some(false));
-			assert_eq!(NFT::owner(nft_id_2), Some(BOB));
-			assert_eq!(Marketplace::nft_for_sale(nft_id_2), None);
-
-			assert_eq!(Balances::free_balance(BOB), bob_before - 50);
-			assert_eq!(Balances::free_balance(ALICE), alice_before + 45);
-			assert_eq!(Balances::free_balance(DAVE), dave_before + 5);
-		})
-}
-
-#[test]
-fn buy_unhappy() {
-	ExtBuilder::default()
-		.caps(vec![(ALICE, 100), (BOB, 100)])
-		.build()
-		.execute_with(|| {
-			let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
-			let bob: mock::Origin = RawOrigin::Signed(BOB).into();
-
-			let price = 5000;
-			let nft_id =
-				help::create_nft_and_lock_series(alice.clone(), bounded_vec![50], vec![50]);
-			assert_ok!(Marketplace::list_nft(alice.clone(), nft_id, price, None));
-
-			// Unhappy nft not on sale
-			let ok = Marketplace::buy_nft(bob.clone(), 1001);
-			assert_noop!(ok, Error::<Test>::NFTNotForSale);
-
-			// Unhappy not enough caps
-			let ok = Marketplace::buy_nft(bob.clone(), nft_id);
-			assert_noop!(ok, BalanceError::<Test>::InsufficientBalance);
-		})
-}
-
-#[test]
-fn create_happy() {
-	ExtBuilder::default().caps(vec![(ALICE, 10000)]).build().execute_with(|| {
-		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
-
-		assert_eq!(Marketplace::marketplace_id_generator(), 0);
-		assert_eq!(Marketplace::marketplaces(1), None);
-		let balance = Balances::free_balance(ALICE);
-		let fee = 25;
-		let name: NameVec<Test> = bounded_vec![50];
-		let kind = MPT::Public;
-		let uri: URIVec<Test> = bounded_vec![65];
-		let logo_uri: URIVec<Test> = bounded_vec![66];
-		let description: DescriptionVec<Test> = bounded_vec![];
-		let info = MarketplaceData::new(
-			kind,
-			fee,
-			ALICE,
-			bounded_vec![],
-			bounded_vec![],
-			name.clone(),
-			uri.clone(),
-			logo_uri.clone(),
-			description.clone(),
-		);
-
-		// Happy path
-		assert_ok!(Marketplace::create_marketplace(
-			alice.clone(),
-			kind,
-			fee,
-			name,
-			uri,
-			logo_uri,
-			description,
-		));
-		assert_eq!(Marketplace::marketplace_id_generator(), 1);
-		assert_eq!(Marketplace::marketplaces(1), Some(info));
-		assert_eq!(Balances::free_balance(ALICE), balance - Marketplace::marketplace_mint_fee());
-	})
-}
-
-#[test]
-fn create_unhappy() {
-	ExtBuilder::default().caps(vec![(ALICE, 5)]).build().execute_with(|| {
-		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
-		let normal_uri: URIVec<Test> = bounded_vec![66];
-
-		// Unhappy invalid commission fee
-		let ok = Marketplace::create_marketplace(
-			alice.clone(),
-			MPT::Public,
-			101,
-			bounded_vec![50],
-			normal_uri.clone(),
-			normal_uri.clone(),
-			bounded_vec![],
-		);
-		assert_noop!(ok, Error::<Test>::InvalidCommissionFeeValue);
-
-		// Unhappy not enough funds
-		let ok = Marketplace::create_marketplace(
-			alice.clone(),
-			MPT::Public,
-			5,
-			bounded_vec![50],
-			normal_uri.clone(),
-			normal_uri.clone(),
-			bounded_vec![],
-		);
-		assert_noop!(ok, BalanceError::<Test>::InsufficientBalance);
-	})
-}
-
-#[test]
-fn add_account_to_allow_list_happy() {
-	ExtBuilder::default().caps(vec![(ALICE, 1000)]).build().execute_with(|| {
-		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
-
-		// Happy path
-		let list = vec![];
-		let mkp_1 =
-			help::create_mkp(alice.clone(), MPT::Private, 0, bounded_vec![50], list.clone());
-		assert_eq!(Marketplace::marketplaces(mkp_1).unwrap().allow_list, list);
-
-		let ok = Marketplace::add_account_to_allow_list(alice.clone(), mkp_1, BOB);
-		assert_ok!(ok);
-		let list = vec![BOB];
-		assert_eq!(Marketplace::marketplaces(mkp_1).unwrap().allow_list, list);
-	})
-}
-
-#[test]
-fn add_account_to_allow_list_unhappy() {
-	ExtBuilder::default()
-		.caps(vec![(BOB, 1000), (DAVE, 1000)])
-		.build()
-		.execute_with(|| {
-			let bob: mock::Origin = RawOrigin::Signed(BOB).into();
-
-			// Unhappy unknown marketplace
-			let ok = Marketplace::add_account_to_allow_list(bob.clone(), 1001, DAVE);
-			assert_noop!(ok, Error::<Test>::MarketplaceNotFound);
-
-			// Unhappy not marketplace owner
-			let ok = Marketplace::add_account_to_allow_list(bob.clone(), 0, DAVE);
-			assert_noop!(ok, Error::<Test>::NotMarketplaceOwner);
-
-			// Unhappy unsupported marketplace type
-			let mkp_id = help::create_mkp(bob.clone(), MPT::Public, 0, bounded_vec![50], vec![]);
-			let ok = Marketplace::add_account_to_allow_list(bob.clone(), mkp_id, DAVE);
-			assert_noop!(ok, Error::<Test>::UnsupportedMarketplace);
-		})
-}
-
-#[test]
-fn remove_account_from_allow_list_happy() {
-	ExtBuilder::default().caps(vec![(ALICE, 1000)]).build().execute_with(|| {
-		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
-
-		// Happy path
-		let list = vec![BOB];
-		let mkp_id =
-			help::create_mkp(alice.clone(), MPT::Private, 0, bounded_vec![50], list.clone());
-		assert_eq!(Marketplace::marketplaces(mkp_id).unwrap().allow_list, list);
-
-		let ok = Marketplace::remove_account_from_allow_list(alice.clone(), mkp_id, BOB);
-		assert_ok!(ok);
-		let list: Vec<u64> = vec![];
-		assert_eq!(Marketplace::marketplaces(mkp_id).unwrap().allow_list, list);
-	})
-}
-
-#[test]
-fn remove_account_from_allow_list_unhappy() {
-	ExtBuilder::default()
-		.caps(vec![(BOB, 1000), (DAVE, 1000)])
-		.build()
-		.execute_with(|| {
-			let bob: mock::Origin = RawOrigin::Signed(BOB).into();
-
-			// Unhappy unknown marketplace
-			let ok = Marketplace::remove_account_from_allow_list(bob.clone(), 1001, DAVE);
-			assert_noop!(ok, Error::<Test>::MarketplaceNotFound);
-
-			// Unhappy not marketplace owner
-			let ok = Marketplace::remove_account_from_allow_list(bob.clone(), 0, DAVE);
-			assert_noop!(ok, Error::<Test>::NotMarketplaceOwner);
-
-			// Unhappy unsupported marketplace type
-			let mkp_id = help::create_mkp(bob.clone(), MPT::Public, 0, bounded_vec![50], vec![]);
-			let ok = Marketplace::remove_account_from_allow_list(bob.clone(), mkp_id, DAVE);
-			assert_noop!(ok, Error::<Test>::UnsupportedMarketplace);
-		})
-}
-
-#[test]
-fn set_owner_happy() {
-	ExtBuilder::default()
-		.caps(vec![(ALICE, 1000), (BOB, 1000)])
-		.build()
-		.execute_with(|| {
-			let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
-
-			// Happy path
-			let mkp_id = help::create_mkp(alice.clone(), MPT::Private, 0, bounded_vec![50], vec![]);
-			assert_ok!(Marketplace::set_marketplace_owner(alice.clone(), mkp_id, BOB));
-			assert_eq!(Marketplace::marketplaces(mkp_id).unwrap().owner, BOB);
-		})
-}
-
-#[test]
-fn set_owner_unhappy() {
-	ExtBuilder::default().caps(vec![(BOB, 1000)]).build().execute_with(|| {
-		let bob: mock::Origin = RawOrigin::Signed(BOB).into();
-
-		// Unhappy unknown marketplace
-		let ok = Marketplace::set_marketplace_owner(bob.clone(), 1001, DAVE);
-		assert_noop!(ok, Error::<Test>::MarketplaceNotFound);
-
-		// Unhappy not marketplace owner
-		let ok = Marketplace::set_marketplace_owner(bob.clone(), 0, DAVE);
-		assert_noop!(ok, Error::<Test>::NotMarketplaceOwner);
-	})
-}
-
-#[test]
-fn set_market_type_happy() {
-	ExtBuilder::default()
-		.caps(vec![(ALICE, 1000), (BOB, 1000)])
-		.build()
-		.execute_with(|| {
-			let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
-
-			let kind = MPT::Public;
-			let mkp_id = help::create_mkp(alice.clone(), MPT::Public, 0, bounded_vec![50], vec![]);
-			assert_eq!(Marketplace::marketplaces(mkp_id).unwrap().kind, kind);
-
-			// Happy path Public to Private
-			let kind = MPT::Private;
-			assert_ok!(Marketplace::set_marketplace_type(alice.clone(), mkp_id, kind));
-			assert_eq!(Marketplace::marketplaces(mkp_id).unwrap().kind, kind);
-
-			// Happy path Private to Public
-			let kind = MPT::Public;
-			assert_ok!(Marketplace::set_marketplace_type(alice.clone(), mkp_id, kind));
-			assert_eq!(Marketplace::marketplaces(mkp_id).unwrap().kind, kind);
-		})
-}
-
-#[test]
-fn set_market_type_unhappy() {
-	ExtBuilder::default().caps(vec![(BOB, 1000)]).build().execute_with(|| {
-		let bob: mock::Origin = RawOrigin::Signed(BOB).into();
-
-		let kind = MPT::Public;
-
-		// Unhappy unknown marketplace
-		let ok = Marketplace::set_marketplace_type(bob.clone(), 1001, kind);
-		assert_noop!(ok, Error::<Test>::MarketplaceNotFound);
-
-		// Unhappy not marketplace owner
-		let ok = Marketplace::set_marketplace_type(bob.clone(), 0, kind);
-		assert_noop!(ok, Error::<Test>::NotMarketplaceOwner);
-	})
-}
-
-#[test]
-fn set_name_happy() {
-	ExtBuilder::default()
-		.caps(vec![(ALICE, 1000), (BOB, 1000)])
-		.build()
-		.execute_with(|| {
-			let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
-
-			// Happy path
-			let name: NameVec<Test> = bounded_vec![50];
-			let mkp_id = help::create_mkp(alice.clone(), MPT::Private, 0, name.clone(), vec![]);
-			assert_eq!(Marketplace::marketplaces(mkp_id).unwrap().name, name);
-
-			let name: NameVec<Test> = bounded_vec![51];
-			assert_ok!(Marketplace::set_marketplace_name(alice.clone(), mkp_id, name.clone()));
-			assert_eq!(Marketplace::marketplaces(mkp_id).unwrap().name, name);
-		})
-}
-
-#[test]
-fn set_name_unhappy() {
-	ExtBuilder::default().caps(vec![(BOB, 1000)]).build().execute_with(|| {
-		let bob: mock::Origin = RawOrigin::Signed(BOB).into();
-
-		// Unhappy unknown marketplace
-		let ok = Marketplace::set_marketplace_name(bob.clone(), 1001, bounded_vec![51]);
-		assert_noop!(ok, Error::<Test>::MarketplaceNotFound);
-
-		// Unhappy not marketplace owner
-		let ok = Marketplace::set_marketplace_name(bob.clone(), 0, bounded_vec![51]);
-		assert_noop!(ok, Error::<Test>::NotMarketplaceOwner);
-	})
-}
-
-#[test]
-fn set_marketplace_mint_fee_happy() {
-	ExtBuilder::default().build().execute_with(|| {
-		// Happy path
-		let old_mint_fee = Marketplace::marketplace_mint_fee();
-		let new_mint_fee = 654u128;
-		assert_eq!(Marketplace::marketplace_mint_fee(), old_mint_fee);
-
-		let ok = Marketplace::set_marketplace_mint_fee(mock::Origin::root(), new_mint_fee);
-		assert_ok!(ok);
-		assert_eq!(Marketplace::marketplace_mint_fee(), new_mint_fee);
-	})
-}
-
-#[test]
-fn set_marketplace_mint_fee_unhappy() {
-	ExtBuilder::default().caps(vec![(ALICE, 10000)]).build().execute_with(|| {
-		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
-
-		// Unhappy non root user tries to modify the mint fee
-		let ok = Marketplace::set_marketplace_mint_fee(alice.clone(), 654);
-		assert_noop!(ok, BadOrigin);
-	})
-}
-
-#[test]
-fn set_commission_fee_happy() {
-	ExtBuilder::default().caps(vec![(ALICE, 1000)]).build().execute_with(|| {
-		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
-
-		let fee = 10;
-		let id = help::create_mkp(alice.clone(), MPT::Public, fee, bounded_vec![50], vec![]);
-		assert_eq!(Marketplace::marketplaces(id).unwrap().commission_fee, fee);
-
-		// Happy path
-		let fee = 15;
-		assert_ok!(Marketplace::set_marketplace_commission_fee(alice.clone(), id, fee));
-		assert_eq!(Marketplace::marketplaces(id).unwrap().commission_fee, fee);
-	})
-}
-
-#[test]
-fn set_commission_fee_unhappy() {
-	ExtBuilder::default().caps(vec![(BOB, 1000)]).build().execute_with(|| {
-		let bob: mock::Origin = RawOrigin::Signed(BOB).into();
-
-		// Unhappy commission fee is more than 100
-		let ok = Marketplace::set_marketplace_commission_fee(bob.clone(), 0, 101);
-		assert_noop!(ok, Error::<Test>::InvalidCommissionFeeValue);
-
-		// Unhappy unknown marketplace
-		let ok = Marketplace::set_marketplace_commission_fee(bob.clone(), 1001, 15);
-		assert_noop!(ok, Error::<Test>::MarketplaceNotFound);
-
-		// Unhappy not marketplace owner
-		let ok = Marketplace::set_marketplace_commission_fee(bob.clone(), 0, 15);
-		assert_noop!(ok, Error::<Test>::NotMarketplaceOwner);
-	})
-}
-
-#[test]
-fn update_uri_happy() {
-	ExtBuilder::default().caps(vec![(ALICE, 10000)]).build().execute_with(|| {
-		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
-
-		let fee = 25;
-		let name: NameVec<Test> = bounded_vec![50];
-		let kind = MPT::Public;
-		let uri: URIVec<Test> = bounded_vec![66];
-		let updated_uri: URIVec<Test> = bounded_vec![67];
-
-		let updated_info = MarketplaceData::new(
-			kind,
-			fee,
-			ALICE,
-			bounded_vec![],
-			bounded_vec![],
-			name.clone(),
-			updated_uri.clone(),
-			uri.clone(),
-			bounded_vec![],
-		);
-
-		assert_ok!(Marketplace::create_marketplace(
-			alice.clone(),
-			kind.clone(),
-			fee,
-			name.clone(),
-			uri.clone(),
-			uri.clone(),
-			bounded_vec![],
-		));
-		assert_ne!(Marketplace::marketplaces(1).unwrap().uri, updated_uri);
-		assert_ok!(Marketplace::set_marketplace_uri(alice.clone(), 1, updated_uri));
-		assert_eq!(Marketplace::marketplaces(1), Some(updated_info));
-	})
-}
-
-#[test]
-fn update_logo_uri_happy() {
-	ExtBuilder::default().caps(vec![(ALICE, 10000)]).build().execute_with(|| {
-		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
-
-		let fee = 25;
-		let name: NameVec<Test> = bounded_vec![50];
-		let kind = MPT::Public;
-		let uri: URIVec<Test> = bounded_vec![66];
-		let updated_uri: URIVec<Test> = bounded_vec![67];
-
-		let updated_info = MarketplaceData::new(
-			kind,
-			fee,
-			ALICE,
-			bounded_vec![],
-			bounded_vec![],
-			name.clone(),
-			uri.clone(),
-			updated_uri.clone(),
-			bounded_vec![],
-		);
-
-		assert_ok!(Marketplace::create_marketplace(
-			alice.clone(),
-			kind.clone(),
-			fee,
-			name.clone(),
-			uri.clone(),
-			uri.clone(),
-			bounded_vec![],
-		));
-		assert_ne!(Marketplace::marketplaces(1).unwrap().uri, updated_uri.clone());
-
-		assert_ok!(Marketplace::set_marketplace_logo_uri(alice.clone(), 1, updated_uri));
-		assert_eq!(Marketplace::marketplaces(1), Some(updated_info));
-	})
-}
-
-#[test]
-fn add_account_to_disallow_list_happy() {
-	ExtBuilder::default().caps(vec![(ALICE, 1000)]).build().execute_with(|| {
-		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
-
-		// Happy path
-		let list = vec![];
-		let mkp_1 = help::create_mkp(alice.clone(), MPT::Public, 0, bounded_vec![50], list.clone());
-		assert_eq!(Marketplace::marketplaces(mkp_1).unwrap().disallow_list, list);
-
-		let ok = Marketplace::add_account_to_disallow_list(alice.clone(), mkp_1, BOB);
-		assert_ok!(ok);
-		let list = vec![BOB];
-		assert_eq!(Marketplace::marketplaces(mkp_1).unwrap().disallow_list, list);
-	})
-}
-
-#[test]
-fn add_account_to_disallow_list_unhappy() {
-	ExtBuilder::default()
-		.caps(vec![(BOB, 1000), (DAVE, 1000)])
-		.build()
-		.execute_with(|| {
-			let bob: mock::Origin = RawOrigin::Signed(BOB).into();
-
-			// Unhappy unknown marketplace
-			let ok = Marketplace::add_account_to_disallow_list(bob.clone(), 1001, DAVE);
-			assert_noop!(ok, Error::<Test>::MarketplaceNotFound);
-
-			// Unhappy not marketplace owner
-			let ok = Marketplace::add_account_to_disallow_list(bob.clone(), 0, DAVE);
-			assert_noop!(ok, Error::<Test>::NotMarketplaceOwner);
-
-			// Unhappy unsupported marketplace type
-			let mkp_id = help::create_mkp(bob.clone(), MPT::Private, 0, bounded_vec![50], vec![]);
-			let ok = Marketplace::add_account_to_disallow_list(bob.clone(), mkp_id, DAVE);
-			assert_noop!(ok, Error::<Test>::UnsupportedMarketplace);
-		})
-}
-
-#[test]
-fn remove_account_from_disallow_list_happy() {
-	ExtBuilder::default().caps(vec![(ALICE, 1000)]).build().execute_with(|| {
-		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
-
-		// Happy path
-		let list = vec![BOB];
-		let mkp_id =
-			help::create_mkp(alice.clone(), MPT::Public, 0, bounded_vec![50], list.clone());
-		assert_eq!(Marketplace::marketplaces(mkp_id).unwrap().disallow_list, list);
-
-		let ok = Marketplace::remove_account_from_disallow_list(alice.clone(), mkp_id, BOB);
-		assert_ok!(ok);
-		let list: Vec<u64> = vec![];
-		assert_eq!(Marketplace::marketplaces(mkp_id).unwrap().disallow_list, list);
-	})
-}
-
-#[test]
-fn remove_account_from_disallow_list_unhappy() {
-	ExtBuilder::default()
-		.caps(vec![(BOB, 1000), (DAVE, 1000)])
-		.build()
-		.execute_with(|| {
-			let bob: mock::Origin = RawOrigin::Signed(BOB).into();
-
-			// Unhappy unknown marketplace
-			let ok = Marketplace::remove_account_from_disallow_list(bob.clone(), 1001, DAVE);
-			assert_noop!(ok, Error::<Test>::MarketplaceNotFound);
-
-			// Unhappy not marketplace owner
-			let ok = Marketplace::remove_account_from_disallow_list(bob.clone(), 0, DAVE);
-			assert_noop!(ok, Error::<Test>::NotMarketplaceOwner);
-
-			// Unhappy unsupported marketplace type
-			let mkp_id = help::create_mkp(bob.clone(), MPT::Private, 0, bounded_vec![50], vec![]);
-			let ok = Marketplace::remove_account_from_disallow_list(bob.clone(), mkp_id, DAVE);
-			assert_noop!(ok, Error::<Test>::UnsupportedMarketplace);
-		})
-}
-
-#[test]
-fn set_description_happy() {
-	ExtBuilder::default().caps(vec![(ALICE, 10000)]).build().execute_with(|| {
-		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
-
-		let fee = 25;
-		let name: NameVec<Test> = bounded_vec![50];
-		let kind = MPT::Public;
-		let uri: URIVec<Test> = bounded_vec![66];
-		let description: DescriptionVec<Test> = bounded_vec![66];
-		let updated_description: DescriptionVec<Test> = bounded_vec![67];
-
-		let updated_info = MarketplaceData::new(
-			kind,
-			fee,
-			ALICE,
-			bounded_vec![],
-			bounded_vec![],
-			name.clone(),
-			uri.clone(),
-			uri.clone(),
-			updated_description.clone(),
-		);
-
-		assert_ok!(Marketplace::create_marketplace(
-			alice.clone(),
-			kind.clone(),
-			fee,
-			name.clone(),
-			uri.clone(),
-			uri.clone(),
-			description.clone(),
-		));
-
-		assert_ok!(Marketplace::set_marketplace_description(alice.clone(), 1, updated_description));
-		assert_eq!(Marketplace::marketplaces(1), Some(updated_info));
-	})
+mod buy_nft {
+	use super::*;
+
+	#[test]
+	fn buy_nft() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
+			|| {
+				prepare_tests();
+				let alice: mock::Origin = origin(ALICE);
+				let alice_balance = Balances::free_balance(ALICE);
+				let bob: mock::Origin = origin(BOB);
+				let bob_balance = Balances::free_balance(BOB);
+
+				// List NFT.
+				Marketplace::list_nft(alice, ALICE_NFT_ID, 10, ALICE_MARKETPLACE_ID).unwrap();
+
+				// Buy NFT.
+				Marketplace::buy_nft(bob, ALICE_NFT_ID).unwrap();
+
+				// Final state checks.
+				let nft = NFT::nfts(ALICE_NFT_ID).unwrap();
+				let sale = Marketplace::nft_for_sale(ALICE_NFT_ID);
+				assert_eq!(sale, None);
+				assert_eq!(nft.owner, BOB);
+				assert_eq!(Balances::free_balance(BOB), bob_balance - 10);
+				assert_eq!(Balances::free_balance(ALICE), alice_balance + 10);
+
+				// Events checks.
+				let event = MarketplaceEvent::NftSold {
+					nft_id: ALICE_NFT_ID,
+					buyer: BOB,
+					commission_fee: None,
+					marketplace_id: ALICE_MARKETPLACE_ID,
+					price: 10,
+				};
+				let event = Event::Marketplace(event);
+				assert_eq!(System::events().last().unwrap().event, event);
+			},
+		)
+	}
+
+	#[test]
+	fn buy_nft_flat_commission() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
+			|| {
+				prepare_tests();
+				let alice: mock::Origin = origin(ALICE);
+				let alice_balance = Balances::free_balance(ALICE);
+				let bob: mock::Origin = origin(BOB);
+				let bob_balance = Balances::free_balance(BOB);
+				let charlie: mock::Origin = origin(CHARLIE);
+				let charlie_balance = Balances::free_balance(CHARLIE);
+
+				// Set marketplace commission fee.
+				Marketplace::set_marketplace_configuration(
+					charlie,
+					CHARLIE_MARKETPLACE_ID,
+					ConfigOp::Set(MarketplaceFee::Flat(5)),
+					ConfigOp::Noop,
+					ConfigOp::Noop,
+					ConfigOp::Noop,
+				)
+				.unwrap();
+
+				// List NFT.
+				Marketplace::list_nft(alice, ALICE_NFT_ID, 10, CHARLIE_MARKETPLACE_ID).unwrap();
+
+				// Buy NFT.
+				Marketplace::buy_nft(bob, ALICE_NFT_ID).unwrap();
+
+				// Final state checks.
+				let nft = NFT::nfts(ALICE_NFT_ID).unwrap();
+				let sale = Marketplace::nft_for_sale(ALICE_NFT_ID);
+				assert_eq!(sale, None);
+				assert_eq!(nft.owner, BOB);
+				// Buyer check.
+				assert_eq!(Balances::free_balance(BOB), bob_balance - 10);
+				// Seller check.
+				assert_eq!(Balances::free_balance(ALICE), alice_balance + 5);
+				// Marketplace owner check.
+				assert_eq!(Balances::free_balance(CHARLIE), charlie_balance + 5);
+
+				// Events checks.
+				let event = MarketplaceEvent::NftSold {
+					nft_id: ALICE_NFT_ID,
+					buyer: BOB,
+					commission_fee: Some(MarketplaceFee::Flat(5)),
+					marketplace_id: CHARLIE_MARKETPLACE_ID,
+					price: 10,
+				};
+				let event = Event::Marketplace(event);
+				assert_eq!(System::events().last().unwrap().event, event);
+			},
+		)
+	}
+
+	#[test]
+	fn buy_nft_percentage_commission() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
+			|| {
+				prepare_tests();
+				let alice: mock::Origin = origin(ALICE);
+				let alice_balance = Balances::free_balance(ALICE);
+				let bob: mock::Origin = origin(BOB);
+				let bob_balance = Balances::free_balance(BOB);
+				let charlie: mock::Origin = origin(CHARLIE);
+				let charlie_balance = Balances::free_balance(CHARLIE);
+
+				// Set marketplace commission fee.
+				Marketplace::set_marketplace_configuration(
+					charlie,
+					CHARLIE_MARKETPLACE_ID,
+					ConfigOp::Set(MarketplaceFee::Percentage(PERCENT_80)),
+					ConfigOp::Noop,
+					ConfigOp::Noop,
+					ConfigOp::Noop,
+				)
+				.unwrap();
+
+				// List NFT.
+				Marketplace::list_nft(alice, ALICE_NFT_ID, 10, CHARLIE_MARKETPLACE_ID).unwrap();
+
+				// Buy NFT.
+				Marketplace::buy_nft(bob, ALICE_NFT_ID).unwrap();
+
+				// Final state checks.
+				let nft = NFT::nfts(ALICE_NFT_ID).unwrap();
+				let sale = Marketplace::nft_for_sale(ALICE_NFT_ID);
+				assert_eq!(sale, None);
+				assert_eq!(nft.owner, BOB);
+				// Buyer check.
+				assert_eq!(Balances::free_balance(BOB), bob_balance - 10);
+				// Seller check.
+				assert_eq!(Balances::free_balance(ALICE), alice_balance + 2);
+				// Marketplace owner check.
+				assert_eq!(Balances::free_balance(CHARLIE), charlie_balance + 8);
+
+				// Events checks.
+				let event = MarketplaceEvent::NftSold {
+					nft_id: ALICE_NFT_ID,
+					buyer: BOB,
+					commission_fee: Some(MarketplaceFee::Percentage(PERCENT_80)),
+					marketplace_id: CHARLIE_MARKETPLACE_ID,
+					price: 10,
+				};
+				let event = Event::Marketplace(event);
+				assert_eq!(System::events().last().unwrap().event, event);
+			},
+		)
+	}
+
+	#[test]
+	fn buy_nft_royalty() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
+			|| {
+				prepare_tests();
+				let alice: mock::Origin = origin(ALICE);
+				let alice_balance = Balances::free_balance(ALICE);
+				let bob: mock::Origin = origin(BOB);
+				let bob_balance = Balances::free_balance(BOB);
+				let charlie: mock::Origin = origin(CHARLIE);
+				let charlie_balance = Balances::free_balance(CHARLIE);
+
+				// Set the royalty of alice's NFT.
+				NFT::set_royalty(alice.clone(), ALICE_NFT_ID, PERCENT_80).unwrap();
+
+				// Transfer the NFT to charlie.
+				NFT::transfer_nft(alice, ALICE_NFT_ID, CHARLIE).unwrap();
+
+				// List NFT.
+				Marketplace::list_nft(charlie, ALICE_NFT_ID, 10, BOB_MARKETPLACE_ID).unwrap();
+
+				// Buy NFT.
+				Marketplace::buy_nft(bob, ALICE_NFT_ID).unwrap();
+
+				// Final state checks.
+				let nft = NFT::nfts(ALICE_NFT_ID).unwrap();
+				let sale = Marketplace::nft_for_sale(ALICE_NFT_ID);
+				assert_eq!(sale, None);
+				assert_eq!(nft.owner, BOB);
+				// Buyer check.
+				assert_eq!(Balances::free_balance(BOB), bob_balance - 10);
+				// Creator check.
+				assert_eq!(Balances::free_balance(ALICE), alice_balance + 8);
+				// Seller check.
+				assert_eq!(Balances::free_balance(CHARLIE), charlie_balance + 2);
+
+				// Events checks.
+				let event = MarketplaceEvent::NftSold {
+					nft_id: ALICE_NFT_ID,
+					buyer: BOB,
+					commission_fee: None,
+					marketplace_id: BOB_MARKETPLACE_ID,
+					price: 10,
+				};
+				let event = Event::Marketplace(event);
+				assert_eq!(System::events().last().unwrap().event, event);
+			},
+		)
+	}
+
+	#[test]
+	fn buy_nft_flat_commission_and_royalty() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
+			|| {
+				prepare_tests();
+				let alice: mock::Origin = origin(ALICE);
+				let alice_balance = Balances::free_balance(ALICE);
+				let bob: mock::Origin = origin(BOB);
+				let bob_balance = Balances::free_balance(BOB);
+				let charlie: mock::Origin = origin(CHARLIE);
+				let charlie_balance = Balances::free_balance(CHARLIE);
+				let dave: mock::Origin = origin(DAVE);
+				let dave_balance = Balances::free_balance(DAVE);
+
+				// Set marketplace commission fee.
+				Marketplace::set_marketplace_configuration(
+					charlie,
+					CHARLIE_MARKETPLACE_ID,
+					ConfigOp::Set(MarketplaceFee::Flat(40)),
+					ConfigOp::Noop,
+					ConfigOp::Noop,
+					ConfigOp::Noop,
+				)
+				.unwrap();
+
+				// Set the royalty of alice's NFT.
+				NFT::set_royalty(alice.clone(), ALICE_NFT_ID, PERCENT_80).unwrap();
+
+				// Transfer the NFT to dave.
+				NFT::transfer_nft(alice, ALICE_NFT_ID, DAVE).unwrap();
+
+				// List NFT.
+				Marketplace::list_nft(dave, ALICE_NFT_ID, 100, CHARLIE_MARKETPLACE_ID).unwrap();
+
+				// Buy NFT
+				Marketplace::buy_nft(bob, ALICE_NFT_ID).unwrap();
+
+				// Final state checks.
+				let nft = NFT::nfts(ALICE_NFT_ID).unwrap();
+				let sale = Marketplace::nft_for_sale(ALICE_NFT_ID);
+				assert_eq!(sale, None);
+				assert_eq!(nft.owner, BOB);
+				// Buyer check
+				assert_eq!(Balances::free_balance(BOB), bob_balance - 100);
+				// Marketplace owner check.
+				assert_eq!(Balances::free_balance(CHARLIE), charlie_balance + 40);
+				// Royalty check.
+				assert_eq!(Balances::free_balance(ALICE), alice_balance + 48);
+				// Seller check.
+				assert_eq!(Balances::free_balance(DAVE), dave_balance + 12);
+
+				// Events checks.
+				let event = MarketplaceEvent::NftSold {
+					nft_id: ALICE_NFT_ID,
+					buyer: BOB,
+					commission_fee: Some(MarketplaceFee::Flat(40)),
+					marketplace_id: CHARLIE_MARKETPLACE_ID,
+					price: 100,
+				};
+				let event = Event::Marketplace(event);
+				assert_eq!(System::events().last().unwrap().event, event);
+			},
+		)
+	}
+
+	#[test]
+	fn buy_nft_percentage_commission_and_royalty() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
+			|| {
+				prepare_tests();
+				let alice: mock::Origin = origin(ALICE);
+				let alice_balance = Balances::free_balance(ALICE);
+				let bob: mock::Origin = origin(BOB);
+				let bob_balance = Balances::free_balance(BOB);
+				let charlie: mock::Origin = origin(CHARLIE);
+				let charlie_balance = Balances::free_balance(CHARLIE);
+				let dave: mock::Origin = origin(DAVE);
+				let dave_balance = Balances::free_balance(DAVE);
+
+				// Set marketplace commission fee.
+				Marketplace::set_marketplace_configuration(
+					charlie,
+					CHARLIE_MARKETPLACE_ID,
+					ConfigOp::Set(MarketplaceFee::Percentage(PERCENT_50)),
+					ConfigOp::Noop,
+					ConfigOp::Noop,
+					ConfigOp::Noop,
+				)
+				.unwrap();
+
+				// Set the royalty of alice's NFT.
+				NFT::set_royalty(alice.clone(), ALICE_NFT_ID, PERCENT_80).unwrap();
+
+				// Transfer the NFT to dave.
+				NFT::transfer_nft(alice, ALICE_NFT_ID, DAVE).unwrap();
+
+				// List NFT.
+				Marketplace::list_nft(dave, ALICE_NFT_ID, 100, CHARLIE_MARKETPLACE_ID).unwrap();
+
+				// Buy NFT.
+				Marketplace::buy_nft(bob, ALICE_NFT_ID).unwrap();
+
+				// Final state checks.
+				let nft = NFT::nfts(ALICE_NFT_ID).unwrap();
+				let sale = Marketplace::nft_for_sale(ALICE_NFT_ID);
+				assert_eq!(sale, None);
+				assert_eq!(nft.owner, BOB);
+				// Buyer check.
+				assert_eq!(Balances::free_balance(BOB), bob_balance - 100);
+				// Marketplace owner check.
+				assert_eq!(Balances::free_balance(CHARLIE), charlie_balance + 50);
+				// Royalty check.
+				assert_eq!(Balances::free_balance(ALICE), alice_balance + 40);
+				// Seller check.
+				assert_eq!(Balances::free_balance(DAVE), dave_balance + 10);
+
+				// Events checks.
+				let event = MarketplaceEvent::NftSold {
+					nft_id: ALICE_NFT_ID,
+					buyer: BOB,
+					commission_fee: Some(MarketplaceFee::Percentage(PERCENT_50)),
+					marketplace_id: CHARLIE_MARKETPLACE_ID,
+					price: 100,
+				};
+				let event = Event::Marketplace(event);
+				assert_eq!(System::events().last().unwrap().event, event);
+			},
+		)
+	}
+
+	#[test]
+	fn keep_alive() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
+			|| {
+				prepare_tests();
+				let alice: mock::Origin = origin(ALICE);
+				let bob: mock::Origin = origin(BOB);
+				let bob_balance = Balances::free_balance(BOB);
+
+				// List NFT.
+				Marketplace::list_nft(alice, ALICE_NFT_ID, bob_balance, CHARLIE_MARKETPLACE_ID)
+					.unwrap();
+
+				// Buy NFT.
+				let err = Marketplace::buy_nft(bob, ALICE_NFT_ID);
+
+				// Nothing should have changed.
+				let nft = NFT::nfts(ALICE_NFT_ID).unwrap();
+				let sale = Marketplace::nft_for_sale(ALICE_NFT_ID);
+				assert!(sale.is_some());
+				assert_eq!(nft.owner, ALICE);
+				assert_eq!(Balances::free_balance(BOB), bob_balance);
+				assert_noop!(err, BalanceError::<Test>::KeepAlive);
+			},
+		)
+	}
+
+	#[test]
+	fn nft_not_found() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
+			|| {
+				prepare_tests();
+				let alice: mock::Origin = origin(ALICE);
+
+				// Buy invalid NFT.
+				let err = Marketplace::buy_nft(alice, INVALID_NFT_ID);
+				assert_noop!(err, Error::<Test>::NFTNotFound);
+			},
+		)
+	}
+
+	#[test]
+	fn nft_not_for_sale() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
+			|| {
+				prepare_tests();
+				let alice: mock::Origin = origin(ALICE);
+
+				// Buy non listed NFT.
+				let err = Marketplace::buy_nft(alice, BOB_NFT_ID);
+				assert_noop!(err, Error::<Test>::NFTNotForSale);
+			},
+		)
+	}
+
+	#[test]
+	fn cannot_buy_owned_nft() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
+			|| {
+				prepare_tests();
+				let alice: mock::Origin = origin(ALICE);
+
+				// List NFT.
+				Marketplace::list_nft(alice.clone(), ALICE_NFT_ID, 10, ALICE_MARKETPLACE_ID)
+					.unwrap();
+
+				// Buy owned NFT.
+				let err = Marketplace::buy_nft(alice, ALICE_NFT_ID);
+				assert_noop!(err, Error::<Test>::CannotBuyOwnedNFT);
+			},
+		)
+	}
+
+	#[test]
+	fn not_enough_balance_to_buy() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
+			|| {
+				prepare_tests();
+				let alice: mock::Origin = origin(ALICE);
+				let bob: mock::Origin = origin(BOB);
+
+				// List NFT.
+				Marketplace::list_nft(alice, ALICE_NFT_ID, 10_000, ALICE_MARKETPLACE_ID).unwrap();
+
+				// Buy owned NFT.
+				let err = Marketplace::buy_nft(bob, ALICE_NFT_ID);
+				assert_noop!(err, Error::<Test>::NotEnoughBalanceToBuy);
+			},
+		)
+	}
 }

@@ -19,8 +19,8 @@
 use frame_support::{traits::Get, BoundedVec, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
-use sp_runtime::RuntimeDebug;
 use sp_arithmetic::per_things::Permill;
+use sp_runtime::RuntimeDebug;
 use sp_std::fmt::Debug;
 
 use crate::U8BoundedVec;
@@ -39,6 +39,13 @@ pub enum MarketplaceFee<Balance> {
 	Flat(Balance),
 	Percentage(Permill),
 }
+
+// impl <Balance> MarketplaceFee<Balance>
+// where Balance: Clone + PartialEq + Debug + sp_std::cmp::PartialOrd {
+// 	fn default() -> Self {
+// 		MarketplaceFee::Percentage(Permill::from_parts(0))
+// 	}
+// }
 
 #[derive(
 	Encode, Decode, CloneNoBound, Eq, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen,

@@ -16,14 +16,9 @@
 
 use frame_support::{CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
+use primitives::marketplace::{MarketplaceFee, MarketplaceId};
 use scale_info::TypeInfo;
 use sp_std::fmt::Debug;
-use primitives::{
-	marketplace::{
-		MarketplaceId,
-		MarketplaceFee,
-	}, 
-};
 
 #[derive(
 	Encode, Decode, CloneNoBound, Eq, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen,
@@ -40,8 +35,7 @@ where
 	pub commission_fee: Option<MarketplaceFee<Balance>>,
 }
 
-impl<AccountId, Balance>
-	Sale<AccountId, Balance>
+impl<AccountId, Balance> Sale<AccountId, Balance>
 where
 	AccountId: Clone + PartialEq + Debug,
 	Balance: Clone + PartialEq + Debug + sp_std::cmp::PartialOrd,

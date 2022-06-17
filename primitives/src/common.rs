@@ -24,7 +24,7 @@ pub type U8BoundedVec<S> = BoundedVec<u8, S>;
 
 /// Possible operations on the configuration values of this pallet.
 #[derive(TypeInfo, Debug, Clone, Encode, Decode, PartialEq)]
-pub enum ConfigOp<T: Default + Codec> {
+pub enum ConfigOp<T: Codec> {
 	/// Don't change.
 	Noop,
 	/// Set the given value.
