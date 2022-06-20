@@ -40,13 +40,6 @@ pub enum MarketplaceFee<Balance> {
 	Percentage(Permill),
 }
 
-// impl <Balance> MarketplaceFee<Balance>
-// where Balance: Clone + PartialEq + Debug + sp_std::cmp::PartialOrd {
-// 	fn default() -> Self {
-// 		MarketplaceFee::Percentage(Permill::from_parts(0))
-// 	}
-// }
-
 #[derive(
 	Encode, Decode, CloneNoBound, Eq, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen,
 )]
