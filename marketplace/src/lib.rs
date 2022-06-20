@@ -469,10 +469,8 @@ pub mod pallet {
 
 			// Caller pays for royalty, the price is updated.
 			let royalty_value = nft.royalty * price;
-			if royalty_value > 0u32.into() {
-				T::Currency::transfer(&who, &nft.creator, royalty_value, KeepAlive)?;
-				price = price.checked_sub(&royalty_value).ok_or(Error::<T>::InternalMathError)?;
-			}
+			T::Currency::transfer(&who, &nft.creator, royalty_value, KeepAlive)?;
+			price = price.checked_sub(&royalty_value).ok_or(Error::<T>::InternalMathError)?;
 
 			// Caller pays the seller the updated price.
 			T::Currency::transfer(&who, &sale.account_id, price, KeepAlive)?;
@@ -549,9 +547,7 @@ impl<T: Config> Pallet<T> {
 				MarketplaceFee::Flat(x) => x,
 				MarketplaceFee::Percentage(x) => x * price,
 			};
-			if listing_fee_value > 0u32.into() {
-				T::Currency::transfer(&who, &marketplace.owner, listing_fee_value, KeepAlive)?;
-			}
+			T::Currency::transfer(&who, &marketplace.owner, listing_fee_value, KeepAlive)?;
 		}
 		Ok(())
 	}
@@ -573,12 +569,9 @@ impl<T: Config> Pallet<T> {
 				MarketplaceFee::Flat(x) => x,
 				MarketplaceFee::Percentage(x) => x * price,
 			};
-			if commission_fee_value > 0u32.into() {
-				T::Currency::transfer(&who, &marketplace.owner, commission_fee_value, KeepAlive)?;
-				price = price
-					.checked_sub(&commission_fee_value)
-					.ok_or(Error::<T>::InternalMathError)?;
-			}
+			T::Currency::transfer(&who, &marketplace.owner, commission_fee_value, KeepAlive)?;
+			price =
+				price.checked_sub(&commission_fee_value).ok_or(Error::<T>::InternalMathError)?;
 		}
 		Ok(price)
 	}
