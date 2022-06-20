@@ -262,7 +262,7 @@ pub mod pallet {
 
 		/// Transfer the ownership of the marketplace to the recipient. Must be called by the
 		/// owner of the marketplace.
-		#[pallet::weight(T::WeightInfo::create_marketplace())]
+		#[pallet::weight(T::WeightInfo::set_marketplace_owner())]
 		pub fn set_marketplace_owner(
 			origin: OriginFor<T>,
 			marketplace_id: MarketplaceId,
@@ -290,7 +290,7 @@ pub mod pallet {
 
 		/// Change the kind of the marketplace, can be private or public.
 		/// Must be called by the owner of the marketplace.
-		#[pallet::weight(T::WeightInfo::create_marketplace())]
+		#[pallet::weight(T::WeightInfo::set_marketplace_kind())]
 		pub fn set_marketplace_kind(
 			origin: OriginFor<T>,
 			marketplace_id: MarketplaceId,
@@ -316,7 +316,7 @@ pub mod pallet {
 
 		/// Set the configuration parameters of the marketplace (eg. commission_fee, listing_fee,
 		/// account_list, offchain_data). Must be called by the owner of the marketplace.
-		#[pallet::weight(T::WeightInfo::create_marketplace())]
+		#[pallet::weight(T::WeightInfo::set_marketplace_configuration())]
 		pub fn set_marketplace_configuration(
 			origin: OriginFor<T>,
 			marketplace_id: MarketplaceId,
@@ -354,7 +354,7 @@ pub mod pallet {
 		}
 
 		/// Set the fee for minting a marketplace if the caller is root.
-		#[pallet::weight(T::WeightInfo::create_marketplace())]
+		#[pallet::weight(T::WeightInfo::set_marketplace_mint_fee())]
 		pub fn set_marketplace_mint_fee(
 			origin: OriginFor<T>,
 			fee: BalanceOf<T>,
@@ -367,7 +367,7 @@ pub mod pallet {
 		}
 
 		/// Put an NFT on sale on a marketplace.
-		#[pallet::weight(T::WeightInfo::create_marketplace())]
+		#[pallet::weight(T::WeightInfo::list_nft())]
 		#[transactional]
 		pub fn list_nft(
 			origin: OriginFor<T>,
@@ -425,7 +425,7 @@ pub mod pallet {
 		}
 
 		/// Remove an NFT from sale.
-		#[pallet::weight(T::WeightInfo::create_marketplace())]
+		#[pallet::weight(T::WeightInfo::unlist_nft())]
 		pub fn unlist_nft(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 			let nft = T::NFTExt::get_nft(nft_id).ok_or(Error::<T>::NFTNotFound)?;
@@ -450,7 +450,7 @@ pub mod pallet {
 		}
 
 		/// Buy a listed nft
-		#[pallet::weight(T::WeightInfo::create_marketplace())]
+		#[pallet::weight(T::WeightInfo::buy_nft())]
 		#[transactional]
 		pub fn buy_nft(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;

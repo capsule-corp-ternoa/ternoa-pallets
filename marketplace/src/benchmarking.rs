@@ -139,7 +139,21 @@ benchmarks! {
 		let nft_id = T::NFTExt::create_nft(alice, BoundedVec::default(), PERCENT_50, None, false).unwrap();
 	}: _(alice_origin, nft_id, 10u32.into(), marketplace_id)
 	verify {
+		assert_eq!(T::NFTExt::get_nft(nft_id).unwrap().state.listed_for_sale, true);
 		assert!(Marketplace::<T>::nfts_for_sale(nft_id).is_some());
+	}
+
+	unlist_nft {
+		prepare_benchmarks::<T>();
+		let alice: T::AccountId = get_account::<T>("ALICE");
+		let alice_origin = origin::<T>("ALICE");
+		let marketplace_id = Marketplace::<T>::get_next_marketplace_id() - 1;
+		let nft_id = T::NFTExt::create_nft(alice, BoundedVec::default(), PERCENT_50, None, false).unwrap();
+		Marketplace::<T>::list_nft(alice_origin.clone().into(), nft_id, 10u32.into(), marketplace_id).unwrap();
+	}: _(alice_origin, nft_id)
+	verify {
+		assert_eq!(T::NFTExt::get_nft(nft_id).unwrap().state.listed_for_sale, false);
+		assert!(Marketplace::<T>::nfts_for_sale(nft_id).is_none());
 	}
 
 	buy_nft {
