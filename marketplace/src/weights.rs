@@ -33,46 +33,45 @@ impl WeightInfo for () {
 	// Storage: Marketplace NextMarketplaceId (r:1 w:1)
 	// Storage: Marketplace Marketplaces (r:0 w:1)
 	fn create_marketplace() -> Weight {
-		(46_500_000 as Weight)
+		(46_700_000 as Weight)
 			.saturating_add(DbWeight::get().reads(3 as Weight))
 			.saturating_add(DbWeight::get().writes(3 as Weight))
 	}
 	// Storage: Marketplace Marketplaces (r:1 w:1)
 	fn set_marketplace_owner() -> Weight {
-		(15_700_000 as Weight)
+		(16_100_000 as Weight)
 			.saturating_add(DbWeight::get().reads(1 as Weight))
 			.saturating_add(DbWeight::get().writes(1 as Weight))
 	}
 	// Storage: Marketplace Marketplaces (r:1 w:1)
 	fn set_marketplace_kind() -> Weight {
-		(15_600_000 as Weight)
+		(15_700_000 as Weight)
 			.saturating_add(DbWeight::get().reads(1 as Weight))
 			.saturating_add(DbWeight::get().writes(1 as Weight))
 	}
 	// Storage: Marketplace Marketplaces (r:1 w:1)
 	fn set_marketplace_configuration() -> Weight {
-		(41_800_000 as Weight)
+		(43_200_000 as Weight)
 			.saturating_add(DbWeight::get().reads(1 as Weight))
 			.saturating_add(DbWeight::get().writes(1 as Weight))
 	}
 	// Storage: Marketplace MarketplaceMintFee (r:0 w:1)
 	fn set_marketplace_mint_fee() -> Weight {
-		(11_600_000 as Weight)
+		(11_100_000 as Weight)
 			.saturating_add(DbWeight::get().writes(1 as Weight))
 	}
 	// Storage: NFT Nfts (r:1 w:1)
 	// Storage: Marketplace Marketplaces (r:1 w:0)
 	// Storage: Marketplace NftsForSale (r:0 w:1)
 	fn list_nft() -> Weight {
-		(23_700_000 as Weight)
+		(24_800_000 as Weight)
 			.saturating_add(DbWeight::get().reads(2 as Weight))
 			.saturating_add(DbWeight::get().writes(2 as Weight))
 	}
 	// Storage: NFT Nfts (r:1 w:1)
-	// Storage: Marketplace Marketplaces (r:1 w:0)
-	// Storage: Marketplace NftsForSale (r:0 w:1)
+	// Storage: Marketplace NftsForSale (r:1 w:1)
 	fn unlist_nft() -> Weight {
-		(23_700_000 as Weight)
+		(22_100_000 as Weight)
 			.saturating_add(DbWeight::get().reads(2 as Weight))
 			.saturating_add(DbWeight::get().writes(2 as Weight))
 	}
@@ -81,7 +80,7 @@ impl WeightInfo for () {
 	// Storage: Marketplace Marketplaces (r:1 w:0)
 	// Storage: System Account (r:2 w:2)
 	fn buy_nft() -> Weight {
-		(75_300_000 as Weight)
+		(75_100_000 as Weight)
 			.saturating_add(DbWeight::get().reads(5 as Weight))
 			.saturating_add(DbWeight::get().writes(4 as Weight))
 	}
