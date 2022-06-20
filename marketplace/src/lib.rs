@@ -45,7 +45,7 @@ use primitives::{
 	ConfigOp, U8BoundedVec,
 };
 use ternoa_common::{config_op_field_exp, traits::NFTExt};
-use weights::WeightInfo;
+pub use weights::WeightInfo;
 
 pub type BalanceOf<T> =
 	<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
