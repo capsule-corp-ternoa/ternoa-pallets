@@ -19,11 +19,10 @@
 use frame_support::{traits::Get, BoundedVec, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
-use sp_arithmetic::per_things::Permill;
 use sp_runtime::RuntimeDebug;
 use sp_std::fmt::Debug;
 
-use crate::U8BoundedVec;
+use crate::{CompoundFee, U8BoundedVec};
 
 pub type MarketplaceId = u32;
 
@@ -32,12 +31,6 @@ pub type MarketplaceId = u32;
 pub enum MarketplaceType {
 	Public = 0,
 	Private = 1,
-}
-
-#[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
-pub enum MarketplaceFee<Balance> {
-	Flat(Balance),
-	Percentage(Permill),
 }
 
 #[derive(
@@ -54,8 +47,8 @@ where
 {
 	pub owner: AccountId,
 	pub kind: MarketplaceType,
-	pub commission_fee: Option<MarketplaceFee<Balance>>,
-	pub listing_fee: Option<MarketplaceFee<Balance>>,
+	pub commission_fee: Option<CompoundFee<Balance>>,
+	pub listing_fee: Option<CompoundFee<Balance>>,
 	pub account_list: Option<BoundedVec<AccountId, AccountSizeLimit>>,
 	pub offchain_data: Option<U8BoundedVec<OffchainDataLimit>>,
 }
@@ -71,8 +64,8 @@ where
 	pub fn new(
 		owner: AccountId,
 		kind: MarketplaceType,
-		commission_fee: Option<MarketplaceFee<Balance>>,
-		listing_fee: Option<MarketplaceFee<Balance>>,
+		commission_fee: Option<CompoundFee<Balance>>,
+		listing_fee: Option<CompoundFee<Balance>>,
 		account_list: Option<BoundedVec<AccountId, AccountSizeLimit>>,
 		offchain_data: Option<U8BoundedVec<OffchainDataLimit>>,
 	) -> MarketplaceData<AccountId, Balance, AccountSizeLimit, OffchainDataLimit> {

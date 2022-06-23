@@ -17,7 +17,6 @@
 #![cfg(feature = "runtime-benchmarks")]
 
 use super::*;
-use crate::Pallet as NFT;
 use frame_benchmarking::{account as benchmark_account, benchmarks, impl_benchmark_test_suite};
 use frame_support::{assert_ok, traits::Currency, BoundedVec};
 use frame_system::RawOrigin;
@@ -26,8 +25,13 @@ use sp_runtime::traits::{Bounded, StaticLookup};
 use sp_std::prelude::*;
 use ternoa_common::traits::NFTExt;
 
-const NFT_ID: u32 = 0;
-const COLLECTION_ID: u32 = 0;
+use crate::Pallet as NFT;
+
+pub struct BenchmarkData {
+	nft_id: NFTId,
+	collection_id: CollectionId,
+}
+
 const PERCENT_100: Permill = Permill::from_parts(1000000);
 
 pub fn get_account<T: Config>(name: &'static str) -> T::AccountId {
@@ -39,96 +43,99 @@ pub fn origin<T: Config>(name: &'static str) -> RawOrigin<T::AccountId> {
 	RawOrigin::Signed(get_account::<T>(name))
 }
 
-pub fn prepare_benchmarks<T: Config>() {
+pub fn prepare_benchmarks<T: Config>() -> BenchmarkData {
 	let alice: T::AccountId = get_account::<T>("ALICE");
 	let bob: T::AccountId = get_account::<T>("BOB");
-	let alice_origin = origin::<T>("ALICE");
 
 	// Give them enough caps.
 	T::Currency::make_free_balance_be(&alice, BalanceOf::<T>::max_value());
 	T::Currency::make_free_balance_be(&bob, BalanceOf::<T>::max_value());
 
-	let nft_offchain_data = BoundedVec::try_from(vec![1; T::NFTOffchainDataLimit::get() as usize])
-		.expect("It will never happen.");
+	let nft_offchain_data =
+		BoundedVec::try_from(vec![1; T::NFTOffchainDataLimit::get() as usize]).unwrap();
 	let collection_offchain_data =
-		BoundedVec::try_from(vec![1; T::CollectionOffchainDataLimit::get() as usize])
-			.expect("It will never happen.");
+		BoundedVec::try_from(vec![1; T::CollectionOffchainDataLimit::get() as usize]).unwrap();
 
 	// Create default NFT and collection.
 	assert_ok!(NFT::<T>::create_nft(
-		alice_origin.clone().into(),
+		origin::<T>("ALICE").into(),
 		nft_offchain_data,
 		PERCENT_100,
 		None,
 		false,
 	));
-	assert_ok!(NFT::<T>::create_collection(alice_origin.into(), collection_offchain_data, None,));
+	assert_ok!(NFT::<T>::create_collection(
+		origin::<T>("ALICE").into(),
+		collection_offchain_data,
+		None,
+	));
+	BenchmarkData {
+		nft_id: NFT::<T>::next_nft_id() - 1,
+		collection_id: NFT::<T>::next_collection_id() - 1,
+	}
 }
 
 benchmarks! {
 	create_nft {
 		let s in 0 .. T::CollectionSizeLimit::get() - 1;
-		prepare_benchmarks::<T>();
+		let benchmark_data = prepare_benchmarks::<T>();
 		let alice: T::AccountId = get_account::<T>("ALICE");
-		let alice_origin = origin::<T>("ALICE");
-		let nft_offchain_data: BoundedVec<u8, T::NFTOffchainDataLimit> = BoundedVec::try_from(vec![1; T::NFTOffchainDataLimit::get() as usize]).expect("It will never happen.");
+		let nft_offchain_data: BoundedVec<u8, T::NFTOffchainDataLimit> = BoundedVec::try_from(vec![1; T::NFTOffchainDataLimit::get() as usize]).unwrap();
 		// Fill the collection.
-		let collection_id = NFT::<T>::get_next_collection_id();
-		NFT::<T>::create_filled_collection(alice.clone(), collection_id, 0, s).unwrap();
-	}: _(alice_origin, nft_offchain_data, PERCENT_100, Some(collection_id), false)
+		NFT::<T>::create_filled_collection(alice.clone(), benchmark_data.collection_id, 0, s).unwrap();
+	}: _(origin::<T>("ALICE"), nft_offchain_data, PERCENT_100, Some(benchmark_data.collection_id), false)
 	verify {
 		// Get The NFT id.
-		let nft_id = NFT::<T>::get_next_nft_id() - 1;
+		let nft_id = NFT::<T>::next_nft_id() - 1;
 		// Get The NFT.
 		let nft = NFT::<T>::nfts(nft_id).unwrap();
 		assert_eq!(nft.owner, alice);
-		assert_eq!(NFT::<T>::collections(collection_id).unwrap().nfts.contains(&nft_id), true);
-		assert_eq!(nft.collection_id, Some(collection_id));
+		assert_eq!(NFT::<T>::collections(benchmark_data.collection_id).unwrap().nfts.contains(&nft_id), true);
+		assert_eq!(nft.collection_id, Some(benchmark_data.collection_id));
 	}
 
 	burn_nft {
 		let s in 0 .. T::CollectionSizeLimit::get() - 1;
-		prepare_benchmarks::<T>();
+		let benchmark_data = prepare_benchmarks::<T>();
 		let alice = origin::<T>("ALICE");
-		let nft_offchain_data: BoundedVec<u8, T::NFTOffchainDataLimit> = BoundedVec::try_from(vec![1; T::NFTOffchainDataLimit::get() as usize]).expect("It will never happen.");
+		let nft_offchain_data: BoundedVec<u8, T::NFTOffchainDataLimit> = BoundedVec::try_from(vec![1; T::NFTOffchainDataLimit::get() as usize]).unwrap();
 		// Fill the collection.
-		let collection_id = NFT::<T>::get_next_collection_id();
-		NFT::<T>::create_filled_collection(get_account::<T>("ALICE"), collection_id, NFT_ID + 1, s).unwrap();
+		NFT::<T>::create_filled_collection(get_account::<T>("ALICE"), benchmark_data.collection_id, benchmark_data.nft_id + 1, s).unwrap();
 		// Add NFT to collection.
-		NFT::<T>::add_nft_to_collection(alice.clone().into(), NFT_ID, collection_id).unwrap();
-	}: _(alice, NFT_ID)
+		NFT::<T>::add_nft_to_collection(alice.clone().into(), benchmark_data.nft_id, benchmark_data.collection_id).unwrap();
+	}: _(alice, benchmark_data.nft_id)
 	verify {
-		assert_eq!(NFT::<T>::nfts(NFT_ID), None);
-		assert_eq!(NFT::<T>::collections(collection_id).unwrap().nfts.contains(&NFT_ID), false);
+		assert_eq!(NFT::<T>::nfts(benchmark_data.nft_id), None);
+		assert_eq!(NFT::<T>::collections(benchmark_data.collection_id).unwrap().nfts.contains(&benchmark_data.nft_id), false);
 	}
 
 	transfer_nft {
-		prepare_benchmarks::<T>();
+		let benchmark_data = prepare_benchmarks::<T>();
 		let alice = origin::<T>("ALICE");
 		let bob: T::AccountId = get_account::<T>("BOB");
 		let bob_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(bob.clone());
-	}: _(alice, NFT_ID, bob_lookup)
+	}: _(alice, benchmark_data.nft_id, bob_lookup)
 	verify {
-		assert_eq!(NFT::<T>::nfts(NFT_ID).unwrap().owner, bob);
+		assert_eq!(NFT::<T>::nfts(benchmark_data.nft_id).unwrap().owner, bob);
 	}
 
 	delegate_nft {
-		prepare_benchmarks::<T>();
+		let benchmark_data = prepare_benchmarks::<T>();
 		let alice = origin::<T>("ALICE");
 		let bob: T::AccountId = get_account::<T>("BOB");
 		let bob_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(bob.clone());
-	}: _(alice, NFT_ID, Some(bob_lookup))
+	}: _(alice, benchmark_data.nft_id, Some(bob_lookup))
 	verify {
-		assert_eq!(NFT::<T>::nfts(NFT_ID).unwrap().state.is_delegated, true);
-		assert_eq!(NFT::<T>::delegated_nfts(NFT_ID), Some(bob));
+		assert_eq!(NFT::<T>::nfts(benchmark_data.nft_id).unwrap().state.is_delegated, true);
+		assert_eq!(NFT::<T>::delegated_nfts(benchmark_data.nft_id), Some(bob));
 	}
 
 	set_royalty {
-		prepare_benchmarks::<T>();
+		let benchmark_data = prepare_benchmarks::<T>();
 		let alice = origin::<T>("ALICE");
-	}: _(alice, NFT_ID, PERCENT_100)
+	}: _(alice, benchmark_data.nft_id, PERCENT_100)
 	verify {
-		assert_eq!(NFT::<T>::nfts(NFT_ID).unwrap().royalty, PERCENT_100);
+		assert_eq!(NFT::<T>::nfts(benchmark_data.nft_id).unwrap().royalty, PERCENT_100);
 	}
 
 	set_nft_mint_fee {
@@ -143,50 +150,48 @@ benchmarks! {
 	create_collection {
 		prepare_benchmarks::<T>();
 		let alice: T::AccountId = get_account::<T>("ALICE");
-		let alice_origin = origin::<T>("ALICE");
-		let collection_id = 1;
-		let collection_offchain_data = BoundedVec::try_from(vec![1; T::CollectionOffchainDataLimit::get() as usize]).expect("It will never happen.");
-	}: _(alice_origin, collection_offchain_data, Some(10))
+		let collection_offchain_data = BoundedVec::try_from(vec![1; T::CollectionOffchainDataLimit::get() as usize]).unwrap();
+	}: _(origin::<T>("ALICE"), collection_offchain_data, Some(10))
 	verify {
+		let collection_id = NFT::<T>::next_nft_id() - 1;
 		assert_eq!(NFT::<T>::collections(collection_id).unwrap().owner, alice);
 	}
 
 	burn_collection {
-		prepare_benchmarks::<T>();
+		let benchmark_data = prepare_benchmarks::<T>();
 		let alice = origin::<T>("ALICE");
-	}: _(alice, COLLECTION_ID)
+	}: _(alice, benchmark_data.collection_id)
 	verify {
-		assert_eq!(NFT::<T>::collections(COLLECTION_ID), None);
+		assert_eq!(NFT::<T>::collections(benchmark_data.collection_id), None);
 	}
 
 	close_collection {
-		prepare_benchmarks::<T>();
+		let benchmark_data = prepare_benchmarks::<T>();
 		let alice = origin::<T>("ALICE");
-	}: _(alice, COLLECTION_ID)
+	}: _(alice, benchmark_data.collection_id)
 	verify {
-		assert_eq!(NFT::<T>::collections(COLLECTION_ID).unwrap().is_closed, true);
+		assert_eq!(NFT::<T>::collections(benchmark_data.collection_id).unwrap().is_closed, true);
 	}
 
 	limit_collection {
-		prepare_benchmarks::<T>();
+		let benchmark_data = prepare_benchmarks::<T>();
 		let alice = origin::<T>("ALICE");
-	}: _(alice, COLLECTION_ID, 1)
+	}: _(alice, benchmark_data.collection_id, 1)
 	verify {
-		assert_eq!(NFT::<T>::collections(COLLECTION_ID).unwrap().limit, Some(1));
+		assert_eq!(NFT::<T>::collections(benchmark_data.collection_id).unwrap().limit, Some(1));
 	}
 
 	add_nft_to_collection {
 		let s in 0 .. T::CollectionSizeLimit::get() - 1;
-		prepare_benchmarks::<T>();
+		let benchmark_data = prepare_benchmarks::<T>();
 		let alice = origin::<T>("ALICE");
-		let nft_offchain_data: BoundedVec<u8, T::NFTOffchainDataLimit> = BoundedVec::try_from(vec![1; T::NFTOffchainDataLimit::get() as usize]).expect("It will never happen.");
+		let nft_offchain_data: BoundedVec<u8, T::NFTOffchainDataLimit> = BoundedVec::try_from(vec![1; T::NFTOffchainDataLimit::get() as usize]).unwrap();
 		// Fill the collection.
-		let collection_id = NFT::<T>::get_next_collection_id();
-		NFT::<T>::create_filled_collection(get_account::<T>("ALICE"), collection_id, NFT_ID + 1, s).unwrap();
-	}: _(alice, NFT_ID, collection_id)
+		NFT::<T>::create_filled_collection(get_account::<T>("ALICE"), benchmark_data.collection_id, benchmark_data.nft_id + 1, s).unwrap();
+	}: _(alice, benchmark_data.nft_id, benchmark_data.collection_id)
 	verify {
-		assert_eq!(NFT::<T>::nfts(NFT_ID).unwrap().collection_id, Some(collection_id));
-		assert_eq!(NFT::<T>::collections(collection_id).unwrap().nfts.contains(&NFT_ID), true);
+		assert_eq!(NFT::<T>::nfts(benchmark_data.nft_id).unwrap().collection_id, Some(benchmark_data.collection_id));
+		assert_eq!(NFT::<T>::collections(benchmark_data.collection_id).unwrap().nfts.contains(&benchmark_data.nft_id), true);
 	}
 }
 

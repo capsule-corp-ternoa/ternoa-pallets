@@ -2374,7 +2374,7 @@ dependencies = [
 
 [[package]]
 name = "ternoa-common"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "frame-support",
  "sp-arithmetic",
@@ -2418,7 +2418,7 @@ dependencies = [
 
 [[package]]
 name = "ternoa-nft"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -2438,7 +2438,7 @@ dependencies = [
 
 [[package]]
 name = "ternoa-pallets-primitives"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "frame-support",
  "parity-scale-codec",

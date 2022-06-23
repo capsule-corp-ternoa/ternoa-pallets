@@ -20,4 +20,4 @@ pub mod common;
 pub mod marketplace;
 pub mod nfts;
 
-pub use common::{ConfigOp, U8BoundedVec};
+pub use common::{CompoundFee, ConfigOp, U8BoundedVec};

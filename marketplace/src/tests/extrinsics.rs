@@ -15,19 +15,20 @@
 // along with Ternoa.  If not, see <http://www.gnu.org/licenses/>.
 
 use super::mock::*;
-use crate::{
-	tests::mock, Error, Event as MarketplaceEvent, MarketplaceData, MarketplaceFee, MarketplaceId,
-	MarketplaceType, Sale,
-};
 use frame_support::{assert_noop, assert_ok, error::BadOrigin, BoundedVec};
 use frame_system::RawOrigin;
 use pallet_balances::Error as BalanceError;
 use primitives::{
-	nfts::{CollectionId, NFTId},
+	nfts::{CollectionId, NFTId, NFTState},
 	ConfigOp,
 };
 use sp_arithmetic::per_things::Permill;
 use ternoa_common::traits::NFTExt;
+
+use crate::{
+	tests::mock, CompoundFee, Error, Event as MarketplaceEvent, MarketplaceData, MarketplaceId,
+	MarketplaceType, Sale,
+};
 
 const ALICE_NFT_ID: NFTId = 0;
 const ALICE_COLLECTION_ID: CollectionId = 0;
@@ -99,8 +100,8 @@ mod create_marketplace {
 			let data = MarketplaceData::new(
 				ALICE,
 				MarketplaceType::Public,
-				Some(MarketplaceFee::Percentage(PERCENT_80)),
-				Some(MarketplaceFee::Flat(10)),
+				Some(CompoundFee::Percentage(PERCENT_80)),
+				Some(CompoundFee::Flat(10)),
 				None,
 				Some(BoundedVec::default()),
 			);
@@ -319,8 +320,8 @@ mod set_marketplace_configuration {
 				let data = MarketplaceData::new(
 					ALICE,
 					MarketplaceType::Public,
-					Some(MarketplaceFee::Percentage(PERCENT_100)),
-					Some(MarketplaceFee::Percentage(PERCENT_100)),
+					Some(CompoundFee::Percentage(PERCENT_100)),
+					Some(CompoundFee::Percentage(PERCENT_100)),
 					Some(BoundedVec::try_from(vec![ALICE, BOB]).unwrap()),
 					Some(BoundedVec::try_from(vec![1]).unwrap()),
 				);
@@ -471,15 +472,15 @@ mod list_nft {
 				let data = Sale::new(ALICE, ALICE_MARKETPLACE_ID, 10, marketplace.commission_fee);
 
 				// List NFT.
-				Marketplace::list_nft(alice, ALICE_NFT_ID, data.price, data.marketplace_id)
+				Marketplace::list_nft(alice, ALICE_NFT_ID, data.marketplace_id, data.price)
 					.unwrap();
 
 				// Final state checks.
-				let sale = Marketplace::nfts_for_sale(ALICE_NFT_ID).unwrap();
+				let sale = Marketplace::listed_nfts(ALICE_NFT_ID).unwrap();
 				assert_eq!(sale, data);
 
 				// Events checks.
-				let event = MarketplaceEvent::NftListed {
+				let event = MarketplaceEvent::NFTListed {
 					marketplace_id: data.marketplace_id,
 					nft_id: ALICE_NFT_ID,
 					commission_fee: data.commission_fee,
@@ -506,7 +507,7 @@ mod list_nft {
 					bob.clone(),
 					BOB_MARKETPLACE_ID,
 					ConfigOp::Noop,
-					ConfigOp::Set(MarketplaceFee::Flat(new_listing_fee)),
+					ConfigOp::Set(CompoundFee::Flat(new_listing_fee)),
 					ConfigOp::Noop,
 					ConfigOp::Noop,
 				)
@@ -516,16 +517,16 @@ mod list_nft {
 				let data = Sale::new(ALICE, BOB_MARKETPLACE_ID, 10, marketplace.commission_fee);
 
 				// List nft.
-				Marketplace::list_nft(alice, ALICE_NFT_ID, data.price, data.marketplace_id)
+				Marketplace::list_nft(alice, ALICE_NFT_ID, data.marketplace_id, data.price)
 					.unwrap();
 
 				// Final state checks.
-				let sale = Marketplace::nfts_for_sale(ALICE_NFT_ID).unwrap();
+				let sale = Marketplace::listed_nfts(ALICE_NFT_ID).unwrap();
 				assert_eq!(sale, data);
 				assert_eq!(Balances::free_balance(ALICE), alice_balance - new_listing_fee);
 
 				// Events checks.
-				let event = MarketplaceEvent::NftListed {
+				let event = MarketplaceEvent::NFTListed {
 					marketplace_id: data.marketplace_id,
 					nft_id: ALICE_NFT_ID,
 					commission_fee: data.commission_fee,
@@ -552,7 +553,7 @@ mod list_nft {
 					bob.clone(),
 					BOB_MARKETPLACE_ID,
 					ConfigOp::Noop,
-					ConfigOp::Set(MarketplaceFee::Percentage(new_listing_fee)),
+					ConfigOp::Set(CompoundFee::Percentage(new_listing_fee)),
 					ConfigOp::Noop,
 					ConfigOp::Noop,
 				)
@@ -562,11 +563,11 @@ mod list_nft {
 				let data = Sale::new(ALICE, BOB_MARKETPLACE_ID, 10, marketplace.commission_fee);
 
 				// List nft.
-				Marketplace::list_nft(alice, ALICE_NFT_ID, data.price, data.marketplace_id)
+				Marketplace::list_nft(alice, ALICE_NFT_ID, data.marketplace_id, data.price)
 					.unwrap();
 
 				// Final state checks.
-				let sale = Marketplace::nfts_for_sale(ALICE_NFT_ID).unwrap();
+				let sale = Marketplace::listed_nfts(ALICE_NFT_ID).unwrap();
 				assert_eq!(sale, data);
 				assert_eq!(
 					Balances::free_balance(ALICE),
@@ -574,7 +575,7 @@ mod list_nft {
 				);
 
 				// Events checks.
-				let event = MarketplaceEvent::NftListed {
+				let event = MarketplaceEvent::NFTListed {
 					marketplace_id: data.marketplace_id,
 					nft_id: ALICE_NFT_ID,
 					commission_fee: data.commission_fee,
@@ -605,13 +606,13 @@ mod list_nft {
 				bob.clone(),
 				BOB_MARKETPLACE_ID,
 				ConfigOp::Noop,
-				ConfigOp::Set(MarketplaceFee::Flat(new_listing_fee)),
+				ConfigOp::Set(CompoundFee::Flat(new_listing_fee)),
 				ConfigOp::Noop,
 				ConfigOp::Noop,
 			)
 			.unwrap();
 
-			let err = Marketplace::list_nft(alice, ALICE_NFT_ID, 10, BOB_MARKETPLACE_ID);
+			let err = Marketplace::list_nft(alice, ALICE_NFT_ID, BOB_MARKETPLACE_ID, 10);
 			assert_noop!(err, BalanceError::<Test>::KeepAlive);
 			assert_eq!(Balances::free_balance(ALICE), alice_balance);
 		})
@@ -625,7 +626,7 @@ mod list_nft {
 				let alice: mock::Origin = origin(ALICE);
 
 				// List invalid nft.
-				let err = Marketplace::list_nft(alice, INVALID_NFT_ID, 10, ALICE_MARKETPLACE_ID);
+				let err = Marketplace::list_nft(alice, INVALID_NFT_ID, ALICE_MARKETPLACE_ID, 10);
 				assert_noop!(err, Error::<Test>::NFTNotFound);
 			},
 		)
@@ -639,7 +640,7 @@ mod list_nft {
 				let alice: mock::Origin = origin(ALICE);
 
 				// Try to list unowned nft.
-				let err = Marketplace::list_nft(alice, BOB_NFT_ID, 10, ALICE_MARKETPLACE_ID);
+				let err = Marketplace::list_nft(alice, BOB_NFT_ID, ALICE_MARKETPLACE_ID, 10);
 				assert_noop!(err, Error::<Test>::NotTheNFTOwner);
 			},
 		)
@@ -653,10 +654,10 @@ mod list_nft {
 				let alice: mock::Origin = origin(ALICE);
 
 				// List twice the same nft.
-				Marketplace::list_nft(alice.clone(), ALICE_NFT_ID, 10, ALICE_MARKETPLACE_ID)
+				Marketplace::list_nft(alice.clone(), ALICE_NFT_ID, ALICE_MARKETPLACE_ID, 10)
 					.unwrap();
-				let err = Marketplace::list_nft(alice, ALICE_NFT_ID, 10, ALICE_MARKETPLACE_ID);
-				assert_noop!(err, Error::<Test>::NFTAlreadyListed);
+				let err = Marketplace::list_nft(alice, ALICE_NFT_ID, ALICE_MARKETPLACE_ID, 10);
+				assert_noop!(err, Error::<Test>::CannotListAlreadytListedNFTs);
 			},
 		)
 	}
@@ -669,9 +670,10 @@ mod list_nft {
 				let alice: mock::Origin = origin(ALICE);
 
 				// Set capsule to true for Alice's NFT.
-				NFT::set_nft_state(ALICE_NFT_ID, true, false, false, false, false).unwrap();
+				let nft_state = NFTState::new(true, false, false, false, false);
+				NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
 
-				let err = Marketplace::list_nft(alice, ALICE_NFT_ID, 10, ALICE_MARKETPLACE_ID);
+				let err = Marketplace::list_nft(alice, ALICE_NFT_ID, ALICE_MARKETPLACE_ID, 10);
 				assert_noop!(err, Error::<Test>::CannotListCapsuleNFTs);
 			},
 		)
@@ -685,9 +687,10 @@ mod list_nft {
 				let alice: mock::Origin = origin(ALICE);
 
 				// Set delegated to true for Alice's NFT.
-				NFT::set_nft_state(ALICE_NFT_ID, false, false, false, true, false).unwrap();
+				let nft_state = NFTState::new(false, false, false, true, false);
+				NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
 
-				let err = Marketplace::list_nft(alice, ALICE_NFT_ID, 10, ALICE_MARKETPLACE_ID);
+				let err = Marketplace::list_nft(alice, ALICE_NFT_ID, ALICE_MARKETPLACE_ID, 10);
 				assert_noop!(err, Error::<Test>::CannotListDelegatedNFTs);
 			},
 		)
@@ -701,9 +704,10 @@ mod list_nft {
 				let alice: mock::Origin = origin(ALICE);
 
 				// Set soulbound to true for Alice's NFT.
-				NFT::set_nft_state(ALICE_NFT_ID, false, false, false, false, true).unwrap();
+				let nft_state = NFTState::new(false, false, false, false, true);
+				NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
 
-				let err = Marketplace::list_nft(alice, ALICE_NFT_ID, 10, ALICE_MARKETPLACE_ID);
+				let err = Marketplace::list_nft(alice, ALICE_NFT_ID, ALICE_MARKETPLACE_ID, 10);
 				assert_noop!(err, Error::<Test>::CannotListSoulboundNFTs);
 			},
 		)
@@ -717,7 +721,7 @@ mod list_nft {
 				let alice: mock::Origin = origin(ALICE);
 
 				// List on invalid marketplace.
-				let err = Marketplace::list_nft(alice, ALICE_NFT_ID, 10, INVALID_MARKETPLACE_ID);
+				let err = Marketplace::list_nft(alice, ALICE_NFT_ID, INVALID_MARKETPLACE_ID, 10);
 				assert_noop!(err, Error::<Test>::MarketplaceNotFound);
 			},
 		)
@@ -741,7 +745,7 @@ mod list_nft {
 				)
 				.unwrap();
 
-				let err = Marketplace::list_nft(alice, ALICE_NFT_ID, 10, ALICE_MARKETPLACE_ID);
+				let err = Marketplace::list_nft(alice, ALICE_NFT_ID, ALICE_MARKETPLACE_ID, 10);
 				assert_noop!(err, Error::<Test>::AccountNotAllowedToList);
 			},
 		)
@@ -762,7 +766,7 @@ mod list_nft {
 				)
 				.unwrap();
 
-				let err = Marketplace::list_nft(alice, ALICE_NFT_ID, 10, ALICE_MARKETPLACE_ID);
+				let err = Marketplace::list_nft(alice, ALICE_NFT_ID, ALICE_MARKETPLACE_ID, 10);
 				assert_noop!(err, Error::<Test>::AccountNotAllowedToList);
 			},
 		)
@@ -779,15 +783,15 @@ mod list_nft {
 				Marketplace::set_marketplace_configuration(
 					alice.clone(),
 					ALICE_MARKETPLACE_ID,
-					ConfigOp::Set(MarketplaceFee::Flat(10_000)),
+					ConfigOp::Set(CompoundFee::Flat(10_000)),
 					ConfigOp::Noop,
 					ConfigOp::Noop,
 					ConfigOp::Noop,
 				)
 				.unwrap();
 
-				let err = Marketplace::list_nft(alice, ALICE_NFT_ID, 10, ALICE_MARKETPLACE_ID);
-				assert_noop!(err, Error::<Test>::PriceTooLowForCommissionFee);
+				let err = Marketplace::list_nft(alice, ALICE_NFT_ID, ALICE_MARKETPLACE_ID, 10);
+				assert_noop!(err, Error::<Test>::PriceCannotCoverMarketplaceFee);
 			},
 		)
 	}
@@ -806,18 +810,18 @@ mod unlist_nft {
 				let data = Sale::new(ALICE, ALICE_MARKETPLACE_ID, 10, marketplace.commission_fee);
 
 				// List NFT.
-				Marketplace::list_nft(alice.clone(), ALICE_NFT_ID, data.price, data.marketplace_id)
+				Marketplace::list_nft(alice.clone(), ALICE_NFT_ID, data.marketplace_id, data.price)
 					.unwrap();
 
 				// Unlist NFT.
 				Marketplace::unlist_nft(alice, ALICE_NFT_ID).unwrap();
 
 				// Final state checks.
-				let sale = Marketplace::nfts_for_sale(ALICE_NFT_ID);
+				let sale = Marketplace::listed_nfts(ALICE_NFT_ID);
 				assert_eq!(sale, None);
 
 				// Events checks.
-				let event = MarketplaceEvent::NftUnlisted { nft_id: ALICE_NFT_ID };
+				let event = MarketplaceEvent::NFTUnlisted { nft_id: ALICE_NFT_ID };
 				let event = Event::Marketplace(event);
 				System::assert_last_event(event);
 			},
@@ -847,7 +851,7 @@ mod unlist_nft {
 				let bob: mock::Origin = origin(BOB);
 
 				// List bob's nft.
-				Marketplace::list_nft(bob.clone(), BOB_NFT_ID, 0, ALICE_MARKETPLACE_ID).unwrap();
+				Marketplace::list_nft(bob.clone(), BOB_NFT_ID, ALICE_MARKETPLACE_ID, 0).unwrap();
 
 				let err = Marketplace::unlist_nft(alice, BOB_NFT_ID);
 				assert_noop!(err, Error::<Test>::NotTheNFTOwner);
@@ -884,26 +888,27 @@ mod buy_nft {
 				let bob_balance = Balances::free_balance(BOB);
 
 				// List NFT.
-				Marketplace::list_nft(alice, ALICE_NFT_ID, 10, ALICE_MARKETPLACE_ID).unwrap();
+				Marketplace::list_nft(alice, ALICE_NFT_ID, ALICE_MARKETPLACE_ID, 10).unwrap();
 
 				// Buy NFT.
 				Marketplace::buy_nft(bob, ALICE_NFT_ID).unwrap();
 
 				// Final state checks.
 				let nft = NFT::nfts(ALICE_NFT_ID).unwrap();
-				let sale = Marketplace::nfts_for_sale(ALICE_NFT_ID);
+				let sale = Marketplace::listed_nfts(ALICE_NFT_ID);
 				assert_eq!(sale, None);
 				assert_eq!(nft.owner, BOB);
 				assert_eq!(Balances::free_balance(BOB), bob_balance - 10);
 				assert_eq!(Balances::free_balance(ALICE), alice_balance + 10);
 
 				// Events checks.
-				let event = MarketplaceEvent::NftSold {
+				let event = MarketplaceEvent::NFTSold {
 					nft_id: ALICE_NFT_ID,
-					buyer: BOB,
-					commission_fee: None,
 					marketplace_id: ALICE_MARKETPLACE_ID,
-					price: 10,
+					buyer: BOB,
+					listed_price: 10,
+					marketplace_cut: 0,
+					royalty_cut: 0,
 				};
 				let event = Event::Marketplace(event);
 				System::assert_last_event(event);
@@ -927,7 +932,7 @@ mod buy_nft {
 				Marketplace::set_marketplace_configuration(
 					charlie,
 					CHARLIE_MARKETPLACE_ID,
-					ConfigOp::Set(MarketplaceFee::Flat(5)),
+					ConfigOp::Set(CompoundFee::Flat(5)),
 					ConfigOp::Noop,
 					ConfigOp::Noop,
 					ConfigOp::Noop,
@@ -935,14 +940,14 @@ mod buy_nft {
 				.unwrap();
 
 				// List NFT.
-				Marketplace::list_nft(alice, ALICE_NFT_ID, 10, CHARLIE_MARKETPLACE_ID).unwrap();
+				Marketplace::list_nft(alice, ALICE_NFT_ID, CHARLIE_MARKETPLACE_ID, 10).unwrap();
 
 				// Buy NFT.
 				Marketplace::buy_nft(bob, ALICE_NFT_ID).unwrap();
 
 				// Final state checks.
 				let nft = NFT::nfts(ALICE_NFT_ID).unwrap();
-				let sale = Marketplace::nfts_for_sale(ALICE_NFT_ID);
+				let sale = Marketplace::listed_nfts(ALICE_NFT_ID);
 				assert_eq!(sale, None);
 				assert_eq!(nft.owner, BOB);
 				// Buyer check.
@@ -953,12 +958,13 @@ mod buy_nft {
 				assert_eq!(Balances::free_balance(CHARLIE), charlie_balance + 5);
 
 				// Events checks.
-				let event = MarketplaceEvent::NftSold {
+				let event = MarketplaceEvent::NFTSold {
 					nft_id: ALICE_NFT_ID,
-					buyer: BOB,
-					commission_fee: Some(MarketplaceFee::Flat(5)),
 					marketplace_id: CHARLIE_MARKETPLACE_ID,
-					price: 10,
+					buyer: BOB,
+					listed_price: 10,
+					marketplace_cut: 5,
+					royalty_cut: 0,
 				};
 				let event = Event::Marketplace(event);
 				System::assert_last_event(event);
@@ -982,7 +988,7 @@ mod buy_nft {
 				Marketplace::set_marketplace_configuration(
 					charlie,
 					CHARLIE_MARKETPLACE_ID,
-					ConfigOp::Set(MarketplaceFee::Percentage(PERCENT_80)),
+					ConfigOp::Set(CompoundFee::Percentage(PERCENT_80)),
 					ConfigOp::Noop,
 					ConfigOp::Noop,
 					ConfigOp::Noop,
@@ -990,14 +996,14 @@ mod buy_nft {
 				.unwrap();
 
 				// List NFT.
-				Marketplace::list_nft(alice, ALICE_NFT_ID, 10, CHARLIE_MARKETPLACE_ID).unwrap();
+				Marketplace::list_nft(alice, ALICE_NFT_ID, CHARLIE_MARKETPLACE_ID, 10).unwrap();
 
 				// Buy NFT.
 				Marketplace::buy_nft(bob, ALICE_NFT_ID).unwrap();
 
 				// Final state checks.
 				let nft = NFT::nfts(ALICE_NFT_ID).unwrap();
-				let sale = Marketplace::nfts_for_sale(ALICE_NFT_ID);
+				let sale = Marketplace::listed_nfts(ALICE_NFT_ID);
 				assert_eq!(sale, None);
 				assert_eq!(nft.owner, BOB);
 				// Buyer check.
@@ -1008,12 +1014,13 @@ mod buy_nft {
 				assert_eq!(Balances::free_balance(CHARLIE), charlie_balance + 8);
 
 				// Events checks.
-				let event = MarketplaceEvent::NftSold {
+				let event = MarketplaceEvent::NFTSold {
 					nft_id: ALICE_NFT_ID,
-					buyer: BOB,
-					commission_fee: Some(MarketplaceFee::Percentage(PERCENT_80)),
 					marketplace_id: CHARLIE_MARKETPLACE_ID,
-					price: 10,
+					buyer: BOB,
+					listed_price: 10,
+					marketplace_cut: 8,
+					royalty_cut: 0,
 				};
 				let event = Event::Marketplace(event);
 				System::assert_last_event(event);
@@ -1040,14 +1047,14 @@ mod buy_nft {
 				NFT::transfer_nft(alice, ALICE_NFT_ID, CHARLIE).unwrap();
 
 				// List NFT.
-				Marketplace::list_nft(charlie, ALICE_NFT_ID, 10, BOB_MARKETPLACE_ID).unwrap();
+				Marketplace::list_nft(charlie, ALICE_NFT_ID, BOB_MARKETPLACE_ID, 10).unwrap();
 
 				// Buy NFT.
 				Marketplace::buy_nft(bob, ALICE_NFT_ID).unwrap();
 
 				// Final state checks.
 				let nft = NFT::nfts(ALICE_NFT_ID).unwrap();
-				let sale = Marketplace::nfts_for_sale(ALICE_NFT_ID);
+				let sale = Marketplace::listed_nfts(ALICE_NFT_ID);
 				assert_eq!(sale, None);
 				assert_eq!(nft.owner, BOB);
 				// Buyer check.
@@ -1058,12 +1065,13 @@ mod buy_nft {
 				assert_eq!(Balances::free_balance(CHARLIE), charlie_balance + 2);
 
 				// Events checks.
-				let event = MarketplaceEvent::NftSold {
+				let event = MarketplaceEvent::NFTSold {
 					nft_id: ALICE_NFT_ID,
-					buyer: BOB,
-					commission_fee: None,
 					marketplace_id: BOB_MARKETPLACE_ID,
-					price: 10,
+					buyer: BOB,
+					listed_price: 10,
+					marketplace_cut: 0,
+					royalty_cut: 8,
 				};
 				let event = Event::Marketplace(event);
 				System::assert_last_event(event);
@@ -1089,7 +1097,7 @@ mod buy_nft {
 				Marketplace::set_marketplace_configuration(
 					charlie,
 					CHARLIE_MARKETPLACE_ID,
-					ConfigOp::Set(MarketplaceFee::Flat(40)),
+					ConfigOp::Set(CompoundFee::Flat(40)),
 					ConfigOp::Noop,
 					ConfigOp::Noop,
 					ConfigOp::Noop,
@@ -1103,14 +1111,14 @@ mod buy_nft {
 				NFT::transfer_nft(alice, ALICE_NFT_ID, DAVE).unwrap();
 
 				// List NFT.
-				Marketplace::list_nft(dave, ALICE_NFT_ID, 100, CHARLIE_MARKETPLACE_ID).unwrap();
+				Marketplace::list_nft(dave, ALICE_NFT_ID, CHARLIE_MARKETPLACE_ID, 100).unwrap();
 
 				// Buy NFT
 				Marketplace::buy_nft(bob, ALICE_NFT_ID).unwrap();
 
 				// Final state checks.
 				let nft = NFT::nfts(ALICE_NFT_ID).unwrap();
-				let sale = Marketplace::nfts_for_sale(ALICE_NFT_ID);
+				let sale = Marketplace::listed_nfts(ALICE_NFT_ID);
 				assert_eq!(sale, None);
 				assert_eq!(nft.owner, BOB);
 				// Buyer check
@@ -1123,12 +1131,13 @@ mod buy_nft {
 				assert_eq!(Balances::free_balance(DAVE), dave_balance + 12);
 
 				// Events checks.
-				let event = MarketplaceEvent::NftSold {
+				let event = MarketplaceEvent::NFTSold {
 					nft_id: ALICE_NFT_ID,
-					buyer: BOB,
-					commission_fee: Some(MarketplaceFee::Flat(40)),
 					marketplace_id: CHARLIE_MARKETPLACE_ID,
-					price: 100,
+					buyer: BOB,
+					listed_price: 100,
+					marketplace_cut: 40,
+					royalty_cut: 48,
 				};
 				let event = Event::Marketplace(event);
 				System::assert_last_event(event);
@@ -1154,7 +1163,7 @@ mod buy_nft {
 				Marketplace::set_marketplace_configuration(
 					charlie,
 					CHARLIE_MARKETPLACE_ID,
-					ConfigOp::Set(MarketplaceFee::Percentage(PERCENT_50)),
+					ConfigOp::Set(CompoundFee::Percentage(PERCENT_50)),
 					ConfigOp::Noop,
 					ConfigOp::Noop,
 					ConfigOp::Noop,
@@ -1168,14 +1177,14 @@ mod buy_nft {
 				NFT::transfer_nft(alice, ALICE_NFT_ID, DAVE).unwrap();
 
 				// List NFT.
-				Marketplace::list_nft(dave, ALICE_NFT_ID, 100, CHARLIE_MARKETPLACE_ID).unwrap();
+				Marketplace::list_nft(dave, ALICE_NFT_ID, CHARLIE_MARKETPLACE_ID, 100).unwrap();
 
 				// Buy NFT.
 				Marketplace::buy_nft(bob, ALICE_NFT_ID).unwrap();
 
 				// Final state checks.
 				let nft = NFT::nfts(ALICE_NFT_ID).unwrap();
-				let sale = Marketplace::nfts_for_sale(ALICE_NFT_ID);
+				let sale = Marketplace::listed_nfts(ALICE_NFT_ID);
 				assert_eq!(sale, None);
 				assert_eq!(nft.owner, BOB);
 				// Buyer check.
@@ -1188,12 +1197,13 @@ mod buy_nft {
 				assert_eq!(Balances::free_balance(DAVE), dave_balance + 10);
 
 				// Events checks.
-				let event = MarketplaceEvent::NftSold {
+				let event = MarketplaceEvent::NFTSold {
 					nft_id: ALICE_NFT_ID,
-					buyer: BOB,
-					commission_fee: Some(MarketplaceFee::Percentage(PERCENT_50)),
 					marketplace_id: CHARLIE_MARKETPLACE_ID,
-					price: 100,
+					buyer: BOB,
+					listed_price: 100,
+					marketplace_cut: 50,
+					royalty_cut: 40,
 				};
 				let event = Event::Marketplace(event);
 				System::assert_last_event(event);
@@ -1211,7 +1221,7 @@ mod buy_nft {
 				let bob_balance = Balances::free_balance(BOB);
 
 				// List NFT.
-				Marketplace::list_nft(alice, ALICE_NFT_ID, bob_balance, CHARLIE_MARKETPLACE_ID)
+				Marketplace::list_nft(alice, ALICE_NFT_ID, CHARLIE_MARKETPLACE_ID, bob_balance)
 					.unwrap();
 
 				// Buy NFT.
@@ -1219,7 +1229,7 @@ mod buy_nft {
 
 				// Nothing should have changed.
 				let nft = NFT::nfts(ALICE_NFT_ID).unwrap();
-				let sale = Marketplace::nfts_for_sale(ALICE_NFT_ID);
+				let sale = Marketplace::listed_nfts(ALICE_NFT_ID);
 				assert!(sale.is_some());
 				assert_eq!(nft.owner, ALICE);
 				assert_eq!(Balances::free_balance(BOB), bob_balance);
@@ -1264,7 +1274,7 @@ mod buy_nft {
 				let alice: mock::Origin = origin(ALICE);
 
 				// List NFT.
-				Marketplace::list_nft(alice.clone(), ALICE_NFT_ID, 10, ALICE_MARKETPLACE_ID)
+				Marketplace::list_nft(alice.clone(), ALICE_NFT_ID, ALICE_MARKETPLACE_ID, 10)
 					.unwrap();
 
 				// Buy owned NFT.
@@ -1283,7 +1293,7 @@ mod buy_nft {
 				let bob: mock::Origin = origin(BOB);
 
 				// List NFT.
-				Marketplace::list_nft(alice, ALICE_NFT_ID, 10_000, ALICE_MARKETPLACE_ID).unwrap();
+				Marketplace::list_nft(alice, ALICE_NFT_ID, ALICE_MARKETPLACE_ID, 10_000).unwrap();
 
 				// Buy owned NFT.
 				let err = Marketplace::buy_nft(bob, ALICE_NFT_ID);

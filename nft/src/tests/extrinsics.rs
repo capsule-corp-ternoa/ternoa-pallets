@@ -15,12 +15,14 @@
 // along with Ternoa.  If not, see <http://www.gnu.org/licenses/>.
 
 use super::mock::*;
-use crate::{tests::mock, Collection, CollectionId, Error, Event as NFTsEvent, NFTData, NFTId};
 use frame_support::{assert_noop, assert_ok, error::BadOrigin, BoundedVec};
 use frame_system::RawOrigin;
 use pallet_balances::Error as BalanceError;
+use primitives::nfts::NFTState;
 use sp_arithmetic::per_things::Permill;
 use ternoa_common::traits::NFTExt;
+
+use crate::{tests::mock, Collection, CollectionId, Error, Event as NFTsEvent, NFTData, NFTId};
 
 const ALICE_NFT_ID: NFTId = 0;
 const BOB_NFT_ID: NFTId = 1;
@@ -283,6 +285,7 @@ mod create_nft {
 }
 
 mod burn_nft {
+
 	use super::*;
 
 	#[test]
@@ -356,7 +359,8 @@ mod burn_nft {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			prepare_tests();
 			// Set listed to true for Alice's NFT.
-			NFT::set_nft_state(ALICE_NFT_ID, false, true, false, false, false).unwrap();
+			let nft_state = NFTState::new(false, true, false, false, false);
+			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
 			// Burning an nft.
 			let err = NFT::burn_nft(origin(ALICE), ALICE_NFT_ID);
 			// Should fail because NFT is listed for sale.
@@ -369,7 +373,8 @@ mod burn_nft {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			prepare_tests();
 			// Set capsule to true for Alice's NFT.
-			NFT::set_nft_state(ALICE_NFT_ID, true, false, false, false, false).unwrap();
+			let nft_state = NFTState::new(true, false, false, false, false);
+			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
 			// Burning an nft.
 			let err = NFT::burn_nft(origin(ALICE), ALICE_NFT_ID);
 			// Should fail because NFT is capsule.
@@ -458,7 +463,8 @@ mod transfer_nft {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 			// Set NFT to listed.
-			NFT::set_nft_state(ALICE_NFT_ID, false, true, false, false, false).unwrap();
+			let nft_state = NFTState::new(false, true, false, false, false);
+			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
 			// Try to transfer.
 			let err = NFT::transfer_nft(alice, ALICE_NFT_ID, BOB);
 			// Should fail because NFT is listed.
@@ -472,7 +478,8 @@ mod transfer_nft {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 			// Set NFT to capsule.
-			NFT::set_nft_state(ALICE_NFT_ID, true, false, false, false, false).unwrap();
+			let nft_state = NFTState::new(true, false, false, false, false);
+			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
 			// Try to transfer.
 			let err = NFT::transfer_nft(alice, ALICE_NFT_ID, BOB);
 			// Should fail because NFT is capsule.
@@ -592,7 +599,8 @@ mod delegate_nft {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 			// Set alice's NFT to listed.
-			NFT::set_nft_state(ALICE_NFT_ID, false, true, false, false, false).unwrap();
+			let nft_state = NFTState::new(false, true, false, false, false);
+			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
 			// Delegate listed NFT.
 			let err = NFT::delegate_nft(alice, ALICE_NFT_ID, None);
 			// Should fail because NFT is listed.
@@ -606,7 +614,8 @@ mod delegate_nft {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 			// Set alice's NFT to capsule.
-			NFT::set_nft_state(ALICE_NFT_ID, true, false, false, false, false).unwrap();
+			let nft_state = NFTState::new(true, false, false, false, false);
+			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
 			// Delegate capsule NFT.
 			let err = NFT::delegate_nft(alice, ALICE_NFT_ID, None);
 			// Should fail because NFT is capsule.
@@ -685,7 +694,8 @@ mod set_royalty {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 			// Set Alice's NFT to listed.
-			NFT::set_nft_state(ALICE_NFT_ID, false, true, false, false, false).unwrap();
+			let nft_state = NFTState::new(false, true, false, false, false);
+			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
 			// Set royalty.
 			let err = NFT::set_royalty(alice, ALICE_NFT_ID, PERCENT_80);
 			// Should fail because you cannot set royalty for listed NFTs.
@@ -699,7 +709,8 @@ mod set_royalty {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 			// Set Alice's NFT to capsule.
-			NFT::set_nft_state(ALICE_NFT_ID, true, false, false, false, false).unwrap();
+			let nft_state = NFTState::new(true, false, false, false, false);
+			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
 			// Set royalty.
 			let err = NFT::set_royalty(alice, ALICE_NFT_ID, PERCENT_80);
 			// Should fail because you cannot set royalty for capsule NFTs.

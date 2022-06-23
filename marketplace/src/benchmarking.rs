@@ -17,7 +17,6 @@
 #![cfg(feature = "runtime-benchmarks")]
 
 use super::*;
-use crate::Pallet as Marketplace;
 use frame_benchmarking::{account as benchmark_account, benchmarks, impl_benchmark_test_suite};
 use frame_support::{assert_ok, traits::Currency};
 use frame_system::RawOrigin;
@@ -25,6 +24,13 @@ use sp_arithmetic::per_things::Permill;
 use sp_runtime::traits::{Bounded, StaticLookup};
 use sp_std::prelude::*;
 use ternoa_common::traits::NFTExt;
+
+use crate::Pallet as Marketplace;
+
+pub struct BenchmarkData {
+	marketplace_id: MarketplaceId,
+	nft_id: NFTId,
+}
 
 const PERCENT_50: Permill = Permill::from_parts(500000);
 
@@ -37,79 +43,73 @@ pub fn origin<T: Config>(name: &'static str) -> RawOrigin<T::AccountId> {
 	RawOrigin::Signed(get_account::<T>(name))
 }
 
-pub fn prepare_benchmarks<T: Config>() {
+pub fn prepare_benchmarks<T: Config>() -> BenchmarkData {
 	let alice: T::AccountId = get_account::<T>("ALICE");
 	let bob: T::AccountId = get_account::<T>("BOB");
-	let alice_origin = origin::<T>("ALICE");
 
 	// Give them enough caps
 	T::Currency::make_free_balance_be(&alice, BalanceOf::<T>::max_value());
 	T::Currency::make_free_balance_be(&bob, BalanceOf::<T>::max_value());
 
 	let marketplace_offchain_data =
-		BoundedVec::try_from(vec![1; T::OffchainDataLimit::get() as usize])
-			.expect("It will never happen.");
+		BoundedVec::try_from(vec![1; T::OffchainDataLimit::get() as usize]).unwrap();
+
+	// Create default NFT.
+	let nft_id =
+		T::NFTExt::create_nft(alice, BoundedVec::default(), PERCENT_50, None, false).unwrap();
 
 	// Create default marketplace.
 	assert_ok!(Marketplace::<T>::create_marketplace(
-		alice_origin.into(),
+		origin::<T>("ALICE").into(),
 		MarketplaceType::Public,
-		Some(MarketplaceFee::Percentage(PERCENT_50)),
-		Some(MarketplaceFee::Percentage(PERCENT_50)),
+		Some(CompoundFee::Percentage(PERCENT_50)),
+		Some(CompoundFee::Percentage(PERCENT_50)),
 		Some(marketplace_offchain_data),
 	));
+
+	BenchmarkData { nft_id, marketplace_id: Marketplace::<T>::next_marketplace_id() - 1 }
 }
 
 benchmarks! {
 	create_marketplace {
 		prepare_benchmarks::<T>();
 		let alice: T::AccountId = get_account::<T>("ALICE");
-		let alice_origin = origin::<T>("ALICE");
 		let marketplace_offchain_data =
-			BoundedVec::try_from(vec![1; T::OffchainDataLimit::get() as usize])
-				.expect("It will never happen.");
-	}: _(alice_origin, MarketplaceType::Public, Some(MarketplaceFee::Percentage(PERCENT_50)), Some(MarketplaceFee::Percentage(PERCENT_50)), Some(marketplace_offchain_data))
+			BoundedVec::try_from(vec![1; T::OffchainDataLimit::get() as usize]).unwrap();
+	}: _(origin::<T>("ALICE"), MarketplaceType::Public, Some(CompoundFee::Percentage(PERCENT_50)), Some(CompoundFee::Percentage(PERCENT_50)), Some(marketplace_offchain_data))
 	verify {
-		let marketplace_id = Marketplace::<T>::get_next_marketplace_id() - 1;
-		assert_eq!(Marketplaces::<T>::contains_key(marketplace_id), true);
+		let marketplace_id = Marketplace::<T>::next_marketplace_id() - 1;
 		assert_eq!(Marketplaces::<T>::get(marketplace_id).unwrap().owner, alice);
 	}
 
 	set_marketplace_owner {
-		prepare_benchmarks::<T>();
-		let alice_origin = origin::<T>("ALICE");
+		let benchmark_data = prepare_benchmarks::<T>();
 		let bob: T::AccountId = get_account::<T>("BOB");
 		let bob_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(bob.clone());
-		let marketplace_id = Marketplace::<T>::get_next_marketplace_id() - 1;
-	}: _(alice_origin, marketplace_id, bob_lookup)
+	}: _(origin::<T>("ALICE"), benchmark_data.marketplace_id, bob_lookup)
 	verify {
-		assert_eq!(Marketplaces::<T>::get(marketplace_id).unwrap().owner, bob);
+		assert_eq!(Marketplaces::<T>::get(benchmark_data.marketplace_id).unwrap().owner, bob);
 	}
 
 	set_marketplace_kind {
-		prepare_benchmarks::<T>();
-		let alice_origin = origin::<T>("ALICE");
-		let marketplace_id = Marketplace::<T>::get_next_marketplace_id() - 1;
-	}: _(alice_origin, marketplace_id, MarketplaceType::Private)
+		let benchmark_data = prepare_benchmarks::<T>();
+	}: _(origin::<T>("ALICE"), benchmark_data.marketplace_id, MarketplaceType::Private)
 	verify {
-		assert_eq!(Marketplaces::<T>::get(marketplace_id).unwrap().kind, MarketplaceType::Private);
+		assert_eq!(Marketplaces::<T>::get(benchmark_data.marketplace_id).unwrap().kind, MarketplaceType::Private);
 	}
 
 	set_marketplace_configuration{
-		prepare_benchmarks::<T>();
+		let benchmark_data = prepare_benchmarks::<T>();
 		let alice: T::AccountId = get_account::<T>("ALICE");
-		let alice_origin = origin::<T>("ALICE");
-		let marketplace_id = Marketplace::<T>::get_next_marketplace_id() - 1;
 		let marketplace_offchain_data =
-			BoundedVec::try_from(vec![1; T::OffchainDataLimit::get() as usize])
-				.expect("It will never happen.");
+			BoundedVec::try_from(vec![1; T::OffchainDataLimit::get() as usize]).unwrap();
 		let marketplace_account_list: BoundedVec<T::AccountId, T::AccountSizeLimit> =
 			BoundedVec::try_from(vec![alice.clone(); (T::AccountSizeLimit::get() / 100) as usize]).unwrap();
-	}: _(alice_origin, marketplace_id, ConfigOp::Set(MarketplaceFee::Percentage(PERCENT_50)), ConfigOp::Set(MarketplaceFee::Percentage(PERCENT_50)), ConfigOp::Set(marketplace_account_list.clone()), ConfigOp::Set(marketplace_offchain_data.clone()))
+	}: _(origin::<T>("ALICE"), benchmark_data.marketplace_id, ConfigOp::Set(CompoundFee::Percentage(PERCENT_50)), ConfigOp::Set(CompoundFee::Percentage(PERCENT_50)), ConfigOp::Set(marketplace_account_list.clone()), ConfigOp::Set(marketplace_offchain_data.clone()))
 	verify {
-		let marketplace = Marketplaces::<T>::get(marketplace_id).unwrap();
-		assert_eq!(marketplace.commission_fee, Some(MarketplaceFee::Percentage(PERCENT_50)));
-		assert_eq!(marketplace.listing_fee, Some(MarketplaceFee::Percentage(PERCENT_50)));
+		let marketplace = Marketplaces::<T>::get(benchmark_data.marketplace_id).unwrap();
+		assert_eq!(marketplace.commission_fee, Some(CompoundFee::Percentage(PERCENT_50)));
+		assert_eq!(marketplace.listing_fee, Some(CompoundFee::Percentage(PERCENT_50)));
 		assert_eq!(marketplace.account_list, Some(marketplace_account_list));
 		assert_eq!(marketplace.offchain_data, Some(marketplace_offchain_data));
 	}
@@ -124,59 +124,51 @@ benchmarks! {
 	}
 
 	list_nft {
-		prepare_benchmarks::<T>();
+		let benchmark_data = prepare_benchmarks::<T>();
 		let alice: T::AccountId = get_account::<T>("ALICE");
-		let alice_origin = origin::<T>("ALICE");
-		let marketplace_id = Marketplace::<T>::get_next_marketplace_id() - 1;
 		Marketplace::<T>::set_marketplace_configuration(
-			alice_origin.clone().into(),
-			marketplace_id,
-			ConfigOp::Set(MarketplaceFee::Percentage(PERCENT_50)),
+			origin::<T>("ALICE").into(),
+			benchmark_data.marketplace_id,
+			ConfigOp::Set(CompoundFee::Percentage(PERCENT_50)),
 			ConfigOp::Noop,
 			ConfigOp::Noop,
 			ConfigOp::Noop,
 		).unwrap();
-		let nft_id = T::NFTExt::create_nft(alice, BoundedVec::default(), PERCENT_50, None, false).unwrap();
-	}: _(alice_origin, nft_id, 10u32.into(), marketplace_id)
+	}: _(origin::<T>("ALICE"), benchmark_data.nft_id, benchmark_data.marketplace_id, 10u32.into())
 	verify {
-		assert_eq!(T::NFTExt::get_nft(nft_id).unwrap().state.listed_for_sale, true);
-		assert!(Marketplace::<T>::nfts_for_sale(nft_id).is_some());
+		assert_eq!(T::NFTExt::get_nft(benchmark_data.nft_id).unwrap().state.listed_for_sale, true);
+		assert!(Marketplace::<T>::listed_nfts(benchmark_data.nft_id).is_some());
 	}
 
 	unlist_nft {
-		prepare_benchmarks::<T>();
+		let benchmark_data = prepare_benchmarks::<T>();
 		let alice: T::AccountId = get_account::<T>("ALICE");
-		let alice_origin = origin::<T>("ALICE");
-		let marketplace_id = Marketplace::<T>::get_next_marketplace_id() - 1;
-		let nft_id = T::NFTExt::create_nft(alice, BoundedVec::default(), PERCENT_50, None, false).unwrap();
-		Marketplace::<T>::list_nft(alice_origin.clone().into(), nft_id, 10u32.into(), marketplace_id).unwrap();
-	}: _(alice_origin, nft_id)
+		Marketplace::<T>::list_nft(origin::<T>("ALICE").into(), benchmark_data.marketplace_id, benchmark_data.nft_id, 10u32.into()).unwrap();
+	}: _(origin::<T>("ALICE"), benchmark_data.nft_id)
 	verify {
-		assert_eq!(T::NFTExt::get_nft(nft_id).unwrap().state.listed_for_sale, false);
-		assert!(Marketplace::<T>::nfts_for_sale(nft_id).is_none());
+		assert_eq!(T::NFTExt::get_nft(benchmark_data.nft_id).unwrap().state.listed_for_sale, false);
+		assert!(Marketplace::<T>::listed_nfts(benchmark_data.nft_id).is_none());
 	}
 
 	buy_nft {
-		prepare_benchmarks::<T>();
+		let benchmark_data = prepare_benchmarks::<T>();
 		let alice: T::AccountId = get_account::<T>("ALICE");
-		let alice_origin = origin::<T>("ALICE");
 		let bob: T::AccountId = get_account::<T>("BOB");
 		let bob_origin = origin::<T>("BOB");
-		let marketplace_id = Marketplace::<T>::get_next_marketplace_id() - 1;
 		Marketplace::<T>::set_marketplace_configuration(
-			alice_origin.clone().into(),
-			marketplace_id,
-			ConfigOp::Set(MarketplaceFee::Percentage(PERCENT_50)),
+			origin::<T>("ALICE").into(),
+			benchmark_data.marketplace_id,
+			ConfigOp::Set(CompoundFee::Percentage(PERCENT_50)),
 			ConfigOp::Noop,
 			ConfigOp::Noop,
 			ConfigOp::Noop,
 		).unwrap();
 		let nft_id = T::NFTExt::create_nft(alice, BoundedVec::default(), PERCENT_50, None, false).unwrap();
-		Marketplace::<T>::list_nft(alice_origin.into(), nft_id, 10u32.into(), marketplace_id).unwrap();
-	}: _(bob_origin, nft_id)
+		Marketplace::<T>::list_nft(origin::<T>("ALICE").into(), benchmark_data.nft_id, benchmark_data.marketplace_id, 10u32.into()).unwrap();
+	}: _(bob_origin, benchmark_data.nft_id)
 	verify {
-		assert!(Marketplace::<T>::nfts_for_sale(nft_id).is_none());
-		assert_eq!(T::NFTExt::get_nft(nft_id).unwrap().owner, bob);
+		assert!(Marketplace::<T>::listed_nfts(benchmark_data.nft_id).is_none());
+		assert_eq!(T::NFTExt::get_nft(benchmark_data.nft_id).unwrap().owner, bob);
 	}
 }
 

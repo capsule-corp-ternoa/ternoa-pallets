@@ -16,7 +16,7 @@
 
 use frame_support::{CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
-use primitives::marketplace::{MarketplaceFee, MarketplaceId};
+use primitives::{marketplace::MarketplaceId, CompoundFee};
 use scale_info::TypeInfo;
 use sp_std::fmt::Debug;
 
@@ -32,7 +32,7 @@ where
 	pub account_id: AccountId,
 	pub marketplace_id: MarketplaceId,
 	pub price: Balance,
-	pub commission_fee: Option<MarketplaceFee<Balance>>,
+	pub commission_fee: Option<CompoundFee<Balance>>,
 }
 
 impl<AccountId, Balance> Sale<AccountId, Balance>
@@ -44,7 +44,7 @@ where
 		account_id: AccountId,
 		marketplace_id: MarketplaceId,
 		price: Balance,
-		commission_fee: Option<MarketplaceFee<Balance>>,
+		commission_fee: Option<CompoundFee<Balance>>,
 	) -> Sale<AccountId, Balance> {
 		Self { account_id, marketplace_id, price, commission_fee }
 	}

@@ -240,7 +240,7 @@ pub mod pallet {
 		/// the new limit.
 		CollectionHasTooManyNFTs,
 		/// Operation is not permitted because collection nfts is full.
-		CannotAddMoreNftsToCollection,
+		CannotAddMoreNFTsToCollection,
 	}
 
 	#[pallet::call]
@@ -264,8 +264,6 @@ pub mod pallet {
             },
 			DispatchClass::Normal
         ))]
-		// have to be transactional otherwise we could make people pay the mint fee
-		// even if the creation fails.
 		#[transactional]
 		pub fn create_nft(
 			origin: OriginFor<T>,
@@ -299,7 +297,7 @@ pub mod pallet {
 					collection
 						.nfts
 						.try_push(tmp_nft_id)
-						.map_err(|_| Error::<T>::CannotAddMoreNftsToCollection)?;
+						.map_err(|_| Error::<T>::CannotAddMoreNFTsToCollection)?;
 					next_nft_id = Some(tmp_nft_id);
 					Ok(().into())
 				})?;
@@ -675,7 +673,7 @@ pub mod pallet {
 				collection
 					.nfts
 					.try_push(nft_id)
-					.map_err(|_| Error::<T>::CannotAddMoreNftsToCollection)?;
+					.map_err(|_| Error::<T>::CannotAddMoreNFTsToCollection)?;
 
 				Ok(().into())
 			})?;
@@ -693,18 +691,10 @@ impl<T: Config> traits::NFTExt for Pallet<T> {
 	type CollectionOffchainDataLimit = T::CollectionOffchainDataLimit;
 	type CollectionSizeLimit = T::CollectionSizeLimit;
 
-	fn set_nft_state(
-		nft_id: NFTId,
-		is_capsule: bool,
-		listed_for_sale: bool,
-		is_secret: bool,
-		is_delegated: bool,
-		is_soulbound: bool,
-	) -> DispatchResult {
+	fn set_nft_state(nft_id: NFTId, nft_state: NFTState) -> DispatchResult {
 		Nfts::<T>::try_mutate(nft_id, |data| -> DispatchResult {
 			let data = data.as_mut().ok_or(Error::<T>::NFTNotFound)?;
-			data.state =
-				NFTState::new(is_capsule, listed_for_sale, is_secret, is_delegated, is_soulbound);
+			data.state = nft_state;
 
 			Ok(())
 		})?;
@@ -763,12 +753,11 @@ impl<T: Config> traits::NFTExt for Pallet<T> {
 		Nfts::<T>::get(id)
 	}
 
-	fn set_owner(id: NFTId, owner: &Self::AccountId) -> DispatchResult {
-		Nfts::<T>::try_mutate(id, |data| -> DispatchResult {
-			let data = data.as_mut().ok_or(Error::<T>::NFTNotFound)?;
-			data.owner = owner.clone();
-			Ok(())
-		})?;
+	fn set_nft(
+		id: NFTId,
+		nft_data: NFTData<Self::AccountId, Self::NFTOffchainDataLimit>,
+	) -> DispatchResult {
+		Nfts::<T>::insert(id, nft_data);
 
 		Ok(())
 	}
