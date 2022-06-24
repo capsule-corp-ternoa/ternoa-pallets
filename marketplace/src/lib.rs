@@ -41,7 +41,7 @@ use sp_std::prelude::*;
 
 use primitives::{
 	marketplace::{MarketplaceData, MarketplaceId, MarketplaceType},
-	nfts::{NFTData, NFTId, NFTState},
+	nfts::NFTId,
 	CompoundFee, ConfigOp, U8BoundedVec,
 };
 use ternoa_common::{config_op_field_exp, traits::NFTExt};
@@ -375,7 +375,7 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 
 			// Checks
-			let nft = T::NFTExt::get_nft(nft_id).ok_or(Error::<T>::NFTNotFound)?;
+			let mut nft = T::NFTExt::get_nft(nft_id).ok_or(Error::<T>::NFTNotFound)?;
 			ensure!(nft.owner == who, Error::<T>::NotTheNFTOwner);
 			ensure!(!nft.state.listed_for_sale, Error::<T>::CannotListAlreadytListedNFTs);
 			ensure!(!nft.state.is_capsule, Error::<T>::CannotListCapsuleNFTs);
@@ -400,14 +400,8 @@ pub mod pallet {
 			// Execute.
 			let sale = Sale::new(who, marketplace_id, price, marketplace.commission_fee);
 			ListedNfts::<T>::insert(nft_id, sale);
-			let nft_state = NFTState::new(
-				nft.state.is_capsule,
-				true,
-				nft.state.is_secret,
-				nft.state.is_delegated,
-				nft.state.is_soulbound,
-			);
-			T::NFTExt::set_nft_state(nft_id, nft_state)?;
+			nft.state.listed_for_sale = true;
+			T::NFTExt::set_nft_state(nft_id, nft.state)?;
 
 			let event = Event::NFTListed {
 				nft_id,
@@ -424,21 +418,15 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::unlist_nft())]
 		pub fn unlist_nft(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
-			let nft = T::NFTExt::get_nft(nft_id).ok_or(Error::<T>::NFTNotFound)?;
+			let mut nft = T::NFTExt::get_nft(nft_id).ok_or(Error::<T>::NFTNotFound)?;
 
 			// Checks.
 			ensure!(nft.owner == who, Error::<T>::NotTheNFTOwner);
 			ensure!(ListedNfts::<T>::contains_key(nft_id), Error::<T>::NFTNotForSale);
 
 			// Execute.
-			let nft_state = NFTState::new(
-				nft.state.is_capsule,
-				false,
-				nft.state.is_secret,
-				nft.state.is_delegated,
-				nft.state.is_soulbound,
-			);
-			T::NFTExt::set_nft_state(nft_id, nft_state)?;
+			nft.state.listed_for_sale = false;
+			T::NFTExt::set_nft_state(nft_id, nft.state)?;
 			ListedNfts::<T>::remove(nft_id);
 			Self::deposit_event(Event::NFTUnlisted { nft_id });
 
@@ -450,7 +438,7 @@ pub mod pallet {
 		#[transactional]
 		pub fn buy_nft(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
-			let nft = T::NFTExt::get_nft(nft_id).ok_or(Error::<T>::NFTNotFound)?;
+			let mut nft = T::NFTExt::get_nft(nft_id).ok_or(Error::<T>::NFTNotFound)?;
 			let sale = ListedNfts::<T>::get(nft_id).ok_or(Error::<T>::NFTNotForSale)?;
 			let marketplace = Marketplaces::<T>::get(sale.marketplace_id)
 				.ok_or(Error::<T>::MarketplaceNotFound)?;
@@ -473,22 +461,9 @@ pub mod pallet {
 			T::Currency::transfer(&who, &sale.account_id, price, KeepAlive)?;
 
 			//Execute.
-			let nft_state = NFTState::new(
-				nft.state.is_capsule,
-				false,
-				nft.state.is_secret,
-				nft.state.is_delegated,
-				nft.state.is_soulbound,
-			);
-			let nft_data = NFTData::new(
-				who.clone(),
-				nft.owner,
-				nft.offchain_data,
-				nft.royalty,
-				nft_state,
-				nft.collection_id,
-			);
-			T::NFTExt::set_nft(nft_id, nft_data)?;
+			nft.owner = who.clone();
+			nft.state.listed_for_sale = false;
+			T::NFTExt::set_nft(nft_id, nft)?;
 			ListedNfts::<T>::remove(nft_id);
 			let event = Event::NFTSold {
 				nft_id,
