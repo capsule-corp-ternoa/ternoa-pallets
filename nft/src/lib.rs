@@ -33,9 +33,10 @@ use frame_support::{
 		Currency, ExistenceRequirement::KeepAlive, Get, OnUnbalanced, StorageVersion,
 		WithdrawReasons,
 	},
-	transactional, BoundedVec,
+	transactional, Blake2_128Concat, BoundedVec,
 };
 use frame_system::pallet_prelude::*;
+use parity_scale_codec::Encode;
 use primitives::{
 	nfts::{Collection, CollectionId, NFTData, NFTId, NFTState},
 	U8BoundedVec,
@@ -718,6 +719,8 @@ impl<T: Config> traits::NFTExt for Pallet<T> {
 		start_nft_id: NFTId,
 		amount_in_collection: u32,
 	) -> DispatchResult {
+		use frame_support::storage::generator::StorageMap;
+
 		//Create full collection
 		let collection_offchain_data: U8BoundedVec<Self::CollectionOffchainDataLimit> =
 			U8BoundedVec::try_from(vec![
@@ -752,8 +755,25 @@ impl<T: Config> traits::NFTExt for Pallet<T> {
 			Some(collection_id),
 			false,
 		);
+
+		let encoded = nft.encode();
+		let storage_prefix = Nfts::<T>::prefix_hash();
+		let mut hashed_key = [0u8; 16];
+
+		let mut final_key = Vec::new();
+		final_key.extend_from_slice(&storage_prefix);
+		final_key.extend_from_slice(&hashed_key);
+		final_key.push(0);
+		final_key.push(0);
+		final_key.push(0);
+		final_key.push(0);
+
 		for i in start_nft_id..amount_in_collection + start_nft_id {
-			Nfts::<T>::insert(i, nft.clone());
+			sp_core::hashing::blake2_128_into(&i.encode(), &mut hashed_key);
+			final_key[32..48].copy_from_slice(&hashed_key);
+			frame_support::storage::unhashed::put_raw(&final_key, &encoded);
+
+			// Nfts::<T>::insert(i, nft.clone());
 		}
 
 		Ok(())
