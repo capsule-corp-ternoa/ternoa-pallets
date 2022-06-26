@@ -100,7 +100,7 @@ pub mod pallet {
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
 
-	/// Host much does it cost to mint a NFT (extra fee on top of the tx fees).
+	/// How much does it cost to mint a NFT (extra fee on top of the tx fees).
 	#[pallet::storage]
 	#[pallet::getter(fn nft_mint_fee)]
 	pub(super) type NftMintFee<T: Config> =
@@ -240,7 +240,7 @@ pub mod pallet {
 		/// the new limit.
 		CollectionHasTooManyNFTs,
 		/// Operation is not permitted because collection nfts is full.
-		CannotAddMoreNftsToCollection,
+		CannotAddMoreNFTsToCollection,
 	}
 
 	#[pallet::call]
@@ -264,8 +264,6 @@ pub mod pallet {
             },
 			DispatchClass::Normal
         ))]
-		// have to be transactional otherwise we could make people pay the mint
-		// even if the creation fails.
 		#[transactional]
 		pub fn create_nft(
 			origin: OriginFor<T>,
@@ -299,7 +297,7 @@ pub mod pallet {
 					collection
 						.nfts
 						.try_push(tmp_nft_id)
-						.map_err(|_| Error::<T>::CannotAddMoreNftsToCollection)?;
+						.map_err(|_| Error::<T>::CannotAddMoreNFTsToCollection)?;
 					next_nft_id = Some(tmp_nft_id);
 					Ok(().into())
 				})?;
@@ -675,7 +673,7 @@ pub mod pallet {
 				collection
 					.nfts
 					.try_push(nft_id)
-					.map_err(|_| Error::<T>::CannotAddMoreNftsToCollection)?;
+					.map_err(|_| Error::<T>::CannotAddMoreNFTsToCollection)?;
 
 				Ok(().into())
 			})?;
@@ -693,18 +691,10 @@ impl<T: Config> traits::NFTExt for Pallet<T> {
 	type CollectionOffchainDataLimit = T::CollectionOffchainDataLimit;
 	type CollectionSizeLimit = T::CollectionSizeLimit;
 
-	fn set_nft_state(
-		nft_id: NFTId,
-		is_capsule: bool,
-		listed_for_sale: bool,
-		is_secret: bool,
-		is_delegated: bool,
-		is_soulbound: bool,
-	) -> DispatchResult {
+	fn set_nft_state(nft_id: NFTId, nft_state: NFTState) -> DispatchResult {
 		Nfts::<T>::try_mutate(nft_id, |data| -> DispatchResult {
 			let data = data.as_mut().ok_or(Error::<T>::NFTNotFound)?;
-			data.state =
-				NFTState::new(is_capsule, listed_for_sale, is_secret, is_delegated, is_soulbound);
+			data.state = nft_state;
 
 			Ok(())
 		})?;
@@ -757,6 +747,41 @@ impl<T: Config> traits::NFTExt for Pallet<T> {
 		}
 
 		Ok(())
+	}
+
+	fn get_nft(id: NFTId) -> Option<NFTData<Self::AccountId, Self::NFTOffchainDataLimit>> {
+		Nfts::<T>::get(id)
+	}
+
+	fn set_nft(
+		id: NFTId,
+		nft_data: NFTData<Self::AccountId, Self::NFTOffchainDataLimit>,
+	) -> DispatchResult {
+		Nfts::<T>::insert(id, nft_data);
+
+		Ok(())
+	}
+
+	fn create_nft(
+		owner: Self::AccountId,
+		offchain_data: BoundedVec<u8, Self::NFTOffchainDataLimit>,
+		royalty: Permill,
+		collection_id: Option<CollectionId>,
+		is_soulbound: bool,
+	) -> Result<NFTId, DispatchResult> {
+		let nft_state = NFTState::new(false, false, false, false, is_soulbound);
+		let nft = NFTData::new(
+			owner.clone(),
+			owner.clone(),
+			offchain_data,
+			royalty,
+			nft_state,
+			collection_id,
+		);
+		let nft_id = Self::get_next_nft_id();
+		Nfts::<T>::insert(nft_id, nft);
+
+		Ok(nft_id)
 	}
 }
 

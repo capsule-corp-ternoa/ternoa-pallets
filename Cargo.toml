@@ -6,4 +6,5 @@ members = [
     'mandate',
     'staking-rewards',
     'bridge',
+    'marketplace',
 ]

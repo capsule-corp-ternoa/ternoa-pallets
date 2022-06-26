@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Ternoa.  If not, see <http://www.gnu.org/licenses/>.
 
-use crate::{self as ternoa_nft, Config, NegativeImbalanceOf};
 use frame_support::{
 	parameter_types,
 	traits::{ConstU32, Contains, Currency},
@@ -24,6 +23,8 @@ use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
 };
+
+use crate::{self as ternoa_nft, Config, NegativeImbalanceOf};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -149,13 +150,6 @@ impl Default for ExtBuilder {
 }
 
 impl ExtBuilder {
-	// pub fn caps(mut self, accounts: Vec<(u64, Balance)>) -> Self {
-	// 	for account in accounts {
-	// 		self.balances.push(account);
-	// 	}
-	// 	self
-	// }
-
 	pub fn new(balances: Vec<(u64, Balance)>) -> Self {
 		Self { balances }
 	}

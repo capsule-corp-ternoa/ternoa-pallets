@@ -16,6 +16,28 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use frame_support::BoundedVec;
+use frame_support::{dispatch::Codec, BoundedVec};
+use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
+use scale_info::TypeInfo;
+use sp_arithmetic::per_things::Permill;
+use sp_runtime::RuntimeDebug;
 
 pub type U8BoundedVec<S> = BoundedVec<u8, S>;
+
+/// Possible operations on the configuration values of this pallet.
+#[derive(TypeInfo, Debug, Clone, Encode, Decode, PartialEq)]
+pub enum ConfigOp<T: Codec> {
+	/// Don't change.
+	Noop,
+	/// Set the given value.
+	Set(T),
+	/// Remove the value.
+	Remove,
+}
+
+/// Multiple form of fees
+#[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
+pub enum CompoundFee<Balance> {
+	Flat(Balance),
+	Percentage(Permill),
+}

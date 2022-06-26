@@ -17,6 +17,7 @@
 use super::mock::*;
 use frame_support::BoundedVec;
 use frame_system::RawOrigin;
+use primitives::nfts::NFTState;
 use sp_arithmetic::per_things::Permill;
 use ternoa_common::traits::NFTExt;
 
@@ -30,13 +31,10 @@ fn set_nft_state() {
 		let alice: Origin = RawOrigin::Signed(ALICE).into();
 		NFT::create_nft(alice, BoundedVec::default(), PERCENT_0, None, false).unwrap();
 		let nft_id = mock::NFT::get_next_nft_id() - 1;
-		<NFT as NFTExt>::set_nft_state(nft_id, true, true, true, true, true).unwrap();
+		let nft_state = NFTState::new(true, true, true, true, true);
+		<NFT as NFTExt>::set_nft_state(nft_id, nft_state.clone()).unwrap();
 		let nft = NFT::nfts(nft_id).unwrap();
-		assert_eq!(nft.state.is_capsule, true);
-		assert_eq!(nft.state.listed_for_sale, true);
-		assert_eq!(nft.state.is_secret, true);
-		assert_eq!(nft.state.is_delegated, true);
-		assert_eq!(nft.state.is_soulbound, true);
+		assert_eq!(nft.state, nft_state);
 	})
 }
 
@@ -47,5 +45,45 @@ fn create_filled_collection() {
 		let collection = NFT::collections(0).unwrap();
 		assert_eq!(collection.owner, ALICE);
 		assert_eq!(collection.nfts.len(), CollectionSizeLimit::get() as usize);
+	})
+}
+
+#[test]
+fn get_nft() {
+	ExtBuilder::new_build(vec![(ALICE, 1000)]).execute_with(|| {
+		let alice: Origin = RawOrigin::Signed(ALICE).into();
+		NFT::create_nft(alice, BoundedVec::default(), PERCENT_0, None, false).unwrap();
+		let nft_id = mock::NFT::get_next_nft_id() - 1;
+		let nft = NFT::get_nft(nft_id).unwrap();
+		assert_eq!(nft.owner, ALICE);
+		let invalid_id = 999;
+		let no_nft = NFT::get_nft(invalid_id);
+		assert_eq!(no_nft, None);
+	})
+}
+
+#[test]
+fn set_nft() {
+	ExtBuilder::new_build(vec![(ALICE, 1000)]).execute_with(|| {
+		let alice: Origin = RawOrigin::Signed(ALICE).into();
+		NFT::create_nft(alice, BoundedVec::default(), PERCENT_0, None, false).unwrap();
+		let nft_id = mock::NFT::get_next_nft_id() - 1;
+		let nft = NFT::get_nft(nft_id).unwrap();
+		let mut nft_data = nft.clone();
+		nft_data.owner = BOB;
+		NFT::set_nft(nft_id, nft_data).unwrap();
+		let nft = NFT::get_nft(nft_id).unwrap();
+		assert_eq!(nft.owner, BOB);
+	})
+}
+
+#[test]
+fn create_nft() {
+	ExtBuilder::new_build(vec![(ALICE, 1000)]).execute_with(|| {
+		let nft_id =
+			<NFT as NFTExt>::create_nft(ALICE, BoundedVec::default(), PERCENT_0, None, false)
+				.unwrap();
+		let nft = NFT::get_nft(nft_id).unwrap();
+		assert_eq!(nft.owner, ALICE);
 	})
 }

@@ -15,12 +15,14 @@
 // along with Ternoa.  If not, see <http://www.gnu.org/licenses/>.
 
 use super::mock::*;
-use crate::{tests::mock, Collection, CollectionId, Error, Event as NFTsEvent, NFTData, NFTId};
 use frame_support::{assert_noop, assert_ok, error::BadOrigin, BoundedVec};
 use frame_system::RawOrigin;
 use pallet_balances::Error as BalanceError;
+use primitives::nfts::NFTState;
 use sp_arithmetic::per_things::Permill;
 use ternoa_common::traits::NFTExt;
+
+use crate::{tests::mock, Collection, CollectionId, Error, Event as NFTsEvent, NFTData, NFTId};
 
 const ALICE_NFT_ID: NFTId = 0;
 const BOB_NFT_ID: NFTId = 1;
@@ -58,8 +60,8 @@ fn prepare_tests() {
 	assert_eq!(NFT::nfts(ALICE_NFT_ID).is_some(), true);
 	assert_eq!(NFT::nfts(BOB_NFT_ID).is_some(), true);
 
-	assert_eq!(NFT::nfts(ALICE_COLLECTION_ID).is_some(), true);
-	assert_eq!(NFT::nfts(BOB_COLLECTION_ID).is_some(), true);
+	assert_eq!(NFT::collections(ALICE_COLLECTION_ID).is_some(), true);
+	assert_eq!(NFT::collections(BOB_COLLECTION_ID).is_some(), true);
 }
 
 mod create_nft {
@@ -99,7 +101,7 @@ mod create_nft {
 				mint_fee: NFT::nft_mint_fee(),
 			};
 			let event = Event::NFT(event);
-			assert_eq!(System::events().last().unwrap().event, event);
+			System::assert_last_event(event);
 		})
 	}
 
@@ -145,7 +147,7 @@ mod create_nft {
 				mint_fee: NFT::nft_mint_fee(),
 			};
 			let event = Event::NFT(event);
-			assert_eq!(System::events().last().unwrap().event, event);
+			System::assert_last_event(event);
 		})
 	}
 
@@ -265,23 +267,17 @@ mod create_nft {
 	}
 
 	#[test]
-	fn create_nft_fail_balance_revert() {
-		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
+	fn keep_alive() {
+		ExtBuilder::new_build(vec![(ALICE, 2 * NFT_MINT_FEE), (BOB, 1000)]).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 			let alice_balance = Balances::free_balance(ALICE);
 
-			// Try to add Alice's NFT to Bob's collection.
-			let err = NFT::create_nft(
-				alice,
-				BoundedVec::default(),
-				PERCENT_0,
-				Some(BOB_COLLECTION_ID),
-				false,
-			);
+			// Try to create an NFT.
+			let err = NFT::create_nft(alice, BoundedVec::default(), PERCENT_0, None, false);
 
-			// Should fail because Bob is not the collection owner.
-			assert_noop!(err, Error::<Test>::NotTheCollectionOwner);
+			// Should fail because Alice's account must stay alive.
+			assert_noop!(err, BalanceError::<Test>::KeepAlive);
 			// Alice's balance should not have been changed
 			assert_eq!(Balances::free_balance(ALICE), alice_balance);
 		})
@@ -289,6 +285,7 @@ mod create_nft {
 }
 
 mod burn_nft {
+
 	use super::*;
 
 	#[test]
@@ -306,7 +303,7 @@ mod burn_nft {
 			// Events checks.
 			let event = NFTsEvent::NFTBurned { nft_id: ALICE_NFT_ID };
 			let event = Event::NFT(event);
-			assert_eq!(System::events().last().unwrap().event, event);
+			System::assert_last_event(event);
 		})
 	}
 
@@ -332,7 +329,7 @@ mod burn_nft {
 			// Events checks.
 			let event = NFTsEvent::NFTBurned { nft_id: ALICE_NFT_ID };
 			let event = Event::NFT(event);
-			assert_eq!(System::events().last().unwrap().event, event);
+			System::assert_last_event(event);
 		})
 	}
 
@@ -362,7 +359,8 @@ mod burn_nft {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			prepare_tests();
 			// Set listed to true for Alice's NFT.
-			NFT::set_nft_state(ALICE_NFT_ID, false, true, false, false, false).unwrap();
+			let nft_state = NFTState::new(false, true, false, false, false);
+			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
 			// Burning an nft.
 			let err = NFT::burn_nft(origin(ALICE), ALICE_NFT_ID);
 			// Should fail because NFT is listed for sale.
@@ -375,7 +373,8 @@ mod burn_nft {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			prepare_tests();
 			// Set capsule to true for Alice's NFT.
-			NFT::set_nft_state(ALICE_NFT_ID, true, false, false, false, false).unwrap();
+			let nft_state = NFTState::new(true, false, false, false, false);
+			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
 			// Burning an nft.
 			let err = NFT::burn_nft(origin(ALICE), ALICE_NFT_ID);
 			// Should fail because NFT is capsule.
@@ -418,7 +417,7 @@ mod transfer_nft {
 			let event =
 				NFTsEvent::NFTTransferred { nft_id: ALICE_NFT_ID, sender: ALICE, recipient: BOB };
 			let event = Event::NFT(event);
-			assert_eq!(System::events().last().unwrap().event, event);
+			System::assert_last_event(event);
 		})
 	}
 
@@ -464,7 +463,8 @@ mod transfer_nft {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 			// Set NFT to listed.
-			NFT::set_nft_state(ALICE_NFT_ID, false, true, false, false, false).unwrap();
+			let nft_state = NFTState::new(false, true, false, false, false);
+			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
 			// Try to transfer.
 			let err = NFT::transfer_nft(alice, ALICE_NFT_ID, BOB);
 			// Should fail because NFT is listed.
@@ -478,7 +478,8 @@ mod transfer_nft {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 			// Set NFT to capsule.
-			NFT::set_nft_state(ALICE_NFT_ID, true, false, false, false, false).unwrap();
+			let nft_state = NFTState::new(true, false, false, false, false);
+			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
 			// Try to transfer.
 			let err = NFT::transfer_nft(alice, ALICE_NFT_ID, BOB);
 			// Should fail because NFT is capsule.
@@ -539,7 +540,7 @@ mod delegate_nft {
 			// Events checks.
 			let event = NFTsEvent::NFTDelegated { nft_id: ALICE_NFT_ID, recipient: Some(BOB) };
 			let event = Event::NFT(event);
-			assert_eq!(System::events().last().unwrap().event, event);
+			System::assert_last_event(event);
 		})
 	}
 
@@ -564,7 +565,7 @@ mod delegate_nft {
 			// Events checks.
 			let event = NFTsEvent::NFTDelegated { nft_id: ALICE_NFT_ID, recipient: None };
 			let event = Event::NFT(event);
-			assert_eq!(System::events().last().unwrap().event, event);
+			System::assert_last_event(event);
 		})
 	}
 
@@ -598,7 +599,8 @@ mod delegate_nft {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 			// Set alice's NFT to listed.
-			NFT::set_nft_state(ALICE_NFT_ID, false, true, false, false, false).unwrap();
+			let nft_state = NFTState::new(false, true, false, false, false);
+			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
 			// Delegate listed NFT.
 			let err = NFT::delegate_nft(alice, ALICE_NFT_ID, None);
 			// Should fail because NFT is listed.
@@ -612,7 +614,8 @@ mod delegate_nft {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 			// Set alice's NFT to capsule.
-			NFT::set_nft_state(ALICE_NFT_ID, true, false, false, false, false).unwrap();
+			let nft_state = NFTState::new(true, false, false, false, false);
+			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
 			// Delegate capsule NFT.
 			let err = NFT::delegate_nft(alice, ALICE_NFT_ID, None);
 			// Should fail because NFT is capsule.
@@ -642,7 +645,7 @@ mod set_royalty {
 			// Events checks.
 			let event = NFTsEvent::NFTRoyaltySet { nft_id: ALICE_NFT_ID, royalty: PERCENT_80 };
 			let event = Event::NFT(event);
-			assert_eq!(System::events().last().unwrap().event, event);
+			System::assert_last_event(event);
 		})
 	}
 
@@ -691,7 +694,8 @@ mod set_royalty {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 			// Set Alice's NFT to listed.
-			NFT::set_nft_state(ALICE_NFT_ID, false, true, false, false, false).unwrap();
+			let nft_state = NFTState::new(false, true, false, false, false);
+			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
 			// Set royalty.
 			let err = NFT::set_royalty(alice, ALICE_NFT_ID, PERCENT_80);
 			// Should fail because you cannot set royalty for listed NFTs.
@@ -705,7 +709,8 @@ mod set_royalty {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 			// Set Alice's NFT to capsule.
-			NFT::set_nft_state(ALICE_NFT_ID, true, false, false, false, false).unwrap();
+			let nft_state = NFTState::new(true, false, false, false, false);
+			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
 			// Set royalty.
 			let err = NFT::set_royalty(alice, ALICE_NFT_ID, PERCENT_80);
 			// Should fail because you cannot set royalty for capsule NFTs.
@@ -745,7 +750,7 @@ mod set_nft_mint_fee {
 			// Events checks.
 			let event = NFTsEvent::NFTMintFeeSet { fee: 20 };
 			let event = Event::NFT(event);
-			assert_eq!(System::events().last().unwrap().event, event);
+			System::assert_last_event(event);
 		})
 	}
 
@@ -785,7 +790,7 @@ mod create_collection {
 				limit: data.limit,
 			};
 			let event = Event::NFT(event);
-			assert_eq!(System::events().last().unwrap().event, event);
+			System::assert_last_event(event);
 		})
 	}
 
@@ -820,7 +825,7 @@ mod burn_collection {
 			// Events checks.
 			let event = NFTsEvent::CollectionBurned { collection_id: ALICE_COLLECTION_ID };
 			let event = Event::NFT(event);
-			assert_eq!(System::events().last().unwrap().event, event);
+			System::assert_last_event(event);
 		})
 	}
 
@@ -881,7 +886,7 @@ mod close_collection {
 			// Events checks.
 			let event = NFTsEvent::CollectionClosed { collection_id: ALICE_COLLECTION_ID };
 			let event = Event::NFT(event);
-			assert_eq!(System::events().last().unwrap().event, event);
+			System::assert_last_event(event);
 		})
 	}
 
@@ -929,7 +934,7 @@ mod limit_collection {
 			let event =
 				NFTsEvent::CollectionLimited { collection_id: ALICE_COLLECTION_ID, limit: 1 };
 			let event = Event::NFT(event);
-			assert_eq!(System::events().last().unwrap().event, event);
+			System::assert_last_event(event);
 		})
 	}
 
@@ -1050,7 +1055,7 @@ mod add_nft_to_collection {
 				collection_id: ALICE_COLLECTION_ID,
 			};
 			let event = Event::NFT(event);
-			assert_eq!(System::events().last().unwrap().event, event);
+			System::assert_last_event(event);
 		})
 	}
 

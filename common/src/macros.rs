@@ -14,9 +14,13 @@
 // You should have received a copy of the GNU General Public License
 // along with Ternoa.  If not, see <http://www.gnu.org/licenses/>.
 
-//! Contains shared traits, functions or macros shared across pallets and other crates.
-
-#![cfg_attr(not(feature = "std"), no_std)]
-
-pub mod macros;
-pub mod traits;
+#[macro_export]
+macro_rules! config_op_field_exp {
+    ($($field_path:ident).+, $op:expr) => {
+        match $op {
+            ConfigOp::Noop => (),
+            ConfigOp::Set(v) => $($field_path).+ = Some(v),
+            ConfigOp::Remove => $($field_path).+ = None,
+        }
+    };
+}
