@@ -20,7 +20,7 @@ use frame_system::RawOrigin;
 use sp_arithmetic::per_things::Permill;
 use ternoa_common::traits::NFTExt;
 
-use crate::tests::mock;
+use crate::{pallet::*, tests::mock};
 
 const PERCENT_0: Permill = Permill::from_parts(0);
 
@@ -45,7 +45,10 @@ fn create_filled_collection() {
 	ExtBuilder::new_build(vec![(ALICE, 1000)]).execute_with(|| {
 		<NFT as NFTExt>::create_filled_collection(ALICE, 0, 0, CollectionSizeLimit::get()).unwrap();
 		let collection = NFT::collections(0).unwrap();
+		let count = Nfts::<Test>::iter().count();
+
 		assert_eq!(collection.owner, ALICE);
 		assert_eq!(collection.nfts.len(), CollectionSizeLimit::get() as usize);
+		assert_eq!(count, collection.nfts.len());
 	})
 }
