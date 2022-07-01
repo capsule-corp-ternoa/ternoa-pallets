@@ -51,9 +51,6 @@ pub fn prepare_benchmarks<T: Config>() -> BenchmarkData {
 	T::Currency::make_free_balance_be(&alice, BalanceOf::<T>::max_value());
 	T::Currency::make_free_balance_be(&bob, BalanceOf::<T>::max_value());
 
-	let marketplace_offchain_data =
-		BoundedVec::try_from(vec![1; T::OffchainDataLimit::get() as usize]).unwrap();
-
 	// Create default NFT.
 	let nft_id =
 		T::NFTExt::create_nft(alice, BoundedVec::default(), PERCENT_50, None, false).unwrap();
@@ -62,9 +59,6 @@ pub fn prepare_benchmarks<T: Config>() -> BenchmarkData {
 	assert_ok!(Marketplace::<T>::create_marketplace(
 		origin::<T>("ALICE").into(),
 		MarketplaceType::Public,
-		Some(CompoundFee::Percentage(PERCENT_50)),
-		Some(CompoundFee::Percentage(PERCENT_50)),
-		Some(marketplace_offchain_data),
 	));
 
 	BenchmarkData { nft_id, marketplace_id: Marketplace::<T>::next_marketplace_id() - 1 }
@@ -74,9 +68,7 @@ benchmarks! {
 	create_marketplace {
 		prepare_benchmarks::<T>();
 		let alice: T::AccountId = get_account::<T>("ALICE");
-		let marketplace_offchain_data =
-			BoundedVec::try_from(vec![1; T::OffchainDataLimit::get() as usize]).unwrap();
-	}: _(origin::<T>("ALICE"), MarketplaceType::Public, Some(CompoundFee::Percentage(PERCENT_50)), Some(CompoundFee::Percentage(PERCENT_50)), Some(marketplace_offchain_data))
+	}: _(origin::<T>("ALICE"), MarketplaceType::Public)
 	verify {
 		let marketplace_id = Marketplace::<T>::next_marketplace_id() - 1;
 		assert_eq!(Marketplaces::<T>::get(marketplace_id).unwrap().owner, alice);

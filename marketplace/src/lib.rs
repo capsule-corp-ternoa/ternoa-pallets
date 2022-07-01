@@ -135,10 +135,6 @@ pub mod pallet {
 			marketplace_id: MarketplaceId,
 			owner: T::AccountId,
 			kind: MarketplaceType,
-			commission_fee: Option<CompoundFee<BalanceOf<T>>>,
-			listing_fee: Option<CompoundFee<BalanceOf<T>>>,
-			account_list: Option<BoundedVec<T::AccountId, T::AccountSizeLimit>>,
-			offchain_data: Option<U8BoundedVec<T::OffchainDataLimit>>,
 		},
 		/// Marketplace owner set
 		MarketplaceOwnerSet { marketplace_id: MarketplaceId, owner: T::AccountId },
@@ -220,9 +216,6 @@ pub mod pallet {
 		pub fn create_marketplace(
 			origin: OriginFor<T>,
 			kind: MarketplaceType,
-			commission_fee: Option<CompoundFee<BalanceOf<T>>>,
-			listing_fee: Option<CompoundFee<BalanceOf<T>>>,
-			offchain_data: Option<U8BoundedVec<T::OffchainDataLimit>>,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
@@ -234,10 +227,10 @@ pub mod pallet {
 			let marketplace = MarketplaceData::new(
 				who.clone(),
 				kind,
-				commission_fee,
-				listing_fee,
 				None,
-				offchain_data.clone(),
+				None,
+				None,
+				None,
 			);
 
 			// Execute.
@@ -246,10 +239,6 @@ pub mod pallet {
 				marketplace_id,
 				owner: who,
 				kind,
-				commission_fee,
-				listing_fee,
-				account_list: None,
-				offchain_data,
 			};
 			Self::deposit_event(event);
 

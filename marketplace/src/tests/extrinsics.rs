@@ -64,7 +64,7 @@ fn prepare_tests() {
 	NFT::create_collection(alice.clone(), BoundedVec::default(), None).unwrap();
 
 	// Create alice marketplace.
-	Marketplace::create_marketplace(alice, MarketplaceType::Public, None, None, None).unwrap();
+	Marketplace::create_marketplace(alice, MarketplaceType::Public).unwrap();
 
 	//Create bob NFT.
 	NFT::create_nft(bob.clone(), BoundedVec::default(), PERCENT_0, None, false).unwrap();
@@ -73,10 +73,10 @@ fn prepare_tests() {
 	NFT::create_collection(bob.clone(), BoundedVec::default(), None).unwrap();
 
 	// Create bob marketplace.
-	Marketplace::create_marketplace(bob, MarketplaceType::Public, None, None, None).unwrap();
+	Marketplace::create_marketplace(bob, MarketplaceType::Public).unwrap();
 
 	// Create charlie marketplace.
-	Marketplace::create_marketplace(charlie, MarketplaceType::Public, None, None, None).unwrap();
+	Marketplace::create_marketplace(charlie, MarketplaceType::Public).unwrap();
 
 	assert_eq!(NFT::nfts(ALICE_NFT_ID).is_some(), true);
 	assert_eq!(NFT::nfts(BOB_NFT_ID).is_some(), true);
@@ -100,19 +100,16 @@ mod create_marketplace {
 			let data = MarketplaceData::new(
 				ALICE,
 				MarketplaceType::Public,
-				Some(CompoundFee::Percentage(PERCENT_80)),
-				Some(CompoundFee::Flat(10)),
 				None,
-				Some(BoundedVec::default()),
+				None,
+				None,
+				None,
 			);
 
 			// Create a marketplace.
 			Marketplace::create_marketplace(
 				alice,
 				data.kind,
-				data.commission_fee,
-				data.listing_fee,
-				data.offchain_data.clone(),
 			)
 			.unwrap();
 			let marketplace_id = Marketplace::get_next_marketplace_id() - 1;
@@ -130,10 +127,6 @@ mod create_marketplace {
 				marketplace_id,
 				owner: data.owner,
 				kind: data.kind,
-				commission_fee: data.commission_fee,
-				listing_fee: data.listing_fee,
-				account_list: data.account_list,
-				offchain_data: data.offchain_data,
 			};
 			let event = Event::Marketplace(event);
 			System::assert_last_event(event);
@@ -146,7 +139,7 @@ mod create_marketplace {
 			let alice: mock::Origin = origin(ALICE);
 			// Should fail and storage should remain empty.
 			let err =
-				Marketplace::create_marketplace(alice, MarketplaceType::Public, None, None, None);
+				Marketplace::create_marketplace(alice, MarketplaceType::Public);
 			assert_noop!(err, BalanceError::<Test>::InsufficientBalance);
 		})
 	}
@@ -158,7 +151,7 @@ mod create_marketplace {
 			let alice_balance = Balances::free_balance(ALICE);
 			// Should fail and storage should remain empty.
 			let err =
-				Marketplace::create_marketplace(alice, MarketplaceType::Public, None, None, None);
+				Marketplace::create_marketplace(alice, MarketplaceType::Public);
 			assert_noop!(err, BalanceError::<Test>::KeepAlive);
 			assert_eq!(Balances::free_balance(ALICE), alice_balance);
 		})
