@@ -51,7 +51,7 @@ const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
 pub mod pallet {
 	use super::*;
 
-	use frame_support::{ensure, pallet_prelude::*, transactional};
+	use frame_support::{ensure, pallet_prelude::*};
 	use frame_system::pallet_prelude::*;
 	use sp_runtime::traits::CheckedAdd;
 	use sp_std::convert::TryInto;
@@ -110,7 +110,6 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {
 		/// Creates an NFT and coverts it into a capsule.
 		#[pallet::weight(T::WeightInfo::create())]
-		#[transactional]
 		pub fn create(
 			origin: OriginFor<T>,
 			nft_ipfs_reference: BoundedVec<u8, IPFSLengthLimitOf<T>>,
@@ -141,7 +140,6 @@ pub mod pallet {
 
 		/// Converts an existing NFT into a capsule.
 		#[pallet::weight(T::WeightInfo::create_from_nft())]
-		#[transactional]
 		pub fn create_from_nft(
 			origin: OriginFor<T>,
 			nft_id: NFTId,
@@ -179,7 +177,6 @@ pub mod pallet {
 
 		/// Converts a capsule into an NFT.
 		#[pallet::weight(T::WeightInfo::remove())]
-		#[transactional]
 		pub fn remove(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 			let mut unused_funds = Default::default();
@@ -211,7 +208,6 @@ pub mod pallet {
 
 		/// Adds additional funds to a capsule.
 		#[pallet::weight(T::WeightInfo::add_funds())]
-		#[transactional]
 		pub fn add_funds(
 			origin: OriginFor<T>,
 			nft_id: NFTId,
@@ -409,7 +405,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	fn account_id() -> T::AccountId {
-		T::PalletId::get().into_account()
+		T::PalletId::get().into_account_truncating()
 	}
 
 	fn send_funds(

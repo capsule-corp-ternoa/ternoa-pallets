@@ -35,7 +35,7 @@ use frame_support::{
 		ExistenceRequirement::{AllowDeath, KeepAlive},
 		Get, OnUnbalanced, StorageVersion, WithdrawReasons,
 	},
-	transactional, BoundedVec, PalletId,
+	BoundedVec, PalletId,
 };
 use frame_system::ensure_signed;
 use sp_core::U256;
@@ -334,7 +334,6 @@ pub mod pallet {
 		/// Deposit some amount of the native token to some recipient on a (whitelisted)
 		/// destination chain.
 		#[pallet::weight(<T as pallet::Config>::WeightInfo::deposit())]
-		#[transactional]
 		pub fn deposit(
 			origin: OriginFor<T>,
 			amount: BalanceOf<T>,
@@ -386,7 +385,7 @@ impl<T: Config> Pallet<T> {
 	/// Provides an AccountId for the pallet.
 	/// This is used both as an origin check and deposit/withdrawal account.
 	pub fn account_id() -> T::AccountId {
-		T::PalletId::get().into_account()
+		T::PalletId::get().into_account_truncating()
 	}
 
 	/// Checks if who is a relayer

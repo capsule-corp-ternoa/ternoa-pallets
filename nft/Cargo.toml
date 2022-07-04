@@ -19,9 +19,9 @@ sp-std = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "t
 sp-arithmetic = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-06-21", default-features = false }
 
 # Rest
-parity-scale-codec = { default-features = false, features = ["derive", "max-encoded-len"], version = "3.1.2" }
-log = { default-features = false, version = "0.4.14"}
-scale-info = { version = "2.0.1", default-features = false, features = ["derive"] }
+parity-scale-codec = { default-features = false, features = ["derive", "max-encoded-len"], version = "3.1.5" }
+scale-info = { version = "2.1.2", default-features = false, features = ["derive"] }
+log = { default-features = false, version = "0.4.17" }
 
 # Ternoa
 ternoa-common = { default-features = false, path = "../common" }

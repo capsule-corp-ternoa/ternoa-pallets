@@ -18,8 +18,8 @@ frame-system = { git = "https://github.com/capsule-corp-ternoa/substrate", branc
 sp-std = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-06-21", default-features = false }
 
 # Rest
-parity-scale-codec = { default-features = false, features = ["derive", "max-encoded-len"], version = "3.1.2" }
-scale-info = { version = "2.0.1", default-features = false, features = ["derive"] }
+parity-scale-codec = { default-features = false, features = ["derive", "max-encoded-len"], version = "3.1.5" }
+scale-info = { version = "2.1.2", default-features = false, features = ["derive"] }
 
 [features]
 default = ["std"]

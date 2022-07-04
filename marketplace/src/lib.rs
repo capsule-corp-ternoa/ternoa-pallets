@@ -33,7 +33,7 @@ use frame_support::{
 		Currency, ExistenceRequirement::KeepAlive, Get, OnUnbalanced, StorageVersion,
 		WithdrawReasons,
 	},
-	transactional, BoundedVec,
+	BoundedVec,
 };
 use frame_system::pallet_prelude::*;
 use sp_runtime::traits::{CheckedSub, StaticLookup};
@@ -212,7 +212,6 @@ pub mod pallet {
 		/// generated and logged as an event, The caller of this function
 		/// will become the owner of the new marketplace.
 		#[pallet::weight(T::WeightInfo::create_marketplace())]
-		#[transactional]
 		pub fn create_marketplace(
 			origin: OriginFor<T>,
 			kind: MarketplaceType,
@@ -224,22 +223,11 @@ pub mod pallet {
 			Self::pay_mint_fee(&who)?;
 
 			let marketplace_id = Self::get_next_marketplace_id();
-			let marketplace = MarketplaceData::new(
-				who.clone(),
-				kind,
-				None,
-				None,
-				None,
-				None,
-			);
+			let marketplace = MarketplaceData::new(who.clone(), kind, None, None, None, None);
 
 			// Execute.
 			Marketplaces::<T>::insert(marketplace_id, marketplace);
-			let event = Event::MarketplaceCreated {
-				marketplace_id,
-				owner: who,
-				kind,
-			};
+			let event = Event::MarketplaceCreated { marketplace_id, owner: who, kind };
 			Self::deposit_event(event);
 
 			Ok(().into())
@@ -354,7 +342,6 @@ pub mod pallet {
 
 		/// Put an NFT on sale on a marketplace.
 		#[pallet::weight(T::WeightInfo::list_nft())]
-		#[transactional]
 		pub fn list_nft(
 			origin: OriginFor<T>,
 			nft_id: NFTId,
@@ -424,7 +411,6 @@ pub mod pallet {
 
 		/// Buy a listed nft
 		#[pallet::weight(T::WeightInfo::buy_nft())]
-		#[transactional]
 		pub fn buy_nft(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 			let mut nft = T::NFTExt::get_nft(nft_id).ok_or(Error::<T>::NFTNotFound)?;

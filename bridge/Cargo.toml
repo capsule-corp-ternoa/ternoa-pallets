@@ -20,12 +20,9 @@ sp-runtime = { git = "https://github.com/capsule-corp-ternoa/substrate", branch 
 sp-std = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-06-21", default-features = false }
 
 # Rest
-parity-scale-codec = { default-features = false, features = ["derive", "max-encoded-len"], version = "3.1.2" }
-serde = { optional = true, version = "1.0.132" }
-scale-info = { version = "2.0.1", default-features = false, features = ["derive"] }
-
-[build-dependencies]
-wasm-builder-runner = { version = "3.0.0", package = "substrate-wasm-builder-runner" }
+parity-scale-codec = { default-features = false, features = ["derive", "max-encoded-len"], version = "3.1.5" }
+serde = { optional = true, version = "1.0.137" }
+scale-info = { version = "2.1.2", default-features = false, features = ["derive"] }
 
 [dev-dependencies]
 pallet-balances = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-06-21" }
