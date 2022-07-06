@@ -97,21 +97,10 @@ mod create_marketplace {
 		ExtBuilder::new_build(vec![(ALICE, 1000)]).execute_with(|| {
 			let alice: mock::Origin = origin(ALICE);
 			let alice_balance = Balances::free_balance(ALICE);
-			let data = MarketplaceData::new(
-				ALICE,
-				MarketplaceType::Public,
-				None,
-				None,
-				None,
-				None,
-			);
+			let data = MarketplaceData::new(ALICE, MarketplaceType::Public, None, None, None, None);
 
 			// Create a marketplace.
-			Marketplace::create_marketplace(
-				alice,
-				data.kind,
-			)
-			.unwrap();
+			Marketplace::create_marketplace(alice, data.kind).unwrap();
 			let marketplace_id = Marketplace::get_next_marketplace_id() - 1;
 
 			// Final state checks.
@@ -138,8 +127,7 @@ mod create_marketplace {
 		ExtBuilder::new_build(vec![(ALICE, 1)]).execute_with(|| {
 			let alice: mock::Origin = origin(ALICE);
 			// Should fail and storage should remain empty.
-			let err =
-				Marketplace::create_marketplace(alice, MarketplaceType::Public);
+			let err = Marketplace::create_marketplace(alice, MarketplaceType::Public);
 			assert_noop!(err, BalanceError::<Test>::InsufficientBalance);
 		})
 	}
@@ -150,8 +138,7 @@ mod create_marketplace {
 			let alice: mock::Origin = origin(ALICE);
 			let alice_balance = Balances::free_balance(ALICE);
 			// Should fail and storage should remain empty.
-			let err =
-				Marketplace::create_marketplace(alice, MarketplaceType::Public);
+			let err = Marketplace::create_marketplace(alice, MarketplaceType::Public);
 			assert_noop!(err, BalanceError::<Test>::KeepAlive);
 			assert_eq!(Balances::free_balance(ALICE), alice_balance);
 		})

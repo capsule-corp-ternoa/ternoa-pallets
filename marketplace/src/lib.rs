@@ -224,22 +224,11 @@ pub mod pallet {
 			Self::pay_mint_fee(&who)?;
 
 			let marketplace_id = Self::get_next_marketplace_id();
-			let marketplace = MarketplaceData::new(
-				who.clone(),
-				kind,
-				None,
-				None,
-				None,
-				None,
-			);
+			let marketplace = MarketplaceData::new(who.clone(), kind, None, None, None, None);
 
 			// Execute.
 			Marketplaces::<T>::insert(marketplace_id, marketplace);
-			let event = Event::MarketplaceCreated {
-				marketplace_id,
-				owner: who,
-				kind,
-			};
+			let event = Event::MarketplaceCreated { marketplace_id, owner: who, kind };
 			Self::deposit_event(event);
 
 			Ok(().into())
