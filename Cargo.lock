@@ -2397,7 +2397,7 @@ dependencies = [
 
 [[package]]
 name = "ternoa-marketplace"
-version = "1.0.1"
+version = "1.0.2"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -2418,7 +2418,7 @@ dependencies = [
 
 [[package]]
 name = "ternoa-nft"
-version = "1.0.1"
+version = "1.0.2"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -2446,6 +2446,26 @@ dependencies = [
  "sp-arithmetic",
  "sp-runtime",
  "sp-std",
+]
+
+[[package]]
+name = "ternoa-rent"
+version = "1.0.0"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "log",
+ "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "ternoa-common",
+ "ternoa-nft",
+ "ternoa-pallets-primitives",
 ]
 
 [[package]]

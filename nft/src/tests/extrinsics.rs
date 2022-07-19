@@ -285,7 +285,6 @@ mod create_nft {
 }
 
 mod burn_nft {
-
 	use super::*;
 
 	#[test]
@@ -359,7 +358,7 @@ mod burn_nft {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			prepare_tests();
 			// Set listed to true for Alice's NFT.
-			let nft_state = NFTState::new(false, true, false, false, false);
+			let nft_state = NFTState::new(false, true, false, false, false, false, false);
 			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
 			// Burning an nft.
 			let err = NFT::burn_nft(origin(ALICE), ALICE_NFT_ID);
@@ -373,7 +372,7 @@ mod burn_nft {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			prepare_tests();
 			// Set capsule to true for Alice's NFT.
-			let nft_state = NFTState::new(true, false, false, false, false);
+			let nft_state = NFTState::new(true, false, false, false, false, false, false);
 			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
 			// Burning an nft.
 			let err = NFT::burn_nft(origin(ALICE), ALICE_NFT_ID);
@@ -392,6 +391,34 @@ mod burn_nft {
 			let err = NFT::burn_nft(origin(ALICE), ALICE_NFT_ID);
 			// Should fail because NFT is delegated.
 			assert_noop!(err, Error::<Test>::CannotBurnDelegatedNFTs);
+		})
+	}
+
+	#[test]
+	fn cannot_burn_rented_nfts() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
+			prepare_tests();
+			// Set capsule to true for Alice's NFT.
+			let nft_state = NFTState::new(false, false, false, false, false, true, false);
+			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
+			// Burning an nft.
+			let err = NFT::burn_nft(origin(ALICE), ALICE_NFT_ID);
+			// Should fail because NFT is capsule.
+			assert_noop!(err, Error::<Test>::CannotBurnRentedNFTs);
+		})
+	}
+
+	#[test]
+	fn cannot_burn_auctioned_nfts() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
+			prepare_tests();
+			// Set capsule to true for Alice's NFT.
+			let nft_state = NFTState::new(false, false, false, false, false, false, true);
+			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
+			// Burning an nft.
+			let err = NFT::burn_nft(origin(ALICE), ALICE_NFT_ID);
+			// Should fail because NFT is capsule.
+			assert_noop!(err, Error::<Test>::CannotBurnAuctionedNFTs);
 		})
 	}
 }
@@ -463,7 +490,7 @@ mod transfer_nft {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 			// Set NFT to listed.
-			let nft_state = NFTState::new(false, true, false, false, false);
+			let nft_state = NFTState::new(false, true, false, false, false, false, false);
 			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
 			// Try to transfer.
 			let err = NFT::transfer_nft(alice, ALICE_NFT_ID, BOB);
@@ -478,7 +505,7 @@ mod transfer_nft {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 			// Set NFT to capsule.
-			let nft_state = NFTState::new(true, false, false, false, false);
+			let nft_state = NFTState::new(true, false, false, false, false, false, false);
 			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
 			// Try to transfer.
 			let err = NFT::transfer_nft(alice, ALICE_NFT_ID, BOB);
@@ -514,6 +541,36 @@ mod transfer_nft {
 			let err = NFT::transfer_nft(alice, nft_id, BOB);
 			// Should fail because NFT is soulbound.
 			assert_noop!(err, Error::<Test>::CannotTransferSoulboundNFTs);
+		})
+	}
+
+	#[test]
+	fn cannot_transfer_rented_nfts() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
+			prepare_tests();
+			let alice: mock::Origin = origin(ALICE);
+			// Set NFT to listed.
+			let nft_state = NFTState::new(false, false, false, false, false, true, false);
+			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
+			// Try to transfer.
+			let err = NFT::transfer_nft(alice, ALICE_NFT_ID, BOB);
+			// Should fail because NFT is listed.
+			assert_noop!(err, Error::<Test>::CannotTransferRentedNFTs);
+		})
+	}
+
+	#[test]
+	fn cannot_transfer_auctioned_nfts() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
+			prepare_tests();
+			let alice: mock::Origin = origin(ALICE);
+			// Set NFT to listed.
+			let nft_state = NFTState::new(false, false, false, false, false, false, true);
+			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
+			// Try to transfer.
+			let err = NFT::transfer_nft(alice, ALICE_NFT_ID, BOB);
+			// Should fail because NFT is listed.
+			assert_noop!(err, Error::<Test>::CannotTransferAuctionedNFTs);
 		})
 	}
 }
@@ -599,7 +656,7 @@ mod delegate_nft {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 			// Set alice's NFT to listed.
-			let nft_state = NFTState::new(false, true, false, false, false);
+			let nft_state = NFTState::new(false, true, false, false, false, false, false);
 			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
 			// Delegate listed NFT.
 			let err = NFT::delegate_nft(alice, ALICE_NFT_ID, None);
@@ -614,12 +671,42 @@ mod delegate_nft {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 			// Set alice's NFT to capsule.
-			let nft_state = NFTState::new(true, false, false, false, false);
+			let nft_state = NFTState::new(true, false, false, false, false, false, false);
 			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
 			// Delegate capsule NFT.
 			let err = NFT::delegate_nft(alice, ALICE_NFT_ID, None);
 			// Should fail because NFT is capsule.
 			assert_noop!(err, Error::<Test>::CannotDelegateCapsuleNFTs);
+		})
+	}
+
+	#[test]
+	fn cannot_delegate_rented_nfts() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
+			prepare_tests();
+			let alice: mock::Origin = origin(ALICE);
+			// Set alice's NFT to capsule.
+			let nft_state = NFTState::new(false, false, false, false, false, true, false);
+			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
+			// Delegate capsule NFT.
+			let err = NFT::delegate_nft(alice, ALICE_NFT_ID, None);
+			// Should fail because NFT is capsule.
+			assert_noop!(err, Error::<Test>::CannotDelegateRentedNFTs);
+		})
+	}
+
+	#[test]
+	fn cannot_delegate_auctioned_nfts() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
+			prepare_tests();
+			let alice: mock::Origin = origin(ALICE);
+			// Set alice's NFT to capsule.
+			let nft_state = NFTState::new(false, false, false, false, false, false, true);
+			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
+			// Delegate capsule NFT.
+			let err = NFT::delegate_nft(alice, ALICE_NFT_ID, None);
+			// Should fail because NFT is capsule.
+			assert_noop!(err, Error::<Test>::CannotDelegateAuctionedNFTs);
 		})
 	}
 }
@@ -694,7 +781,7 @@ mod set_royalty {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 			// Set Alice's NFT to listed.
-			let nft_state = NFTState::new(false, true, false, false, false);
+			let nft_state = NFTState::new(false, true, false, false, false, false, false);
 			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
 			// Set royalty.
 			let err = NFT::set_royalty(alice, ALICE_NFT_ID, PERCENT_80);
@@ -709,7 +796,7 @@ mod set_royalty {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 			// Set Alice's NFT to capsule.
-			let nft_state = NFTState::new(true, false, false, false, false);
+			let nft_state = NFTState::new(true, false, false, false, false, false, false);
 			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
 			// Set royalty.
 			let err = NFT::set_royalty(alice, ALICE_NFT_ID, PERCENT_80);
@@ -729,6 +816,36 @@ mod set_royalty {
 			let err = NFT::set_royalty(alice, ALICE_NFT_ID, PERCENT_80);
 			// Should fail because you cannot set royalty for delegated NFTs.
 			assert_noop!(err, Error::<Test>::CannotSetRoyaltyForDelegatedNFTs);
+		})
+	}
+
+	#[test]
+	fn cannot_set_royalty_for_rented_nfts() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
+			prepare_tests();
+			let alice: mock::Origin = origin(ALICE);
+			// Set Alice's NFT to capsule.
+			let nft_state = NFTState::new(false, false, false, false, false, true, false);
+			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
+			// Set royalty.
+			let err = NFT::set_royalty(alice, ALICE_NFT_ID, PERCENT_80);
+			// Should fail because you cannot set royalty for capsule NFTs.
+			assert_noop!(err, Error::<Test>::CannotSetRoyaltyForRentedNFTs);
+		})
+	}
+
+	#[test]
+	fn cannot_set_royalty_for_auctioned_nfts() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
+			prepare_tests();
+			let alice: mock::Origin = origin(ALICE);
+			// Set Alice's NFT to capsule.
+			let nft_state = NFTState::new(false, false, false, false, false, false, true);
+			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
+			// Set royalty.
+			let err = NFT::set_royalty(alice, ALICE_NFT_ID, PERCENT_80);
+			// Should fail because you cannot set royalty for capsule NFTs.
+			assert_noop!(err, Error::<Test>::CannotSetRoyaltyForAuctionedNFTs);
 		})
 	}
 }

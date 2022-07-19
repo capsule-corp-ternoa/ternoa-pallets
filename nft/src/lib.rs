@@ -53,7 +53,7 @@ pub type NegativeImbalanceOf<T> = <<T as Config>::Currency as Currency<
 	<T as frame_system::Config>::AccountId,
 >>::NegativeImbalance;
 
-const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
+const STORAGE_VERSION: StorageVersion = StorageVersion::new(1); //TODO 2 ??
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -212,6 +212,22 @@ pub mod pallet {
 		CannotSetRoyaltyForCapsuleNFTs,
 		/// Operation is not allowed because the NFT is owned by the caller.
 		CannotTransferNFTsToYourself,
+		/// Operation is not allowed because the NFT is rented
+		CannotTransferRentedNFTs,
+		/// Operation is not allowed because the NFT is rented
+		CannotBurnRentedNFTs,
+		/// Operation is not allowed because the NFT is rented
+		CannotSetRoyaltyForRentedNFTs,
+		/// Operation is not allowed because the NFT is rented
+		CannotDelegateRentedNFTs,
+		/// Operation is not allowed because the NFT is auctioned
+		CannotTransferAuctionedNFTs,
+		/// Operation is not allowed because the NFT is auctioned
+		CannotBurnAuctionedNFTs,
+		/// Operation is not allowed because the NFT is auctioned
+		CannotSetRoyaltyForAuctionedNFTs,
+		/// Operation is not allowed because the NFT is auctioned
+		CannotDelegateAuctionedNFTs,
 		/// Operation is not allowed because the collection limit is too low.
 		CollectionLimitExceededMaximumAllowed,
 		/// No NFT was found with that NFT id.
@@ -358,9 +374,11 @@ pub mod pallet {
 
 			// Checks
 			ensure!(nft.owner == who, Error::<T>::NotTheNFTOwner);
-			ensure!(!nft.state.listed_for_sale, Error::<T>::CannotBurnListedNFTs);
+			ensure!(!nft.state.is_listed, Error::<T>::CannotBurnListedNFTs);
 			ensure!(!nft.state.is_capsule, Error::<T>::CannotBurnCapsuleNFTs);
 			ensure!(!nft.state.is_delegated, Error::<T>::CannotBurnDelegatedNFTs);
+			ensure!(!nft.state.is_rented, Error::<T>::CannotBurnRentedNFTs);
+			ensure!(!nft.state.is_auctioned, Error::<T>::CannotBurnAuctionedNFTs);
 
 			// Check for collection to remove nft.
 			if let Some(collection_id) = &nft.collection_id {
@@ -400,10 +418,12 @@ pub mod pallet {
 				// Checks
 				ensure!(nft.owner == who, Error::<T>::NotTheNFTOwner);
 				ensure!(nft.owner != recipient, Error::<T>::CannotTransferNFTsToYourself);
-				ensure!(!nft.state.listed_for_sale, Error::<T>::CannotTransferListedNFTs);
+				ensure!(!nft.state.is_listed, Error::<T>::CannotTransferListedNFTs);
 				ensure!(!nft.state.is_capsule, Error::<T>::CannotTransferCapsuleNFTs);
 				ensure!(!nft.state.is_delegated, Error::<T>::CannotTransferDelegatedNFTs);
 				ensure!(!nft.state.is_soulbound, Error::<T>::CannotTransferSoulboundNFTs);
+				ensure!(!nft.state.is_rented, Error::<T>::CannotTransferRentedNFTs);
+				ensure!(!nft.state.is_auctioned, Error::<T>::CannotTransferAuctionedNFTs);
 
 				// Execute
 				nft.owner = recipient.clone();
@@ -438,8 +458,10 @@ pub mod pallet {
 
 				// Checks
 				ensure!(nft.owner == who, Error::<T>::NotTheNFTOwner);
-				ensure!(!nft.state.listed_for_sale, Error::<T>::CannotDelegateListedNFTs);
+				ensure!(!nft.state.is_listed, Error::<T>::CannotDelegateListedNFTs);
 				ensure!(!nft.state.is_capsule, Error::<T>::CannotDelegateCapsuleNFTs);
+				ensure!(!nft.state.is_rented, Error::<T>::CannotDelegateRentedNFTs);
+				ensure!(!nft.state.is_auctioned, Error::<T>::CannotDelegateAuctionedNFTs);
 
 				// Execute
 				nft.state.is_delegated = is_delegated;
@@ -476,9 +498,11 @@ pub mod pallet {
 				// Checks
 				ensure!(nft.owner == who, Error::<T>::NotTheNFTOwner);
 				ensure!(nft.creator == who, Error::<T>::NotTheNFTCreator);
-				ensure!(!nft.state.listed_for_sale, Error::<T>::CannotSetRoyaltyForListedNFTs);
+				ensure!(!nft.state.is_listed, Error::<T>::CannotSetRoyaltyForListedNFTs);
 				ensure!(!nft.state.is_capsule, Error::<T>::CannotSetRoyaltyForCapsuleNFTs);
 				ensure!(!nft.state.is_delegated, Error::<T>::CannotSetRoyaltyForDelegatedNFTs);
+				ensure!(!nft.state.is_rented, Error::<T>::CannotSetRoyaltyForRentedNFTs);
+				ensure!(!nft.state.is_auctioned, Error::<T>::CannotSetRoyaltyForAuctionedNFTs);
 
 				// Execute
 				nft.royalty = royalty;
@@ -769,7 +793,7 @@ impl<T: Config> traits::NFTExt for Pallet<T> {
 		collection_id: Option<CollectionId>,
 		is_soulbound: bool,
 	) -> Result<NFTId, DispatchResult> {
-		let nft_state = NFTState::new(false, false, false, false, is_soulbound);
+		let nft_state = NFTState::new(false, false, false, false, is_soulbound, false, false);
 		let nft = NFTData::new(
 			owner.clone(),
 			owner.clone(),

@@ -1,6 +1,6 @@
 [package]
-name = "ternoa-marketplace"
-version = "1.0.2"
+name = "ternoa-rent"
+version = "1.0.0"
 edition = "2021"
 license = "GPL-3.0-or-later WITH Classpath-exception-2.0"
 
@@ -16,11 +16,10 @@ frame-system = { git = "https://github.com/capsule-corp-ternoa/substrate", branc
 # Sp
 sp-runtime = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-03-24", default-features = false }
 sp-std = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-03-24", default-features = false }
-sp-arithmetic = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-03-24", default-features = false }
-log = { default-features = false, version = "0.4.14"}
 
 # Rest
 parity-scale-codec = { default-features = false, features = ["derive", "max-encoded-len"], version = "3.1.2" }
+log = { default-features = false, version = "0.4.14"}
 scale-info = { version = "2.0.1", default-features = false, features = ["derive"] }
 
 # Ternoa
