@@ -239,9 +239,12 @@ pub mod pallet {
 		MaxSimultaneousContractReached,
 		/// Cannot create a contract with fixed duration and onSubscriptionChange revocation type.
 		NoFixedWithSubscriptionChanges,
-		/// Cannot create a contract with infinite duration and onSubscriptionChange revocation type.
+		/// Cannot create a contract with infinite duration and onSubscriptionChange revocation
+		/// type.
 		NoInfiniteWithSubscriptionChanges,
-		/// Cannot create a contract with no revocation type and a renter cancellation _fee.
+		/// Cannot create a contract with infinite duration and flexible tokens cancellation fee
+		NoInfiniteWithFlexibleFee,
+		/// Cannot create a contract with no revocation type and a renter cancellation fee.
 		CannotSetRenterCancellationFeeWithNoRevocation,
 		/// The contract was not found for the given nft_id.
 		ContractNotFound,
@@ -249,6 +252,14 @@ pub mod pallet {
 		NotTheRenterOrRentee,
 		/// Operation is not permitted because revocation type is No Revocation.
 		CannotRevokeNoRevocation,
+		/// The owner was not found to return flexible fee.
+		FlexibleFeeOwnerNotFound,
+		/// The total duration was not found to return flexible fee
+		FlexibleFeeEndTotalDurationNotFound,
+		/// The endblock was not found to return flexible fee.
+		FlexibleFeeEndBlockNotFound,
+		/// Math error
+		InternalMathError,
 	}
 
 	#[pallet::call]
@@ -269,11 +280,31 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 
 			// Checks.
-			let is_fixed = matches!(duration, Duration::Fixed {..});
-			let is_on_subscription_change = matches!(revocation_type, RevocationType::OnSubscriptionChange {..});
-			ensure!(!(is_fixed && is_on_subscription_change), Error::<T>::NoFixedWithSubscriptionChanges);
-			ensure!(!(duration == Duration::Infinite && is_on_subscription_change), Error::<T>::NoInfiniteWithSubscriptionChanges);
-			ensure!(!(revocation_type == RevocationType::NoRevocation && renter_cancellation_fee.is_some()), Error::<T>::CannotSetRenterCancellationFeeWithNoRevocation);
+			let is_fixed = matches!(duration, Duration::Fixed { .. });
+			let is_on_subscription_change =
+				matches!(revocation_type, RevocationType::OnSubscriptionChange { .. });
+			let is_flexible_token_renter =
+				matches!(renter_cancellation_fee, Some(CancellationFee::FlexibleTokens { .. }));
+			let is_flexible_token_rentee =
+				matches!(rentee_cancellation_fee, Some(CancellationFee::FlexibleTokens { .. }));
+			ensure!(
+				!(is_fixed && is_on_subscription_change),
+				Error::<T>::NoFixedWithSubscriptionChanges
+			);
+			ensure!(
+				!(duration == Duration::Infinite && is_on_subscription_change),
+				Error::<T>::NoInfiniteWithSubscriptionChanges
+			);
+			ensure!(
+				!(duration == Duration::Infinite &&
+					(is_flexible_token_renter || is_flexible_token_rentee)),
+				Error::<T>::NoInfiniteWithFlexibleFee
+			);
+			ensure!(
+				!(revocation_type == RevocationType::NoRevocation &&
+					renter_cancellation_fee.is_some()),
+				Error::<T>::CannotSetRenterCancellationFeeWithNoRevocation
+			);
 
 			let mut nft = T::NFTExt::get_nft(nft_id).ok_or(Error::<T>::NFTNotFound)?;
 			ensure!(nft.owner == who, Error::<T>::NotTheNFTOwner);
@@ -351,7 +382,8 @@ pub mod pallet {
 					// Give back cancellation fee for renter if it exist and contract has not
 					// started yet.
 					if let Some(cancellation_fee) = &contract.renter_cancellation_fee {
-						Self::move_cancellation_fee(who.clone(), cancellation_fee)?;
+						// Todo
+						// Self::move_cancellation_fee(who.clone(), cancellation_fee)?;
 						cancellation_fee_moved = Some(cancellation_fee.clone());
 						cancellation_fee_recipient = Some(who.clone())
 					}
@@ -359,7 +391,11 @@ pub mod pallet {
 					// Remove from available queue
 					AvailableQueue::<T>::mutate(|x| x.remove(nft_id));
 				} else {
-					ensure!(contract.revocation_type == RevocationType::NoRevocation, Error::<T>::CannotRevokeNoRevocation)
+					ensure!(
+						contract.revocation_type == RevocationType::NoRevocation,
+						Error::<T>::CannotRevokeNoRevocation
+					)
+					//TODO
 					// if let RevocationType::Anytime
 					// match cancellation_fee {
 					// 	CancellationFee::NFT(cancellation_nft_id) => {
@@ -381,7 +417,8 @@ pub mod pallet {
 				};
 			} else {
 				if let Some(cancellation_fee) = &contract.rentee_cancellation_fee {
-					Self::move_cancellation_fee(contract.renter.clone(), cancellation_fee)?;
+					// TODO
+					// Self::move_cancellation_fee(contract.renter.clone(), cancellation_fee)?;
 				}
 			};
 
@@ -474,6 +511,9 @@ impl<T: Config> Pallet<T> {
 	pub fn move_cancellation_fee(
 		to: T::AccountId,
 		cancellation_fee: &CancellationFee<BalanceOf<T>>,
+		flexible_fee_origin: Option<T::AccountId>,
+		total_duration: Option<T::BlockNumber>,
+		end_block: Option<T::BlockNumber>,
 	) -> Result<(), DispatchError> {
 		match cancellation_fee {
 			CancellationFee::NFT(cancellation_nft_id) => {
@@ -489,7 +529,22 @@ impl<T: Config> Pallet<T> {
 				T::Currency::transfer(&Self::account_id(), &to, *amount, KeepAlive)?;
 			},
 			CancellationFee::FlexibleTokens(amount) => {
-				T::Currency::transfer(&Self::account_id(), &to, *amount, KeepAlive)?;
+				//TODO
+				ensure!(flexible_fee_origin.is_some(), Error::<T>::FlexibleFeeOwnerNotFound);
+				ensure!(total_duration.is_some(), Error::<T>::FlexibleFeeEndTotalDurationNotFound);
+				ensure!(end_block.is_some(), Error::<T>::FlexibleFeeEndBlockNotFound);
+				let block_number = <frame_system::Pallet<T>>::block_number();
+				// price = price.checked_sub(&commission_fee).ok_or(Error::<T>::InternalMathError)?;
+				if let Some(end_block) = end_block {
+					let remaining = end_block
+						.checked_sub(&block_number)
+						.ok_or(Error::<T>::InternalMathError)?;
+					if let Some(total_duration) = total_duration {
+						let ratio = remaining / total_duration;
+						//TODO
+						// T::Currency::transfer(&Self::account_id(), &to, *amount, KeepAlive)?;
+					}
+				}
 			},
 		};
 		Ok(())
