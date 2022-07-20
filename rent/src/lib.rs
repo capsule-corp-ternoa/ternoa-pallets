@@ -485,7 +485,7 @@ impl<T: Config> Pallet<T> {
 					Error::<T>::CannotPutRentedNFTsForCancellationFee
 				);
 				cancellation_nft.owner = Self::account_id();
-				T::NFTExt::set_nft(cancellation_nft_id, cancellation_nft);
+				T::NFTExt::set_nft(*cancellation_nft_id, cancellation_nft)?;
 			},
 			CancellationFee::FixedTokens(amount) => {
 				T::Currency::transfer(&from, &Self::account_id(), *amount, KeepAlive)?;
