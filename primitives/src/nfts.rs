@@ -61,7 +61,15 @@ impl NFTState {
 		is_rented: bool,
 		is_auctioned: bool,
 	) -> Self {
-		Self { is_capsule, is_listed, is_secret, is_delegated, is_soulbound, is_rented, is_auctioned }
+		Self {
+			is_capsule,
+			is_listed,
+			is_secret,
+			is_delegated,
+			is_soulbound,
+			is_rented,
+			is_auctioned,
+		}
 	}
 
 	pub fn new_default(is_soulbound: bool) -> Self {
