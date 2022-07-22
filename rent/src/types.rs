@@ -145,6 +145,15 @@ where
 	BlockNumber: Clone + PartialEq + Debug + sp_std::cmp::PartialOrd,
 	Limit: Get<u32>,
 {
+	pub fn get(&mut self, nft_id: NFTId) -> Option<BlockNumber> {
+		let index = self.0.iter().position(|x| x.0 == nft_id);
+		if let Some(index) = index{
+			Some(self.0[index].1.clone())
+		} else {
+			None
+		}
+	}
+
 	pub fn insert(&mut self, nft_id: NFTId, block_number: BlockNumber) -> Result<(), ()> {
 		let index = self.0.iter().position(|x| x.1 > block_number);
 		let index = index.unwrap_or_else(|| self.0.len());
