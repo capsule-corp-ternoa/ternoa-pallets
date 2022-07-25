@@ -74,6 +74,8 @@ where
 {
 	/// Flag indicating if the renting contract has starter.
 	pub has_started:               bool,
+	/// Start block of the contract.
+	pub start_block:               Option<BlockNumber>,
 	/// Renter of the NFT.
   	pub renter:                    AccountId,
 	/// Rentee of the NFT.
@@ -103,6 +105,7 @@ where
 {
 	pub fn new(
 		has_started: bool,
+		start_block: Option<BlockNumber>,
 		renter: AccountId,
 		rentee: Option<AccountId>,
 		duration: Duration<BlockNumber>,
@@ -115,6 +118,7 @@ where
 	) -> RentContractData<AccountId, BlockNumber, Balance, AccountSizeLimit> {
 		Self { 
 			has_started,
+			start_block,
 			renter,
 			rentee,
 			duration,
