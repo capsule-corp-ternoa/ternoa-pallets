@@ -39,9 +39,9 @@ pub enum AcceptanceType<AccountList> {
 
 /// Enumeration of contract revocation type.
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo, MaxEncodedLen)]
-pub enum RevocationType<Balance, BlockNumber> {
+pub enum RevocationType {
 	NoRevocation,
-	OnSubscriptionChange(Duration<BlockNumber>, Balance),
+	OnSubscriptionChange,
 	Anytime,
 }
 
@@ -85,7 +85,7 @@ where
 	/// Acceptance type of the renting contract.
 	pub acceptance_type:           AcceptanceType<AccountList<AccountId, AccountSizeLimit>>,
 	/// Revocation type of the renting contract.
-	pub revocation_type:           RevocationType<Balance, BlockNumber>,
+	pub revocation_type:           RevocationType,
 	/// Rent fee paid by rentee.
 	pub rent_fee:                  RentFee<Balance>,
 	/// Flag indicating if terms were accepted in case of change.
@@ -110,7 +110,7 @@ where
 		rentee: Option<AccountId>,
 		duration: Duration<BlockNumber>,
 		acceptance_type: AcceptanceType<AccountList<AccountId, AccountSizeLimit>>,
-		revocation_type: RevocationType<Balance, BlockNumber>,
+		revocation_type: RevocationType,
 		rent_fee: RentFee<Balance>,
 		terms_accepted: bool,
 		renter_cancellation_fee: Option<CancellationFee<Balance>>,

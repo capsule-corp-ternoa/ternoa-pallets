@@ -53,7 +53,7 @@ pub type NegativeImbalanceOf<T> = <<T as Config>::Currency as Currency<
 	<T as frame_system::Config>::AccountId,
 >>::NegativeImbalance;
 
-const STORAGE_VERSION: StorageVersion = StorageVersion::new(1); //TODO 2 ??
+const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -315,7 +315,7 @@ pub mod pallet {
 						.try_push(tmp_nft_id)
 						.map_err(|_| Error::<T>::CannotAddMoreNFTsToCollection)?;
 					next_nft_id = Some(tmp_nft_id);
-					Ok(().into())
+					Ok(())
 				})?;
 			}
 
@@ -391,7 +391,7 @@ pub mod pallet {
 						.ok_or(Error::<T>::NFTNotFoundInCollection)?;
 					// Execute
 					collection.nfts.swap_remove(index);
-					Ok(().into())
+					Ok(())
 				})?;
 			}
 			// Execute
@@ -428,7 +428,7 @@ pub mod pallet {
 				// Execute
 				nft.owner = recipient.clone();
 
-				Ok(().into())
+				Ok(())
 			})?;
 			// Execute
 			let event = Event::NFTTransferred { nft_id, sender: who, recipient };
@@ -466,7 +466,7 @@ pub mod pallet {
 				// Execute
 				nft.state.is_delegated = is_delegated;
 
-				Ok(().into())
+				Ok(())
 			})?;
 
 			// Execute
@@ -507,7 +507,7 @@ pub mod pallet {
 				// Execute
 				nft.royalty = royalty;
 
-				Ok(().into())
+				Ok(())
 			})?;
 
 			let event = Event::NFTRoyaltySet { nft_id, royalty };
@@ -602,7 +602,7 @@ pub mod pallet {
 				ensure!(collection.owner == who, Error::<T>::NotTheCollectionOwner);
 				collection.is_closed = true;
 
-				Ok(().into())
+				Ok(())
 			})?;
 
 			Self::deposit_event(Event::CollectionClosed { collection_id });
@@ -640,7 +640,7 @@ pub mod pallet {
 				// Execute
 				collection.limit = Some(limit);
 
-				Ok(().into())
+				Ok(())
 			})?;
 
 			Self::deposit_event(Event::CollectionLimited { collection_id, limit });
@@ -690,7 +690,7 @@ pub mod pallet {
 					//Execution
 					nft.collection_id = Some(collection_id);
 
-					Ok(().into())
+					Ok(())
 				})?;
 
 				// Execute
@@ -699,7 +699,7 @@ pub mod pallet {
 					.try_push(nft_id)
 					.map_err(|_| Error::<T>::CannotAddMoreNFTsToCollection)?;
 
-				Ok(().into())
+				Ok(())
 			})?;
 
 			Self::deposit_event(Event::NFTAddedToCollection { nft_id, collection_id });
