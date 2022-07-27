@@ -245,10 +245,6 @@ pub mod pallet {
 		CannotAcceptOfferForAutoAcceptance,
 		/// Operation is not permitted because acceptance type is not manual.
 		CannotRetractOfferForAutoAcceptance,
-		/// No offers were found.
-		NoOffersForThisContract,
-		/// Addresss not found in offers.
-		AddressNotFoundInOffers,
 		/// Terms can only be set for subscription duration.
 		CanChangeTermForSubscriptionOnly,
 		/// New term must be suvscription.
@@ -874,7 +870,7 @@ impl<T: Config> Pallet<T> {
 				Error::<T>::InvalidFeeNFT
 			);
 		}
-		if renter_cancellation_nft_id.is_some() {
+		if rentee_cancellation_nft_id.is_some() {
 			ensure!(
 				rentee_cancellation_nft_id != nft_id &&
 					rentee_cancellation_nft_id != rent_fee_nft_id &&
