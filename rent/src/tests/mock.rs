@@ -16,7 +16,7 @@
 
 use frame_support::{
 	parameter_types,
-	traits::{ConstU32, Contains, Currency}, PalletId,
+	traits::{ConstU32, Contains, Currency, Hooks}, PalletId,
 };
 use sp_core::H256;
 use sp_runtime::{
@@ -194,4 +194,18 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 	let t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
 	t.into()
+}
+
+pub fn run_to_block(n: u64) {
+	while System::block_number() < n {
+		Rent::on_finalize(System::block_number());
+		NFT::on_finalize(System::block_number());
+		Balances::on_finalize(System::block_number());
+		System::on_finalize(System::block_number());
+		System::set_block_number(System::block_number() + 1);
+		System::on_initialize(System::block_number());
+		Balances::on_initialize(System::block_number());
+		NFT::on_initialize(System::block_number());
+		Rent::on_initialize(System::block_number());
+	}
 }
