@@ -31,6 +31,7 @@ type Block = frame_system::mocking::MockBlock<Test>;
 
 pub const ALICE: u64 = 1;
 pub const BOB: u64 = 2;
+pub const CHARLIE: u64 = 3;
 pub const COLLECTOR: u64 = 99;
 pub const NFT_MINT_FEE: Balance = 10;
 
@@ -124,7 +125,7 @@ parameter_types! {
 	pub const RentAccountSizeLimit: u32 = 3;
 	pub const SimultaneousContractLimit: u32 = 10;
 	pub const ActionsInBlockLimit: u32 = 10;
-	pub const ContractExpirationDuration: u32 = 300;
+	pub const ContractExpirationDuration: u32 = 2000;
 }
 
 impl ternoa_nft::Config for Test {

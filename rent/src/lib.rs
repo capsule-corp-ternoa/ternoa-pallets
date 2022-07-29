@@ -246,12 +246,14 @@ pub mod pallet {
 		CannotAcceptOfferForAutoAcceptance,
 		/// Operation is not permitted because acceptance type is not manual.
 		CannotRetractOfferForAutoAcceptance,
-		/// Terms can only be set for subscription duration.
+		/// Operation is not permitted because contract has started.
+		ContractHasStarted,
+		/// Operation is not permitted because contract has not started yet.
+		ContractHasNotStarted,
+		/// Terms can only be set for subscription duration and OnSubscriptionChange revocation type.
 		CanChangeTermForSubscriptionOnly,
 		/// New term must be suvscription.
 		CanSetTermsForSubscriptionOnly,
-		/// Operation is not permitted because revocation type is not OnSubscriptionChange.
-		CanChangeTermForOnSubscriptionChangeOnly,
 		/// Operation is not permitted because contract terms are already accepted
 		ContractTermsAlreadyAccepted,
 		/// Operation is allowed only for subscription
@@ -556,6 +558,7 @@ pub mod pallet {
 			let contract = Contracts::<T>::get(nft_id).ok_or(Error::<T>::ContractNotFound)?;
 			let is_manual_acceptance = matches!(contract.acceptance_type, AcceptanceType::ManualAcceptance { .. });
 			ensure!(is_manual_acceptance, Error::<T>::CannotRetractOfferForAutoAcceptance);
+			ensure!(!contract.has_started, Error::<T>::ContractHasStarted);
 			Self::remove_offer(nft_id, who.clone())?;
 
 			// Deposit event.
@@ -579,11 +582,11 @@ pub mod pallet {
 				let contract = x.as_mut().ok_or(Error::<T>::ContractNotFound)?;
 
 				ensure!(who == contract.renter, Error::<T>::NotTheRenter);
+				ensure!(contract.has_started, Error::<T>::ContractHasNotStarted);
 				let is_on_subscription_change =
 					matches!(contract.revocation_type, RevocationType::OnSubscriptionChange { .. });
-				ensure!(is_on_subscription_change, Error::<T>::CanChangeTermForOnSubscriptionChangeOnly);
 				let is_subscription = matches!(contract.duration, Duration::Subscription { .. });
-				ensure!(is_subscription, Error::<T>::CanChangeTermForSubscriptionOnly);
+				ensure!(is_on_subscription_change && is_subscription, Error::<T>::CanChangeTermForSubscriptionOnly);
 				let is_new_term_subscription = matches!(duration, Duration::Subscription { .. });
 				ensure!(is_new_term_subscription, Error::<T>::CanSetTermsForSubscriptionOnly);
 
@@ -611,7 +614,7 @@ pub mod pallet {
 
 				ensure!(Some(who) == contract.rentee, Error::<T>::NotTheRentee);
 				ensure!(!contract.terms_accepted, Error::<T>::ContractTermsAlreadyAccepted);
-	
+
 				contract.terms_accepted = true;
 
 				Ok(())
@@ -659,45 +662,47 @@ pub mod pallet {
 			let is_subscription = matches!(contract.duration, Duration::Subscription { .. });
 			ensure!(is_subscription, Error::<T>::RenewalOnlyForSubscription);
 
-			match contract.duration {
-				Duration::Subscription(_, max_blocks) => {
-					let mut should_end = false;
-					if let Some(max_blocks) = max_blocks {
-						if let Some(start_block) = contract.start_block {
-							if now - start_block >= max_blocks {
-								should_end = true;
+			if !contract.terms_accepted {
+				// Contract new terms were not accepted / declined
+				Self::end_contract(RawOrigin::Root.into(), nft_id, Some(contract.renter.clone()))?;
+			} else {
+				match contract.duration {
+					Duration::Subscription(_, max_blocks) => {
+						let mut should_end = false;
+						if let Some(max_blocks) = max_blocks {
+							if let Some(start_block) = contract.start_block {
+								if now - start_block >= max_blocks {
+									should_end = true;
+								}
 							}
 						}
-					}
-					if should_end {
-						// Contract has reached max block if it exists
-						Self::end_contract(RawOrigin::Root.into(), nft_id, None)?;
-					} else if !contract.terms_accepted {
-						// Contract new terms were not accepted / declined
-						Self::end_contract(RawOrigin::Root.into(), nft_id, Some(contract.renter.clone()))?;
-					} else {
-						// Contract subscription is renewed
-						if let Some(rentee) = contract.rentee {
-							let has_rent_fee = Self::ensure_enough_for_rent_fee(&contract.rent_fee, &rentee);
-							match has_rent_fee {
-								Err(_) => {
-									Self::end_contract(RawOrigin::Root.into(), nft_id, Some(rentee.clone()))?;
-								},
-								Ok(_) => {
-									Self::take_rent_fee(&rentee, contract.renter.clone(), &contract.rent_fee)?;
-									Self::remove_from_subscription_queue(nft_id)?;
-									Self::insert_in_queue(nft_id, &contract.duration)?;
+						if should_end {
+							// Contract has reached max block if it exists
+							Self::end_contract(RawOrigin::Root.into(), nft_id, None)?;
+						} else {
+							// Contract subscription is renewed
+							if let Some(rentee) = contract.rentee {
+								let has_rent_fee = Self::ensure_enough_for_rent_fee(&contract.rent_fee, &rentee);
+								match has_rent_fee {
+									Err(_) => {
+										Self::end_contract(RawOrigin::Root.into(), nft_id, Some(rentee.clone()))?;
+									},
+									Ok(_) => {
+										Self::take_rent_fee(&rentee, contract.renter.clone(), &contract.rent_fee)?;
+										Self::remove_from_subscription_queue(nft_id)?;
+										Self::insert_in_queue(nft_id, &contract.duration)?;
 
-									// Deposit event.
-									let event = Event::ContractSubscriptionPeriodStarted { nft_id };
-									Self::deposit_event(event);
-								},
+										// Deposit event.
+										let event = Event::ContractSubscriptionPeriodStarted { nft_id };
+										Self::deposit_event(event);
+									},
+								}
 							}
 						}
-					}
-				},
-				Duration::Fixed(_) => (),
-				Duration::Infinite => (),
+					},
+					Duration::Fixed(_) => (),
+					Duration::Infinite => (),
+				}
 			}
 
 			Ok(().into())
@@ -771,7 +776,9 @@ impl<T: Config> Pallet<T> {
 	}
 
 	// Check the cancellation fee NFT for existence
-	pub fn ensure_cancellation_fee_valid(cancellation_fee: &Option<CancellationFee<BalanceOf<T>>>) -> Result<(), DispatchError> {
+	pub fn ensure_cancellation_fee_valid(
+		cancellation_fee: &Option<CancellationFee<BalanceOf<T>>>,
+	) -> Result<(), DispatchError> {
 		if let Some(cancellation_fee) = cancellation_fee {
 			match cancellation_fee {
 				CancellationFee::NFT(nft_id) => {
@@ -805,7 +812,7 @@ impl<T: Config> Pallet<T> {
 			},
 			RentFee::NFT(nft_id) => {
 				let nft = T::NFTExt::get_nft(*nft_id).ok_or(Error::<T>::NFTNotFoundForCancellationFee)?;
-				ensure!(nft.owner == *from, Error::<T>::NotTheNFTOwnerForCancellationFee);
+				ensure!(nft.owner == *from, Error::<T>::NotTheNFTOwnerForRentFee);
 				Self::ensure_nft_available(&nft)?;
 			},
 		}
@@ -875,22 +882,20 @@ impl<T: Config> Pallet<T> {
 		match rent_fee {
 			RentFee::NFT(nft_id) => {
 				rent_fee_nft_id = Some(*nft_id);
-			}
+			},
 			_ => (),
 		}
 		if let Some(renter_cancellation_fee) = renter_cancellation_fee {
 			match renter_cancellation_fee {
 				CancellationFee::NFT(nft_id) => {
 					renter_cancellation_nft_id = Some(*nft_id);
-				}
+				},
 				_ => (),
 			}
 		}
 		if let Some(rentee_cancellation_fee) = rentee_cancellation_fee {
 			match rentee_cancellation_fee {
-				CancellationFee::NFT(nft_id) => {
-					rentee_cancellation_nft_id = Some(*nft_id)
-				}
+				CancellationFee::NFT(nft_id) => rentee_cancellation_nft_id = Some(*nft_id),
 				_ => (),
 			}
 		}
