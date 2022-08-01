@@ -210,8 +210,8 @@ pub mod pallet {
 		/// Cannot create a contract with fixed / infinite duration and onSubscriptionChange
 		/// revocation type.
 		SubscriptionChangeForSubscriptionOnly,
-		/// Cannot create a contract with infinite duration and flexible tokens cancellation fee.
-		NoInfiniteWithFlexibleFee,
+		/// Cannot create a contract with infinite or subscription duration and flexible tokens cancellation fee.
+		FlexibleFeeOnlyForFixedDuration,
 		/// Cannot create a contract with no revocation type and a renter cancellation fee.
 		NoRenterCancellationFeeWithNoRevocation,
 		/// Cannot create a contract with NFT id rent fee type and subscription duration.
@@ -637,6 +637,8 @@ pub mod pallet {
 			ensure_root(origin)?;
 			let contract = Contracts::<T>::get(nft_id).ok_or(Error::<T>::ContractNotFound)?;
 			let mut nft = T::NFTExt::get_nft(nft_id).ok_or(Error::<T>::NFTNotFound)?;
+			
+			ensure!(contract.has_started, Error::<T>::ContractHasNotStarted);
 
 			Self::process_cancellation_fees(nft_id, &contract, revoker.clone())?;
 
@@ -659,6 +661,8 @@ pub mod pallet {
 		pub fn renew_contract(origin: OriginFor<T>, nft_id: NFTId, now: T::BlockNumber) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
 			let contract = Contracts::<T>::get(nft_id).ok_or(Error::<T>::ContractNotFound)?;
+			
+			ensure!(contract.has_started, Error::<T>::ContractHasNotStarted);
 			let is_subscription = matches!(contract.duration, Duration::Subscription { .. });
 			ensure!(is_subscription, Error::<T>::RenewalOnlyForSubscription);
 
@@ -871,8 +875,8 @@ impl<T: Config> Pallet<T> {
 			Error::<T>::NoRenterCancellationFeeWithNoRevocation
 		);
 		ensure!(
-			!(*duration == Duration::Infinite && (is_flexible_token_renter || is_flexible_token_rentee)),
-			Error::<T>::NoInfiniteWithFlexibleFee
+			!((is_flexible_token_renter || is_flexible_token_rentee) && (is_subscription || *duration == Duration::Infinite)),
+			Error::<T>::FlexibleFeeOnlyForFixedDuration
 		);
 
 		let nft_id = Some(nft_id);
@@ -1023,7 +1027,13 @@ impl<T: Config> Pallet<T> {
 	pub fn get_contract_total_blocks(duration: &Duration<T::BlockNumber>) -> T::BlockNumber {
 		match duration {
 			Duration::Fixed(value) => *value,
-			Duration::Subscription(value, _) => *value,
+			Duration::Subscription(value, max_value) => {
+				if let Some(max_value) = *max_value {
+					max_value
+				} else {
+					*value
+				}
+			},
 			Duration::Infinite => T::BlockNumber::from(0u32),
 		}
 	}
@@ -1117,8 +1127,8 @@ impl<T: Config> Pallet<T> {
 		from: &T::AccountId,
 		to: T::AccountId,
 		cancellation_fee: &Option<CancellationFee<BalanceOf<T>>>,
-		end_block: Option<T::BlockNumber>,
-		total_blocks: T::BlockNumber,
+		nft_id: NFTId,
+		duration: &Duration<T::BlockNumber>,
 	) -> Result<(), DispatchError> {
 		if let Some(cancellation_fee) = cancellation_fee {
 			match cancellation_fee {
@@ -1133,7 +1143,8 @@ impl<T: Config> Pallet<T> {
 					T::Currency::transfer(&Self::account_id(), &to, *amount, KeepAlive)?;
 				},
 				CancellationFee::FlexibleTokens(amount) => {
-					//TODO Check
+					let end_block = Self::get_contract_end_block(nft_id, &duration);
+					let total_blocks = Self::get_contract_total_blocks(&duration);
 					ensure!(end_block.is_some(), Error::<T>::FlexibleFeeEndBlockNotFound);
 					if let Some(end_block) = end_block {
 						let current_block: u128 = <frame_system::Pallet<T>>::block_number().saturated_into();
@@ -1169,14 +1180,12 @@ impl<T: Config> Pallet<T> {
 				if revoker == contract.renter {
 					if let Some(rentee) = &contract.rentee {
 						// Revoked by renter, rentee receive renter's cancellation fee
-						let end_block = Self::get_contract_end_block(nft_id, &contract.duration);
-						let total_blocks = Self::get_contract_total_blocks(&contract.duration);
 						Self::pay_cancellation_fee(
 							&contract.renter,
 							rentee.clone(),
 							&contract.renter_cancellation_fee,
-							end_block,
-							total_blocks,
+							nft_id,
+							&contract.duration,
 						)?;
 
 						// Rentee gets back his cancellation fee
@@ -1185,14 +1194,12 @@ impl<T: Config> Pallet<T> {
 				} else if let Some(rentee) = &contract.rentee {
 					if revoker == *rentee {
 						// Revoked by rentee or Subscription payment stopped, renters receive rentees's cancellation fee
-						let end_block = Self::get_contract_end_block(nft_id, &contract.duration);
-						let total_blocks = Self::get_contract_total_blocks(&contract.duration);
 						Self::pay_cancellation_fee(
 							&rentee,
 							contract.renter.clone(),
 							&contract.rentee_cancellation_fee,
-							end_block,
-							total_blocks,
+							nft_id,
+							&contract.duration,
 						)?;
 
 						// Renter gets back his cancellation fee

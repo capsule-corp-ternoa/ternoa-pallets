@@ -15,9 +15,9 @@
 // along with Ternoa.  If not, see <http://www.gnu.org/licenses/>.
 
 use super::mock::*;
-use frame_support::{assert_noop, assert_ok, error::BadOrigin, BoundedVec};
+use frame_support::{assert_noop, error::BadOrigin, BoundedVec};
 use frame_system::RawOrigin;
-use primitives::nfts::{NFTData, NFTId, NFTState};
+use primitives::nfts::{NFTId, NFTState};
 use sp_arithmetic::per_things::Permill;
 use ternoa_common::traits::NFTExt;
 
@@ -46,7 +46,7 @@ const LESS_TOKENS: Balance = 10;
 const FIXED_AUTO_NOREV_NFT_NONE_NONE: NFTId = 0;
 const SUBSC_MANU_OSC_TOK_FIXTOK_FIXTOK: NFTId = 1;
 const INFINITE_AUTO_ANY_TOK_NFT_NFT: NFTId = 2;
-const SUBSC_AUTO_OSC_TOK_FLEXTOK_FLEXTOK: NFTId = 3;
+const FIXED_AUTO_ANY_TOK_FLEXTOK_FLEXTOK: NFTId = 3;
 const FIXED_MANU_ANY_NFT_NONE_NFT: NFTId = 4;
 
 const BLOCK_DURATION: u64 = 100;
@@ -75,7 +75,7 @@ fn prepare_tests() {
 	NFT::create_nft(alice.clone(), BoundedVec::default(), PERCENT_0, None, false).unwrap();
 	NFT::create_nft(bob.clone(), BoundedVec::default(), PERCENT_0, None, false).unwrap();
 	NFT::create_nft(bob.clone(), BoundedVec::default(), PERCENT_0, None, false).unwrap();
-	NFT::create_nft(bob.clone(), BoundedVec::default(), PERCENT_0, None, false).unwrap();
+	NFT::create_nft(bob, BoundedVec::default(), PERCENT_0, None, false).unwrap();
 
 	//Create contracts.
 	Rent::create_contract(
@@ -113,17 +113,17 @@ fn prepare_tests() {
 	.unwrap();
 	Rent::create_contract(
 		alice.clone(),
-		SUBSC_AUTO_OSC_TOK_FLEXTOK_FLEXTOK,
-		Duration::Subscription(BLOCK_DURATION, Some(BLOCK_MAX_DURATION)),
+		FIXED_AUTO_ANY_TOK_FLEXTOK_FLEXTOK,
+		Duration::Fixed(BLOCK_DURATION),
 		AcceptanceType::AutoAcceptance(Some(BoundedVec::try_from(vec![BOB]).unwrap())),
-		RevocationType::OnSubscriptionChange,
+		RevocationType::Anytime,
 		RentFee::Tokens(TOKENS),
 		Some(CancellationFee::FlexibleTokens(LESS_TOKENS)),
 		Some(CancellationFee::FlexibleTokens(LESS_TOKENS)),
 	)
 	.unwrap();
 	Rent::create_contract(
-		alice.clone(),
+		alice,
 		FIXED_MANU_ANY_NFT_NONE_NFT,
 		Duration::Fixed(BLOCK_DURATION),
 		AcceptanceType::ManualAcceptance(Some(BoundedVec::try_from(vec![BOB]).unwrap())),
@@ -135,22 +135,22 @@ fn prepare_tests() {
 	.unwrap();
 
 	//Check existence
-	assert_eq!(NFT::nfts(ALICE_NFT_ID_0).is_some(), true);
-	assert_eq!(NFT::nfts(ALICE_NFT_ID_1).is_some(), true);
-	assert_eq!(NFT::nfts(ALICE_NFT_ID_2).is_some(), true);
-	assert_eq!(NFT::nfts(ALICE_NFT_ID_3).is_some(), true);
-	assert_eq!(NFT::nfts(ALICE_NFT_ID_4).is_some(), true);
-	assert_eq!(NFT::nfts(ALICE_NFT_ID_5).is_some(), true);
-	assert_eq!(NFT::nfts(ALICE_NFT_ID_6).is_some(), true);
-	assert_eq!(NFT::nfts(ALICE_NFT_ID_7).is_some(), true);
-	assert_eq!(NFT::nfts(BOB_NFT_ID_0).is_some(), true);
-	assert_eq!(NFT::nfts(BOB_NFT_ID_1).is_some(), true);
-	assert_eq!(NFT::nfts(BOB_NFT_ID_2).is_some(), true);
-	assert_eq!(Rent::contracts(FIXED_AUTO_NOREV_NFT_NONE_NONE).is_some(), true);
-	assert_eq!(Rent::contracts(SUBSC_MANU_OSC_TOK_FIXTOK_FIXTOK).is_some(), true);
-	assert_eq!(Rent::contracts(INFINITE_AUTO_ANY_TOK_NFT_NFT).is_some(), true);
-	assert_eq!(Rent::contracts(SUBSC_AUTO_OSC_TOK_FLEXTOK_FLEXTOK).is_some(), true);
-	assert_eq!(Rent::contracts(FIXED_MANU_ANY_NFT_NONE_NFT).is_some(), true);
+	assert!(NFT::nfts(ALICE_NFT_ID_0).is_some());
+	assert!(NFT::nfts(ALICE_NFT_ID_1).is_some());
+	assert!(NFT::nfts(ALICE_NFT_ID_2).is_some());
+	assert!(NFT::nfts(ALICE_NFT_ID_3).is_some());
+	assert!(NFT::nfts(ALICE_NFT_ID_4).is_some());
+	assert!(NFT::nfts(ALICE_NFT_ID_5).is_some());
+	assert!(NFT::nfts(ALICE_NFT_ID_6).is_some());
+	assert!(NFT::nfts(ALICE_NFT_ID_7).is_some());
+	assert!(NFT::nfts(BOB_NFT_ID_0).is_some());
+	assert!(NFT::nfts(BOB_NFT_ID_1).is_some());
+	assert!(NFT::nfts(BOB_NFT_ID_2).is_some());
+	assert!(Rent::contracts(FIXED_AUTO_NOREV_NFT_NONE_NONE).is_some());
+	assert!(Rent::contracts(SUBSC_MANU_OSC_TOK_FIXTOK_FIXTOK).is_some());
+	assert!(Rent::contracts(INFINITE_AUTO_ANY_TOK_NFT_NFT).is_some());
+	assert!(Rent::contracts(FIXED_AUTO_ANY_TOK_FLEXTOK_FLEXTOK).is_some());
+	assert!(Rent::contracts(FIXED_MANU_ANY_NFT_NONE_NFT).is_some());
 }
 
 mod create_contract {
@@ -194,7 +194,7 @@ mod create_contract {
 				let contract = Rent::contracts(ALICE_NFT_ID_6).unwrap();
 				let nft = NFT::nfts(ALICE_NFT_ID_6).unwrap();
 				assert_eq!(contract, data.clone());
-				assert_eq!(nft.state.is_rented, true);
+				assert!(nft.state.is_rented);
 
 				// Event check.
 				let event = RentEvent::ContractCreated {
@@ -286,7 +286,7 @@ mod create_contract {
 	}
 
 	#[test]
-	fn no_infinite_with_flexible_fee_renter() {
+	fn flexible_fee_only_for_fixed_duration_renter() {
 		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000), (Rent::account_id(), 1_000_000)]).execute_with(
 			|| {
 				prepare_tests();
@@ -304,13 +304,13 @@ mod create_contract {
 					None,
 				);
 
-				assert_noop!(err, Error::<Test>::NoInfiniteWithFlexibleFee);
+				assert_noop!(err, Error::<Test>::FlexibleFeeOnlyForFixedDuration);
 			},
 		)
 	}
 
 	#[test]
-	fn no_infinite_with_flexible_fee_rentee() {
+	fn flexible_fee_only_for_fixed_duration_rentee() {
 		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000), (Rent::account_id(), 1_000_000)]).execute_with(
 			|| {
 				prepare_tests();
@@ -320,7 +320,7 @@ mod create_contract {
 				let err = Rent::create_contract(
 					alice,
 					ALICE_NFT_ID_6,
-					Duration::Infinite,
+					Duration::Subscription(BLOCK_DURATION, Some(BLOCK_MAX_DURATION)),
 					AcceptanceType::AutoAcceptance(None),
 					RevocationType::Anytime,
 					RentFee::Tokens(TOKENS),
@@ -328,7 +328,7 @@ mod create_contract {
 					Some(CancellationFee::FlexibleTokens(TOKENS)),
 				);
 
-				assert_noop!(err, Error::<Test>::NoInfiniteWithFlexibleFee);
+				assert_noop!(err, Error::<Test>::FlexibleFeeOnlyForFixedDuration);
 			},
 		)
 	}
@@ -713,15 +713,15 @@ mod revoke_contract {
 				let alice: mock::Origin = origin(ALICE);
 
 				// Revoke before start.
-				Rent::revoke_contract(alice, SUBSC_AUTO_OSC_TOK_FLEXTOK_FLEXTOK).unwrap();
+				Rent::revoke_contract(alice, FIXED_AUTO_ANY_TOK_FLEXTOK_FLEXTOK).unwrap();
 				// State check.
-				let nft = NFT::nfts(SUBSC_AUTO_OSC_TOK_FLEXTOK_FLEXTOK).unwrap();
-				assert_eq!(Rent::contracts(SUBSC_AUTO_OSC_TOK_FLEXTOK_FLEXTOK), None);
-				assert_eq!(Rent::available_queue().get(SUBSC_AUTO_OSC_TOK_FLEXTOK_FLEXTOK), None);
-				assert_eq!(nft.state.is_rented, false);
+				let nft = NFT::nfts(FIXED_AUTO_ANY_TOK_FLEXTOK_FLEXTOK).unwrap();
+				assert!(Rent::contracts(FIXED_AUTO_ANY_TOK_FLEXTOK_FLEXTOK).is_none());
+				assert!(Rent::available_queue().get(FIXED_AUTO_ANY_TOK_FLEXTOK_FLEXTOK).is_none());
+				assert!(!nft.state.is_rented);
 				// Event check.
 				let event =
-					RentEvent::ContractRevoked { nft_id: SUBSC_AUTO_OSC_TOK_FLEXTOK_FLEXTOK, revoked_by: ALICE };
+					RentEvent::ContractRevoked { nft_id: FIXED_AUTO_ANY_TOK_FLEXTOK_FLEXTOK, revoked_by: ALICE };
 				let event = Event::Rent(event);
 				System::assert_last_event(event);
 			},
@@ -747,9 +747,9 @@ mod revoke_contract {
 
 				// State check.
 				let nft = NFT::nfts(SUBSC_MANU_OSC_TOK_FIXTOK_FIXTOK).unwrap();
-				assert_eq!(Rent::contracts(SUBSC_MANU_OSC_TOK_FIXTOK_FIXTOK), None);
-				assert_eq!(Rent::available_queue().get(SUBSC_MANU_OSC_TOK_FIXTOK_FIXTOK), None);
-				assert_eq!(nft.state.is_rented, false);
+				assert!(Rent::contracts(SUBSC_MANU_OSC_TOK_FIXTOK_FIXTOK).is_none());
+				assert!(Rent::available_queue().get(SUBSC_MANU_OSC_TOK_FIXTOK_FIXTOK).is_none());
+				assert!(!nft.state.is_rented);
 				assert_eq!(Balances::free_balance(ALICE), alice_balance);
 				assert_eq!(Balances::free_balance(BOB), bob_balance + 2 * LESS_TOKENS);
 				// Event check.
@@ -779,9 +779,9 @@ mod revoke_contract {
 
 				// State check.
 				let nft = NFT::nfts(SUBSC_MANU_OSC_TOK_FIXTOK_FIXTOK).unwrap();
-				assert_eq!(Rent::contracts(SUBSC_MANU_OSC_TOK_FIXTOK_FIXTOK), None);
-				assert_eq!(Rent::available_queue().get(SUBSC_MANU_OSC_TOK_FIXTOK_FIXTOK), None);
-				assert_eq!(nft.state.is_rented, false);
+				assert!(Rent::contracts(SUBSC_MANU_OSC_TOK_FIXTOK_FIXTOK).is_none());
+				assert!(Rent::available_queue().get(SUBSC_MANU_OSC_TOK_FIXTOK_FIXTOK).is_none());
+				assert!(!nft.state.is_rented);
 				assert_eq!(Balances::free_balance(ALICE), alice_balance + 2 * LESS_TOKENS);
 				assert_eq!(Balances::free_balance(BOB), bob_balance);
 				// Event check.
@@ -809,9 +809,9 @@ mod revoke_contract {
 				let nft = NFT::nfts(INFINITE_AUTO_ANY_TOK_NFT_NFT).unwrap();
 				let alice_cancellation_nft = NFT::nfts(ALICE_NFT_ID_5).unwrap();
 				let bob_cancellation_nft = NFT::nfts(BOB_NFT_ID_0).unwrap();
-				assert_eq!(Rent::contracts(INFINITE_AUTO_ANY_TOK_NFT_NFT), None);
-				assert_eq!(Rent::available_queue().get(INFINITE_AUTO_ANY_TOK_NFT_NFT), None);
-				assert_eq!(nft.state.is_rented, false);
+				assert!(Rent::contracts(INFINITE_AUTO_ANY_TOK_NFT_NFT).is_none());
+				assert!(Rent::available_queue().get(INFINITE_AUTO_ANY_TOK_NFT_NFT).is_none());
+				assert!(!nft.state.is_rented);
 				assert_eq!(alice_cancellation_nft.owner, BOB);
 				assert_eq!(bob_cancellation_nft.owner, BOB);
 				// Event check.
@@ -838,9 +838,9 @@ mod revoke_contract {
 				let nft = NFT::nfts(INFINITE_AUTO_ANY_TOK_NFT_NFT).unwrap();
 				let alice_cancellation_nft = NFT::nfts(ALICE_NFT_ID_5).unwrap();
 				let bob_cancellation_nft = NFT::nfts(BOB_NFT_ID_0).unwrap();
-				assert_eq!(Rent::contracts(INFINITE_AUTO_ANY_TOK_NFT_NFT), None);
-				assert_eq!(Rent::available_queue().get(INFINITE_AUTO_ANY_TOK_NFT_NFT), None);
-				assert_eq!(nft.state.is_rented, false);
+				assert!(Rent::contracts(INFINITE_AUTO_ANY_TOK_NFT_NFT).is_none());
+				assert!(Rent::available_queue().get(INFINITE_AUTO_ANY_TOK_NFT_NFT).is_none());
+				assert!(!nft.state.is_rented);
 				assert_eq!(alice_cancellation_nft.owner, ALICE);
 				assert_eq!(bob_cancellation_nft.owner, ALICE);
 				// Event check.
@@ -859,7 +859,7 @@ mod revoke_contract {
 				let alice: mock::Origin = origin(ALICE);
 				let bob: mock::Origin = origin(BOB);
 
-				Rent::rent(bob, SUBSC_AUTO_OSC_TOK_FLEXTOK_FLEXTOK).unwrap();
+				Rent::rent(bob, FIXED_AUTO_ANY_TOK_FLEXTOK_FLEXTOK).unwrap();
 
 				let alice_balance = Balances::free_balance(ALICE);
 				let bob_balance = Balances::free_balance(BOB);
@@ -868,18 +868,18 @@ mod revoke_contract {
 				run_to_block(BLOCK_DURATION / 5);
 
 				// Revoke.
-				Rent::revoke_contract(alice, SUBSC_AUTO_OSC_TOK_FLEXTOK_FLEXTOK).unwrap();
+				Rent::revoke_contract(alice, FIXED_AUTO_ANY_TOK_FLEXTOK_FLEXTOK).unwrap();
 
 				// State check.
-				let nft = NFT::nfts(SUBSC_AUTO_OSC_TOK_FLEXTOK_FLEXTOK).unwrap();
-				assert_eq!(Rent::contracts(SUBSC_AUTO_OSC_TOK_FLEXTOK_FLEXTOK), None);
-				assert_eq!(Rent::available_queue().get(SUBSC_AUTO_OSC_TOK_FLEXTOK_FLEXTOK), None);
-				assert_eq!(nft.state.is_rented, false);
+				let nft = NFT::nfts(FIXED_AUTO_ANY_TOK_FLEXTOK_FLEXTOK).unwrap();
+				assert!(Rent::contracts(FIXED_AUTO_ANY_TOK_FLEXTOK_FLEXTOK).is_none());
+				assert!(Rent::available_queue().get(FIXED_AUTO_ANY_TOK_FLEXTOK_FLEXTOK).is_none());
+				assert!(!nft.state.is_rented);
 				assert_eq!(Balances::free_balance(ALICE), alice_balance + (LESS_TOKENS / 5));
 				assert_eq!(Balances::free_balance(BOB), bob_balance + LESS_TOKENS + (4 * LESS_TOKENS / 5));
 				// Event check.
 				let event =
-					RentEvent::ContractRevoked { nft_id: SUBSC_AUTO_OSC_TOK_FLEXTOK_FLEXTOK, revoked_by: ALICE };
+					RentEvent::ContractRevoked { nft_id: FIXED_AUTO_ANY_TOK_FLEXTOK_FLEXTOK, revoked_by: ALICE };
 				let event = Event::Rent(event);
 				System::assert_last_event(event);
 			},
@@ -893,7 +893,7 @@ mod revoke_contract {
 				prepare_tests();
 				let bob: mock::Origin = origin(BOB);
 
-				Rent::rent(bob.clone(), SUBSC_AUTO_OSC_TOK_FLEXTOK_FLEXTOK).unwrap();
+				Rent::rent(bob.clone(), FIXED_AUTO_ANY_TOK_FLEXTOK_FLEXTOK).unwrap();
 
 				let alice_balance = Balances::free_balance(ALICE);
 				let bob_balance = Balances::free_balance(BOB);
@@ -902,17 +902,17 @@ mod revoke_contract {
 				run_to_block(BLOCK_DURATION / 5);
 
 				// Revoke.
-				Rent::revoke_contract(bob, SUBSC_AUTO_OSC_TOK_FLEXTOK_FLEXTOK).unwrap();
+				Rent::revoke_contract(bob, FIXED_AUTO_ANY_TOK_FLEXTOK_FLEXTOK).unwrap();
 
 				// State check.
-				let nft = NFT::nfts(SUBSC_AUTO_OSC_TOK_FLEXTOK_FLEXTOK).unwrap();
-				assert_eq!(Rent::contracts(SUBSC_AUTO_OSC_TOK_FLEXTOK_FLEXTOK), None);
-				assert_eq!(Rent::available_queue().get(SUBSC_AUTO_OSC_TOK_FLEXTOK_FLEXTOK), None);
-				assert_eq!(nft.state.is_rented, false);
+				let nft = NFT::nfts(FIXED_AUTO_ANY_TOK_FLEXTOK_FLEXTOK).unwrap();
+				assert!(Rent::contracts(FIXED_AUTO_ANY_TOK_FLEXTOK_FLEXTOK).is_none());
+				assert!(Rent::available_queue().get(FIXED_AUTO_ANY_TOK_FLEXTOK_FLEXTOK).is_none());
+				assert!(!nft.state.is_rented);
 				assert_eq!(Balances::free_balance(ALICE), alice_balance + LESS_TOKENS + (4 * LESS_TOKENS / 5));
 				assert_eq!(Balances::free_balance(BOB), bob_balance + (LESS_TOKENS / 5));
 				// Event check.
-				let event = RentEvent::ContractRevoked { nft_id: SUBSC_AUTO_OSC_TOK_FLEXTOK_FLEXTOK, revoked_by: BOB };
+				let event = RentEvent::ContractRevoked { nft_id: FIXED_AUTO_ANY_TOK_FLEXTOK_FLEXTOK, revoked_by: BOB };
 				let event = Event::Rent(event);
 				System::assert_last_event(event);
 			},
@@ -978,20 +978,20 @@ mod rent {
 				let bob: mock::Origin = origin(BOB);
 
 				// Rent contract.
-				Rent::rent(bob, SUBSC_AUTO_OSC_TOK_FLEXTOK_FLEXTOK).unwrap();
+				Rent::rent(bob, FIXED_AUTO_ANY_TOK_FLEXTOK_FLEXTOK).unwrap();
 
 				// State check.
-				let nft = NFT::nfts(SUBSC_AUTO_OSC_TOK_FLEXTOK_FLEXTOK).unwrap();
-				let contract = Rent::contracts(SUBSC_AUTO_OSC_TOK_FLEXTOK_FLEXTOK).unwrap();
+				let nft = NFT::nfts(FIXED_AUTO_ANY_TOK_FLEXTOK_FLEXTOK).unwrap();
+				let contract = Rent::contracts(FIXED_AUTO_ANY_TOK_FLEXTOK_FLEXTOK).unwrap();
 				assert_eq!(contract.rentee, Some(BOB));
-				assert_eq!(contract.has_started, true);
-				assert_eq!(contract.terms_accepted, true);
-				assert_eq!(Rent::available_queue().get(SUBSC_AUTO_OSC_TOK_FLEXTOK_FLEXTOK), None);
-				assert!(Rent::subscription_queue().get(SUBSC_AUTO_OSC_TOK_FLEXTOK_FLEXTOK).is_some());
-				assert_eq!(nft.state.is_rented, true);
+				assert!(contract.has_started);
+				assert!(contract.terms_accepted);
+				assert!(Rent::available_queue().get(FIXED_AUTO_ANY_TOK_FLEXTOK_FLEXTOK).is_none());
+				assert!(Rent::fixed_queue().get(FIXED_AUTO_ANY_TOK_FLEXTOK_FLEXTOK).is_some());
+				assert!(nft.state.is_rented);
 
 				// Event check.
-				let event = RentEvent::ContractStarted { nft_id: SUBSC_AUTO_OSC_TOK_FLEXTOK_FLEXTOK, rentee: BOB };
+				let event = RentEvent::ContractStarted { nft_id: FIXED_AUTO_ANY_TOK_FLEXTOK_FLEXTOK, rentee: BOB };
 				let event = Event::Rent(event);
 				System::assert_last_event(event);
 			},
@@ -1016,11 +1016,11 @@ mod rent {
 				let nft = NFT::nfts(SUBSC_MANU_OSC_TOK_FIXTOK_FIXTOK).unwrap();
 				let contract = Rent::contracts(SUBSC_MANU_OSC_TOK_FIXTOK_FIXTOK).unwrap();
 				assert_eq!(contract.rentee, Some(BOB));
-				assert_eq!(contract.has_started, true);
-				assert_eq!(contract.terms_accepted, true);
-				assert_eq!(Rent::available_queue().get(SUBSC_MANU_OSC_TOK_FIXTOK_FIXTOK), None);
+				assert!(contract.has_started);
+				assert!(contract.terms_accepted);
+				assert!(Rent::available_queue().get(SUBSC_MANU_OSC_TOK_FIXTOK_FIXTOK).is_none());
 				assert!(Rent::subscription_queue().get(SUBSC_MANU_OSC_TOK_FIXTOK_FIXTOK).is_some());
-				assert_eq!(nft.state.is_rented, true);
+				assert!(nft.state.is_rented);
 
 				// Event check.
 				let event = RentEvent::ContractStarted { nft_id: SUBSC_MANU_OSC_TOK_FIXTOK_FIXTOK, rentee: BOB };
@@ -1161,15 +1161,13 @@ mod rent {
 			assert_noop!(err, Error::<Test>::NotAuthorizedForRent);
 
 			// Try to rent without being authorized auto acceptance.
-			let err = Rent::rent(charlie, SUBSC_AUTO_OSC_TOK_FLEXTOK_FLEXTOK);
+			let err = Rent::rent(charlie, FIXED_AUTO_ANY_TOK_FLEXTOK_FLEXTOK);
 			assert_noop!(err, Error::<Test>::NotAuthorizedForRent);
 		})
 	}
 }
 
 mod accept_rent_offer {
-	use frame_support::traits::Currency;
-
 	use super::*;
 
 	#[test]
@@ -1193,11 +1191,11 @@ mod accept_rent_offer {
 				let nft = NFT::nfts(SUBSC_MANU_OSC_TOK_FIXTOK_FIXTOK).unwrap();
 				let contract = Rent::contracts(SUBSC_MANU_OSC_TOK_FIXTOK_FIXTOK).unwrap();
 				assert_eq!(contract.rentee, Some(BOB));
-				assert_eq!(contract.has_started, true);
-				assert_eq!(contract.terms_accepted, true);
-				assert_eq!(Rent::available_queue().get(SUBSC_MANU_OSC_TOK_FIXTOK_FIXTOK), None);
+				assert!(contract.has_started);
+				assert!(contract.terms_accepted);
+				assert!(Rent::available_queue().get(SUBSC_MANU_OSC_TOK_FIXTOK_FIXTOK).is_none());
 				assert!(Rent::subscription_queue().get(SUBSC_MANU_OSC_TOK_FIXTOK_FIXTOK).is_some());
-				assert_eq!(nft.state.is_rented, true);
+				assert!(nft.state.is_rented);
 				assert_eq!(Balances::free_balance(ALICE), alice_balance + TOKENS);
 				assert_eq!(Balances::free_balance(BOB), bob_balance - TOKENS - LESS_TOKENS);
 				// Event check.
@@ -1451,27 +1449,28 @@ mod change_subscription_terms {
 				let alice: mock::Origin = origin(ALICE);
 				let bob: mock::Origin = origin(BOB);
 
-				Rent::rent(bob, SUBSC_AUTO_OSC_TOK_FLEXTOK_FLEXTOK).unwrap();
+				Rent::rent(bob, SUBSC_MANU_OSC_TOK_FIXTOK_FIXTOK).unwrap();
+				Rent::accept_rent_offer(alice.clone(), SUBSC_MANU_OSC_TOK_FIXTOK_FIXTOK, BOB).unwrap();
 
 				// Change subscription terms.
 				Rent::change_subscription_terms(
 					alice,
-					SUBSC_AUTO_OSC_TOK_FLEXTOK_FLEXTOK,
+					SUBSC_MANU_OSC_TOK_FIXTOK_FIXTOK,
 					Duration::Subscription(BLOCK_DURATION + 1, None),
 					TOKENS + 1,
 				)
 				.unwrap();
 
 				// State check.
-				let contract = Rent::contracts(SUBSC_AUTO_OSC_TOK_FLEXTOK_FLEXTOK).unwrap();
-				assert_eq!(contract.has_started, true);
-				assert_eq!(contract.terms_accepted, false);
+				let contract = Rent::contracts(SUBSC_MANU_OSC_TOK_FIXTOK_FIXTOK).unwrap();
+				assert!(contract.has_started);
+				assert!(!contract.terms_accepted);
 				assert_eq!(contract.duration, Duration::Subscription(BLOCK_DURATION + 1, None));
 				assert_eq!(contract.rent_fee, RentFee::Tokens(TOKENS + 1));
 
 				// Event check.
 				let event = RentEvent::ContractSubscriptionTermsChanged {
-					nft_id: SUBSC_AUTO_OSC_TOK_FLEXTOK_FLEXTOK,
+					nft_id: SUBSC_MANU_OSC_TOK_FIXTOK_FIXTOK,
 					duration: Duration::Subscription(BLOCK_DURATION + 1, None),
 					rent_fee: RentFee::Tokens(TOKENS + 1),
 				};
@@ -1488,7 +1487,7 @@ mod change_subscription_terms {
 				prepare_tests();
 				let alice: mock::Origin = origin(ALICE);
 
-				// Change subscription terms for invalid contract
+				// Change subscription terms for invalid contract.
 				let err = Rent::change_subscription_terms(
 					alice,
 					INVALID_NFT,
@@ -1507,10 +1506,10 @@ mod change_subscription_terms {
 				prepare_tests();
 				let bob: mock::Origin = origin(BOB);
 
-				// Change subscription terms from invalid owner
+				// Change subscription terms from invalid owner.
 				let err = Rent::change_subscription_terms(
 					bob,
-					SUBSC_AUTO_OSC_TOK_FLEXTOK_FLEXTOK,
+					FIXED_AUTO_ANY_TOK_FLEXTOK_FLEXTOK,
 					Duration::Subscription(BLOCK_DURATION + 1, None),
 					TOKENS + 1,
 				);
@@ -1526,10 +1525,10 @@ mod change_subscription_terms {
 				prepare_tests();
 				let alice: mock::Origin = origin(ALICE);
 
-				// Change subscription terms from invalid owner
+				// Change subscription terms for contract that did not start.
 				let err = Rent::change_subscription_terms(
 					alice,
-					SUBSC_AUTO_OSC_TOK_FLEXTOK_FLEXTOK,
+					FIXED_AUTO_ANY_TOK_FLEXTOK_FLEXTOK,
 					Duration::Subscription(BLOCK_DURATION + 1, None),
 					TOKENS + 1,
 				);
@@ -1568,12 +1567,13 @@ mod change_subscription_terms {
 				let alice: mock::Origin = origin(ALICE);
 				let bob: mock::Origin = origin(BOB);
 
-				Rent::rent(bob, SUBSC_AUTO_OSC_TOK_FLEXTOK_FLEXTOK).unwrap();
+				Rent::rent(bob, SUBSC_MANU_OSC_TOK_FIXTOK_FIXTOK).unwrap();
+				Rent::accept_rent_offer(alice.clone(), SUBSC_MANU_OSC_TOK_FIXTOK_FIXTOK, BOB).unwrap();
 
 				// Change subscription terms for invalid contract
 				let err = Rent::change_subscription_terms(
 					alice,
-					SUBSC_AUTO_OSC_TOK_FLEXTOK_FLEXTOK,
+					SUBSC_MANU_OSC_TOK_FIXTOK_FIXTOK,
 					Duration::Fixed(BLOCK_DURATION + 1),
 					TOKENS + 1,
 				);
@@ -1594,26 +1594,27 @@ mod accept_subscription_terms {
 				let alice: mock::Origin = origin(ALICE);
 				let bob: mock::Origin = origin(BOB);
 
-				Rent::rent(bob.clone(), SUBSC_AUTO_OSC_TOK_FLEXTOK_FLEXTOK).unwrap();
+				Rent::rent(bob.clone(), SUBSC_MANU_OSC_TOK_FIXTOK_FIXTOK).unwrap();
+				Rent::accept_rent_offer(alice.clone(), SUBSC_MANU_OSC_TOK_FIXTOK_FIXTOK, BOB).unwrap();
 
 				// Change subscription terms.
 				Rent::change_subscription_terms(
 					alice,
-					SUBSC_AUTO_OSC_TOK_FLEXTOK_FLEXTOK,
+					SUBSC_MANU_OSC_TOK_FIXTOK_FIXTOK,
 					Duration::Subscription(BLOCK_DURATION + 1, None),
 					TOKENS + 1,
 				)
 				.unwrap();
 
 				// Accept new subscription terms
-				Rent::accept_subscription_terms(bob, SUBSC_AUTO_OSC_TOK_FLEXTOK_FLEXTOK).unwrap();
+				Rent::accept_subscription_terms(bob, SUBSC_MANU_OSC_TOK_FIXTOK_FIXTOK).unwrap();
 
 				// State check.
-				let contract = Rent::contracts(SUBSC_AUTO_OSC_TOK_FLEXTOK_FLEXTOK).unwrap();
-				assert_eq!(contract.terms_accepted, true);
+				let contract = Rent::contracts(SUBSC_MANU_OSC_TOK_FIXTOK_FIXTOK).unwrap();
+				assert!(contract.terms_accepted);
 
 				// Event check.
-				let event = RentEvent::ContractSubscriptionTermsAccepted { nft_id: SUBSC_AUTO_OSC_TOK_FLEXTOK_FLEXTOK };
+				let event = RentEvent::ContractSubscriptionTermsAccepted { nft_id: SUBSC_MANU_OSC_TOK_FIXTOK_FIXTOK };
 				let event = Event::Rent(event);
 				System::assert_last_event(event);
 			},
@@ -1628,7 +1629,7 @@ mod accept_subscription_terms {
 				let bob: mock::Origin = origin(BOB);
 
 				// Try to accept new subscription terms without being rentee
-				let err = Rent::accept_subscription_terms(bob, SUBSC_AUTO_OSC_TOK_FLEXTOK_FLEXTOK);
+				let err = Rent::accept_subscription_terms(bob, FIXED_AUTO_ANY_TOK_FLEXTOK_FLEXTOK);
 				assert_noop!(err, Error::<Test>::NotTheRentee);
 			},
 		)
@@ -1641,10 +1642,10 @@ mod accept_subscription_terms {
 				prepare_tests();
 				let bob: mock::Origin = origin(BOB);
 
-				Rent::rent(bob.clone(), SUBSC_AUTO_OSC_TOK_FLEXTOK_FLEXTOK).unwrap();
+				Rent::rent(bob.clone(), FIXED_AUTO_ANY_TOK_FLEXTOK_FLEXTOK).unwrap();
 
 				// Try to accept subscription terms while already accepted
-				let err = Rent::accept_subscription_terms(bob, SUBSC_AUTO_OSC_TOK_FLEXTOK_FLEXTOK);
+				let err = Rent::accept_subscription_terms(bob, FIXED_AUTO_ANY_TOK_FLEXTOK_FLEXTOK);
 				assert_noop!(err, Error::<Test>::ContractTermsAlreadyAccepted);
 			},
 		)
@@ -1668,7 +1669,7 @@ mod end_contract {
 				// State check.
 				let contract = Rent::contracts(FIXED_AUTO_NOREV_NFT_NONE_NONE);
 				let rent_fee_nft = NFT::get_nft(BOB_NFT_ID_0).unwrap();
-				assert_eq!(contract, None);
+				assert!(contract.is_none());
 				assert_eq!(rent_fee_nft.owner, ALICE);
 
 				// Event check.
@@ -1684,17 +1685,19 @@ mod end_contract {
 		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000), (Rent::account_id(), 1_000_000)]).execute_with(
 			|| {
 				prepare_tests();
+				let alice: mock::Origin = origin(ALICE);
 				let bob: mock::Origin = origin(BOB);
 				let alice_balance = Balances::free_balance(ALICE);
 				let bob_balance = Balances::free_balance(BOB);
 
-				Rent::rent(bob, SUBSC_AUTO_OSC_TOK_FLEXTOK_FLEXTOK).unwrap();
+				Rent::rent(bob, SUBSC_MANU_OSC_TOK_FIXTOK_FIXTOK).unwrap();
+				Rent::accept_rent_offer(alice, SUBSC_MANU_OSC_TOK_FIXTOK_FIXTOK, BOB).unwrap();
 
 				run_to_block(BLOCK_MAX_DURATION + 1);
 
 				// State check.
-				let contract = Rent::contracts(SUBSC_AUTO_OSC_TOK_FLEXTOK_FLEXTOK);
-				assert_eq!(contract, None);
+				let contract = Rent::contracts(SUBSC_MANU_OSC_TOK_FIXTOK_FIXTOK);
+				assert!(contract.is_none());
 				assert_eq!(
 					Balances::free_balance(ALICE),
 					alice_balance + (BLOCK_MAX_DURATION * TOKENS / BLOCK_DURATION) + LESS_TOKENS
@@ -1702,7 +1705,7 @@ mod end_contract {
 				assert_eq!(Balances::free_balance(BOB), bob_balance - (BLOCK_MAX_DURATION * TOKENS / BLOCK_DURATION));
 
 				// Event check.
-				let event = RentEvent::ContractEnded { nft_id: SUBSC_AUTO_OSC_TOK_FLEXTOK_FLEXTOK, revoked_by: None };
+				let event = RentEvent::ContractEnded { nft_id: SUBSC_MANU_OSC_TOK_FIXTOK_FIXTOK, revoked_by: None };
 				let event = Event::Rent(event);
 				System::assert_last_event(event);
 			},
@@ -1719,10 +1722,11 @@ mod end_contract {
 				let alice_balance = Balances::free_balance(ALICE);
 				let bob_balance = Balances::free_balance(BOB);
 
-				Rent::rent(bob, SUBSC_AUTO_OSC_TOK_FLEXTOK_FLEXTOK).unwrap();
+				Rent::rent(bob, SUBSC_MANU_OSC_TOK_FIXTOK_FIXTOK).unwrap();
+				Rent::accept_rent_offer(alice.clone(), SUBSC_MANU_OSC_TOK_FIXTOK_FIXTOK, BOB).unwrap();
 				Rent::change_subscription_terms(
 					alice,
-					SUBSC_AUTO_OSC_TOK_FLEXTOK_FLEXTOK,
+					SUBSC_MANU_OSC_TOK_FIXTOK_FIXTOK,
 					Duration::Subscription(BLOCK_DURATION / 2, Some(BLOCK_MAX_DURATION / 2)),
 					TOKENS,
 				)
@@ -1731,17 +1735,224 @@ mod end_contract {
 				run_to_block(BLOCK_DURATION + 1);
 
 				// State check.
-				let contract = Rent::contracts(SUBSC_AUTO_OSC_TOK_FLEXTOK_FLEXTOK);
-				assert_eq!(contract, None);
-				// Todo
-				// assert_eq!(Balances::free_balance(ALICE), alice_balance + TOKENS + (BLOCK_DURATION * LESS_TOKENS / BLOCK_MAX_DURATION));
-				// assert_eq!(Balances::free_balance(BOB), bob_balance - ((BLOCK_MAX_DURATION - BLOCK_DURATION) * TOKENS / BLOCK_MAX_DURATION) + LESS_TOKENS);
+				let contract = Rent::contracts(SUBSC_MANU_OSC_TOK_FIXTOK_FIXTOK);
+				assert!(contract.is_none());
+				assert_eq!(Balances::free_balance(ALICE), alice_balance + TOKENS);
+				assert_eq!(Balances::free_balance(BOB), bob_balance - TOKENS + LESS_TOKENS);
 
 				// Event check.
 				let event =
-					RentEvent::ContractEnded { nft_id: SUBSC_AUTO_OSC_TOK_FLEXTOK_FLEXTOK, revoked_by: Some(ALICE) };
+					RentEvent::ContractEnded { nft_id: SUBSC_MANU_OSC_TOK_FIXTOK_FIXTOK, revoked_by: Some(ALICE) };
 				let event = Event::Rent(event);
 				System::assert_last_event(event);
+			},
+		)
+	}
+
+	#[test]
+	fn end_contract_rentee() {
+		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000), (Rent::account_id(), 1_000_000)]).execute_with(
+			|| {
+				prepare_tests();
+				let alice: mock::Origin = origin(ALICE);
+				let bob: mock::Origin = origin(BOB);
+				let alice_balance = Balances::free_balance(ALICE);
+
+				Rent::rent(bob, SUBSC_MANU_OSC_TOK_FIXTOK_FIXTOK).unwrap();
+				Rent::accept_rent_offer(alice, SUBSC_MANU_OSC_TOK_FIXTOK_FIXTOK, BOB).unwrap();
+				Balances::set_balance(root(), BOB, LESS_TOKENS, 0).unwrap();
+
+				run_to_block(BLOCK_DURATION + 1);
+
+				// State check.
+				let contract = Rent::contracts(SUBSC_MANU_OSC_TOK_FIXTOK_FIXTOK);
+				assert!(contract.is_none());
+				assert_eq!(Balances::free_balance(ALICE), alice_balance + TOKENS + 2 * LESS_TOKENS);
+				assert_eq!(Balances::free_balance(BOB), LESS_TOKENS);
+
+				// Event check.
+				let event =
+					RentEvent::ContractEnded { nft_id: SUBSC_MANU_OSC_TOK_FIXTOK_FIXTOK, revoked_by: Some(BOB) };
+				let event = Event::Rent(event);
+				System::assert_last_event(event);
+			},
+		)
+	}
+
+	#[test]
+	fn bad_origin() {
+		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000), (Rent::account_id(), 1_000_000)]).execute_with(
+			|| {
+				prepare_tests();
+				let alice: mock::Origin = origin(ALICE);
+				let err = Rent::end_contract(alice, INVALID_NFT, None);
+				assert_noop!(err, BadOrigin);
+			},
+		)
+	}
+
+	#[test]
+	fn contract_not_found() {
+		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000), (Rent::account_id(), 1_000_000)]).execute_with(
+			|| {
+				prepare_tests();
+				let err = Rent::end_contract(root(), INVALID_NFT, None);
+				assert_noop!(err, Error::<Test>::ContractNotFound);
+			},
+		)
+	}
+
+	#[test]
+	fn contract_has_not_started() {
+		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000), (Rent::account_id(), 1_000_000)]).execute_with(
+			|| {
+				prepare_tests();
+				let err = Rent::end_contract(root(), FIXED_AUTO_ANY_TOK_FLEXTOK_FLEXTOK, None);
+				assert_noop!(err, Error::<Test>::ContractHasNotStarted);
+			},
+		)
+	}
+}
+
+mod renew_contract {
+	use super::*;
+
+	#[test]
+	fn renew_contract() {
+		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000), (Rent::account_id(), 1_000_000)]).execute_with(
+			|| {
+				prepare_tests();
+				let alice: mock::Origin = origin(ALICE);
+				let bob: mock::Origin = origin(BOB);
+
+				Rent::rent(bob, SUBSC_MANU_OSC_TOK_FIXTOK_FIXTOK).unwrap();
+				Rent::accept_rent_offer(alice, SUBSC_MANU_OSC_TOK_FIXTOK_FIXTOK, BOB).unwrap();
+
+				// Check subscription queue
+				assert_eq!(Rent::subscription_queue().get(SUBSC_MANU_OSC_TOK_FIXTOK_FIXTOK), Some(BLOCK_DURATION+1));
+
+				run_to_block(BLOCK_DURATION + 1);
+
+				// State check.
+				let contract = Rent::contracts(SUBSC_MANU_OSC_TOK_FIXTOK_FIXTOK);
+				assert!(contract.is_some());
+				assert_eq!(Rent::subscription_queue().get(SUBSC_MANU_OSC_TOK_FIXTOK_FIXTOK), Some(2*BLOCK_DURATION+1));
+
+				// Event check.
+				let event = RentEvent::ContractSubscriptionPeriodStarted { nft_id: SUBSC_MANU_OSC_TOK_FIXTOK_FIXTOK };
+				let event = Event::Rent(event);
+				System::assert_last_event(event);
+			},
+		)
+	}
+
+	#[test]
+	fn bad_origin() {
+		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000), (Rent::account_id(), 1_000_000)]).execute_with(
+			|| {
+				prepare_tests();
+				let alice: mock::Origin = origin(ALICE);
+				let err = Rent::renew_contract(alice, INVALID_NFT, 1);
+				assert_noop!(err, BadOrigin);
+			},
+		)
+	}
+
+	#[test]
+	fn contract_not_found() {
+		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000), (Rent::account_id(), 1_000_000)]).execute_with(
+			|| {
+				prepare_tests();
+				let err = Rent::renew_contract(root(), INVALID_NFT, 1);
+				assert_noop!(err, Error::<Test>::ContractNotFound);
+			},
+		)
+	}
+
+	#[test]
+	fn contract_has_not_started() {
+		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000), (Rent::account_id(), 1_000_000)]).execute_with(
+			|| {
+				prepare_tests();
+				let err = Rent::renew_contract(root(), FIXED_AUTO_ANY_TOK_FLEXTOK_FLEXTOK, 1);
+				assert_noop!(err, Error::<Test>::ContractHasNotStarted);
+			},
+		)
+	}
+
+	#[test]
+	fn renewal_only_for_subscription() {
+		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000), (Rent::account_id(), 1_000_000)]).execute_with(
+			|| {
+				prepare_tests();
+				let bob: mock::Origin = origin(BOB);
+
+				Rent::rent(bob, FIXED_AUTO_ANY_TOK_FLEXTOK_FLEXTOK).unwrap();
+
+				let err = Rent::renew_contract(root(), FIXED_AUTO_ANY_TOK_FLEXTOK_FLEXTOK, 1);
+				assert_noop!(err, Error::<Test>::RenewalOnlyForSubscription);
+			},
+		)
+	}
+}
+
+mod remove_expired_contract {
+	use super::*;
+
+	#[test]
+	fn remove_expired_contract() {
+		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000), (Rent::account_id(), 1_000_000)]).execute_with(
+			|| {
+				prepare_tests();
+
+				run_to_block((ContractExpirationDuration::get() + 1).into());
+
+				// State check.
+				assert!(Rent::contracts(FIXED_AUTO_NOREV_NFT_NONE_NONE).is_none());
+				assert_eq!(Rent::available_queue().get(FIXED_AUTO_NOREV_NFT_NONE_NONE), None);
+				assert!(Rent::contracts(SUBSC_MANU_OSC_TOK_FIXTOK_FIXTOK).is_none());
+				assert_eq!(Rent::available_queue().get(SUBSC_MANU_OSC_TOK_FIXTOK_FIXTOK), None);
+				assert!(Rent::contracts(INFINITE_AUTO_ANY_TOK_NFT_NFT).is_none());
+				assert_eq!(Rent::available_queue().get(INFINITE_AUTO_ANY_TOK_NFT_NFT), None);
+				assert!(Rent::contracts(FIXED_AUTO_ANY_TOK_FLEXTOK_FLEXTOK).is_none());
+				assert_eq!(Rent::available_queue().get(FIXED_AUTO_ANY_TOK_FLEXTOK_FLEXTOK), None);
+				assert!(Rent::contracts(FIXED_MANU_ANY_NFT_NONE_NFT).is_none());
+				assert_eq!(Rent::available_queue().get(FIXED_MANU_ANY_NFT_NONE_NFT), None);
+
+				// Event check.
+				let event_0 = Event::Rent(RentEvent::ContractAvailableExpired { nft_id: FIXED_AUTO_NOREV_NFT_NONE_NONE });
+				let event_1 = Event::Rent(RentEvent::ContractAvailableExpired { nft_id: SUBSC_MANU_OSC_TOK_FIXTOK_FIXTOK });
+				let event_2 = Event::Rent(RentEvent::ContractAvailableExpired { nft_id: INFINITE_AUTO_ANY_TOK_NFT_NFT });
+				let event_3 = Event::Rent(RentEvent::ContractAvailableExpired { nft_id: FIXED_AUTO_ANY_TOK_FLEXTOK_FLEXTOK });
+				let event_4 = Event::Rent(RentEvent::ContractAvailableExpired { nft_id: FIXED_MANU_ANY_NFT_NONE_NFT });
+				System::assert_has_event(event_0);
+				System::assert_has_event(event_1);
+				System::assert_has_event(event_2);
+				System::assert_has_event(event_3);
+				System::assert_has_event(event_4);
+			},
+		)
+	}
+
+	#[test]
+	fn bad_origin() {
+		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000), (Rent::account_id(), 1_000_000)]).execute_with(
+			|| {
+				prepare_tests();
+				let alice: mock::Origin = origin(ALICE);
+				let err = Rent::remove_expired_contract(alice, INVALID_NFT);
+				assert_noop!(err, BadOrigin);
+			},
+		)
+	}
+
+	#[test]
+	fn contract_not_found() {
+		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000), (Rent::account_id(), 1_000_000)]).execute_with(
+			|| {
+				prepare_tests();
+				let err = Rent::remove_expired_contract(root(), INVALID_NFT);
+				assert_noop!(err, Error::<Test>::ContractNotFound);
 			},
 		)
 	}
