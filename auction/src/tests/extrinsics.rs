@@ -72,7 +72,7 @@ pub mod create_auction {
 			assert_ok!(ok);
 
 			// Storage
-			assert_eq!(NFT::is_listed_for_sale(nft_id), Some(true));
+			assert_eq!(NFT::is_listed(nft_id), Some(true));
 			assert_eq!(Auctions::<Test>::iter().count(), 1);
 			assert_eq!(Claims::<Test>::iter().count(), 0);
 
@@ -255,10 +255,10 @@ pub mod create_auction {
 	}
 
 	#[test]
-	fn cannot_auction_nfts_listed_for_sale() {
+	fn cannot_auction_nfts_listed() {
 		ExtBuilder::new_build(vec![], None).execute_with(|| {
 			let (nft_id, market_id) = (ALICE_NFT_ID, ALICE_MARKET_ID);
-			assert_ok!(NFT::set_listed_for_sale(nft_id, true));
+			assert_ok!(NFT::is_listed(nft_id, true));
 
 			let ok = Auction::create_auction(
 				origin(ALICE),
@@ -386,13 +386,13 @@ pub mod cancel_auction {
 
 			// NFT
 			let nft = NFT::get_nft(nft_id).unwrap();
-			assert_eq!(nft.listed_for_sale, false);
+			assert_eq!(nft.is_listed, false);
 			assert_eq!(nft.owner, ALICE);
 
 			// Storage
 			deadlines.remove(nft_id);
 
-			assert_eq!(NFT::is_listed_for_sale(nft_id), Some(false));
+			assert_eq!(NFT::is_listed(nft_id), Some(false));
 			assert_eq!(Auctions::<Test>::iter().count(), auction_count - 1);
 			assert_eq!(Claims::<Test>::iter().count(), 0);
 
@@ -489,7 +489,7 @@ pub mod end_auction {
 
 				// NFT
 				let nft = NFT::get_nft(nft_id).unwrap();
-				assert_eq!(nft.listed_for_sale, false);
+				assert_eq!(nft.is_listed, false);
 				assert_eq!(nft.owner, DAVE);
 
 				// Storage
@@ -871,7 +871,7 @@ pub mod buy_it_now {
 
 			// NFT
 			let nft = NFT::get_nft(nft_id).unwrap();
-			assert_eq!(nft.listed_for_sale, false);
+			assert_eq!(nft.is_listed, false);
 			assert_eq!(nft.owner, CHARLIE);
 
 			// Storage
@@ -915,7 +915,7 @@ pub mod buy_it_now {
 
 				// NFT
 				let nft = NFT::get_nft(nft_id).unwrap();
-				assert_eq!(nft.listed_for_sale, false);
+				assert_eq!(nft.is_listed, false);
 				assert_eq!(nft.owner, CHARLIE);
 
 				// Storage
@@ -996,7 +996,7 @@ pub mod complete_auction {
 
 			// NFT
 			let nft = NFT::get_nft(nft_id).unwrap();
-			assert_eq!(nft.listed_for_sale, false);
+			assert_eq!(nft.is_listed, false);
 			assert_eq!(nft.owner, auction.creator);
 
 			// Storage
@@ -1045,7 +1045,7 @@ pub mod complete_auction {
 
 				// NFT
 				let nft = NFT::get_nft(nft_id).unwrap();
-				assert_eq!(nft.listed_for_sale, false);
+				assert_eq!(nft.is_listed, false);
 				assert_eq!(nft.owner, CHARLIE);
 
 				// Storage
@@ -1097,7 +1097,7 @@ pub mod complete_auction {
 
 				// NFT
 				let nft = NFT::get_nft(nft_id).unwrap();
-				assert_eq!(nft.listed_for_sale, false);
+				assert_eq!(nft.is_listed, false);
 				assert_eq!(nft.owner, CHARLIE);
 
 				// Storage

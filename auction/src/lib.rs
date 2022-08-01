@@ -184,7 +184,7 @@ pub mod pallet {
 			let is_nft_in_completed_series = T::NFTExt::is_nft_in_completed_series(nft_id);
 
 			ensure!(nft_data.owner == creator.clone(), Error::<T>::CannotAuctionNotOwnedNFTs);
-			ensure!(nft_data.listed_for_sale == false, Error::<T>::CannotAuctionNFTsListedForSale);
+			ensure!(nft_data.is_listed == false, Error::<T>::CannotAuctionNFTsListedForSale);
 			ensure!(
 				nft_data.is_in_transmission == false,
 				Error::<T>::CannotAuctionNFTsInTransmission
@@ -197,7 +197,7 @@ pub mod pallet {
 			);
 
 			T::MarketplaceExt::is_allowed_to_list(marketplace_id, creator.clone())?;
-			T::NFTExt::set_listed_for_sale(nft_id, true)?;
+			T::NFTExt::set_listed(nft_id, true)?;
 
 			let bidders: BidderList<T::AccountId, BalanceOf<T>, T::BidderListLengthLimit> =
 				BidderList::new();
@@ -249,7 +249,7 @@ pub mod pallet {
 				Error::<T>::CannotCancelAuctionInProgress
 			);
 
-			T::NFTExt::set_listed_for_sale(nft_id, false)?;
+			T::NFTExt::set_listed(nft_id, false)?;
 			Self::remove_auction(nft_id, &auction);
 
 			Self::deposit_event(Event::AuctionCancelled { nft_id });
@@ -637,7 +637,7 @@ impl<T: Config> Pallet<T> {
 		T::Currency::transfer(&balance_source, &auction.creator, to_auctioneer, existence)?;
 
 		T::NFTExt::set_owner(nft_id, new_owner)?;
-		T::NFTExt::set_listed_for_sale(nft_id, false)?;
+		T::NFTExt::set_listed(nft_id, false)?;
 
 		Ok(())
 	}

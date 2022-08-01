@@ -177,7 +177,7 @@ benchmarks! {
 
 	}: _(RawOrigin::Signed(alice.clone()), nft_id, market_id, start_block, end_block, start_price, Some(buy_now_price))
 	verify {
-		assert_eq!(T::NFTExt::is_listed_for_sale(nft_id), Some(true));
+		assert_eq!(T::NFTExt::is_listed(nft_id), Some(true));
 	}
 
 	 cancel_auction {
@@ -187,7 +187,7 @@ benchmarks! {
 
 	}: _(RawOrigin::Signed(bob.clone()), nft_id)
 	verify {
-		assert_eq!(T::NFTExt::is_listed_for_sale(nft_id), Some(false));
+		assert_eq!(T::NFTExt::is_listed(nft_id), Some(false));
 	}
 
 	end_auction {
@@ -206,7 +206,7 @@ benchmarks! {
 	verify {
 		let eve: T::AccountId = get_account::<T>("EVE");
 
-		assert_eq!(T::NFTExt::is_listed_for_sale(nft_id), Some(false));
+		assert_eq!(T::NFTExt::is_listed(nft_id), Some(false));
 		assert_eq!(T::NFTExt::owner(nft_id), Some(eve));
 	}
 
@@ -245,7 +245,7 @@ benchmarks! {
 
 	}: _(RawOrigin::Signed(charlie.clone()), nft_id)
 	verify {
-		assert_eq!(T::NFTExt::is_listed_for_sale(nft_id), Some(false));
+		assert_eq!(T::NFTExt::is_listed(nft_id), Some(false));
 		assert_eq!(T::NFTExt::owner(nft_id), Some(charlie));
 	}
 
@@ -265,7 +265,7 @@ benchmarks! {
 	verify {
 		let eve: T::AccountId = get_account::<T>("EVE");
 
-		assert_eq!(T::NFTExt::is_listed_for_sale(nft_id), Some(false));
+		assert_eq!(T::NFTExt::is_listed(nft_id), Some(false));
 		assert_eq!(T::NFTExt::owner(nft_id), Some(eve));
 	}
 

@@ -154,7 +154,7 @@ pub mod pallet {
 
 			let nft = T::NFTExt::get_nft(nft_id).ok_or(Error::<T>::NFTNotFound)?;
 			ensure!(nft.owner == who, Error::<T>::NotTheNFTOwner);
-			ensure!(!nft.listed_for_sale, Error::<T>::CannotCreateCapsulesFromNFTsListedForSale);
+			ensure!(!nft.is_listed, Error::<T>::CannotCreateCapsulesFromNFTsListedForSale);
 			ensure!(
 				!nft.is_in_transmission,
 				Error::<T>::CannotCreateCapsulesFromNFTsInTransmission
