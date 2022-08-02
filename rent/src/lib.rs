@@ -637,7 +637,7 @@ pub mod pallet {
 			ensure_root(origin)?;
 			let contract = Contracts::<T>::get(nft_id).ok_or(Error::<T>::ContractNotFound)?;
 			let mut nft = T::NFTExt::get_nft(nft_id).ok_or(Error::<T>::NFTNotFound)?;
-			
+
 			ensure!(contract.has_started, Error::<T>::ContractHasNotStarted);
 
 			Self::process_cancellation_fees(nft_id, &contract, revoker.clone())?;
@@ -661,7 +661,7 @@ pub mod pallet {
 		pub fn renew_contract(origin: OriginFor<T>, nft_id: NFTId, now: T::BlockNumber) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
 			let contract = Contracts::<T>::get(nft_id).ok_or(Error::<T>::ContractNotFound)?;
-			
+
 			ensure!(contract.has_started, Error::<T>::ContractHasNotStarted);
 			let is_subscription = matches!(contract.duration, Duration::Subscription { .. });
 			ensure!(is_subscription, Error::<T>::RenewalOnlyForSubscription);
@@ -779,7 +779,7 @@ impl<T: Config> Pallet<T> {
 		Ok(())
 	}
 
-	// Check the cancellation fee NFT for existence
+	/// Check the cancellation fee NFT for existence
 	pub fn ensure_cancellation_fee_valid(
 		cancellation_fee: &Option<CancellationFee<BalanceOf<T>>>,
 	) -> Result<(), DispatchError> {
@@ -794,7 +794,7 @@ impl<T: Config> Pallet<T> {
 		Ok(())
 	}
 
-	// Check the rent fee NFT for existence
+	/// Check the rent fee NFT for existence
 	pub fn ensure_rent_fee_valid(rent_fee: &RentFee<BalanceOf<T>>) -> Result<(), DispatchError> {
 		match rent_fee {
 			RentFee::NFT(nft_id) => {
@@ -875,7 +875,8 @@ impl<T: Config> Pallet<T> {
 			Error::<T>::NoRenterCancellationFeeWithNoRevocation
 		);
 		ensure!(
-			!((is_flexible_token_renter || is_flexible_token_rentee) && (is_subscription || *duration == Duration::Infinite)),
+			!((is_flexible_token_renter || is_flexible_token_rentee) &&
+				(is_subscription || *duration == Duration::Infinite)),
 			Error::<T>::FlexibleFeeOnlyForFixedDuration
 		);
 
@@ -1027,13 +1028,12 @@ impl<T: Config> Pallet<T> {
 	pub fn get_contract_total_blocks(duration: &Duration<T::BlockNumber>) -> T::BlockNumber {
 		match duration {
 			Duration::Fixed(value) => *value,
-			Duration::Subscription(value, max_value) => {
+			Duration::Subscription(value, max_value) =>
 				if let Some(max_value) = *max_value {
 					max_value
 				} else {
 					*value
-				}
-			},
+				},
 			Duration::Infinite => T::BlockNumber::from(0u32),
 		}
 	}
@@ -1243,6 +1243,42 @@ impl<T: Config> Pallet<T> {
 				}
 			}
 		}
+		Ok(())
+	}
+
+	/// Fill available queue with any number of data
+	pub fn fill_available_queue(number: u32, nft_id: NFTId, block_number: T::BlockNumber) -> Result<(), DispatchError> {
+		AvailableQueue::<T>::mutate(|x| -> DispatchResult {
+			for _i in 0..number {
+				x.insert(nft_id, block_number)
+					.map_err(|_| Error::<T>::MaxSimultaneousContractReached)?;
+			}
+			Ok(())
+		})?;
+		Ok(())
+	}
+
+	/// Fill fixed queue with any number of data
+	pub fn fill_fixed_queue(number: u32, nft_id: NFTId, block_number: T::BlockNumber) -> Result<(), DispatchError> {
+		FixedQueue::<T>::mutate(|x| -> DispatchResult {
+			for _i in 0..number {
+				x.insert(nft_id, block_number)
+					.map_err(|_| Error::<T>::MaxSimultaneousContractReached)?;
+			}
+			Ok(())
+		})?;
+		Ok(())
+	}
+
+	/// Fill subscription queue with any number of data
+	pub fn fill_subscription_queue(number: u32, nft_id: NFTId, block_number: T::BlockNumber) -> Result<(), DispatchError> {
+		SubscriptionQueue::<T>::mutate(|x| -> DispatchResult {
+			for _i in 0..number {
+				x.insert(nft_id, block_number)
+					.map_err(|_| Error::<T>::MaxSimultaneousContractReached)?;
+			}
+			Ok(())
+		})?;
 		Ok(())
 	}
 }
