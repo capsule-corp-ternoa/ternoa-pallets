@@ -100,20 +100,14 @@ pub mod add_chain {
 	fn cannot_add_self_to_allowed_chain_list() {
 		ExtBuilder::build().execute_with(|| {
 			let chain_id = <Test as ternoa_bridge::Config>::ChainId::get();
-			assert_noop!(
-				Bridge::add_chain(root(), chain_id),
-				Error::<Test>::CannotAddSelfToAllowedChainList
-			);
+			assert_noop!(Bridge::add_chain(root(), chain_id), Error::<Test>::CannotAddSelfToAllowedChainList);
 		});
 	}
 
 	#[test]
 	fn chain_already_whitelisted() {
 		ExtBuilder::build_with(CHAIN_ID, THRESHOLD).execute_with(|| {
-			assert_noop!(
-				Bridge::add_chain(root(), CHAIN_ID),
-				Error::<Test>::ChainAlreadyWhitelisted
-			);
+			assert_noop!(Bridge::add_chain(root(), CHAIN_ID), Error::<Test>::ChainAlreadyWhitelisted);
 		});
 	}
 }
@@ -182,10 +176,7 @@ pub mod set_deposit_nonce {
 	#[test]
 	fn new_nonce_too_low() {
 		ExtBuilder::build_with(CHAIN_ID, THRESHOLD).execute_with(|| {
-			assert_noop!(
-				Bridge::set_deposit_nonce(root(), CHAIN_ID, 0),
-				Error::<Test>::NewNonceTooLow
-			);
+			assert_noop!(Bridge::set_deposit_nonce(root(), CHAIN_ID, 0), Error::<Test>::NewNonceTooLow);
 		});
 	}
 }
@@ -200,13 +191,7 @@ pub mod vote_for_proposal {
 			let deposit_nonce = Bridge::chain_nonces(CHAIN_ID).unwrap();
 			let account = RELAYER_A;
 
-			let ok = Bridge::vote_for_proposal(
-				origin(account),
-				CHAIN_ID,
-				deposit_nonce,
-				recipient,
-				AMOUNT,
-			);
+			let ok = Bridge::vote_for_proposal(origin(account), CHAIN_ID, deposit_nonce, recipient, AMOUNT);
 			assert_ok!(ok);
 
 			let initial_votes = bounded_vec![account];
@@ -214,12 +199,10 @@ pub mod vote_for_proposal {
 			let block_expiry = now + <Test as ternoa_bridge::Config>::ProposalLifetime::get();
 			let expected_proposal = Proposal::new(initial_votes, block_expiry);
 
-			let actual_proposal =
-				Bridge::get_votes(CHAIN_ID, (deposit_nonce, recipient, AMOUNT)).unwrap();
+			let actual_proposal = Bridge::get_votes(CHAIN_ID, (deposit_nonce, recipient, AMOUNT)).unwrap();
 			assert_eq!(actual_proposal, expected_proposal);
 
-			let event =
-				BridgeEvent::RelayerVoted { chain_id: CHAIN_ID, nonce: deposit_nonce, account };
+			let event = BridgeEvent::RelayerVoted { chain_id: CHAIN_ID, nonce: deposit_nonce, account };
 			let event = Event::Bridge(event);
 			assert_eq!(System::events().last().unwrap().event, event);
 		});
@@ -232,22 +215,10 @@ pub mod vote_for_proposal {
 			let deposit_nonce = Bridge::chain_nonces(CHAIN_ID).unwrap();
 
 			let account = RELAYER_B;
-			let ok = Bridge::vote_for_proposal(
-				origin(RELAYER_A),
-				CHAIN_ID,
-				deposit_nonce,
-				recipient,
-				AMOUNT,
-			);
+			let ok = Bridge::vote_for_proposal(origin(RELAYER_A), CHAIN_ID, deposit_nonce, recipient, AMOUNT);
 			assert_ok!(ok);
 
-			let ok = Bridge::vote_for_proposal(
-				origin(account),
-				CHAIN_ID,
-				deposit_nonce,
-				recipient,
-				AMOUNT,
-			);
+			let ok = Bridge::vote_for_proposal(origin(account), CHAIN_ID, deposit_nonce, recipient, AMOUNT);
 			assert_ok!(ok);
 
 			let initial_votes = bounded_vec![RELAYER_A, account];
@@ -255,12 +226,10 @@ pub mod vote_for_proposal {
 			let block_expiry = now + <Test as ternoa_bridge::Config>::ProposalLifetime::get();
 			let expected_proposal = Proposal::new(initial_votes, block_expiry);
 
-			let actual_proposal =
-				Bridge::get_votes(CHAIN_ID, (deposit_nonce, recipient, AMOUNT)).unwrap();
+			let actual_proposal = Bridge::get_votes(CHAIN_ID, (deposit_nonce, recipient, AMOUNT)).unwrap();
 			assert_eq!(actual_proposal, expected_proposal);
 
-			let event =
-				BridgeEvent::RelayerVoted { chain_id: CHAIN_ID, nonce: deposit_nonce, account };
+			let event = BridgeEvent::RelayerVoted { chain_id: CHAIN_ID, nonce: deposit_nonce, account };
 			let event = Event::Bridge(event);
 			assert_eq!(System::events().last().unwrap().event, event);
 		});
@@ -274,13 +243,7 @@ pub mod vote_for_proposal {
 			let relayer_c_before = Balances::free_balance(RELAYER_C);
 			let total_issuance = Balances::total_issuance();
 
-			let ok = Bridge::vote_for_proposal(
-				origin(RELAYER_A),
-				CHAIN_ID,
-				deposit_nonce,
-				recipient,
-				AMOUNT,
-			);
+			let ok = Bridge::vote_for_proposal(origin(RELAYER_A), CHAIN_ID, deposit_nonce, recipient, AMOUNT);
 			assert_ok!(ok);
 
 			let initial_votes = bounded_vec![RELAYER_A];
@@ -289,8 +252,7 @@ pub mod vote_for_proposal {
 			let mut expected_proposal = Proposal::new(initial_votes, block_expiry);
 			expected_proposal.status = ProposalStatus::Approved;
 
-			let actual_proposal =
-				Bridge::get_votes(CHAIN_ID, (deposit_nonce, recipient, AMOUNT)).unwrap();
+			let actual_proposal = Bridge::get_votes(CHAIN_ID, (deposit_nonce, recipient, AMOUNT)).unwrap();
 			assert_eq!(actual_proposal, expected_proposal);
 
 			// Fund checks
@@ -306,10 +268,7 @@ pub mod vote_for_proposal {
 	#[test]
 	fn must_be_relayer() {
 		ExtBuilder::build().execute_with(|| {
-			assert_noop!(
-				Bridge::vote_for_proposal(origin(5), 0, 0, RELAYER_C, AMOUNT),
-				Error::<Test>::MustBeRelayer
-			);
+			assert_noop!(Bridge::vote_for_proposal(origin(5), 0, 0, RELAYER_C, AMOUNT), Error::<Test>::MustBeRelayer);
 		});
 	}
 
@@ -326,8 +285,7 @@ pub mod vote_for_proposal {
 	#[test]
 	fn proposal_already_completed() {
 		ExtBuilder::build_with(CHAIN_ID, 1).execute_with(|| {
-			let ok =
-				Bridge::vote_for_proposal(origin(RELAYER_A), CHAIN_ID, NONCE, RELAYER_C, AMOUNT);
+			let ok = Bridge::vote_for_proposal(origin(RELAYER_A), CHAIN_ID, NONCE, RELAYER_C, AMOUNT);
 			assert_ok!(ok);
 
 			assert_noop!(
@@ -340,13 +298,10 @@ pub mod vote_for_proposal {
 	#[test]
 	fn proposal_expired() {
 		ExtBuilder::build_with(CHAIN_ID, THRESHOLD).execute_with(|| {
-			let ok =
-				Bridge::vote_for_proposal(origin(RELAYER_A), CHAIN_ID, NONCE, RELAYER_C, AMOUNT);
+			let ok = Bridge::vote_for_proposal(origin(RELAYER_A), CHAIN_ID, NONCE, RELAYER_C, AMOUNT);
 			assert_ok!(ok);
 
-			System::set_block_number(
-				frame_system::Pallet::<Test>::block_number() + ProposalLifetime::get() + 1,
-			);
+			System::set_block_number(frame_system::Pallet::<Test>::block_number() + ProposalLifetime::get() + 1);
 
 			assert_noop!(
 				Bridge::vote_for_proposal(origin(RELAYER_B), CHAIN_ID, NONCE, RELAYER_C, AMOUNT),
@@ -358,8 +313,7 @@ pub mod vote_for_proposal {
 	#[test]
 	fn relayer_already_voted() {
 		ExtBuilder::build_with(CHAIN_ID, THRESHOLD).execute_with(|| {
-			let ok =
-				Bridge::vote_for_proposal(origin(RELAYER_A), CHAIN_ID, NONCE, RELAYER_C, AMOUNT);
+			let ok = Bridge::vote_for_proposal(origin(RELAYER_A), CHAIN_ID, NONCE, RELAYER_C, AMOUNT);
 			assert_ok!(ok);
 
 			assert_noop!(
@@ -390,10 +344,7 @@ pub mod deposit {
 
 			let new_deposit_nonce = Bridge::chain_nonces(CHAIN_ID).unwrap();
 
-			assert_eq!(
-				Balances::free_balance(RELAYER_A),
-				relayer_a_balance_before - AMOUNT - bridge_fee
-			);
+			assert_eq!(Balances::free_balance(RELAYER_A), relayer_a_balance_before - AMOUNT - bridge_fee);
 			assert_eq!(Balances::total_issuance(), total_issuance - AMOUNT);
 			assert_eq!(Balances::free_balance(COLLECTOR), collector_before + bridge_fee);
 			assert_eq!(Bridge::chain_nonces(CHAIN_ID).unwrap(), deposit_nonce + 1);
@@ -412,10 +363,7 @@ pub mod deposit {
 	#[test]
 	fn chain_not_allowed() {
 		ExtBuilder::build().execute_with(|| {
-			assert_noop!(
-				Bridge::deposit(origin(RELAYER_A), 10, vec![0], 0),
-				Error::<Test>::ChainNotAllowed
-			);
+			assert_noop!(Bridge::deposit(origin(RELAYER_A), 10, vec![0], 0), Error::<Test>::ChainNotAllowed);
 		});
 	}
 

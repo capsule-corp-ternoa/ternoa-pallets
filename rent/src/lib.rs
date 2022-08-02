@@ -1271,7 +1271,11 @@ impl<T: Config> Pallet<T> {
 	}
 
 	/// Fill subscription queue with any number of data
-	pub fn fill_subscription_queue(number: u32, nft_id: NFTId, block_number: T::BlockNumber) -> Result<(), DispatchError> {
+	pub fn fill_subscription_queue(
+		number: u32,
+		nft_id: NFTId,
+		block_number: T::BlockNumber,
+	) -> Result<(), DispatchError> {
 		SubscriptionQueue::<T>::mutate(|x| -> DispatchResult {
 			for _i in 0..number {
 				x.insert(nft_id, block_number)

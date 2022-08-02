@@ -20,9 +20,7 @@ use primitives::{marketplace::MarketplaceId, CompoundFee};
 use scale_info::TypeInfo;
 use sp_std::fmt::Debug;
 
-#[derive(
-	Encode, Decode, CloneNoBound, Eq, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen,
-)]
+#[derive(Encode, Decode, CloneNoBound, Eq, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen)]
 #[codec(mel_bound(AccountId: MaxEncodedLen, Balance: MaxEncodedLen))]
 pub struct Sale<AccountId, Balance>
 where

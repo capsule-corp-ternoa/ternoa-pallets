@@ -49,11 +49,9 @@ pub use pallet::*;
 pub use types::*;
 pub use weights::WeightInfo;
 
-pub type BalanceOf<T> =
-	<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
-pub type NegativeImbalanceOf<T> = <<T as Config>::Currency as Currency<
-	<T as frame_system::Config>::AccountId,
->>::NegativeImbalance;
+pub type BalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+pub type NegativeImbalanceOf<T> =
+	<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::NegativeImbalance;
 
 const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
 
@@ -120,14 +118,12 @@ pub mod pallet {
 	/// Number of votes required for a proposal to execute
 	#[pallet::storage]
 	#[pallet::getter(fn relayer_vote_threshold)]
-	pub type RelayerVoteThreshold<T: Config> =
-		StorageValue<_, u32, ValueQuery, T::RelayerVoteThreshold>;
+	pub type RelayerVoteThreshold<T: Config> = StorageValue<_, u32, ValueQuery, T::RelayerVoteThreshold>;
 
 	/// Tracks current relayer set
 	#[pallet::storage]
 	#[pallet::getter(fn relayers)]
-	pub type Relayers<T: Config> =
-		StorageValue<_, BoundedVec<T::AccountId, T::RelayerCountLimit>, ValueQuery>;
+	pub type Relayers<T: Config> = StorageValue<_, BoundedVec<T::AccountId, T::RelayerCountLimit>, ValueQuery>;
 
 	/// All known proposals.
 	/// The key is the hash of the call and the deposit ID, to ensure it's unique.
@@ -301,8 +297,7 @@ pub mod pallet {
 						result = proposal.try_to_complete(threshold);
 					} else {
 						let lifetime = T::ProposalLifetime::get();
-						let initial =
-							BoundedVec::try_from(vec![account.clone()]).map_err(|_| error)?;
+						let initial = BoundedVec::try_from(vec![account.clone()]).map_err(|_| error)?;
 						let mut new_proposal = Proposal::new(initial, now + lifetime);
 						result = new_proposal.try_to_complete(threshold);
 						*proposal = Some(new_proposal);
@@ -348,8 +343,7 @@ pub mod pallet {
 			ensure!(Self::chain_allowed(dest_id), Error::<T>::ChainNotAllowed);
 			ensure!(T::Currency::free_balance(&source) >= total, Error::<T>::InsufficientBalance);
 
-			let imbalance =
-				T::Currency::withdraw(&source, bridge_fee, WithdrawReasons::all(), KeepAlive)?;
+			let imbalance = T::Currency::withdraw(&source, bridge_fee, WithdrawReasons::all(), KeepAlive)?;
 			T::FeesCollector::on_unbalanced(imbalance);
 
 			T::Currency::withdraw(&source, amount, WithdrawReasons::TRANSFER, AllowDeath)?;
@@ -366,10 +360,7 @@ pub mod pallet {
 
 		/// Update the bridge fee value
 		#[pallet::weight(<T as pallet::Config>::WeightInfo::set_bridge_fee())]
-		pub fn set_bridge_fee(
-			origin: OriginFor<T>,
-			bridge_fee: BalanceOf<T>,
-		) -> DispatchResultWithPostInfo {
+		pub fn set_bridge_fee(origin: OriginFor<T>, bridge_fee: BalanceOf<T>) -> DispatchResultWithPostInfo {
 			T::ExternalOrigin::ensure_origin(origin)?;
 
 			BridgeFee::<T>::put(bridge_fee);

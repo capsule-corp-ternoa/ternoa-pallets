@@ -52,14 +52,10 @@ pub fn prepare_benchmarks<T: Config>() -> BenchmarkData {
 	T::Currency::make_free_balance_be(&bob, BalanceOf::<T>::max_value());
 
 	// Create default NFT.
-	let nft_id =
-		T::NFTExt::create_nft(alice, BoundedVec::default(), PERCENT_50, None, false).unwrap();
+	let nft_id = T::NFTExt::create_nft(alice, BoundedVec::default(), PERCENT_50, None, false).unwrap();
 
 	// Create default marketplace.
-	assert_ok!(Marketplace::<T>::create_marketplace(
-		origin::<T>("ALICE").into(),
-		MarketplaceType::Public,
-	));
+	assert_ok!(Marketplace::<T>::create_marketplace(origin::<T>("ALICE").into(), MarketplaceType::Public,));
 
 	BenchmarkData { nft_id, marketplace_id: Marketplace::<T>::next_marketplace_id() - 1 }
 }
@@ -164,8 +160,4 @@ benchmarks! {
 	}
 }
 
-impl_benchmark_test_suite!(
-	Marketplace,
-	crate::tests::mock::new_test_ext(),
-	crate::tests::mock::Test
-);
+impl_benchmark_test_suite!(Marketplace, crate::tests::mock::new_test_ext(), crate::tests::mock::Test);

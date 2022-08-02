@@ -217,9 +217,9 @@ benchmarks! {
 		).unwrap();
 		Rent::<T>::rent(origin::<T>("BOB").into(), NFT_ID_1).unwrap();
 		Rent::<T>::change_subscription_terms(
-			origin::<T>("ALICE").into(), 
-			NFT_ID_1, 
-			Duration::Subscription(500u32.into(), Some(5000u32.into())), 
+			origin::<T>("ALICE").into(),
+			NFT_ID_1,
+			Duration::Subscription(500u32.into(), Some(5000u32.into())),
 			150u32.into()
 		).unwrap();
 	}: _(origin::<T>("BOB"), NFT_ID_1)

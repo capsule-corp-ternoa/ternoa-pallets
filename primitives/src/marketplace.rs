@@ -33,9 +33,7 @@ pub enum MarketplaceType {
 	Private = 1,
 }
 
-#[derive(
-	Encode, Decode, CloneNoBound, Eq, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen,
-)]
+#[derive(Encode, Decode, CloneNoBound, Eq, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen)]
 #[scale_info(skip_type_params(AccountSizeLimit, OffchainDataLimit,))]
 #[codec(mel_bound(AccountId: MaxEncodedLen, Balance: MaxEncodedLen))]
 pub struct MarketplaceData<AccountId, Balance, AccountSizeLimit, OffchainDataLimit>

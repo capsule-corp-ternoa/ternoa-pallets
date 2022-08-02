@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Ternoa.  If not, see <http://www.gnu.org/licenses/>.
 
-use frame_support::{CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, BoundedVec, RuntimeDebug, traits::Get};
+use frame_support::{traits::Get, BoundedVec, CloneNoBound, PartialEqNoBound, RuntimeDebug, RuntimeDebugNoBound};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use primitives::nfts::NFTId;
 use scale_info::TypeInfo;
@@ -56,13 +56,11 @@ pub enum RentFee<Balance> {
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 pub enum CancellationFee<Balance> {
 	FixedTokens(Balance),
-  	FlexibleTokens(Balance),
-  	NFT(NFTId),
+	FlexibleTokens(Balance),
+	NFT(NFTId),
 }
 
-#[derive(
-	Encode, Decode, CloneNoBound, Eq, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen,
-)]
+#[derive(Encode, Decode, CloneNoBound, Eq, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen)]
 #[scale_info(skip_type_params(AccountSizeLimit))]
 #[codec(mel_bound(AccountId: MaxEncodedLen, Balance: MaxEncodedLen, BlockNumber: MaxEncodedLen))]
 pub struct RentContractData<AccountId, BlockNumber, Balance, AccountSizeLimit>
@@ -73,30 +71,31 @@ where
 	AccountSizeLimit: Get<u32>,
 {
 	/// Flag indicating if the renting contract has starter.
-	pub has_started:               bool,
+	pub has_started: bool,
 	/// Start block of the contract.
-	pub start_block:               Option<BlockNumber>,
+	pub start_block: Option<BlockNumber>,
 	/// Renter of the NFT.
-  	pub renter:                    AccountId,
+	pub renter: AccountId,
 	/// Rentee of the NFT.
-	pub rentee:                    Option<AccountId>,
+	pub rentee: Option<AccountId>,
 	/// Duration of the renting contract.
-	pub duration:                  Duration<BlockNumber>,
+	pub duration: Duration<BlockNumber>,
 	/// Acceptance type of the renting contract.
-	pub acceptance_type:           AcceptanceType<AccountList<AccountId, AccountSizeLimit>>,
+	pub acceptance_type: AcceptanceType<AccountList<AccountId, AccountSizeLimit>>,
 	/// Revocation type of the renting contract.
-	pub revocation_type:           RevocationType,
+	pub revocation_type: RevocationType,
 	/// Rent fee paid by rentee.
-	pub rent_fee:                  RentFee<Balance>,
+	pub rent_fee: RentFee<Balance>,
 	/// Flag indicating if terms were accepted in case of change.
-	pub terms_accepted:            bool,
+	pub terms_accepted: bool,
 	/// Optional cancellation fee for renter.
-	pub renter_cancellation_fee:   Option<CancellationFee<Balance>>,
+	pub renter_cancellation_fee: Option<CancellationFee<Balance>>,
 	/// Optional cancellation fee for rentee.
-	pub rentee_cancellation_fee:   Option<CancellationFee<Balance>>,
+	pub rentee_cancellation_fee: Option<CancellationFee<Balance>>,
 }
 
-impl<AccountId, BlockNumber, Balance, AccountSizeLimit> RentContractData<AccountId, BlockNumber, Balance, AccountSizeLimit>
+impl<AccountId, BlockNumber, Balance, AccountSizeLimit>
+	RentContractData<AccountId, BlockNumber, Balance, AccountSizeLimit>
 where
 	AccountId: Clone + PartialEq + Debug,
 	Balance: Clone + PartialEq + Debug + sp_std::cmp::PartialOrd,
@@ -116,7 +115,7 @@ where
 		renter_cancellation_fee: Option<CancellationFee<Balance>>,
 		rentee_cancellation_fee: Option<CancellationFee<Balance>>,
 	) -> RentContractData<AccountId, BlockNumber, Balance, AccountSizeLimit> {
-		Self { 
+		Self {
 			has_started,
 			start_block,
 			renter,
@@ -132,17 +131,14 @@ where
 	}
 }
 
-#[derive(
-	Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen,
-)]
+#[derive(Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen)]
 #[codec(mel_bound(BlockNumber: MaxEncodedLen))]
 #[scale_info(skip_type_params(Limit))]
 /// wrapper type to store queues of either fixed duration contracts, subscription contract or available contract.
 /// The wrapper exists to ensure a queue implementation.
-pub struct Queue<
-	BlockNumber: Clone + PartialEq + Debug + sp_std::cmp::PartialOrd,
-	Limit: Get<u32>,
->(pub BoundedVec<(NFTId, BlockNumber), Limit>);
+pub struct Queue<BlockNumber: Clone + PartialEq + Debug + sp_std::cmp::PartialOrd, Limit: Get<u32>>(
+	pub BoundedVec<(NFTId, BlockNumber), Limit>,
+);
 
 impl<BlockNumber, Limit> Queue<BlockNumber, Limit>
 where
@@ -151,7 +147,7 @@ where
 {
 	pub fn get(&mut self, nft_id: NFTId) -> Option<BlockNumber> {
 		let index = self.0.iter().position(|x| x.0 == nft_id);
-		if let Some(index) = index{
+		if let Some(index) = index {
 			Some(self.0[index].1.clone())
 		} else {
 			None

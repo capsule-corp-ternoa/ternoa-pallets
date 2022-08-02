@@ -42,10 +42,7 @@ pub trait NFTExt {
 	fn get_nft(id: NFTId) -> Option<NFTData<Self::AccountId, Self::NFTOffchainDataLimit>>;
 
 	/// Set the NFT data
-	fn set_nft(
-		id: NFTId,
-		nft_data: NFTData<Self::AccountId, Self::NFTOffchainDataLimit>,
-	) -> DispatchResult;
+	fn set_nft(id: NFTId, nft_data: NFTData<Self::AccountId, Self::NFTOffchainDataLimit>) -> DispatchResult;
 
 	/// Create an NFT
 	fn create_nft(

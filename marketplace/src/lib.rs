@@ -29,10 +29,7 @@ use frame_support::{
 	dispatch::{DispatchError, DispatchResult},
 	ensure,
 	pallet_prelude::DispatchResultWithPostInfo,
-	traits::{
-		Currency, ExistenceRequirement::KeepAlive, Get, OnUnbalanced, StorageVersion,
-		WithdrawReasons,
-	},
+	traits::{Currency, ExistenceRequirement::KeepAlive, Get, OnUnbalanced, StorageVersion, WithdrawReasons},
 	transactional, BoundedVec,
 };
 use frame_system::pallet_prelude::*;
@@ -47,11 +44,9 @@ use primitives::{
 use ternoa_common::{config_op_field_exp, traits::NFTExt};
 pub use weights::WeightInfo;
 
-pub type BalanceOf<T> =
-	<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
-pub type NegativeImbalanceOf<T> = <<T as Config>::Currency as Currency<
-	<T as frame_system::Config>::AccountId,
->>::NegativeImbalance;
+pub type BalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+pub type NegativeImbalanceOf<T> =
+	<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::NegativeImbalance;
 
 const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
 
@@ -102,8 +97,7 @@ pub mod pallet {
 	/// How much does it cost to create a marketplace.
 	#[pallet::storage]
 	#[pallet::getter(fn marketplace_mint_fee)]
-	pub type MarketplaceMintFee<T: Config> =
-		StorageValue<_, BalanceOf<T>, ValueQuery, T::InitialMintFee>;
+	pub type MarketplaceMintFee<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery, T::InitialMintFee>;
 
 	/// Counter for marketplace ids.
 	#[pallet::storage]
@@ -131,11 +125,7 @@ pub mod pallet {
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		/// Marketplace created
-		MarketplaceCreated {
-			marketplace_id: MarketplaceId,
-			owner: T::AccountId,
-			kind: MarketplaceType,
-		},
+		MarketplaceCreated { marketplace_id: MarketplaceId, owner: T::AccountId, kind: MarketplaceType },
 		/// Marketplace owner set
 		MarketplaceOwnerSet { marketplace_id: MarketplaceId, owner: T::AccountId },
 		/// Marketplace kind set
@@ -217,10 +207,7 @@ pub mod pallet {
 		/// will become the owner of the new marketplace.
 		#[pallet::weight(T::WeightInfo::create_marketplace())]
 		#[transactional]
-		pub fn create_marketplace(
-			origin: OriginFor<T>,
-			kind: MarketplaceType,
-		) -> DispatchResultWithPostInfo {
+		pub fn create_marketplace(origin: OriginFor<T>, kind: MarketplaceType) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
 			// Checks.
@@ -334,10 +321,7 @@ pub mod pallet {
 
 		/// Sets the marketplace mint fee. Can only be called by Root.
 		#[pallet::weight(T::WeightInfo::set_marketplace_mint_fee())]
-		pub fn set_marketplace_mint_fee(
-			origin: OriginFor<T>,
-			fee: BalanceOf<T>,
-		) -> DispatchResultWithPostInfo {
+		pub fn set_marketplace_mint_fee(origin: OriginFor<T>, fee: BalanceOf<T>) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
 			MarketplaceMintFee::<T>::put(fee);
 			Self::deposit_event(Event::MarketplaceMintFeeSet { fee });
@@ -366,8 +350,7 @@ pub mod pallet {
 			ensure!(!nft.state.is_rented, Error::<T>::CannotListRentedNFTs);
 			ensure!(!nft.state.is_auctioned, Error::<T>::CannotListAuctionedNFTs);
 
-			let marketplace =
-				Marketplaces::<T>::get(marketplace_id).ok_or(Error::<T>::MarketplaceNotFound)?;
+			let marketplace = Marketplaces::<T>::get(marketplace_id).ok_or(Error::<T>::MarketplaceNotFound)?;
 
 			Self::ensure_is_allowed_to_list(&who, &marketplace)?;
 
@@ -387,12 +370,7 @@ pub mod pallet {
 			nft.state.is_listed = true;
 			T::NFTExt::set_nft_state(nft_id, nft.state)?;
 
-			let event = Event::NFTListed {
-				nft_id,
-				marketplace_id,
-				price,
-				commission_fee: marketplace.commission_fee,
-			};
+			let event = Event::NFTListed { nft_id, marketplace_id, price, commission_fee: marketplace.commission_fee };
 			Self::deposit_event(event);
 
 			Ok(().into())
@@ -424,8 +402,7 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 			let mut nft = T::NFTExt::get_nft(nft_id).ok_or(Error::<T>::NFTNotFound)?;
 			let sale = ListedNfts::<T>::get(nft_id).ok_or(Error::<T>::NFTNotForSale)?;
-			let marketplace = Marketplaces::<T>::get(sale.marketplace_id)
-				.ok_or(Error::<T>::MarketplaceNotFound)?;
+			let marketplace = Marketplaces::<T>::get(sale.marketplace_id).ok_or(Error::<T>::MarketplaceNotFound)?;
 			let mut price = sale.price;
 
 			// Checks
@@ -477,12 +454,7 @@ impl<T: Config> Pallet<T> {
 
 	fn ensure_is_allowed_to_list(
 		who: &T::AccountId,
-		marketplace: &MarketplaceData<
-			T::AccountId,
-			BalanceOf<T>,
-			T::AccountSizeLimit,
-			T::OffchainDataLimit,
-		>,
+		marketplace: &MarketplaceData<T::AccountId, BalanceOf<T>, T::AccountSizeLimit, T::OffchainDataLimit>,
 	) -> Result<(), Error<T>> {
 		let mut is_in_account_list = false;
 		if let Some(account_list) = &marketplace.account_list {
@@ -506,12 +478,7 @@ impl<T: Config> Pallet<T> {
 
 	fn pay_listing_fee(
 		who: &T::AccountId,
-		marketplace: &MarketplaceData<
-			T::AccountId,
-			BalanceOf<T>,
-			T::AccountSizeLimit,
-			T::OffchainDataLimit,
-		>,
+		marketplace: &MarketplaceData<T::AccountId, BalanceOf<T>, T::AccountSizeLimit, T::OffchainDataLimit>,
 		price: BalanceOf<T>,
 	) -> Result<(), DispatchError> {
 		if let Some(listing_fee) = &marketplace.listing_fee {
@@ -526,12 +493,7 @@ impl<T: Config> Pallet<T> {
 
 	fn pay_commission_fee(
 		who: &T::AccountId,
-		marketplace: &MarketplaceData<
-			T::AccountId,
-			BalanceOf<T>,
-			T::AccountSizeLimit,
-			T::OffchainDataLimit,
-		>,
+		marketplace: &MarketplaceData<T::AccountId, BalanceOf<T>, T::AccountSizeLimit, T::OffchainDataLimit>,
 		sale: &Sale<T::AccountId, BalanceOf<T>>,
 		price: BalanceOf<T>,
 	) -> Result<BalanceOf<T>, DispatchError> {

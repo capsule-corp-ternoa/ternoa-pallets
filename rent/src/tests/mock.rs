@@ -16,7 +16,8 @@
 
 use frame_support::{
 	parameter_types,
-	traits::{ConstU32, Contains, Currency, Hooks}, PalletId,
+	traits::{ConstU32, Contains, Currency, Hooks},
+	PalletId,
 };
 use sp_core::H256;
 use sp_runtime::{

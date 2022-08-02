@@ -56,10 +56,7 @@ pub mod pallet {
 			let dispatch_info = call.get_dispatch_info();
 			(dispatch_info.weight.saturating_add(10_000), dispatch_info.class)
 		})]
-		pub fn mandate(
-			origin: OriginFor<T>,
-			call: Box<<T as Config>::Call>,
-		) -> DispatchResultWithPostInfo {
+		pub fn mandate(origin: OriginFor<T>, call: Box<<T as Config>::Call>) -> DispatchResultWithPostInfo {
 			T::ExternalOrigin::ensure_origin(origin)?;
 
 			let res = call.dispatch_bypass_filter(frame_system::RawOrigin::Root.into());
