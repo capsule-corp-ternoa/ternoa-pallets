@@ -41,7 +41,10 @@ use primitives::{
 	nfts::NFTId,
 	CompoundFee, ConfigOp, U8BoundedVec,
 };
-use ternoa_common::{config_op_field_exp, traits::NFTExt};
+use ternoa_common::{
+	config_op_field_exp,
+	traits::{MarketplaceExt, NFTExt},
+};
 pub use weights::WeightInfo;
 
 pub type BalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
@@ -441,21 +444,22 @@ pub mod pallet {
 	}
 }
 
-impl<T: Config> Pallet<T> {
-	fn get_next_marketplace_id() -> MarketplaceId {
-		let marketplace_id = NextMarketplaceId::<T>::get();
-		let next_id = marketplace_id
-			.checked_add(1)
-			.expect("If u32 is not enough we should crash for safety; qed.");
-		NextMarketplaceId::<T>::put(next_id);
+impl<T: Config> MarketplaceExt for Pallet<T> {
+	type AccountId = T::AccountId;
+	type Balance = BalanceOf<T>;
+	type OffchainDataLimit = T::OffchainDataLimit;
+	type AccountSizeLimit = T::AccountSizeLimit;
 
-		marketplace_id
+	fn get_marketplace(
+		id: MarketplaceId,
+	) -> Option<MarketplaceData<Self::AccountId, Self::Balance, Self::AccountSizeLimit, Self::OffchainDataLimit>> {
+		Marketplaces::<T>::get(id)
 	}
 
 	fn ensure_is_allowed_to_list(
-		who: &T::AccountId,
+		who: &Self::AccountId,
 		marketplace: &MarketplaceData<T::AccountId, BalanceOf<T>, T::AccountSizeLimit, T::OffchainDataLimit>,
-	) -> Result<(), Error<T>> {
+	) -> Result<(), DispatchError> {
 		let mut is_in_account_list = false;
 		if let Some(account_list) = &marketplace.account_list {
 			is_in_account_list = account_list.contains(&who);
@@ -466,6 +470,18 @@ impl<T: Config> Pallet<T> {
 		};
 		ensure!(is_allowed, Error::<T>::AccountNotAllowedToList);
 		Ok(())
+	}
+}
+
+impl<T: Config> Pallet<T> {
+	fn get_next_marketplace_id() -> MarketplaceId {
+		let marketplace_id = NextMarketplaceId::<T>::get();
+		let next_id = marketplace_id
+			.checked_add(1)
+			.expect("If u32 is not enough we should crash for safety; qed.");
+		NextMarketplaceId::<T>::put(next_id);
+
+		marketplace_id
 	}
 
 	fn pay_mint_fee(who: &T::AccountId) -> Result<(), DispatchError> {

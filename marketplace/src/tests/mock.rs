@@ -119,11 +119,11 @@ impl pallet_balances::Config for Test {
 parameter_types! {
 	// NFT parameter types
 	pub const NFTInitialMintFee: Balance = NFT_MINT_FEE;
-	pub const MarketplaceInitialMintFee: Balance = MARKETPLACE_MINT_FEE;
 	pub const NFTOffchainDataLimit: u32 = 10;
 	pub const CollectionOffchainDataLimit: u32 = 10;
 	pub const CollectionSizeLimit: u32 = 10;
 	// Marketplace parameter types
+	pub const MarketplaceInitialMintFee: Balance = MARKETPLACE_MINT_FEE;
 	pub const OffchainDataLimit: u32 = 150;
 	pub const AccountSizeLimit: u32 = 100;
 

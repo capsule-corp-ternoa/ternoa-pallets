@@ -51,55 +51,6 @@ where
 	pub is_extended: bool,
 }
 
-impl<AccountId, BlockNumber, Balance, BidderListLengthLimit>
-	AuctionData<AccountId, BlockNumber, Balance, BidderListLengthLimit>
-where
-	AccountId: Clone + PartialEq + Debug + sp_std::cmp::Ord,
-	BlockNumber: Clone + PartialEq + Debug + sp_std::cmp::PartialOrd,
-	Balance: Clone + PartialEq + Debug + sp_std::cmp::PartialOrd,
-	BidderListLengthLimit: Get<u32>,
-{
-	pub fn to_raw(&self, nft_id: NFTId) -> AuctionsGenesis<AccountId, BlockNumber, Balance> {
-		(
-			nft_id,
-			self.creator.clone(),
-			self.start_block.clone(),
-			self.end_block.clone(),
-			self.start_price.clone(),
-			self.buy_it_price.clone(),
-			self.bidders.to_raw(),
-			self.marketplace_id.clone(),
-			self.is_extended.clone(),
-		)
-	}
-
-	pub fn from_raw(raw: AuctionsGenesis<AccountId, BlockNumber, Balance>) -> Self {
-		Self {
-			creator: raw.1,
-			start_block: raw.2,
-			end_block: raw.3,
-			start_price: raw.4,
-			buy_it_price: raw.5,
-			bidders: BidderList::from_raw(raw.6),
-			marketplace_id: raw.7,
-			is_extended: raw.8,
-		}
-	}
-}
-
-// nft id, creator, start_block, end_block, start_price, buy it
-pub type AuctionsGenesis<AccountId, BlockNumber, Balance> = (
-	NFTId,
-	AccountId,
-	BlockNumber,
-	BlockNumber,
-	Balance,
-	Option<Balance>,
-	Vec<(AccountId, Balance)>,
-	MarketplaceId,
-	bool,
-);
-
 #[derive(
 	Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen,
 )]
