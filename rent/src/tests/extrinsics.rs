@@ -134,9 +134,6 @@ fn prepare_tests() {
 	)
 	.unwrap();
 
-	// Set escrow accounts balance
-	Balances::set_balance(root(), Rent::account_id(), 1_000_000, 0).unwrap();
-
 	//Check existence
 	assert!(NFT::nfts(ALICE_NFT_ID_0).is_some());
 	assert!(NFT::nfts(ALICE_NFT_ID_1).is_some());

@@ -256,7 +256,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			nft_id: NFTId,
 			marketplace_id: MarketplaceId,
-			#[pallet::compact] start_block: T::BlockNumber,
+			#[pallet::compact] start_block: T::BlockNumber, // Pallet compact is used to encode arg, is it really needed ? https://docs.substrate.io/reference/frame-macros/ https://docs.substrate.io/reference/scale-codec/
 			#[pallet::compact] end_block: T::BlockNumber,
 			start_price: BalanceOf<T>,
 			buy_it_price: Option<BalanceOf<T>>,

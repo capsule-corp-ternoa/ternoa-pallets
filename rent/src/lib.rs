@@ -29,7 +29,11 @@ use frame_support::{
 	dispatch::{DispatchError, DispatchResult},
 	ensure,
 	pallet_prelude::DispatchResultWithPostInfo,
-	traits::{Currency, ExistenceRequirement::KeepAlive, Get, StorageVersion},
+	traits::{
+		Currency,
+		ExistenceRequirement::{AllowDeath, KeepAlive},
+		Get, StorageVersion,
+	},
 	transactional, BoundedVec, PalletId,
 };
 use frame_system::{pallet_prelude::*, RawOrigin};
@@ -75,7 +79,6 @@ pub mod pallet {
 
 		// Constants
 		/// The auctions pallet id - will be used to generate account id.
-		// TODO : maket escrow account always full ?
 		#[pallet::constant]
 		type PalletId: Get<PalletId>;
 
@@ -86,18 +89,6 @@ pub mod pallet {
 		/// Maximum number of simultaneous rent contract.
 		#[pallet::constant]
 		type SimultaneousContractLimit: Get<u32>; //TODO use to limit contracts mapping
-
-		// /// Maximum number of simultaneous fixed rent contract.
-		// #[pallet::constant]
-		// type FixedQueueLimit: Get<u32>;
-
-		// /// Maximum number of simultaneous subscription rent contract.
-		// #[pallet::constant]
-		// type SubscriptionQueueLimit: Get<u32>;
-
-		// /// Maximum number of simultaneous rent contract waiting for acceptance.
-		// #[pallet::constant]
-		// type AvailableQueueLimit: Get<u32>;
 
 		/// Maximum number of related automatic rent actions in block.
 		#[pallet::constant]
@@ -118,6 +109,16 @@ pub mod pallet {
 		RentContractData<T::AccountId, T::BlockNumber, BalanceOf<T>, T::AccountSizeLimit>,
 		OptionQuery,
 	>;
+
+	#[pallet::type_value]
+	pub fn DefaultContractNb() -> u32 {
+		0u32
+	}
+
+	/// Data related to fixed contract deadlines.
+	#[pallet::storage]
+	#[pallet::getter(fn contract_nb)]
+	pub type ContractNb<T: Config> = StorageValue<_, u32, ValueQuery, DefaultContractNb>;
 
 	/// Data related to fixed contract deadlines.
 	#[pallet::storage]
@@ -351,6 +352,12 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
+			// Check number of contract
+			ensure!(
+				ContractNb::<T>::get() + 1 <= T::SimultaneousContractLimit::get(),
+				Error::<T>::MaxSimultaneousContractReached
+			);
+
 			// Check nft data.
 			let mut nft = T::NFTExt::get_nft(nft_id).ok_or(Error::<T>::NFTNotFound)?;
 			ensure!(nft.owner == who, Error::<T>::NotTheNFTOwner);
@@ -400,6 +407,9 @@ pub mod pallet {
 			nft.state.is_rented = true;
 			T::NFTExt::set_nft(nft_id, nft)?;
 
+			// Add 1 to contract nb
+			Self::add_one_to_contract_nb()?;
+
 			// Deposit event.
 			let event = Event::ContractCreated {
 				nft_id,
@@ -443,6 +453,9 @@ pub mod pallet {
 
 			// Remove contract.
 			Contracts::<T>::remove(nft_id);
+
+			// Substract 1 to contract nb
+			Self::remove_one_to_contract_nb()?;
 
 			// Deposit event.
 			let event = Event::ContractRevoked { nft_id, revoked_by: who };
@@ -649,6 +662,9 @@ pub mod pallet {
 
 			Contracts::<T>::remove(nft_id);
 
+			// Substract 1 to contract nb
+			Self::remove_one_to_contract_nb()?;
+
 			// Deposit event.
 			let event = Event::ContractEnded { nft_id, revoked_by: revoker };
 			Self::deposit_event(event);
@@ -727,6 +743,9 @@ pub mod pallet {
 			Self::remove_from_available_queue(nft_id)?;
 
 			Contracts::<T>::remove(nft_id);
+
+			// Substract 1 to contract nb
+			Self::remove_one_to_contract_nb()?;
 
 			// Deposit event.
 			let event = Event::ContractAvailableExpired { nft_id };
@@ -1112,10 +1131,10 @@ impl<T: Config> Pallet<T> {
 					T::NFTExt::set_nft(*cancellation_nft_id, cancellation_nft)?;
 				},
 				CancellationFee::FixedTokens(amount) => {
-					T::Currency::transfer(&Self::account_id(), &to, *amount, KeepAlive)?;
+					T::Currency::transfer(&Self::account_id(), &to, *amount, AllowDeath)?;
 				},
 				CancellationFee::FlexibleTokens(amount) => {
-					T::Currency::transfer(&Self::account_id(), &to, *amount, KeepAlive)?;
+					T::Currency::transfer(&Self::account_id(), &to, *amount, AllowDeath)?;
 				},
 			};
 		}
@@ -1140,7 +1159,7 @@ impl<T: Config> Pallet<T> {
 					T::NFTExt::set_nft(*cancellation_nft_id, cancellation_nft)?;
 				},
 				CancellationFee::FixedTokens(amount) => {
-					T::Currency::transfer(&Self::account_id(), &to, *amount, KeepAlive)?;
+					T::Currency::transfer(&Self::account_id(), &to, *amount, AllowDeath)?;
 				},
 				CancellationFee::FlexibleTokens(amount) => {
 					let end_block = Self::get_contract_end_block(nft_id, &duration);
@@ -1158,8 +1177,8 @@ impl<T: Config> Pallet<T> {
 							.ok_or(Error::<T>::InternalMathError)?;
 						let returned = amount.checked_sub(&taken).ok_or(Error::<T>::InternalMathError)?;
 
-						T::Currency::transfer(&Self::account_id(), &to, taken, KeepAlive)?;
-						T::Currency::transfer(&Self::account_id(), &from, returned, KeepAlive)?;
+						T::Currency::transfer(&Self::account_id(), &to, taken, AllowDeath)?;
+						T::Currency::transfer(&Self::account_id(), &from, returned, AllowDeath)?;
 					}
 				},
 			};
@@ -1283,6 +1302,24 @@ impl<T: Config> Pallet<T> {
 			}
 			Ok(())
 		})?;
+		Ok(())
+	}
+
+	pub fn add_one_to_contract_nb() -> Result<(), DispatchError> {
+		let current_nb = ContractNb::<T>::get();
+		let next_nb = current_nb
+			.checked_add(1)
+			.expect("If u32 is not enough we should crash for safety; qed.");
+		ContractNb::<T>::put(next_nb);
+		Ok(())
+	}
+
+	pub fn remove_one_to_contract_nb() -> Result<(), DispatchError> {
+		let current_nb = ContractNb::<T>::get();
+		let next_nb = current_nb
+			.checked_sub(1)
+			.expect("If u32 is not enough we should crash for safety; qed.");
+		ContractNb::<T>::put(next_nb);
 		Ok(())
 	}
 }

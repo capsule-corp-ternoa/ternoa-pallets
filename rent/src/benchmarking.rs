@@ -49,7 +49,6 @@ pub fn prepare_benchmarks<T: Config>() -> () {
 	// Give them enough caps.
 	T::Currency::make_free_balance_be(&alice, 100_000u32.into());
 	T::Currency::make_free_balance_be(&bob, 100_000u32.into());
-	T::Currency::make_free_balance_be(&Rent::<T>::account_id(), 100_000u32.into());
 
 	let account_list: BoundedVec<T::AccountId, T::AccountSizeLimit> =
 		BoundedVec::try_from(vec![bob; T::AccountSizeLimit::get() as usize]).unwrap();
