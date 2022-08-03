@@ -9,12 +9,12 @@ targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
 # Frame
-frame-support = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-06-21", default-features = false }
+frame-support = { git = "https://github.com/capsule-corp-ternoa/substrate", tag = "ternoa-substrate-2022-07-30", default-features = false }
 
 # Sp
-sp-runtime = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-06-21", default-features = false }
-sp-std = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-06-21", default-features = false }
-sp-arithmetic = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-06-21", default-features = false }
+sp-runtime = { git = "https://github.com/capsule-corp-ternoa/substrate", tag = "ternoa-substrate-2022-07-30", default-features = false }
+sp-std = { git = "https://github.com/capsule-corp-ternoa/substrate", tag = "ternoa-substrate-2022-07-30", default-features = false }
+sp-arithmetic = { git = "https://github.com/capsule-corp-ternoa/substrate", tag = "ternoa-substrate-2022-07-30", default-features = false }
 
 # Ternoa
 primitives = { package = "ternoa-pallets-primitives", default-features = false, path = "../primitives" }
