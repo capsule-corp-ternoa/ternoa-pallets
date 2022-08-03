@@ -33,7 +33,7 @@ use frame_support::{
 		Currency, ExistenceRequirement::KeepAlive, Get, OnUnbalanced, StorageVersion,
 		WithdrawReasons,
 	},
-	transactional, BoundedVec,
+	BoundedVec,
 };
 use frame_system::pallet_prelude::*;
 use primitives::{
@@ -264,7 +264,6 @@ pub mod pallet {
             },
 			DispatchClass::Normal
         ))]
-		#[transactional]
 		pub fn create_nft(
 			origin: OriginFor<T>,
 			offchain_data: U8BoundedVec<T::NFTOffchainDataLimit>,

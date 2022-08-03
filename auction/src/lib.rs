@@ -47,7 +47,7 @@ const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use frame_support::{dispatch::DispatchResultWithPostInfo, transactional};
+	use frame_support::dispatch::DispatchResultWithPostInfo;
 	use frame_system::{ensure_root, pallet_prelude::*, RawOrigin};
 	use primitives::marketplace::MarketplaceId;
 
@@ -146,7 +146,6 @@ pub mod pallet {
 		/// An example dispatchable that takes a singles value as a parameter, writes the value to
 		/// storage and emits an event. This function must be dispatched by a signed extrinsic.
 		#[pallet::weight(T::WeightInfo::create_auction())]
-		#[transactional]
 		pub fn create_auction(
 			origin: OriginFor<T>,
 			nft_id: NFTId,
@@ -236,7 +235,6 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(T::WeightInfo::cancel_auction())]
-		#[transactional]
 		pub fn cancel_auction(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 			let current_block = frame_system::Pallet::<T>::block_number();
@@ -258,7 +256,6 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(T::WeightInfo::end_auction())]
-		#[transactional]
 		pub fn end_auction(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
@@ -273,7 +270,6 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(T::WeightInfo::add_bid())]
-		#[transactional]
 		pub fn add_bid(
 			origin: OriginFor<T>,
 			nft_id: NFTId,
@@ -344,7 +340,6 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(T::WeightInfo::remove_bid())]
-		#[transactional]
 		pub fn remove_bid(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 			let current_block = frame_system::Pallet::<T>::block_number();
@@ -380,7 +375,6 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(T::WeightInfo::buy_it_now())]
-		#[transactional]
 		pub fn buy_it_now(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 			let current_block = frame_system::Pallet::<T>::block_number();
@@ -414,7 +408,6 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(T::WeightInfo::complete_auction())]
-		#[transactional]
 		pub fn complete_auction(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
 			let _who = ensure_root(origin)?;
 
@@ -438,7 +431,6 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(T::WeightInfo::claim())]
-		#[transactional]
 		pub fn claim(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 			let claim = Claims::<T>::get(&who).ok_or(Error::<T>::ClaimDoesNotExist)?;
@@ -609,7 +601,7 @@ pub mod pallet {
 impl<T: Config> Pallet<T> {
 	/// The account ID of the auctions pot.
 	pub fn account_id() -> T::AccountId {
-		T::PalletId::get().into_account()
+		T::PalletId::get().into_account_truncating()
 	}
 
 	pub fn close_auction(

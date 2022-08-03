@@ -9,18 +9,18 @@ targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
 # Frame
-frame-benchmarking = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-03-24", default-features = false, optional = true }
-frame-support = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-03-24", default-features = false }
-frame-system = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-03-24", default-features = false }
+frame-benchmarking = { git = "https://github.com/capsule-corp-ternoa/substrate", tag = "ternoa-substrate-2022-07-30", default-features = false, optional = true }
+frame-support = { git = "https://github.com/capsule-corp-ternoa/substrate", tag = "ternoa-substrate-2022-07-30", default-features = false }
+frame-system = { git = "https://github.com/capsule-corp-ternoa/substrate", tag = "ternoa-substrate-2022-07-30", default-features = false }
 
 # Sp
-sp-runtime = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-03-24", default-features = false }
-sp-std = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-03-24", default-features = false }
+sp-runtime = { git = "https://github.com/capsule-corp-ternoa/substrate", tag = "ternoa-substrate-2022-07-30", default-features = false }
+sp-std = { git = "https://github.com/capsule-corp-ternoa/substrate", tag = "ternoa-substrate-2022-07-30", default-features = false }
 
 # Rest
-parity-scale-codec = { default-features = false, features = ["derive", "max-encoded-len"], version = "3.1.2" }
-log = { default-features = false, version = "0.4.14"}
-scale-info = { version = "2.0.1", default-features = false, features = ["derive"] }
+parity-scale-codec = { default-features = false, features = ["derive", "max-encoded-len"], version = "3.1.5" }
+log = { default-features = false, version = "0.4.17" }
+scale-info = { version = "2.1.2", default-features = false, features = ["derive"] }
 
 # Ternoa
 ternoa-common = { default-features = false, path = "../common" }
@@ -30,9 +30,9 @@ primitives = { package = "ternoa-pallets-primitives", default-features = false, 
 [dev-dependencies]
 ternoa-nft = { default-features = false, path = "../nft" }
 ternoa-marketplace = { default-features = false, path = "../marketplace" }
-pallet-balances = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-03-24" }
-sp-core = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-03-24", default-features = false }
-sp-io = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-03-24", default-features = false }
+pallet-balances = { git = "https://github.com/capsule-corp-ternoa/substrate", tag = "ternoa-substrate-2022-07-30" }
+sp-core = { git = "https://github.com/capsule-corp-ternoa/substrate", tag = "ternoa-substrate-2022-07-30", default-features = false }
+sp-io = { git = "https://github.com/capsule-corp-ternoa/substrate", tag = "ternoa-substrate-2022-07-30", default-features = false }
 
 [features]
 default = ["std"]
