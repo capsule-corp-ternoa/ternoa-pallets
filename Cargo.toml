@@ -8,5 +8,5 @@ members = [
     'bridge',
     'marketplace',
     'rent',
-    # 'auction',
+    'auction',
 ]

@@ -25,17 +25,17 @@ mod weights;
 pub use pallet::*;
 
 use frame_support::{
+	dispatch::DispatchResultWithPostInfo,
 	pallet_prelude::*,
 	traits::{
 		Currency,
 		ExistenceRequirement::{AllowDeath, KeepAlive},
 		Get, StorageVersion,
 	},
-	PalletId,
-	dispatch::DispatchResultWithPostInfo, transactional
+	transactional, PalletId,
 };
 use frame_system::{ensure_root, pallet_prelude::*, RawOrigin};
-use primitives::{common::CompoundFee, nfts::NFTId, marketplace::MarketplaceId};
+use primitives::{common::CompoundFee, marketplace::MarketplaceId, nfts::NFTId};
 use sp_runtime::traits::{AccountIdConversion, Saturating};
 use ternoa_common::traits::{MarketplaceExt, NFTExt};
 use types::{AuctionData, BidderList, DeadlineList};
@@ -70,7 +70,7 @@ pub mod pallet {
 		type NFTExt: NFTExt<AccountId = Self::AccountId>;
 
 		/// Link to the Marketplace pallet.
-		type MarketplaceExt: MarketplaceExt<AccountId = Self::AccountId>;
+		type MarketplaceExt: MarketplaceExt<AccountId = Self::AccountId, Balance = BalanceOf<Self>>;
 
 		// Constants
 		/// Minimum required length of auction.
@@ -256,7 +256,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			nft_id: NFTId,
 			marketplace_id: MarketplaceId,
-			#[pallet::compact] start_block: T::BlockNumber, // Pallet compact is used to encode arg, is it really needed ? https://docs.substrate.io/reference/frame-macros/ https://docs.substrate.io/reference/scale-codec/
+			#[pallet::compact] start_block: T::BlockNumber, /* Pallet compact is used to encode arg, is it really needed ? https://docs.substrate.io/reference/frame-macros/ https://docs.substrate.io/reference/scale-codec/ */
 			#[pallet::compact] end_block: T::BlockNumber,
 			start_price: BalanceOf<T>,
 			buy_it_price: Option<BalanceOf<T>>,
@@ -575,7 +575,7 @@ impl<T: Config> Pallet<T> {
 		T::Currency::transfer(&balance_source, &auction.creator, to_auctioneer, existence)?;
 
 		let mut nft = T::NFTExt::get_nft(nft_id).ok_or(Error::<T>::NFTNotFound)?;
-		nft.owner = *new_owner;
+		nft.owner = new_owner.clone();
 		nft.state.is_auctioned = false;
 		T::NFTExt::set_nft(nft_id, nft)?;
 
