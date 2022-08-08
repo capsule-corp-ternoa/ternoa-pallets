@@ -55,7 +55,7 @@ pub fn prepare_benchmarks<T: Config>() -> BenchmarkData {
 	let nft_id = T::NFTExt::create_nft(alice, BoundedVec::default(), PERCENT_50, None, false).unwrap();
 
 	// Create default marketplace.
-	assert_ok!(Marketplace::<T>::create_marketplace(origin::<T>("ALICE").into(), MarketplaceType::Public,));
+	assert_ok!(Marketplace::<T>::create_marketplace(origin::<T>("ALICE").into(), MarketplaceType::Public));
 
 	BenchmarkData { nft_id, marketplace_id: Marketplace::<T>::next_marketplace_id() - 1 }
 }
