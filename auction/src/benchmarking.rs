@@ -20,7 +20,7 @@ use super::*;
 use crate::{Auctions as AuctionsStorage, Claims, Pallet as TernoaAuctions};
 use frame_benchmarking::{account as benchmark_account, benchmarks, impl_benchmark_test_suite};
 use frame_support::{
-	assert_ok, bounded_vec,
+	assert_ok,
 	traits::{Currency, OnFinalize, OnInitialize},
 };
 use frame_system::{pallet_prelude::OriginFor, Pallet as System, RawOrigin};
@@ -74,8 +74,8 @@ pub fn prepare_benchmarks<T: Config>(state: Option<AuctionState>) -> BenchmarkDa
 	T::MarketplaceExt::set_marketplace(marketplace_id, marketplace_data).unwrap();
 
 	// Create NFTs
-	let alice_nft_id = T::NFTExt::create_nft(alice, bounded_vec![1], PERCENT_0, None, false).unwrap();
-	let bob_nft_id = T::NFTExt::create_nft(bob, bounded_vec![1], PERCENT_0, None, false).unwrap();
+	let alice_nft_id = T::NFTExt::create_nft(alice, BoundedVec::default(), PERCENT_0, None, false).unwrap();
+	let bob_nft_id = T::NFTExt::create_nft(bob, BoundedVec::default(), PERCENT_0, None, false).unwrap();
 
 	// Create auctions
 	if let Some(state) = state {
@@ -133,7 +133,7 @@ pub fn run_to_block<T: Config>(n: T::BlockNumber) {
 
 // 	// Create 10 000 additional auctions
 // 	for _i in 0..10_000 {
-// 		let nft_id = T::NFTExt::create_nft(alice.clone(), bounded_vec![1], PERCENT_0, None, false).unwrap();
+// 		let nft_id = T::NFTExt::create_nft(alice.clone(), BoundedVec::default(), PERCENT_0, None, false).unwrap();
 
 // 		let start_block = System::<T>::block_number() + T::MaxAuctionDelay::get() - 1u16.into();
 // 		let end_block = start_block + T::MinAuctionDuration::get();
