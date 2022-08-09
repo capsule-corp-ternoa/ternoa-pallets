@@ -88,7 +88,7 @@ pub mod pallet {
 
 		/// Maximum number of simultaneous rent contract.
 		#[pallet::constant]
-		type SimultaneousContractLimit: Get<u32>; //TODO use to limit contracts mapping
+		type SimultaneousContractLimit: Get<u32>;
 
 		/// Maximum number of related automatic rent actions in block.
 		#[pallet::constant]
