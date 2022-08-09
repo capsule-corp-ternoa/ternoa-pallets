@@ -18,10 +18,10 @@
 
 use frame_support::{dispatch::DispatchResult, traits::Get, BoundedVec};
 use primitives::{
-	nfts::{CollectionId, NFTData, NFTId, NFTState},
 	marketplace::{MarketplaceData, MarketplaceId},
+	nfts::{CollectionId, NFTData, NFTId, NFTState},
 };
-use sp_runtime::{Permill, DispatchError};
+use sp_runtime::{DispatchError, Permill};
 use sp_std::fmt::Debug;
 
 pub trait NFTExt {
@@ -44,10 +44,10 @@ pub trait NFTExt {
 	/// Returns an NFT corresponding to its id.
 	fn get_nft(id: NFTId) -> Option<NFTData<Self::AccountId, Self::NFTOffchainDataLimit>>;
 
-	/// Set the NFT data
+	/// Set the NFT data.
 	fn set_nft(id: NFTId, nft_data: NFTData<Self::AccountId, Self::NFTOffchainDataLimit>) -> DispatchResult;
 
-	/// Create an NFT
+	/// Create an NFT.
 	fn create_nft(
 		owner: Self::AccountId,
 		offchain_data: BoundedVec<u8, Self::NFTOffchainDataLimit>,
@@ -64,11 +64,24 @@ pub trait MarketplaceExt {
 	type AccountSizeLimit: Get<u32>;
 
 	/// Returns a marketplace corresponding to its id.
-	fn get_marketplace(id: MarketplaceId) -> Option<MarketplaceData<Self::AccountId, Self::Balance, Self::AccountSizeLimit, Self::OffchainDataLimit>>;
+	fn get_marketplace(
+		id: MarketplaceId,
+	) -> Option<MarketplaceData<Self::AccountId, Self::Balance, Self::AccountSizeLimit, Self::OffchainDataLimit>>;
 
-	/// Check that account id is allowed to list on specific marketplace
+	/// Check that account id is allowed to list on specific marketplace.
 	fn ensure_is_allowed_to_list(
 		who: &Self::AccountId,
 		marketplace: &MarketplaceData<Self::AccountId, Self::Balance, Self::AccountSizeLimit, Self::OffchainDataLimit>,
 	) -> Result<(), DispatchError>;
+
+	/// Set marketplace data for specified id.
+	fn set_marketplace(
+		id: MarketplaceId,
+		marketplace_data: MarketplaceData<
+			Self::AccountId,
+			Self::Balance,
+			Self::AccountSizeLimit,
+			Self::OffchainDataLimit,
+		>,
+	) -> DispatchResult;
 }

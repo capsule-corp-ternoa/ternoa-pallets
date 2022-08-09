@@ -2365,6 +2365,7 @@ dependencies = [
  "pallet-balances",
  "parity-scale-codec",
  "scale-info",
+ "sp-arithmetic",
  "sp-core",
  "sp-io",
  "sp-runtime",

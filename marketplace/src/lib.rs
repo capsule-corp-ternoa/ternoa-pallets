@@ -456,6 +456,15 @@ impl<T: Config> MarketplaceExt for Pallet<T> {
 		Marketplaces::<T>::get(id)
 	}
 
+	fn set_marketplace(
+		id: MarketplaceId,
+		marketplace_data: MarketplaceData<T::AccountId, BalanceOf<T>, T::AccountSizeLimit, T::OffchainDataLimit>,
+	) -> Result<(), DispatchError> {
+		Marketplaces::<T>::insert(id, marketplace_data);
+
+		Ok(())
+	}
+
 	fn ensure_is_allowed_to_list(
 		who: &Self::AccountId,
 		marketplace: &MarketplaceData<T::AccountId, BalanceOf<T>, T::AccountSizeLimit, T::OffchainDataLimit>,

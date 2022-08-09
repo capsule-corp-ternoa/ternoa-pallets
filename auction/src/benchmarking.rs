@@ -25,9 +25,10 @@ use frame_support::{
 };
 use frame_system::{pallet_prelude::OriginFor, Pallet as System, RawOrigin};
 use primitives::{
-	marketplace::{MarketplaceId, MarketplaceType},
+	marketplace::{MarketplaceData, MarketplaceId, MarketplaceType},
 	nfts::NFTId,
 };
+use sp_arithmetic::per_things::Permill;
 use sp_runtime::traits::Bounded;
 use sp_std::prelude::*;
 use ternoa_common::traits::{MarketplaceExt, NFTExt};
@@ -40,9 +41,12 @@ pub enum AuctionState {
 
 pub struct BenchmarkData {
 	pub alice_nft_id: NFTId,
-	pub alice_market_id: MarketplaceId,
+	pub alice_marketplace_id: MarketplaceId,
 	pub bob_nft_id: NFTId,
 }
+
+const PERCENT_0: Permill = Permill::from_parts(0);
+const PERCENT_20: Permill = Permill::from_parts(200000);
 
 pub fn prepare_benchmarks<T: Config>(state: Option<AuctionState>) -> BenchmarkData {
 	// Get accounts
@@ -58,32 +62,25 @@ pub fn prepare_benchmarks<T: Config>(state: Option<AuctionState>) -> BenchmarkDa
 	T::Currency::make_free_balance_be(&eve, BalanceOf::<T>::max_value() / 5u32.into());
 
 	// Create Alice's marketplace
-	let market_id = T::MarketplaceExt::create(
+	let marketplace_id = 0u32;
+	let marketplace_data = MarketplaceData::new(
 		alice.clone(),
 		MarketplaceType::Public,
-		10,
-		bounded_vec![1],
-		bounded_vec![],
-		bounded_vec![],
-		bounded_vec![],
-	)
-	.unwrap();
+		Some(CompoundFee::Percentage(PERCENT_20)),
+		None,
+		None,
+		None,
+	);
+	T::MarketplaceExt::set_marketplace(marketplace_id, marketplace_data).unwrap();
 
 	// Create NFTs
-	let alice_nft_id = T::NFTExt::create_nft(alice.clone(), bounded_vec![10], None).unwrap();
-	let bob_nft_id = T::NFTExt::create_nft(bob.clone(), bounded_vec![10], None).unwrap();
-
-	let alice_series = T::NFTExt::get_nft(alice_nft_id).unwrap().series_id;
-	let bob_series = T::NFTExt::get_nft(bob_nft_id).unwrap().series_id;
-
-	assert_ok!(T::NFTExt::set_series_completion(&alice_series, true));
-	assert_ok!(T::NFTExt::set_series_completion(&bob_series, true));
+	let alice_nft_id = T::NFTExt::create_nft(alice, bounded_vec![1], PERCENT_0, None, false).unwrap();
+	let bob_nft_id = T::NFTExt::create_nft(bob, bounded_vec![1], PERCENT_0, None, false).unwrap();
 
 	// Create auctions
 	if let Some(state) = state {
 		let (start_block, is_extended) = match state {
-			AuctionState::Before =>
-				(System::<T>::block_number() + T::MaxAuctionDelay::get(), false),
+			AuctionState::Before => (System::<T>::block_number() + T::MaxAuctionDelay::get(), false),
 			AuctionState::InProgress => (System::<T>::block_number(), false),
 			AuctionState::Extended => (System::<T>::block_number(), true),
 		};
@@ -92,16 +89,15 @@ pub fn prepare_benchmarks<T: Config>(state: Option<AuctionState>) -> BenchmarkDa
 		let start_price = BalanceOf::<T>::max_value() / 1000u32.into();
 		let buy_it_price = Some(start_price.saturating_mul(2u16.into()));
 
-		let ok = TernoaAuctions::<T>::create_auction(
+		assert_ok!(TernoaAuctions::<T>::create_auction(
 			origin::<T>("BOB"),
 			bob_nft_id,
-			market_id,
+			marketplace_id,
 			start_block,
 			end_block,
 			start_price,
 			buy_it_price,
-		);
-		assert_ok!(ok);
+		));
 
 		AuctionsStorage::<T>::mutate(bob_nft_id, |x| {
 			let mut x = x.as_mut().unwrap();
@@ -109,7 +105,7 @@ pub fn prepare_benchmarks<T: Config>(state: Option<AuctionState>) -> BenchmarkDa
 		});
 	}
 
-	BenchmarkData { alice_nft_id, alice_market_id: market_id, bob_nft_id }
+	BenchmarkData { alice_nft_id, alice_marketplace_id: marketplace_id, bob_nft_id }
 }
 
 pub fn get_account<T: Config>(name: &'static str) -> T::AccountId {
@@ -128,38 +124,34 @@ pub fn run_to_block<T: Config>(n: T::BlockNumber) {
 		<System<T> as OnFinalize<T::BlockNumber>>::on_finalize(System::<T>::block_number());
 		System::<T>::set_block_number(System::<T>::block_number() + 1u16.into());
 		<System<T> as OnInitialize<T::BlockNumber>>::on_initialize(System::<T>::block_number());
-		<TernoaAuctions<T> as OnInitialize<T::BlockNumber>>::on_initialize(
-			System::<T>::block_number(),
-		);
+		<TernoaAuctions<T> as OnInitialize<T::BlockNumber>>::on_initialize(System::<T>::block_number());
 	}
 }
 
-/* pub fn prepare_create_auction<T: Config>(data: &BenchmarkData) {
-	let alice: T::AccountId = get_account::<T>("ALICE");
+// pub fn prepare_create_auction<T: Config>(data: &BenchmarkData) {
+// 	let alice: T::AccountId = get_account::<T>("ALICE");
 
-	// Create 10 000 additional auctions
-	for _i in 0..10_000 {
-		let nft_id = T::NFTExt::create_nft(alice.clone(), vec![10], None).unwrap();
-		let series_id = T::NFTExt::get_nft(nft_id).unwrap().series_id;
-		assert_ok!(T::NFTExt::set_series_completion(&series_id, true));
+// 	// Create 10 000 additional auctions
+// 	for _i in 0..10_000 {
+// 		let nft_id = T::NFTExt::create_nft(alice.clone(), bounded_vec![1], PERCENT_0, None, false).unwrap();
 
-		let start_block = System::<T>::block_number() + T::MaxAuctionDelay::get() - 1u16.into();
-		let end_block = start_block + T::MinAuctionDuration::get();
-		let start_price = BalanceOf::<T>::max_value() / 100000u32.into();
-		let buy_it_price = start_price.saturating_mul(2u16.into());
+// 		let start_block = System::<T>::block_number() + T::MaxAuctionDelay::get() - 1u16.into();
+// 		let end_block = start_block + T::MinAuctionDuration::get();
+// 		let start_price = BalanceOf::<T>::max_value() / 100000u32.into();
+// 		let buy_it_price = start_price.saturating_mul(2u16.into());
 
-		let ok = TernoaAuctions::<T>::create_auction(
-			origin::<T>("ALICE"),
-			nft_id,
-			data.alice_market_id,
-			start_block,
-			end_block,
-			start_price,
-			Some(buy_it_price),
-		);
-		assert_ok!(ok);
-	}
-} */
+// 		let ok = TernoaAuctions::<T>::create_auction(
+// 			origin::<T>("ALICE"),
+// 			nft_id,
+// 			data.alice_marketplace_id,
+// 			start_block,
+// 			end_block,
+// 			start_price,
+// 			Some(buy_it_price),
+// 		);
+// 		assert_ok!(ok);
+// 	}
+// }
 
 benchmarks! {
 	create_auction {
@@ -169,15 +161,15 @@ benchmarks! {
 		let alice: T::AccountId = get_account::<T>("ALICE");
 
 		let nft_id = bench_data.alice_nft_id;
-		let market_id = bench_data.alice_market_id;
+		let marketplace_id = bench_data.alice_marketplace_id;
 		let start_block = System::<T>::block_number() + T::MaxAuctionDelay::get();
 		let end_block = start_block + T::MinAuctionDuration::get();
 		let start_price = BalanceOf::<T>::max_value() / 100u32.into();
 		let buy_now_price = start_price.saturating_mul(2u16.into());
 
-	}: _(RawOrigin::Signed(alice.clone()), nft_id, market_id, start_block, end_block, start_price, Some(buy_now_price))
+	}: _(RawOrigin::Signed(alice), nft_id, marketplace_id, start_block, end_block, start_price, Some(buy_now_price))
 	verify {
-		assert_eq!(T::NFTExt::is_listed(nft_id), Some(true));
+		assert_eq!(T::NFTExt::get_nft(nft_id).unwrap().state.is_auctioned, true);
 	}
 
 	 cancel_auction {
@@ -185,29 +177,27 @@ benchmarks! {
 		let bob: T::AccountId = get_account::<T>("BOB");
 		let nft_id = bench_data.bob_nft_id;
 
-	}: _(RawOrigin::Signed(bob.clone()), nft_id)
+	}: _(RawOrigin::Signed(bob), nft_id)
 	verify {
-		assert_eq!(T::NFTExt::is_listed(nft_id), Some(false));
+		assert_eq!(T::NFTExt::get_nft(nft_id).unwrap().state.is_auctioned, false);
 	}
 
 	end_auction {
 		let bench_data = prepare_benchmarks::<T>(Some(AuctionState::Extended));
 		let bob: T::AccountId = get_account::<T>("BOB");
 		let nft_id = bench_data.bob_nft_id;
-
 		let auction = AuctionsStorage::<T>::get(nft_id).unwrap();
-		let charlie_bid = auction.buy_it_price.clone().unwrap();
+		let charlie_bid = auction.buy_it_price.unwrap();
 		let eve_bid = charlie_bid.saturating_mul(2u16.into());
 
 		assert_ok!(TernoaAuctions::<T>::add_bid(origin::<T>("CHARLIE"), nft_id, charlie_bid));
 		assert_ok!(TernoaAuctions::<T>::add_bid(origin::<T>("EVE"), nft_id, eve_bid));
-
-	}: _(RawOrigin::Signed(bob.clone()), nft_id)
+	}: _(RawOrigin::Signed(bob), nft_id)
 	verify {
 		let eve: T::AccountId = get_account::<T>("EVE");
-
-		assert_eq!(T::NFTExt::is_listed(nft_id), Some(false));
-		assert_eq!(T::NFTExt::owner(nft_id), Some(eve));
+		let nft = T::NFTExt::get_nft(nft_id).unwrap();
+		assert_eq!(nft.state.is_auctioned, false);
+		assert_eq!(nft.owner, eve);
 	}
 
 	add_bid {
@@ -216,7 +206,7 @@ benchmarks! {
 		let nft_id = bench_data.bob_nft_id;
 
 		let auction = AuctionsStorage::<T>::get(nft_id).unwrap();
-		let charlie_bid =  auction.buy_it_price.clone().unwrap();
+		let charlie_bid =  auction.buy_it_price.unwrap();
 
 	}: _(RawOrigin::Signed(charlie.clone()), nft_id, charlie_bid)
 	verify {
@@ -230,10 +220,9 @@ benchmarks! {
 		let nft_id = bench_data.bob_nft_id;
 
 		let auction = AuctionsStorage::<T>::get(nft_id).unwrap();
-		let charlie_bid =  auction.buy_it_price.clone().unwrap();
+		let charlie_bid =  auction.buy_it_price.unwrap();
 		assert_ok!(TernoaAuctions::<T>::add_bid(origin::<T>("CHARLIE"), nft_id, charlie_bid));
-
-	}: _(RawOrigin::Signed(charlie.clone()), nft_id)
+	}: _(RawOrigin::Signed(charlie), nft_id)
 	verify {
 		assert_eq!(auction.bidders.list, vec![]);
 	}
@@ -245,8 +234,9 @@ benchmarks! {
 
 	}: _(RawOrigin::Signed(charlie.clone()), nft_id)
 	verify {
-		assert_eq!(T::NFTExt::is_listed(nft_id), Some(false));
-		assert_eq!(T::NFTExt::owner(nft_id), Some(charlie));
+		let nft = T::NFTExt::get_nft(nft_id).unwrap();
+		assert_eq!(nft.state.is_auctioned, false);
+		assert_eq!(nft.owner, charlie);
 	}
 
 	complete_auction {
@@ -255,7 +245,7 @@ benchmarks! {
 		let nft_id = bench_data.bob_nft_id;
 
 		let auction = AuctionsStorage::<T>::get(nft_id).unwrap();
-		let charlie_bid = auction.buy_it_price.clone().unwrap();
+		let charlie_bid = auction.buy_it_price.unwrap();
 		let eve_bid = charlie_bid.saturating_mul(2u16.into());
 
 		assert_ok!(TernoaAuctions::<T>::add_bid(origin::<T>("CHARLIE"), nft_id, charlie_bid));
@@ -264,9 +254,9 @@ benchmarks! {
 	}: _(RawOrigin::Root, nft_id)
 	verify {
 		let eve: T::AccountId = get_account::<T>("EVE");
-
-		assert_eq!(T::NFTExt::is_listed(nft_id), Some(false));
-		assert_eq!(T::NFTExt::owner(nft_id), Some(eve));
+		let nft = T::NFTExt::get_nft(nft_id).unwrap();
+		assert_eq!(nft.state.is_auctioned, false);
+		assert_eq!(nft.owner, eve);
 	}
 
 	claim {
@@ -275,7 +265,7 @@ benchmarks! {
 		let nft_id = bench_data.bob_nft_id;
 
 		let auction = AuctionsStorage::<T>::get(nft_id).unwrap();
-		let charlie_bid = auction.buy_it_price.clone().unwrap();
+		let charlie_bid = auction.buy_it_price.unwrap();
 		let eve_bid = charlie_bid.saturating_mul(2u16.into());
 
 		assert_ok!(TernoaAuctions::<T>::add_bid(origin::<T>("CHARLIE"), nft_id, charlie_bid));
@@ -284,12 +274,8 @@ benchmarks! {
 
 	}: _(RawOrigin::Signed(charlie.clone()))
 	verify {
-		assert_eq!(Claims::<T>::get(charlie.clone()), None);
+		assert_eq!(Claims::<T>::get(charlie), None);
 	}
 }
 
-impl_benchmark_test_suite!(
-	TernoaAuctions,
-	crate::tests::mock::new_test_ext(),
-	crate::tests::mock::Test
-);
+impl_benchmark_test_suite!(TernoaAuctions, crate::tests::mock::new_test_ext(), crate::tests::mock::Test);

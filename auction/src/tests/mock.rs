@@ -44,14 +44,6 @@ pub const MAX_AUCTION_DURATION: u64 = 1000;
 pub const MAX_AUCTION_DELAY: u64 = 50;
 pub const AUCTION_GRACE_PERIOD: u64 = 5;
 pub const AUCTION_ENDING_PERIOD: u64 = 10;
-
-pub const ALICE_NFT_ID: u32 = 1;
-pub const ALICE_MARKET_ID: u32 = 1;
-
-pub const BOB_NFT_ID: u32 = 10;
-pub const INVALID_NFT_ID: u32 = 404;
-pub const MARKETPLACE_COMMISSION_FEE: u8 = 10;
-
 pub const NFT_MINT_FEE: Balance = 10;
 pub const MARKETPLACE_MINT_FEE: Balance = 100;
 
@@ -68,12 +60,6 @@ frame_support::construct_runtime!(
 		Auction: ternoa_auction,
 	}
 );
-
-pub enum AuctionState {
-	Before,
-	InProgress,
-	Extended,
-}
 
 pub struct TestBaseCallFilter;
 impl Contains<Call> for TestBaseCallFilter {
@@ -202,22 +188,21 @@ impl Config for Test {
 
 pub struct ExtBuilder {
 	balances: Vec<(u64, u128)>,
-	state: Option<AuctionState>,
 }
 
 impl Default for ExtBuilder {
 	fn default() -> Self {
-		ExtBuilder { balances: Vec::new(), state: None }
+		ExtBuilder { balances: Vec::new() }
 	}
 }
 
 impl ExtBuilder {
-	pub fn new(balances: Vec<(u64, u128)>, state: Option<AuctionState>) -> Self {
-		ExtBuilder { balances, state }
+	pub fn new(balances: Vec<(u64, u128)>) -> Self {
+		ExtBuilder { balances }
 	}
 
-	pub fn new_build(balances: Vec<(u64, u128)>, state: Option<AuctionState>) -> sp_io::TestExternalities {
-		Self::new(balances, state).build()
+	pub fn new_build(balances: Vec<(u64, u128)>) -> sp_io::TestExternalities {
+		Self::new(balances).build()
 	}
 
 	pub fn build(self) -> sp_io::TestExternalities {
@@ -231,101 +216,6 @@ impl ExtBuilder {
 		ext.execute_with(|| System::set_block_number(1));
 		ext
 	}
-
-	// fn build_nfts(t: &mut sp_runtime::Storage) {
-	// 	let alice_nft: NFTData<AccountId, IPFSLengthLimit> =
-	// 		NFTData::new_default(ALICE, bounded_vec![10], vec![ALICE_SERIES_ID]);
-	// 	let bob_nft: NFTData<AccountId, IPFSLengthLimit> =
-	// 		NFTData::new_default(BOB, bounded_vec![10], vec![BOB_SERIES_ID]);
-
-	// 	let alice_series = NFTSeriesDetails::new(ALICE, false);
-	// 	let bob_series = NFTSeriesDetails::new(ALICE, false);
-
-	// 	let nfts = vec![alice_nft.to_raw(ALICE_NFT_ID), bob_nft.to_raw(BOB_NFT_ID)];
-	// 	let series = vec![
-	// 		alice_series.to_raw(vec![ALICE_SERIES_ID]),
-	// 		bob_series.to_raw(vec![BOB_SERIES_ID]),
-	// 	];
-
-	// 	ternoa_nft::GenesisConfig::<Test> { nfts, series, nft_mint_fee: 5 }
-	// 		.assimilate_storage(t)
-	// 		.unwrap();
-	// }
-
-	// fn build_market(t: &mut sp_runtime::Storage) {
-	// 	let alice_market: MarketplaceData<
-	// 		AccountId,
-	// 		AccountCountLimit,
-	// 		NameLengthLimit,
-	// 		URILengthLimit,
-	// 		DescriptionLengthLimit,
-	// 	> = MarketplaceData::new(
-	// 		MarketplaceType::Public,
-	// 		MARKETPLACE_COMMISSION_FEE,
-	// 		ALICE,
-	// 		bounded_vec![],
-	// 		bounded_vec![],
-	// 		bounded_vec![10],
-	// 		bounded_vec![],
-	// 		bounded_vec![],
-	// 		bounded_vec![],
-	// 	);
-	// 	let marketplaces = vec![alice_market.to_raw(ALICE_MARKET_ID)];
-
-	// 	ternoa_marketplace::GenesisConfig::<Test> {
-	// 		nfts: vec![],
-	// 		marketplaces,
-	// 		marketplace_mint_fee: 15,
-	// 	}
-	// 	.assimilate_storage(t)
-	// 	.unwrap();
-	// }
-
-	// fn build_auction(t: &mut sp_runtime::Storage, state: Option<AuctionState>) {
-	// 	pub const NFT_PRICE: u128 = 100;
-	// 	pub const NFT_BUY_PRICE: Option<u128> = Some(200);
-
-	// 	let mut auctions: Vec<(
-	// 		u32,
-	// 		AuctionData<AccountId, BlockNumber, u128, BidderListLengthLimit>,
-	// 	)> = vec![];
-	// 	if let Some(state) = state {
-	// 		let (start, end, extended) = match state {
-	// 			AuctionState::Before => (2, 2 + MAX_AUCTION_DURATION, false),
-	// 			AuctionState::InProgress => (1, 1 + MAX_AUCTION_DURATION, false),
-	// 			AuctionState::Extended => (1, 1 + MAX_AUCTION_DURATION, true),
-	// 		};
-
-	// 		let alice_data = AuctionData {
-	// 			creator: ALICE,
-	// 			start_block: start,
-	// 			end_block: end,
-	// 			start_price: NFT_PRICE,
-	// 			buy_it_price: NFT_BUY_PRICE.clone(),
-	// 			bidders: BidderList::new(),
-	// 			marketplace_id: ALICE_MARKET_ID,
-	// 			is_extended: extended,
-	// 		};
-
-	// 		let bob_data = AuctionData {
-	// 			creator: BOB,
-	// 			start_block: start,
-	// 			end_block: end,
-	// 			start_price: NFT_PRICE,
-	// 			buy_it_price: NFT_BUY_PRICE.clone(),
-	// 			bidders: BidderList::new(),
-	// 			marketplace_id: ALICE_MARKET_ID,
-	// 			is_extended: extended,
-	// 		};
-
-	// 		auctions = vec![(ALICE_NFT_ID, alice_data), (BOB_NFT_ID, bob_data)];
-	// 	}
-
-	// 	let auctions = auctions.iter().map(|x| x.1.to_raw(x.0)).collect();
-	// 	ternoa_auction::GenesisConfig::<Test> { auctions }
-	// 		.assimilate_storage(t)
-	// 		.unwrap();
-	// }
 }
 
 #[allow(dead_code)]

@@ -20,9 +20,7 @@ use primitives::{marketplace::MarketplaceId, nfts::NFTId};
 use scale_info::TypeInfo;
 use sp_std::{fmt::Debug, vec::Vec};
 
-#[derive(
-	Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen,
-)]
+#[derive(Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen)]
 #[codec(mel_bound(AccountId: MaxEncodedLen, BlockNumber: MaxEncodedLen, Balance: MaxEncodedLen))]
 #[scale_info(skip_type_params(BidderListLengthLimit))]
 /// Structure to store Auction data
@@ -51,9 +49,7 @@ where
 	pub is_extended: bool,
 }
 
-#[derive(
-	Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen,
-)]
+#[derive(Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen)]
 #[codec(mel_bound(AccountId: MaxEncodedLen, Balance: MaxEncodedLen))]
 #[scale_info(skip_type_params(BidderListLengthLimit))]
 /// wrapper type to store sorted list of all bids
@@ -67,8 +63,7 @@ where
 	pub list: BoundedVec<(AccountId, Balance), BidderListLengthLimit>,
 }
 
-impl<AccountId, Balance, BidderListLengthLimit>
-	BidderList<AccountId, Balance, BidderListLengthLimit>
+impl<AccountId, Balance, BidderListLengthLimit> BidderList<AccountId, Balance, BidderListLengthLimit>
 where
 	AccountId: Clone + PartialEq + Debug + sp_std::cmp::Ord,
 	Balance: Clone + PartialEq + Debug + sp_std::cmp::PartialOrd,
@@ -80,11 +75,7 @@ where
 	}
 
 	/// Insert a new bid to the list
-	pub fn insert_new_bid(
-		&mut self,
-		account_id: AccountId,
-		value: Balance,
-	) -> Option<(AccountId, Balance)> {
+	pub fn insert_new_bid(&mut self, account_id: AccountId, value: Balance) -> Option<(AccountId, Balance)> {
 		// If list is at max capacity, remove lowest bid
 		if self.list.is_full() {
 			let removed_bid = self.list.remove(0);
@@ -151,9 +142,7 @@ where
 	}
 }
 
-#[derive(
-	Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen,
-)]
+#[derive(Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen)]
 #[codec(mel_bound(BlockNumber: MaxEncodedLen))]
 #[scale_info(skip_type_params(ParallelAuctionLimit))]
 /// wrapper type to store sorted list of all bids
