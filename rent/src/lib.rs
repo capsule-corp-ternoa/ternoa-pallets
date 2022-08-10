@@ -1105,6 +1105,7 @@ impl<T: Config> Pallet<T> {
 				},
 				CancellationFee::FixedTokens(amount) => {
 					ensure!(T::Currency::free_balance(from) >= *amount, Error::<T>::NotEnoughBalanceForCancellationFee);
+					// @Marko : Error happens here for whatever reason
 					T::Currency::transfer(from, &Self::account_id(), *amount, KeepAlive)?;
 				},
 				CancellationFee::FlexibleTokens(amount) => {

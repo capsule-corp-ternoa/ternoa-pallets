@@ -497,35 +497,35 @@ pub mod create_auction {
 		})
 	}
 
-	// #[test]
-	// fn price_cannot_cover_marketplace_fee() {
-	// 	ExtBuilder::new_build(vec![(ALICE, 1_000), (BOB, 1_000)]).execute_with(|| {
-	// 		prepare_tests();
-	// 		let alice: mock::Origin = origin(ALICE);
+	#[test]
+	fn price_cannot_cover_marketplace_fee() {
+		ExtBuilder::new_build(vec![(ALICE, 1_000), (BOB, 1_000)]).execute_with(|| {
+			prepare_tests();
+			let alice: mock::Origin = origin(ALICE);
 
-	// 		// Set flat commission fee.
-	// 		Marketplace::set_marketplace_configuration(
-	// 			alice.clone(),
-	// 			ALICE_MARKETPLACE_ID,
-	// 			ConfigOp::Set(CompoundFee::Flat(101)),
-	// 			ConfigOp::Noop,
-	// 			ConfigOp::Noop,
-	// 			ConfigOp::Noop,
-	// 		)
-	// 		.unwrap();
+			// Set flat commission fee.
+			Marketplace::set_marketplace_configuration(
+				alice.clone(),
+				ALICE_MARKETPLACE_ID,
+				ConfigOp::Set(CompoundFee::Flat(101)),
+				ConfigOp::Noop,
+				ConfigOp::Noop,
+				ConfigOp::Noop,
+			)
+			.unwrap();
 
-	// 		let err = Auction::create_auction(
-	// 			alice,
-	// 			ALICE_NFT_ID_0,
-	// 			ALICE_MARKETPLACE_ID,
-	// 			System::block_number(),
-	// 			System::block_number() + MIN_AUCTION_DURATION,
-	// 			100,
-	// 			Some(101),
-	// 		);
-	// 		assert_noop!(err, MarketplaceError::<Test>::PriceCannotCoverMarketplaceFee);
-	// 	})
-	// }
+			let err = Auction::create_auction(
+				alice,
+				ALICE_NFT_ID_0,
+				ALICE_MARKETPLACE_ID,
+				System::block_number(),
+				System::block_number() + MIN_AUCTION_DURATION,
+				100,
+				Some(101),
+			);
+			assert_noop!(err, Error::<Test>::PriceCannotCoverMarketplaceFee);
+		})
+	}
 }
 
 pub mod cancel_auction {

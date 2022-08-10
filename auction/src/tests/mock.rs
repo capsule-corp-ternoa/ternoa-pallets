@@ -56,8 +56,8 @@ frame_support::construct_runtime!(
 		System: frame_system,
 		Balances: pallet_balances,
 		NFT: ternoa_nft,
-		Marketplace: ternoa_marketplace,
 		Auction: ternoa_auction,
+		Marketplace: ternoa_marketplace,
 	}
 );
 
