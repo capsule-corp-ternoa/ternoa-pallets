@@ -22,8 +22,8 @@ use frame_benchmarking::{account as benchmark_account, benchmarks, impl_benchmar
 use frame_support::{assert_ok, traits::Currency, BoundedVec};
 use frame_system::RawOrigin;
 use sp_arithmetic::per_things::Permill;
-use sp_std::prelude::*;
 use sp_runtime::traits::Bounded;
+use sp_std::prelude::*;
 use ternoa_common::traits::NFTExt;
 
 const PERCENT_100: Permill = Permill::from_parts(1000000);
