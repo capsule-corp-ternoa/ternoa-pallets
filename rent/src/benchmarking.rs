@@ -70,6 +70,9 @@ pub fn prepare_benchmarks<T: Config>() -> () {
 		false,
 	));
 
+	let cancellation_fee = BalanceOf::<T>::max_value() / 1000u32.into();
+	let rent_fee = BalanceOf::<T>::max_value() / 10000u32.into();
+
 	// Create default Contract.
 	let ok = Rent::<T>::create_contract(
 		origin::<T>("ALICE").into(),
@@ -77,9 +80,9 @@ pub fn prepare_benchmarks<T: Config>() -> () {
 		Duration::Subscription(1000u32.into(), Some(10000u32.into())),
 		AcceptanceType::AutoAcceptance(Some(account_list)),
 		RevocationType::Anytime,
-		RentFee::Tokens(1000u32.into()),
-		Some(CancellationFee::FixedTokens(100u32.into())),
-		Some(CancellationFee::FixedTokens(100u32.into())),
+		RentFee::Tokens(rent_fee),
+		Some(CancellationFee::FixedTokens(cancellation_fee)),
+		Some(CancellationFee::FixedTokens(cancellation_fee)),
 	);
 	// @Marko : theses lines just test the balance
 	assert_eq!(T::Currency::free_balance(&alice.into()) > 100u32.into(), true);
