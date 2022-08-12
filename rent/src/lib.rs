@@ -338,7 +338,7 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		/// Create a new rent contract with the provided details.
-		#[pallet::weight(T::WeightInfo::transfer_nft())]
+		#[pallet::weight(T::WeightInfo::retract_rent_offer())]
 		#[transactional]
 		pub fn create_contract(
 			origin: OriginFor<T>,
@@ -427,7 +427,7 @@ pub mod pallet {
 		}
 
 		/// Revoke a rent contract, cancel it if it has not started.
-		#[pallet::weight(T::WeightInfo::transfer_nft())]
+		#[pallet::weight(T::WeightInfo::retract_rent_offer())]
 		#[transactional]
 		pub fn revoke_contract(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
@@ -465,7 +465,7 @@ pub mod pallet {
 		}
 
 		/// Rent an nft if contract exist, makes an offer if it's manual acceptance.
-		#[pallet::weight(T::WeightInfo::transfer_nft())]
+		#[pallet::weight(T::WeightInfo::retract_rent_offer())]
 		#[transactional]
 		pub fn rent(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
@@ -518,7 +518,7 @@ pub mod pallet {
 		}
 
 		/// Accept a rent offer for manual acceptance contract.
-		#[pallet::weight(T::WeightInfo::transfer_nft())]
+		#[pallet::weight(T::WeightInfo::retract_rent_offer())]
 		#[transactional]
 		pub fn accept_rent_offer(
 			origin: OriginFor<T>,
@@ -565,7 +565,7 @@ pub mod pallet {
 		}
 
 		/// Retract a rent offer for manual acceptance contract.
-		#[pallet::weight(T::WeightInfo::transfer_nft())]
+		#[pallet::weight(T::WeightInfo::retract_rent_offer())]
 		pub fn retract_rent_offer(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 			let contract = Contracts::<T>::get(nft_id).ok_or(Error::<T>::ContractNotFound)?;
@@ -582,7 +582,7 @@ pub mod pallet {
 		}
 
 		/// Change the subscription terms for subscription contracts.
-		#[pallet::weight(T::WeightInfo::transfer_nft())]
+		#[pallet::weight(T::WeightInfo::change_subscription_terms())]
 		pub fn change_subscription_terms(
 			origin: OriginFor<T>,
 			nft_id: NFTId,
@@ -618,7 +618,7 @@ pub mod pallet {
 		}
 
 		/// Accept the new contract terms.
-		#[pallet::weight(T::WeightInfo::transfer_nft())]
+		#[pallet::weight(T::WeightInfo::accept_subscription_terms())]
 		pub fn accept_subscription_terms(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
@@ -641,7 +641,7 @@ pub mod pallet {
 		}
 
 		/// End a rent contract.
-		#[pallet::weight(T::WeightInfo::transfer_nft())]
+		#[pallet::weight(T::WeightInfo::retract_rent_offer())]
 		pub fn end_contract(
 			origin: OriginFor<T>,
 			nft_id: NFTId,
@@ -673,7 +673,7 @@ pub mod pallet {
 		}
 
 		/// Renew a rent contract for a subscription period.
-		#[pallet::weight(T::WeightInfo::transfer_nft())]
+		#[pallet::weight(T::WeightInfo::retract_rent_offer())]
 		pub fn renew_contract(origin: OriginFor<T>, nft_id: NFTId, now: T::BlockNumber) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
 			let contract = Contracts::<T>::get(nft_id).ok_or(Error::<T>::ContractNotFound)?;
@@ -729,7 +729,7 @@ pub mod pallet {
 		}
 
 		/// Remove a contract from available list if expiration has been reached.
-		#[pallet::weight(T::WeightInfo::transfer_nft())]
+		#[pallet::weight(T::WeightInfo::retract_rent_offer())]
 		pub fn remove_expired_contract(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
 			let contract = Contracts::<T>::get(nft_id).ok_or(Error::<T>::ContractNotFound)?;
@@ -1105,7 +1105,6 @@ impl<T: Config> Pallet<T> {
 				},
 				CancellationFee::FixedTokens(amount) => {
 					ensure!(T::Currency::free_balance(from) >= *amount, Error::<T>::NotEnoughBalanceForCancellationFee);
-					// @Marko : Error happens here for whatever reason
 					T::Currency::transfer(from, &Self::account_id(), *amount, KeepAlive)?;
 				},
 				CancellationFee::FlexibleTokens(amount) => {

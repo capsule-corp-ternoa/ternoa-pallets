@@ -84,20 +84,19 @@ pub fn prepare_benchmarks<T: Config>() -> () {
 		Some(CancellationFee::FixedTokens(cancellation_fee)),
 		Some(CancellationFee::FixedTokens(cancellation_fee)),
 	);
-	// @Marko : theses lines just test the balance
 	assert_eq!(T::Currency::free_balance(&alice.into()) > 100u32.into(), true);
 	assert_ok!(ok);
 }
 
 benchmarks! {
 	create_contract {
-		let s in 0 .. T::AccountSizeLimit::get() - 1;
-		let t in 0 .. T::SimultaneousContractLimit::get() - 2;
+		// let s in 0 .. T::AccountSizeLimit::get() - 1;
+		// let t in 0 .. T::SimultaneousContractLimit::get() - 2;
 		prepare_benchmarks::<T>();
-		Rent::<T>::fill_available_queue(t, 99u32.into(), 10u32.into()).unwrap();
+		// Rent::<T>::fill_available_queue(t, 99u32.into(), 10u32.into()).unwrap();
 		let alice: T::AccountId = get_account::<T>("ALICE");
 		let bob: T::AccountId = get_account::<T>("BOB");
-		let account_list: BoundedVec<T::AccountId, T::AccountSizeLimit> = BoundedVec::try_from(vec![bob; s as usize]).unwrap();
+		let account_list: BoundedVec<T::AccountId, T::AccountSizeLimit> = BoundedVec::try_from(vec![bob; T::AccountSizeLimit::get() as usize]).unwrap();
 	}: _(origin::<T>("ALICE"), NFT_ID_1, Duration::Subscription(1000u32.into(), Some(10000u32.into())), AcceptanceType::AutoAcceptance(Some(account_list)), RevocationType::Anytime, RentFee::Tokens(1000u32.into()), Some(CancellationFee::FixedTokens(100u32.into())),Some(CancellationFee::FixedTokens(100u32.into())))
 	verify {
 		// Get The contract.
@@ -106,9 +105,9 @@ benchmarks! {
 	}
 
 	revoke_contract {
-		let s in 0 .. T::SimultaneousContractLimit::get() - 1;
+		// let s in 0 .. T::SimultaneousContractLimit::get() - 1;
 		prepare_benchmarks::<T>();
-		Rent::<T>::fill_subscription_queue(s, 99u32.into(), 10u32.into()).unwrap();
+		// Rent::<T>::fill_subscription_queue(s, 99u32.into(), 10u32.into()).unwrap();
 		Rent::<T>::rent(origin::<T>("BOB").into(), NFT_ID_0).unwrap();
 	}: _(origin::<T>("ALICE"), NFT_ID_0)
 	verify {
@@ -118,11 +117,11 @@ benchmarks! {
 	}
 
 	rent {
-		let s in 0 .. T::SimultaneousContractLimit::get() - 1;
-		let t in 0 .. T::SimultaneousContractLimit::get() - 1;
+		// let s in 0 .. T::SimultaneousContractLimit::get() - 1;
+		// let t in 0 .. T::SimultaneousContractLimit::get() - 1;
 		prepare_benchmarks::<T>();
-		Rent::<T>::fill_available_queue(s, 99u32.into(), 10u32.into()).unwrap();
-		Rent::<T>::fill_subscription_queue(t, 99u32.into(), 10u32.into()).unwrap();
+		// Rent::<T>::fill_available_queue(s, 99u32.into(), 10u32.into()).unwrap();
+		// Rent::<T>::fill_subscription_queue(t, 99u32.into(), 10u32.into()).unwrap();
 	}: _(origin::<T>("BOB"), NFT_ID_0)
 	verify {
 		// Get The contract.
@@ -131,11 +130,11 @@ benchmarks! {
 	}
 
 	accept_rent_offer {
-		let s in 0 .. T::SimultaneousContractLimit::get() - 2;
-		let t in 0 .. T::SimultaneousContractLimit::get() - 1;
+		// let s in 0 .. T::SimultaneousContractLimit::get() - 2;
+		// let t in 0 .. T::SimultaneousContractLimit::get() - 1;
 		prepare_benchmarks::<T>();
-		Rent::<T>::fill_available_queue(s, 99u32.into(), 10u32.into()).unwrap();
-		Rent::<T>::fill_subscription_queue(t, 99u32.into(), 10u32.into()).unwrap();
+		// Rent::<T>::fill_available_queue(s, 99u32.into(), 10u32.into()).unwrap();
+		// Rent::<T>::fill_subscription_queue(t, 99u32.into(), 10u32.into()).unwrap();
 		let bob: T::AccountId = get_account::<T>("BOB");
 		let account_list: BoundedVec<T::AccountId, T::AccountSizeLimit> = BoundedVec::try_from(vec![bob.clone(); T::AccountSizeLimit::get() as usize]).unwrap();
 		Rent::<T>::create_contract(
@@ -238,9 +237,9 @@ benchmarks! {
 	}
 
 	end_contract {
-		let s in 0 .. T::SimultaneousContractLimit::get() - 1;
+		// let s in 0 .. T::SimultaneousContractLimit::get() - 1;
 		prepare_benchmarks::<T>();
-		Rent::<T>::fill_available_queue(s, 99u32.into(), 10u32.into()).unwrap();
+		// Rent::<T>::fill_available_queue(s, 99u32.into(), 10u32.into()).unwrap();
 		Rent::<T>::rent(origin::<T>("BOB").into(), NFT_ID_0).unwrap();
 	}: _(root::<T>(), NFT_ID_0, None)
 	verify {
@@ -249,9 +248,9 @@ benchmarks! {
 	}
 
 	renew_contract {
-		let s in 0 .. T::SimultaneousContractLimit::get() - 1;
+		// let s in 0 .. T::SimultaneousContractLimit::get() - 1;
 		prepare_benchmarks::<T>();
-		Rent::<T>::fill_available_queue(s, 99u32.into(), 10u32.into()).unwrap();
+		// Rent::<T>::fill_available_queue(s, 99u32.into(), 10u32.into()).unwrap();
 		Rent::<T>::rent(origin::<T>("BOB").into(), NFT_ID_0).unwrap();
 	}: _(root::<T>(), NFT_ID_0, 1u32.into())
 	verify {
@@ -261,9 +260,9 @@ benchmarks! {
 	}
 
 	remove_expired_contract {
-		let s in 0 .. T::SimultaneousContractLimit::get() - 1;
+		// let s in 0 .. T::SimultaneousContractLimit::get() - 1;
 		prepare_benchmarks::<T>();
-		Rent::<T>::fill_available_queue(s, 99u32.into(), 10u32.into()).unwrap();
+		// Rent::<T>::fill_available_queue(s, 99u32.into(), 10u32.into()).unwrap();
 	}: _(root::<T>(), NFT_ID_0)
 	verify {
 		assert!(Rent::<T>::contracts(NFT_ID_0).is_none());
