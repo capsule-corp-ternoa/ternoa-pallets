@@ -1,8 +1,12 @@
 [package]
 name = "ternoa-nft"
 version = "1.0.1"
+authors = ["Ternoa"]
 edition = "2021"
-license = "GPL-3.0-or-later WITH Classpath-exception-2.0"
+license = "GPL-3.0-only"
+homepage = "https://www.ternoa.com/"
+repository = "https://github.com/capsule-corp-ternoa/ternoa-pallets"
+description = "Ternoa Pallet for NFTs"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
@@ -49,3 +53,4 @@ std = [
 runtime-benchmarks = [
     "frame-benchmarking",
 ]
+try-runtime = ["frame-support/try-runtime"]
