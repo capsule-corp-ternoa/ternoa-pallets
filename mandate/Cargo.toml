@@ -2,8 +2,11 @@
 name = "ternoa-mandate"
 version = "1.0.0"
 edition = "2021"
-license = "GPL-3.0-or-later WITH Classpath-exception-2.0"
+license = "GPL-3.0-only"
 authors = [ "Eliott Teissonniere" ]
+homepage = "https://www.ternoa.com/"
+repository = "https://github.com/capsule-corp-ternoa/ternoa-pallets"
+description = "Ternoa Pallet for Mandate"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
@@ -31,3 +34,4 @@ std = [
     "sp-std/std",
     "frame-benchmarking/std",
 ]
+try-runtime = ["frame-support/try-runtime"]
