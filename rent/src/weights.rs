@@ -39,9 +39,7 @@ impl<T: frame_system::Config> WeightInfo for TernoaWeight<T> {
 	// Storage: Rent AvailableQueue (r:1 w:1)
 	// Storage: Rent Contracts (r:0 w:1)
 	fn create_contract() -> Weight {
-		(71_239_000 as Weight)
-			// Standard Error: 2_755_000
-			.saturating_add(103_000 as Weight)
+		(52_900_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(5 as Weight))
 			.saturating_add(T::DbWeight::get().writes(6 as Weight))
 	}
@@ -51,7 +49,7 @@ impl<T: frame_system::Config> WeightInfo for TernoaWeight<T> {
 	// Storage: Rent SubscriptionQueue (r:1 w:1)
 	// Storage: Rent ContractNb (r:1 w:1)
 	fn revoke_contract() -> Weight {
-		(83_409_000 as Weight)
+		(70_000_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(6 as Weight))
 			.saturating_add(T::DbWeight::get().writes(6 as Weight))
 	}
@@ -61,9 +59,7 @@ impl<T: frame_system::Config> WeightInfo for TernoaWeight<T> {
 	// Storage: Rent AvailableQueue (r:1 w:1)
 	// Storage: Rent Offers (r:0 w:1)
 	fn rent() -> Weight {
-		(103_418_000 as Weight)
-			// Standard Error: 832_000
-			.saturating_add(273_000 as Weight)
+		(72_400_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(6 as Weight))
 			.saturating_add(T::DbWeight::get().writes(7 as Weight))
 	}
@@ -73,30 +69,26 @@ impl<T: frame_system::Config> WeightInfo for TernoaWeight<T> {
 	// Storage: Rent SubscriptionQueue (r:1 w:1)
 	// Storage: Rent AvailableQueue (r:1 w:1)
 	fn accept_rent_offer() -> Weight {
-		(49_652_000 as Weight)
-			// Standard Error: 767_000
-			.saturating_add(2_853_000 as Weight)
-			// Standard Error: 669_000
-			.saturating_add(3_352_000 as Weight)
+		(75_300_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(7 as Weight))
 			.saturating_add(T::DbWeight::get().writes(7 as Weight))
 	}
 	// Storage: Rent Contracts (r:1 w:0)
 	// Storage: Rent Offers (r:1 w:1)
 	fn retract_rent_offer() -> Weight {
-		(21_800_000 as Weight)
+		(22_600_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(2 as Weight))
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))
 	}
 	// Storage: Rent Contracts (r:1 w:1)
 	fn change_subscription_terms() -> Weight {
-		(18_400_000 as Weight)
+		(18_300_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(1 as Weight))
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))
 	}
 	// Storage: Rent Contracts (r:1 w:1)
 	fn accept_subscription_terms() -> Weight {
-		(18_000_000 as Weight)
+		(18_100_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(1 as Weight))
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))
 	}
@@ -106,7 +98,7 @@ impl<T: frame_system::Config> WeightInfo for TernoaWeight<T> {
 	// Storage: Rent SubscriptionQueue (r:1 w:1)
 	// Storage: Rent ContractNb (r:1 w:1)
 	fn end_contract() -> Weight {
-		(87_663_000 as Weight)
+		(70_500_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(7 as Weight))
 			.saturating_add(T::DbWeight::get().writes(7 as Weight))
 	}
@@ -114,7 +106,7 @@ impl<T: frame_system::Config> WeightInfo for TernoaWeight<T> {
 	// Storage: System Account (r:2 w:2)
 	// Storage: Rent SubscriptionQueue (r:1 w:1)
 	fn renew_contract() -> Weight {
-		(46_392_000 as Weight)
+		(44_600_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(4 as Weight))
 			.saturating_add(T::DbWeight::get().writes(3 as Weight))
 	}
@@ -125,9 +117,7 @@ impl<T: frame_system::Config> WeightInfo for TernoaWeight<T> {
 	// Storage: Rent ContractNb (r:1 w:1)
 	// Storage: Rent Offers (r:0 w:1)
 	fn remove_expired_contract() -> Weight {
-		(70_018_000 as Weight)
-			// Standard Error: 786_000
-			.saturating_add(2_975_000 as Weight)
+		(54_600_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(6 as Weight))
 			.saturating_add(T::DbWeight::get().writes(7 as Weight))
 	}
