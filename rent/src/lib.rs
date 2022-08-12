@@ -338,7 +338,7 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		/// Create a new rent contract with the provided details.
-		#[pallet::weight(T::WeightInfo::retract_rent_offer())]
+		#[pallet::weight(T::WeightInfo::create_contract())]
 		#[transactional]
 		pub fn create_contract(
 			origin: OriginFor<T>,
@@ -427,7 +427,7 @@ pub mod pallet {
 		}
 
 		/// Revoke a rent contract, cancel it if it has not started.
-		#[pallet::weight(T::WeightInfo::retract_rent_offer())]
+		#[pallet::weight(T::WeightInfo::revoke_contract())]
 		#[transactional]
 		pub fn revoke_contract(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
@@ -465,7 +465,7 @@ pub mod pallet {
 		}
 
 		/// Rent an nft if contract exist, makes an offer if it's manual acceptance.
-		#[pallet::weight(T::WeightInfo::retract_rent_offer())]
+		#[pallet::weight(T::WeightInfo::rent())]
 		#[transactional]
 		pub fn rent(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
@@ -518,7 +518,7 @@ pub mod pallet {
 		}
 
 		/// Accept a rent offer for manual acceptance contract.
-		#[pallet::weight(T::WeightInfo::retract_rent_offer())]
+		#[pallet::weight(T::WeightInfo::accept_rent_offer())]
 		#[transactional]
 		pub fn accept_rent_offer(
 			origin: OriginFor<T>,
@@ -641,7 +641,7 @@ pub mod pallet {
 		}
 
 		/// End a rent contract.
-		#[pallet::weight(T::WeightInfo::retract_rent_offer())]
+		#[pallet::weight(T::WeightInfo::end_contract())]
 		pub fn end_contract(
 			origin: OriginFor<T>,
 			nft_id: NFTId,
@@ -673,7 +673,7 @@ pub mod pallet {
 		}
 
 		/// Renew a rent contract for a subscription period.
-		#[pallet::weight(T::WeightInfo::retract_rent_offer())]
+		#[pallet::weight(T::WeightInfo::renew_contract())]
 		pub fn renew_contract(origin: OriginFor<T>, nft_id: NFTId, now: T::BlockNumber) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
 			let contract = Contracts::<T>::get(nft_id).ok_or(Error::<T>::ContractNotFound)?;
@@ -729,7 +729,7 @@ pub mod pallet {
 		}
 
 		/// Remove a contract from available list if expiration has been reached.
-		#[pallet::weight(T::WeightInfo::retract_rent_offer())]
+		#[pallet::weight(T::WeightInfo::remove_expired_contract())]
 		pub fn remove_expired_contract(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
 			let contract = Contracts::<T>::get(nft_id).ok_or(Error::<T>::ContractNotFound)?;
