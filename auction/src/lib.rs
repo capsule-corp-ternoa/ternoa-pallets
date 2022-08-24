@@ -25,29 +25,32 @@ mod weights;
 pub use pallet::*;
 
 use frame_support::{
-	dispatch::DispatchResultWithPostInfo,
 	pallet_prelude::*,
 	traits::{
 		Currency,
 		ExistenceRequirement::{AllowDeath, KeepAlive},
 		Get, StorageVersion,
 	},
-	transactional, PalletId,
+	PalletId,
 };
-use frame_system::{ensure_root, pallet_prelude::*, RawOrigin};
-use primitives::{common::CompoundFee, marketplace::MarketplaceId, nfts::NFTId};
+use frame_system::pallet_prelude::*;
+use primitives::{common::CompoundFee, nfts::NFTId};
 use sp_runtime::traits::{AccountIdConversion, Saturating};
 use ternoa_common::traits::{MarketplaceExt, NFTExt};
 use types::{AuctionData, BidderList, DeadlineList};
 pub use weights::WeightInfo;
 
-pub type BalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+pub type BalanceOf<T> =
+	<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
 const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
 
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
+	use frame_support::dispatch::DispatchResultWithPostInfo;
+	use frame_system::{ensure_root, RawOrigin};
+	use primitives::marketplace::MarketplaceId;
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
@@ -148,11 +151,13 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn deadlines)]
-	pub type Deadlines<T: Config> = StorageValue<_, DeadlineList<T::BlockNumber, T::ParallelAuctionLimit>, ValueQuery>;
+	pub type Deadlines<T: Config> =
+		StorageValue<_, DeadlineList<T::BlockNumber, T::ParallelAuctionLimit>, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn claims)]
-	pub type Claims<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, BalanceOf<T>, OptionQuery>;
+	pub type Claims<T: Config> =
+		StorageMap<_, Blake2_128Concat, T::AccountId, BalanceOf<T>, OptionQuery>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -170,7 +175,13 @@ pub mod pallet {
 		/// An existing auction was cancelled.
 		AuctionCancelled { nft_id: NFTId },
 		/// An auction has completed and no more bids can be placed.
-		AuctionCompleted { nft_id: NFTId, new_owner: Option<T::AccountId>, amount: Option<BalanceOf<T>> },
+		AuctionCompleted {
+			nft_id: NFTId,
+			new_owner: Option<T::AccountId>,
+			amount: Option<BalanceOf<T>>,
+			marketplace_cut: Option<BalanceOf<T>>,
+			royalty_cut: Option<BalanceOf<T>>,
+		},
 		/// A new bid was created.
 		BidAdded { nft_id: NFTId, bidder: T::AccountId, amount: BalanceOf<T> },
 		/// An exising bid was removed.
@@ -206,6 +217,8 @@ pub mod pallet {
 		BidDoesNotExist,
 		/// Auction owner cannot add a bid to his own auction.
 		CannotAddBidToYourOwnAuctions,
+		/// Auction owner cannot use buy it now feature to his own auction.
+		CannotBuyItNowToYourOwnAuctions,
 		/// Auction cannot be canceled if the auction has started.
 		CannotCancelAuctionInProgress,
 		/// Cannot add a bid that is less than the current highest bid.
@@ -251,7 +264,6 @@ pub mod pallet {
 		/// An example dispatchable that takes a singles value as a parameter, writes the value to
 		/// storage and emits an event. This function must be dispatched by a signed extrinsic.
 		#[pallet::weight(T::WeightInfo::create_auction())]
-		#[transactional]
 		pub fn create_auction(
 			origin: OriginFor<T>,
 			nft_id: NFTId,
@@ -271,11 +283,17 @@ pub mod pallet {
 			let buffer = start_block.saturating_sub(current_block);
 
 			ensure!(duration <= T::MaxAuctionDuration::get(), Error::<T>::AuctionDurationIsTooLong);
-			ensure!(duration >= T::MinAuctionDuration::get(), Error::<T>::AuctionDurationIsTooShort);
+			ensure!(
+				duration >= T::MinAuctionDuration::get(),
+				Error::<T>::AuctionDurationIsTooShort
+			);
 			ensure!(buffer <= T::MaxAuctionDelay::get(), Error::<T>::AuctionStartIsTooFarAway);
 
 			if let Some(price) = buy_it_price {
-				ensure!(price > start_price, Error::<T>::BuyItPriceCannotBeLessOrEqualThanStartPrice);
+				ensure!(
+					price > start_price,
+					Error::<T>::BuyItPriceCannotBeLessOrEqualThanStartPrice
+				);
 			}
 
 			// fetch the data of given nftId.
@@ -284,26 +302,33 @@ pub mod pallet {
 			ensure!(!nft.state.is_listed, Error::<T>::CannotAuctionListedNFTs);
 			ensure!(!nft.state.is_capsule, Error::<T>::CannotAuctionCapsulesNFTs);
 			ensure!(!nft.state.is_delegated, Error::<T>::CannotAuctionDelegatedNFTs);
-			ensure!(!nft.state.is_soulbound, Error::<T>::CannotAuctionSoulboundNFTs);
+			ensure!(
+				!(nft.state.is_soulbound && nft.creator != nft.owner),
+				Error::<T>::CannotAuctionSoulboundNFTs
+			);
 			ensure!(!nft.state.is_auctioned, Error::<T>::CannotAuctionAuctionedNFTs);
 			ensure!(!nft.state.is_rented, Error::<T>::CannotAuctionRentedNFTs);
 
-			let marketplace =
-				T::MarketplaceExt::get_marketplace(marketplace_id).ok_or(Error::<T>::MarketplaceNotFound)?;
+			let marketplace = T::MarketplaceExt::get_marketplace(marketplace_id)
+				.ok_or(Error::<T>::MarketplaceNotFound)?;
 
 			T::MarketplaceExt::ensure_is_allowed_to_list(&who, &marketplace)?;
 
 			// Check if the start price can cover the marketplace commission_fee if it exists.
 			if let Some(commission_fee) = &marketplace.commission_fee {
 				if let CompoundFee::Flat(flat_commission) = commission_fee {
-					ensure!(start_price >= *flat_commission, Error::<T>::PriceCannotCoverMarketplaceFee);
+					ensure!(
+						start_price >= *flat_commission,
+						Error::<T>::PriceCannotCoverMarketplaceFee
+					);
 				}
 			}
 
 			nft.state.is_auctioned = true;
 			T::NFTExt::set_nft(nft_id, nft)?;
 
-			let bidders: BidderList<T::AccountId, BalanceOf<T>, T::BidderListLengthLimit> = BidderList::new();
+			let bidders: BidderList<T::AccountId, BalanceOf<T>, T::BidderListLengthLimit> =
+				BidderList::new();
 			let auction_data = AuctionData {
 				creator: who.clone(),
 				start_block,
@@ -339,7 +364,6 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(T::WeightInfo::cancel_auction())]
-		#[transactional]
 		pub fn cancel_auction(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 			let current_block = frame_system::Pallet::<T>::block_number();
@@ -347,7 +371,10 @@ pub mod pallet {
 			let auction = Auctions::<T>::get(nft_id).ok_or(Error::<T>::AuctionDoesNotExist)?;
 
 			ensure!(auction.creator == who, Error::<T>::NotTheAuctionCreator);
-			ensure!(!Self::has_started(current_block, auction.start_block), Error::<T>::CannotCancelAuctionInProgress);
+			ensure!(
+				!Self::has_started(current_block, auction.start_block),
+				Error::<T>::CannotCancelAuctionInProgress
+			);
 
 			let mut nft = T::NFTExt::get_nft(nft_id).ok_or(Error::<T>::NFTNotFound)?;
 			nft.state.is_auctioned = false;
@@ -360,7 +387,6 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(T::WeightInfo::end_auction())]
-		#[transactional]
 		pub fn end_auction(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
@@ -375,8 +401,11 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(T::WeightInfo::add_bid())]
-		#[transactional]
-		pub fn add_bid(origin: OriginFor<T>, nft_id: NFTId, amount: BalanceOf<T>) -> DispatchResultWithPostInfo {
+		pub fn add_bid(
+			origin: OriginFor<T>,
+			nft_id: NFTId,
+			amount: BalanceOf<T>,
+		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 			let current_block = frame_system::Pallet::<T>::block_number();
 
@@ -388,14 +417,20 @@ pub mod pallet {
 				ensure!(auction.creator != who.clone(), Error::<T>::CannotAddBidToYourOwnAuctions);
 
 				// ensure the auction period has commenced.
-				ensure!(Self::has_started(current_block, auction.start_block), Error::<T>::AuctionNotStarted);
+				ensure!(
+					Self::has_started(current_block, auction.start_block),
+					Error::<T>::AuctionNotStarted
+				);
 
 				// ensure the bid is larger than the current highest bid.
 				if let Some(highest_bid) = auction.bidders.get_highest_bid() {
 					ensure!(amount > highest_bid.1, Error::<T>::CannotBidLessThanTheHighestBid);
 				} else {
 					// ensure the bid amount is greater than start price.
-					ensure!(amount > auction.start_price, Error::<T>::CannotBidLessThanTheStartingPrice);
+					ensure!(
+						amount > auction.start_price,
+						Error::<T>::CannotBidLessThanTheStartingPrice
+					);
 				}
 
 				if let Some(existing_bid) = auction.bidders.find_bid(who.clone()) {
@@ -436,7 +471,6 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(T::WeightInfo::remove_bid())]
-		#[transactional]
 		pub fn remove_bid(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 			let current_block = frame_system::Pallet::<T>::block_number();
@@ -448,7 +482,10 @@ pub mod pallet {
 
 				let remaining_blocks = auction.end_block.saturating_sub(current_block);
 				// ensure the auction period has not ended.
-				ensure!(remaining_blocks > T::AuctionEndingPeriod::get(), Error::<T>::CannotRemoveBidAtTheEndOfAuction);
+				ensure!(
+					remaining_blocks > T::AuctionEndingPeriod::get(),
+					Error::<T>::CannotRemoveBidAtTheEndOfAuction
+				);
 
 				let bid = auction
 					.bidders
@@ -469,7 +506,6 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(T::WeightInfo::buy_it_now())]
-		#[transactional]
 		pub fn buy_it_now(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 			let current_block = frame_system::Pallet::<T>::block_number();
@@ -477,23 +513,38 @@ pub mod pallet {
 			let auction = Auctions::<T>::get(nft_id).ok_or(Error::<T>::AuctionDoesNotExist)?;
 			let amount = auction.buy_it_price.ok_or(Error::<T>::AuctionDoesNotSupportBuyItNow)?;
 
+			// ensure the caller is not the owner of NFT.
+			ensure!(auction.creator != who.clone(), Error::<T>::CannotBuyItNowToYourOwnAuctions);
+
 			// ensure the auction period has commenced.
-			ensure!(Self::has_started(current_block, auction.start_block), Error::<T>::AuctionNotStarted);
+			ensure!(
+				Self::has_started(current_block, auction.start_block),
+				Error::<T>::AuctionNotStarted
+			);
 
 			if let Some(highest_bid) = auction.bidders.get_highest_bid() {
-				ensure!(amount > highest_bid.1, Error::<T>::CannotBuyItWhenABidIsHigherThanBuyItPrice);
+				ensure!(
+					amount > highest_bid.1,
+					Error::<T>::CannotBuyItWhenABidIsHigherThanBuyItPrice
+				);
 			}
 
-			Self::close_auction(nft_id, &auction, &who, amount, Some(who.clone()))?;
+			let (marketplace_cut, royalty_cut) =
+				Self::close_auction(nft_id, &auction, &who, amount, Some(who.clone()))?;
 			Self::remove_auction(nft_id, &auction);
 
-			Self::deposit_event(Event::AuctionCompleted { nft_id, new_owner: Some(who), amount: Some(amount) });
+			Self::deposit_event(Event::AuctionCompleted {
+				nft_id,
+				new_owner: Some(who),
+				amount: Some(amount),
+				marketplace_cut: Some(marketplace_cut),
+				royalty_cut: Some(royalty_cut),
+			});
 
 			Ok(().into())
 		}
 
 		#[pallet::weight(T::WeightInfo::complete_auction())]
-		#[transactional]
 		pub fn complete_auction(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
 			let _who = ensure_root(origin)?;
 
@@ -501,12 +552,18 @@ pub mod pallet {
 
 			let mut new_owner = None;
 			let mut amount = None;
+			let mut maybe_marketplace_cut: Option<BalanceOf<T>> = None;
+			let mut maybe_royalty_cut: Option<BalanceOf<T>> = None;
+
 			// assign to highest bidder if exists.
 			if let Some(bidder) = auction.bidders.remove_highest_bid() {
 				new_owner = Some(bidder.0.clone());
 				amount = Some(bidder.1.clone());
 
-				Self::close_auction(nft_id, &auction, &bidder.0, bidder.1, None)?;
+				let (marketplace_cut, royalty_cut) =
+					Self::close_auction(nft_id, &auction, &bidder.0, bidder.1, None)?;
+				maybe_marketplace_cut = Some(marketplace_cut);
+				maybe_royalty_cut = Some(royalty_cut);
 			} else {
 				let mut nft = T::NFTExt::get_nft(nft_id).ok_or(Error::<T>::NFTNotFound)?;
 				nft.state.is_auctioned = false;
@@ -515,13 +572,18 @@ pub mod pallet {
 
 			Self::remove_auction(nft_id, &auction);
 
-			Self::deposit_event(Event::AuctionCompleted { nft_id, new_owner, amount });
+			Self::deposit_event(Event::AuctionCompleted {
+				nft_id,
+				new_owner,
+				amount,
+				marketplace_cut: maybe_marketplace_cut,
+				royalty_cut: maybe_royalty_cut,
+			});
 
 			Ok(().into())
 		}
 
 		#[pallet::weight(T::WeightInfo::claim())]
-		#[transactional]
 		pub fn claim(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 			let claim = Claims::<T>::get(&who).ok_or(Error::<T>::ClaimDoesNotExist)?;
@@ -540,7 +602,7 @@ pub mod pallet {
 impl<T: Config> Pallet<T> {
 	/// The account ID of the auctions pot.
 	pub fn account_id() -> T::AccountId {
-		T::PalletId::get().into_account()
+		T::PalletId::get().into_account_truncating()
 	}
 
 	pub fn close_auction(
@@ -549,10 +611,10 @@ impl<T: Config> Pallet<T> {
 		new_owner: &T::AccountId,
 		price: BalanceOf<T>,
 		balance_source: Option<T::AccountId>,
-	) -> DispatchResult {
+	) -> Result<(BalanceOf<T>, BalanceOf<T>), DispatchError> {
 		// Handle marketplace fees.
-		let marketplace =
-			T::MarketplaceExt::get_marketplace(auction.marketplace_id).ok_or(Error::<T>::MarketplaceNotFound)?;
+		let marketplace = T::MarketplaceExt::get_marketplace(auction.marketplace_id)
+			.ok_or(Error::<T>::MarketplaceNotFound)?;
 		let mut nft = T::NFTExt::get_nft(nft_id).ok_or(Error::<T>::NFTNotFound)?;
 
 		let mut commission_fee_amount: BalanceOf<T> = 0u32.into();
@@ -582,7 +644,7 @@ impl<T: Config> Pallet<T> {
 		nft.state.is_auctioned = false;
 		T::NFTExt::set_nft(nft_id, nft)?;
 
-		Ok(())
+		Ok((to_marketplace, to_creator))
 	}
 
 	pub fn remove_auction(

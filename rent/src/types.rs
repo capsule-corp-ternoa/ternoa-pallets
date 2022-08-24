@@ -14,7 +14,9 @@
 // You should have received a copy of the GNU General Public License
 // along with Ternoa.  If not, see <http://www.gnu.org/licenses/>.
 
-use frame_support::{traits::Get, BoundedVec, CloneNoBound, PartialEqNoBound, RuntimeDebug, RuntimeDebugNoBound};
+use frame_support::{
+	traits::Get, BoundedVec, CloneNoBound, PartialEqNoBound, RuntimeDebug, RuntimeDebugNoBound,
+};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use primitives::nfts::NFTId;
 use scale_info::TypeInfo;
@@ -60,7 +62,9 @@ pub enum CancellationFee<Balance> {
 	NFT(NFTId),
 }
 
-#[derive(Encode, Decode, CloneNoBound, Eq, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen)]
+#[derive(
+	Encode, Decode, CloneNoBound, Eq, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen,
+)]
 #[scale_info(skip_type_params(AccountSizeLimit))]
 #[codec(mel_bound(AccountId: MaxEncodedLen, Balance: MaxEncodedLen, BlockNumber: MaxEncodedLen))]
 pub struct RentContractData<AccountId, BlockNumber, Balance, AccountSizeLimit>
@@ -131,11 +135,13 @@ where
 	}
 }
 
-#[derive(Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen)]
+#[derive(
+	Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen,
+)]
 #[codec(mel_bound(BlockNumber: MaxEncodedLen))]
 #[scale_info(skip_type_params(Limit))]
-/// wrapper type to store queues of either fixed duration contracts, subscription contract or available contract.
-/// The wrapper exists to ensure a queue implementation.
+/// wrapper type to store queues of either fixed duration contracts, subscription contract or
+/// available contract. The wrapper exists to ensure a queue implementation.
 pub struct Queue<BlockNumber: Clone + PartialEq + Debug + sp_std::cmp::PartialOrd, Limit: Get<u32>>(
 	pub BoundedVec<(NFTId, BlockNumber), Limit>,
 );

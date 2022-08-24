@@ -30,7 +30,9 @@ pub enum ProposalStatus {
 }
 
 /// Proposal votes data structure.
-#[derive(PartialEqNoBound, Eq, Clone, Encode, Decode, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen)]
+#[derive(
+	PartialEqNoBound, Eq, Clone, Encode, Decode, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen,
+)]
 #[codec(mel_bound(AccountId: MaxEncodedLen, BlockNumber: MaxEncodedLen))]
 #[scale_info(skip_type_params(VoteCountLimit))]
 pub struct Proposal<AccountId, BlockNumber, VoteCountLimit>
@@ -50,7 +52,10 @@ where
 	BlockNumber: PartialOrd + Default + sp_std::fmt::Debug,
 	VoteCountLimit: Get<u32>,
 {
-	pub fn new(initial_votes: BoundedVec<AccountId, VoteCountLimit>, block_expiry: BlockNumber) -> Self {
+	pub fn new(
+		initial_votes: BoundedVec<AccountId, VoteCountLimit>,
+		block_expiry: BlockNumber,
+	) -> Self {
 		Self { votes: initial_votes, status: ProposalStatus::Initiated, expiry: block_expiry }
 	}
 

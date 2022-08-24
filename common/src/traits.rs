@@ -45,7 +45,10 @@ pub trait NFTExt {
 	fn get_nft(id: NFTId) -> Option<NFTData<Self::AccountId, Self::NFTOffchainDataLimit>>;
 
 	/// Set the NFT data.
-	fn set_nft(id: NFTId, nft_data: NFTData<Self::AccountId, Self::NFTOffchainDataLimit>) -> DispatchResult;
+	fn set_nft(
+		id: NFTId,
+		nft_data: NFTData<Self::AccountId, Self::NFTOffchainDataLimit>,
+	) -> DispatchResult;
 
 	/// Create an NFT.
 	fn create_nft(
@@ -66,12 +69,24 @@ pub trait MarketplaceExt {
 	/// Returns a marketplace corresponding to its id.
 	fn get_marketplace(
 		id: MarketplaceId,
-	) -> Option<MarketplaceData<Self::AccountId, Self::Balance, Self::AccountSizeLimit, Self::OffchainDataLimit>>;
+	) -> Option<
+		MarketplaceData<
+			Self::AccountId,
+			Self::Balance,
+			Self::AccountSizeLimit,
+			Self::OffchainDataLimit,
+		>,
+	>;
 
 	/// Check that account id is allowed to list on specific marketplace.
 	fn ensure_is_allowed_to_list(
 		who: &Self::AccountId,
-		marketplace: &MarketplaceData<Self::AccountId, Self::Balance, Self::AccountSizeLimit, Self::OffchainDataLimit>,
+		marketplace: &MarketplaceData<
+			Self::AccountId,
+			Self::Balance,
+			Self::AccountSizeLimit,
+			Self::OffchainDataLimit,
+		>,
 	) -> Result<(), DispatchError>;
 
 	/// Set marketplace data for specified id.

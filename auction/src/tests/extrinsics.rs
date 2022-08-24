@@ -113,8 +113,10 @@ pub mod create_auction {
 				is_extended: false,
 			};
 
-			let deadline =
-				DeadlineList(bounded_vec![(ALICE_NFT_ID_0, auction.end_block), (ALICE_NFT_ID_1, DEFAULT_ENDBLOCK)]);
+			let deadline = DeadlineList(bounded_vec![
+				(ALICE_NFT_ID_0, auction.end_block),
+				(ALICE_NFT_ID_1, DEFAULT_ENDBLOCK)
+			]);
 
 			let ok = Auction::create_auction(
 				origin(ALICE),
@@ -406,6 +408,7 @@ pub mod create_auction {
 			// Set soulbound.
 			let mut nft = NFT::get_nft(ALICE_NFT_ID_0).unwrap();
 			nft.state.is_soulbound = true;
+			nft.creator = BOB;
 			NFT::set_nft(ALICE_NFT_ID_0, nft).unwrap();
 
 			let err = Auction::create_auction(
@@ -601,77 +604,86 @@ pub mod end_auction {
 
 	#[test]
 	fn end_auction() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000), (BOB, 1_000), (CHARLIE, 1_000), (DAVE, 1_000)]).execute_with(|| {
-			prepare_tests();
-			let bob: mock::Origin = RawOrigin::Signed(BOB).into();
+		ExtBuilder::new_build(vec![(ALICE, 1_000), (BOB, 1_000), (CHARLIE, 1_000), (DAVE, 1_000)])
+			.execute_with(|| {
+				prepare_tests();
+				let bob: mock::Origin = RawOrigin::Signed(BOB).into();
 
-			Auction::create_auction(
-				bob.clone(),
-				BOB_NFT_ID,
-				ALICE_MARKETPLACE_ID,
-				DEFAULT_STARTBLOCK,
-				DEFAULT_ENDBLOCK,
-				DEFAULT_PRICE,
-				Some(DEFAULT_PRICE + 1),
-			)
-			.unwrap();
+				Auction::create_auction(
+					bob.clone(),
+					BOB_NFT_ID,
+					ALICE_MARKETPLACE_ID,
+					DEFAULT_STARTBLOCK,
+					DEFAULT_ENDBLOCK,
+					DEFAULT_PRICE,
+					Some(DEFAULT_PRICE + 1),
+				)
+				.unwrap();
 
-			run_to_block(DEFAULT_STARTBLOCK);
+				run_to_block(DEFAULT_STARTBLOCK);
 
-			let alice_balance = Balances::free_balance(ALICE);
+				let alice_balance = Balances::free_balance(ALICE);
 
-			let bob_balance = Balances::free_balance(BOB);
-			let charlie_balance = Balances::free_balance(CHARLIE);
-			let dave_balance = Balances::free_balance(CHARLIE);
-			let auction = Auctions::<Test>::get(BOB_NFT_ID).unwrap();
-			let marketplace = Marketplace::marketplaces(ALICE_MARKETPLACE_ID).unwrap();
-			let commission_fee = marketplace.commission_fee.unwrap();
-			let charlie_bid = auction.start_price + 10;
-			let dave_bid = charlie_bid + 10;
+				let bob_balance = Balances::free_balance(BOB);
+				let charlie_balance = Balances::free_balance(CHARLIE);
+				let dave_balance = Balances::free_balance(CHARLIE);
+				let auction = Auctions::<Test>::get(BOB_NFT_ID).unwrap();
+				let marketplace = Marketplace::marketplaces(ALICE_MARKETPLACE_ID).unwrap();
+				let commission_fee = marketplace.commission_fee.unwrap();
+				let charlie_bid = auction.start_price + 10;
+				let dave_bid = charlie_bid + 10;
 
-			assert_eq!(commission_fee, CompoundFee::Percentage(PERCENT_20));
-			assert_ok!(Auction::add_bid(origin(CHARLIE), BOB_NFT_ID, charlie_bid));
+				assert_eq!(commission_fee, CompoundFee::Percentage(PERCENT_20));
+				assert_ok!(Auction::add_bid(origin(CHARLIE), BOB_NFT_ID, charlie_bid));
 
-			run_to_block(DEFAULT_ENDBLOCK - 1);
-			assert_ok!(Auction::add_bid(origin(DAVE), BOB_NFT_ID, dave_bid));
-			assert_eq!(Balances::free_balance(Auction::account_id()), charlie_bid + dave_bid);
+				run_to_block(DEFAULT_ENDBLOCK - 1);
+				assert_ok!(Auction::add_bid(origin(DAVE), BOB_NFT_ID, dave_bid));
+				assert_eq!(Balances::free_balance(Auction::account_id()), charlie_bid + dave_bid);
 
-			run_to_block(DEFAULT_ENDBLOCK + 1);
-			assert_ok!(Auction::end_auction(bob, BOB_NFT_ID));
+				run_to_block(DEFAULT_ENDBLOCK + 1);
+				assert_ok!(Auction::end_auction(bob, BOB_NFT_ID));
 
-			// Balance.
-			let alice_new_balance = Balances::free_balance(ALICE);
-			let bob_new_balance = Balances::free_balance(BOB);
-			let charlie_new_balance = Balances::free_balance(CHARLIE);
-			let dave_new_balance = Balances::free_balance(DAVE);
-			let pallet_new_balance = Balances::free_balance(Auction::account_id());
-			let marketplace_cut: u128 = match commission_fee {
-				CompoundFee::Flat(x) => x,
-				CompoundFee::Percentage(x) => x * dave_bid,
-			};
-			let artist_cut: u128 = dave_bid.saturating_sub(marketplace_cut.into());
+				// Balance.
+				let alice_new_balance = Balances::free_balance(ALICE);
+				let bob_new_balance = Balances::free_balance(BOB);
+				let charlie_new_balance = Balances::free_balance(CHARLIE);
+				let dave_new_balance = Balances::free_balance(DAVE);
+				let pallet_new_balance = Balances::free_balance(Auction::account_id());
+				let marketplace_cut: u128 = match commission_fee {
+					CompoundFee::Flat(x) => x,
+					CompoundFee::Percentage(x) => x * dave_bid,
+				};
+				let artist_cut: u128 = dave_bid.saturating_sub(marketplace_cut.into());
 
-			assert_eq!(alice_new_balance, alice_balance + marketplace_cut);
-			assert_eq!(bob_new_balance, bob_balance + artist_cut + (dave_bid - artist_cut - marketplace_cut));
-			assert_eq!(charlie_new_balance, charlie_balance - charlie_bid);
-			assert_eq!(dave_new_balance, dave_balance - dave_bid);
-			assert_eq!(pallet_new_balance, charlie_bid);
+				assert_eq!(alice_new_balance, alice_balance + marketplace_cut);
+				assert_eq!(
+					bob_new_balance,
+					bob_balance + artist_cut + (dave_bid - artist_cut - marketplace_cut)
+				);
+				assert_eq!(charlie_new_balance, charlie_balance - charlie_bid);
+				assert_eq!(dave_new_balance, dave_balance - dave_bid);
+				assert_eq!(pallet_new_balance, charlie_bid);
 
-			// NFT.
-			let nft = NFT::get_nft(BOB_NFT_ID).unwrap();
-			assert_eq!(nft.state.is_auctioned, false);
-			assert_eq!(nft.owner, DAVE);
+				// NFT.
+				let nft = NFT::get_nft(BOB_NFT_ID).unwrap();
+				assert_eq!(nft.state.is_auctioned, false);
+				assert_eq!(nft.owner, DAVE);
 
-			assert_eq!(Claims::<Test>::iter().count(), 1);
-			assert_eq!(Auctions::<Test>::get(BOB_NFT_ID), None);
-			assert_eq!(Claims::<Test>::get(CHARLIE), Some(charlie_bid));
+				assert_eq!(Claims::<Test>::iter().count(), 1);
+				assert_eq!(Auctions::<Test>::get(BOB_NFT_ID), None);
+				assert_eq!(Claims::<Test>::get(CHARLIE), Some(charlie_bid));
 
-			// Check Events.
-			let event =
-				AuctionEvent::AuctionCompleted { nft_id: BOB_NFT_ID, new_owner: Some(DAVE), amount: Some(dave_bid) };
-			let event = Event::Auction(event);
-			System::assert_last_event(event);
-		})
+				// Check Events.
+				let event = AuctionEvent::AuctionCompleted {
+					nft_id: BOB_NFT_ID,
+					new_owner: Some(DAVE),
+					amount: Some(dave_bid),
+					marketplace_cut: Some(marketplace_cut),
+					royalty_cut: Some(PERCENT_0 * dave_bid),
+				};
+				let event = Event::Auction(event);
+				System::assert_last_event(event);
+			})
 	}
 
 	#[test]
@@ -743,47 +755,55 @@ pub mod add_bid {
 
 	#[test]
 	fn add_bid_above_max_bidder_history_size() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000), (BOB, 1_000), (CHARLIE, 1_000), (DAVE, 1_000), (EVE, 1_000)])
-			.execute_with(|| {
-				prepare_tests();
+		ExtBuilder::new_build(vec![
+			(ALICE, 1_000),
+			(BOB, 1_000),
+			(CHARLIE, 1_000),
+			(DAVE, 1_000),
+			(EVE, 1_000),
+		])
+		.execute_with(|| {
+			prepare_tests();
 
-				let eve_balance = Balances::free_balance(EVE);
-				let mut auction = Auctions::<Test>::get(ALICE_NFT_ID_1).unwrap();
+			let eve_balance = Balances::free_balance(EVE);
+			let mut auction = Auctions::<Test>::get(ALICE_NFT_ID_1).unwrap();
 
-				run_to_block(auction.start_block);
+			run_to_block(auction.start_block);
 
-				let bob_bid = auction.start_price + 1;
-				let charlie_bid = bob_bid + 1;
-				let dave_bid = charlie_bid + 1;
-				let eve_bid = dave_bid + 1;
-				let mut accounts = vec![(BOB, bob_bid), (CHARLIE, charlie_bid), (DAVE, dave_bid), (EVE, eve_bid)];
-				assert_eq!(accounts.len(), (BidderListLengthLimit::get() + 1) as usize);
+			let bob_bid = auction.start_price + 1;
+			let charlie_bid = bob_bid + 1;
+			let dave_bid = charlie_bid + 1;
+			let eve_bid = dave_bid + 1;
+			let mut accounts =
+				vec![(BOB, bob_bid), (CHARLIE, charlie_bid), (DAVE, dave_bid), (EVE, eve_bid)];
+			assert_eq!(accounts.len(), (BidderListLengthLimit::get() + 1) as usize);
 
-				for bidder in accounts.iter() {
-					assert_ok!(Auction::add_bid(origin(bidder.0), ALICE_NFT_ID_1, bidder.1));
-				}
+			for bidder in accounts.iter() {
+				assert_ok!(Auction::add_bid(origin(bidder.0), ALICE_NFT_ID_1, bidder.1));
+			}
 
-				// Balance.
-				let eve_new_balance = Balances::free_balance(EVE);
-				let pallet_new_balance = Balances::free_balance(Auction::account_id());
-				assert_eq!(eve_new_balance, eve_balance - eve_bid);
-				assert_eq!(pallet_new_balance, bob_bid + charlie_bid + dave_bid + eve_bid);
+			// Balance.
+			let eve_new_balance = Balances::free_balance(EVE);
+			let pallet_new_balance = Balances::free_balance(Auction::account_id());
+			assert_eq!(eve_new_balance, eve_balance - eve_bid);
+			assert_eq!(pallet_new_balance, bob_bid + charlie_bid + dave_bid + eve_bid);
 
-				// Storage.
-				accounts.remove(0);
-				let accounts: BoundedVec<(AccountId, u128), BidderListLengthLimit> =
-					BoundedVec::try_from(accounts).unwrap();
-				auction.bidders.list = accounts;
+			// Storage.
+			accounts.remove(0);
+			let accounts: BoundedVec<(AccountId, u128), BidderListLengthLimit> =
+				BoundedVec::try_from(accounts).unwrap();
+			auction.bidders.list = accounts;
 
-				assert_eq!(Claims::<Test>::iter().count(), 1);
-				assert_eq!(Claims::<Test>::get(BOB), Some(bob_bid));
-				assert_eq!(Auctions::<Test>::get(ALICE_NFT_ID_1), Some(auction));
+			assert_eq!(Claims::<Test>::iter().count(), 1);
+			assert_eq!(Claims::<Test>::get(BOB), Some(bob_bid));
+			assert_eq!(Auctions::<Test>::get(ALICE_NFT_ID_1), Some(auction));
 
-				// Check Events.
-				let event = AuctionEvent::BidAdded { nft_id: ALICE_NFT_ID_1, bidder: EVE, amount: eve_bid };
-				let event = Event::Auction(event);
-				System::assert_last_event(event);
-			})
+			// Check Events.
+			let event =
+				AuctionEvent::BidAdded { nft_id: ALICE_NFT_ID_1, bidder: EVE, amount: eve_bid };
+			let event = Event::Auction(event);
+			System::assert_last_event(event);
+		})
 	}
 
 	#[test]
@@ -848,7 +868,8 @@ pub mod add_bid {
 			assert_eq!(Auctions::<Test>::get(ALICE_NFT_ID_1), Some(auction));
 
 			// Check Events.
-			let event = AuctionEvent::BidAdded { nft_id: ALICE_NFT_ID_1, bidder: BOB, amount: new_bid };
+			let event =
+				AuctionEvent::BidAdded { nft_id: ALICE_NFT_ID_1, bidder: BOB, amount: new_bid };
 			let event = Event::Auction(event);
 			System::assert_last_event(event);
 		})
@@ -980,7 +1001,8 @@ pub mod remove_bid {
 			assert_eq!(Auctions::<Test>::get(ALICE_NFT_ID_1), Some(auction));
 
 			// Check Events.
-			let event = AuctionEvent::BidRemoved { nft_id: ALICE_NFT_ID_1, bidder: BOB, amount: bid };
+			let event =
+				AuctionEvent::BidRemoved { nft_id: ALICE_NFT_ID_1, bidder: BOB, amount: bid };
 			let event = Event::Auction(event);
 			System::assert_last_event(event);
 		})
@@ -1033,108 +1055,124 @@ pub mod buy_it_now {
 
 	#[test]
 	fn buy_it_now() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000), (BOB, 1_000), (CHARLIE, 1_000)]).execute_with(|| {
-			prepare_tests();
-			let bob: mock::Origin = RawOrigin::Signed(BOB).into();
+		ExtBuilder::new_build(vec![(ALICE, 1_000), (BOB, 1_000), (CHARLIE, 1_000)]).execute_with(
+			|| {
+				prepare_tests();
+				let bob: mock::Origin = RawOrigin::Signed(BOB).into();
 
-			Auction::create_auction(
-				bob,
-				BOB_NFT_ID,
-				ALICE_MARKETPLACE_ID,
-				DEFAULT_STARTBLOCK,
-				DEFAULT_ENDBLOCK,
-				DEFAULT_PRICE,
-				Some(DEFAULT_PRICE + 1),
-			)
-			.unwrap();
+				Auction::create_auction(
+					bob,
+					BOB_NFT_ID,
+					ALICE_MARKETPLACE_ID,
+					DEFAULT_STARTBLOCK,
+					DEFAULT_ENDBLOCK,
+					DEFAULT_PRICE,
+					Some(DEFAULT_PRICE + 1),
+				)
+				.unwrap();
 
-			run_to_block(DEFAULT_STARTBLOCK);
+				run_to_block(DEFAULT_STARTBLOCK);
 
-			let alice_balance = Balances::free_balance(ALICE);
-			let bob_balance = Balances::free_balance(BOB);
-			let charlie_balance = Balances::free_balance(CHARLIE);
-			let nft = NFT::get_nft(BOB_NFT_ID).unwrap();
-			let auction = Auctions::<Test>::get(BOB_NFT_ID).unwrap();
-			let price = auction.buy_it_price.unwrap();
-			let marketplace = Marketplace::get_marketplace(ALICE_MARKETPLACE_ID).unwrap();
-			let marketplace_cut = match marketplace.commission_fee.unwrap() {
-				CompoundFee::Flat(x) => x,
-				CompoundFee::Percentage(x) => x * price,
-			};
-			let artist_cut: u128 = nft.royalty * price.saturating_sub(marketplace_cut);
-			let auctioneer_cut: u128 = price.saturating_sub(marketplace_cut).saturating_sub(artist_cut);
+				let alice_balance = Balances::free_balance(ALICE);
+				let bob_balance = Balances::free_balance(BOB);
+				let charlie_balance = Balances::free_balance(CHARLIE);
+				let nft = NFT::get_nft(BOB_NFT_ID).unwrap();
+				let auction = Auctions::<Test>::get(BOB_NFT_ID).unwrap();
+				let price = auction.buy_it_price.unwrap();
+				let marketplace = Marketplace::get_marketplace(ALICE_MARKETPLACE_ID).unwrap();
+				let marketplace_cut = match marketplace.commission_fee.unwrap() {
+					CompoundFee::Flat(x) => x,
+					CompoundFee::Percentage(x) => x * price,
+				};
+				let artist_cut: u128 = nft.royalty * price.saturating_sub(marketplace_cut);
+				let auctioneer_cut: u128 =
+					price.saturating_sub(marketplace_cut).saturating_sub(artist_cut);
 
-			assert_ok!(Auction::buy_it_now(origin(CHARLIE), BOB_NFT_ID));
+				assert_ok!(Auction::buy_it_now(origin(CHARLIE), BOB_NFT_ID));
 
-			// Balance.
-			let alice_new_balance = Balances::free_balance(ALICE);
-			let bob_new_balance = Balances::free_balance(BOB);
-			let charlie_new_balance = Balances::free_balance(CHARLIE);
-			let pallet_new_balance = Balances::free_balance(Auction::account_id());
+				// Balance.
+				let alice_new_balance = Balances::free_balance(ALICE);
+				let bob_new_balance = Balances::free_balance(BOB);
+				let charlie_new_balance = Balances::free_balance(CHARLIE);
+				let pallet_new_balance = Balances::free_balance(Auction::account_id());
 
-			assert_eq!(alice_new_balance, alice_balance + marketplace_cut);
-			assert_eq!(bob_new_balance, bob_balance + artist_cut + auctioneer_cut);
-			assert_eq!(charlie_new_balance, charlie_balance - price);
-			assert_eq!(pallet_new_balance, 0);
+				assert_eq!(alice_new_balance, alice_balance + marketplace_cut);
+				assert_eq!(bob_new_balance, bob_balance + artist_cut + auctioneer_cut);
+				assert_eq!(charlie_new_balance, charlie_balance - price);
+				assert_eq!(pallet_new_balance, 0);
 
-			// NFT.
-			let nft = NFT::get_nft(BOB_NFT_ID).unwrap();
-			assert_eq!(nft.state.is_auctioned, false);
-			assert_eq!(nft.owner, CHARLIE);
+				// NFT.
+				let nft = NFT::get_nft(BOB_NFT_ID).unwrap();
+				assert_eq!(nft.state.is_auctioned, false);
+				assert_eq!(nft.owner, CHARLIE);
 
-			// Storage.
-			assert_eq!(Claims::<Test>::iter().count(), 0);
-			assert_eq!(Auctions::<Test>::get(BOB_NFT_ID), None);
+				// Storage.
+				assert_eq!(Claims::<Test>::iter().count(), 0);
+				assert_eq!(Auctions::<Test>::get(BOB_NFT_ID), None);
 
-			// Check Events.
-			let event =
-				AuctionEvent::AuctionCompleted { nft_id: BOB_NFT_ID, new_owner: Some(CHARLIE), amount: Some(price) };
-			let event = Event::Auction(event);
-			System::assert_last_event(event);
-		})
+				// Check Events.
+				let event = AuctionEvent::AuctionCompleted {
+					nft_id: BOB_NFT_ID,
+					new_owner: Some(CHARLIE),
+					amount: Some(price),
+					marketplace_cut: Some(marketplace_cut),
+					royalty_cut: Some(artist_cut),
+				};
+				let event = Event::Auction(event);
+				System::assert_last_event(event);
+			},
+		)
 	}
 
 	#[test]
 	fn buy_it_now_with_existing_bids() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000), (BOB, 1_000), (CHARLIE, 1_000)]).execute_with(|| {
-			prepare_tests();
-			run_to_block(DEFAULT_STARTBLOCK);
+		ExtBuilder::new_build(vec![(ALICE, 1_000), (BOB, 1_000), (CHARLIE, 1_000)]).execute_with(
+			|| {
+				prepare_tests();
+				run_to_block(DEFAULT_STARTBLOCK);
 
-			let bob_balance = Balances::free_balance(BOB);
-			let charlie_balance = Balances::free_balance(CHARLIE);
-			let nft_id = ALICE_NFT_ID_1;
-			let auction = Auctions::<Test>::get(nft_id).unwrap();
+				let bob_balance = Balances::free_balance(BOB);
+				let charlie_balance = Balances::free_balance(CHARLIE);
+				let nft_id = ALICE_NFT_ID_1;
+				let auction = Auctions::<Test>::get(nft_id).unwrap();
 
-			let bob_bid = auction.start_price + 1;
-			assert_ok!(Auction::add_bid(origin(BOB), nft_id, bob_bid));
+				let bob_bid = auction.start_price + 1;
+				assert_ok!(Auction::add_bid(origin(BOB), nft_id, bob_bid));
 
-			let price = auction.buy_it_price.unwrap();
-			assert_ok!(Auction::buy_it_now(origin(CHARLIE), nft_id));
+				let price = auction.buy_it_price.unwrap();
+				assert_ok!(Auction::buy_it_now(origin(CHARLIE), nft_id));
 
-			// Balance.
-			let bob_new_balance = Balances::free_balance(BOB);
-			let charlie_new_balance = Balances::free_balance(CHARLIE);
-			let pallet_new_balance = Balances::free_balance(Auction::account_id());
+				// Balance.
+				let bob_new_balance = Balances::free_balance(BOB);
+				let charlie_new_balance = Balances::free_balance(CHARLIE);
+				let pallet_new_balance = Balances::free_balance(Auction::account_id());
 
-			assert_eq!(bob_new_balance, bob_balance - bob_bid);
-			assert_eq!(charlie_new_balance, charlie_balance - price);
-			assert_eq!(pallet_new_balance, bob_bid);
+				assert_eq!(bob_new_balance, bob_balance - bob_bid);
+				assert_eq!(charlie_new_balance, charlie_balance - price);
+				assert_eq!(pallet_new_balance, bob_bid);
 
-			// NFT.
-			let nft = NFT::get_nft(nft_id).unwrap();
-			assert_eq!(nft.state.is_auctioned, false);
-			assert_eq!(nft.owner, CHARLIE);
+				// NFT.
+				let nft = NFT::get_nft(nft_id).unwrap();
+				assert_eq!(nft.state.is_auctioned, false);
+				assert_eq!(nft.owner, CHARLIE);
 
-			// Storage.
-			assert_eq!(Claims::<Test>::iter().count(), 1);
-			assert_eq!(Claims::<Test>::get(BOB), Some(bob_bid));
-			assert_eq!(Auctions::<Test>::get(nft_id), None);
+				// Storage.
+				assert_eq!(Claims::<Test>::iter().count(), 1);
+				assert_eq!(Claims::<Test>::get(BOB), Some(bob_bid));
+				assert_eq!(Auctions::<Test>::get(nft_id), None);
 
-			// Check Events.
-			let event = AuctionEvent::AuctionCompleted { nft_id, new_owner: Some(CHARLIE), amount: Some(price) };
-			let event = Event::Auction(event);
-			System::assert_last_event(event);
-		})
+				// Check Events.
+				let event = AuctionEvent::AuctionCompleted {
+					nft_id,
+					new_owner: Some(CHARLIE),
+					amount: Some(price),
+					marketplace_cut: Some(PERCENT_20 * price),
+					royalty_cut: Some(PERCENT_0 * price),
+				};
+				let event = Event::Auction(event);
+				System::assert_last_event(event);
+			},
+		)
 	}
 
 	#[test]
@@ -1163,6 +1201,17 @@ pub mod buy_it_now {
 	}
 
 	#[test]
+	fn cannot_buy_it_now_to_your_own_auctions() {
+		ExtBuilder::new_build(vec![(ALICE, 1_000), (BOB, 1_000)]).execute_with(|| {
+			prepare_tests();
+			run_to_block(DEFAULT_STARTBLOCK);
+
+			let err = Auction::buy_it_now(origin(ALICE), ALICE_NFT_ID_1);
+			assert_noop!(err, Error::<Test>::CannotBuyItNowToYourOwnAuctions);
+		})
+	}
+
+	#[test]
 	fn auction_not_started() {
 		ExtBuilder::new_build(vec![(ALICE, 1_000), (BOB, 1_000)]).execute_with(|| {
 			prepare_tests();
@@ -1174,19 +1223,21 @@ pub mod buy_it_now {
 
 	#[test]
 	fn cannot_buy_it_when_a_bid_is_higher_than_buy_it_price() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000), (BOB, 1_000), (CHARLIE, 1_000)]).execute_with(|| {
-			prepare_tests();
-			run_to_block(DEFAULT_STARTBLOCK);
+		ExtBuilder::new_build(vec![(ALICE, 1_000), (BOB, 1_000), (CHARLIE, 1_000)]).execute_with(
+			|| {
+				prepare_tests();
+				run_to_block(DEFAULT_STARTBLOCK);
 
-			let nft_id = ALICE_NFT_ID_1;
-			let auction = Auctions::<Test>::get(nft_id).unwrap();
+				let nft_id = ALICE_NFT_ID_1;
+				let auction = Auctions::<Test>::get(nft_id).unwrap();
 
-			let price = auction.buy_it_price.unwrap();
-			assert_ok!(Auction::add_bid(origin(CHARLIE), nft_id, price));
+				let price = auction.buy_it_price.unwrap();
+				assert_ok!(Auction::add_bid(origin(CHARLIE), nft_id, price));
 
-			let err = Auction::buy_it_now(origin(BOB), nft_id);
-			assert_noop!(err, Error::<Test>::CannotBuyItWhenABidIsHigherThanBuyItPrice);
-		})
+				let err = Auction::buy_it_now(origin(BOB), nft_id);
+				assert_noop!(err, Error::<Test>::CannotBuyItWhenABidIsHigherThanBuyItPrice);
+			},
+		)
 	}
 }
 
@@ -1217,7 +1268,13 @@ pub mod complete_auction {
 			assert_eq!(Deadlines::<Test>::get(), deadlines);
 
 			// Event.
-			let event = AuctionEvent::AuctionCompleted { nft_id, new_owner: None, amount: None };
+			let event = AuctionEvent::AuctionCompleted {
+				nft_id,
+				new_owner: None,
+				amount: None,
+				marketplace_cut: None,
+				royalty_cut: None,
+			};
 			let event = Event::Auction(event);
 			System::assert_last_event(event);
 		})
@@ -1225,120 +1282,139 @@ pub mod complete_auction {
 
 	#[test]
 	fn complete_auction_with_one_bid() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000), (BOB, 1_000), (CHARLIE, 1_000)]).execute_with(|| {
-			prepare_tests();
-			let bob: mock::Origin = RawOrigin::Signed(BOB).into();
+		ExtBuilder::new_build(vec![(ALICE, 1_000), (BOB, 1_000), (CHARLIE, 1_000)]).execute_with(
+			|| {
+				prepare_tests();
+				let bob: mock::Origin = RawOrigin::Signed(BOB).into();
 
-			Auction::create_auction(
-				bob,
-				BOB_NFT_ID,
-				ALICE_MARKETPLACE_ID,
-				DEFAULT_STARTBLOCK,
-				DEFAULT_ENDBLOCK,
-				DEFAULT_PRICE,
-				Some(DEFAULT_PRICE + 1),
-			)
-			.unwrap();
+				Auction::create_auction(
+					bob,
+					BOB_NFT_ID,
+					ALICE_MARKETPLACE_ID,
+					DEFAULT_STARTBLOCK,
+					DEFAULT_ENDBLOCK,
+					DEFAULT_PRICE,
+					Some(DEFAULT_PRICE + 1),
+				)
+				.unwrap();
 
-			run_to_block(DEFAULT_STARTBLOCK);
+				run_to_block(DEFAULT_STARTBLOCK);
 
-			let nft_id = BOB_NFT_ID;
-			let alice_balance = Balances::free_balance(ALICE);
-			let bob_balance = Balances::free_balance(BOB);
-			let charlie_balance = Balances::free_balance(CHARLIE);
-			let nft = NFT::get_nft(BOB_NFT_ID).unwrap();
-			let auction = Auctions::<Test>::get(nft_id).unwrap();
-			let bid = auction.start_price + 1;
-			let marketplace = Marketplace::get_marketplace(ALICE_MARKETPLACE_ID).unwrap();
-			let marketplace_fee = match marketplace.commission_fee.unwrap() {
-				CompoundFee::Flat(x) => x,
-				CompoundFee::Percentage(x) => x * bid,
-			};
-			let royalty_fee = nft.royalty * bid.saturating_sub(marketplace_fee);
+				let nft_id = BOB_NFT_ID;
+				let alice_balance = Balances::free_balance(ALICE);
+				let bob_balance = Balances::free_balance(BOB);
+				let charlie_balance = Balances::free_balance(CHARLIE);
+				let nft = NFT::get_nft(BOB_NFT_ID).unwrap();
+				let auction = Auctions::<Test>::get(nft_id).unwrap();
+				let bid = auction.start_price + 1;
+				let marketplace = Marketplace::get_marketplace(ALICE_MARKETPLACE_ID).unwrap();
+				let marketplace_fee = match marketplace.commission_fee.unwrap() {
+					CompoundFee::Flat(x) => x,
+					CompoundFee::Percentage(x) => x * bid,
+				};
+				let royalty_fee = nft.royalty * bid.saturating_sub(marketplace_fee);
 
-			let mut deadlines = Deadlines::<Test>::get();
-			assert_ok!(Auction::add_bid(origin(CHARLIE), nft_id, bid));
-			assert_ok!(Auction::complete_auction(root(), nft_id));
+				let mut deadlines = Deadlines::<Test>::get();
+				assert_ok!(Auction::add_bid(origin(CHARLIE), nft_id, bid));
+				assert_ok!(Auction::complete_auction(root(), nft_id));
 
-			// Balance.
-			let alice_new_balance = Balances::free_balance(ALICE);
-			let bob_new_balance = Balances::free_balance(BOB);
-			let charlie_new_balance = Balances::free_balance(CHARLIE);
-			let pallet_new_balance = Balances::free_balance(Auction::account_id());
+				// Balance.
+				let alice_new_balance = Balances::free_balance(ALICE);
+				let bob_new_balance = Balances::free_balance(BOB);
+				let charlie_new_balance = Balances::free_balance(CHARLIE);
+				let pallet_new_balance = Balances::free_balance(Auction::account_id());
 
-			assert_eq!(alice_new_balance, alice_balance + marketplace_fee);
-			assert_eq!(bob_new_balance, bob_balance + royalty_fee + (bid - royalty_fee - marketplace_fee));
-			assert_eq!(charlie_new_balance, charlie_balance - bid);
-			assert_eq!(pallet_new_balance, 0);
+				assert_eq!(alice_new_balance, alice_balance + marketplace_fee);
+				assert_eq!(
+					bob_new_balance,
+					bob_balance + royalty_fee + (bid - royalty_fee - marketplace_fee)
+				);
+				assert_eq!(charlie_new_balance, charlie_balance - bid);
+				assert_eq!(pallet_new_balance, 0);
 
-			// NFT.
-			let nft = NFT::get_nft(nft_id).unwrap();
-			assert_eq!(nft.state.is_auctioned, false);
-			assert_eq!(nft.owner, CHARLIE);
+				// NFT.
+				let nft = NFT::get_nft(nft_id).unwrap();
+				assert_eq!(nft.state.is_auctioned, false);
+				assert_eq!(nft.owner, CHARLIE);
 
-			// Storage.
-			deadlines.remove(nft_id);
+				// Storage.
+				deadlines.remove(nft_id);
 
-			assert_eq!(Claims::<Test>::iter().count(), 0);
-			assert_eq!(Auctions::<Test>::get(nft_id), None);
-			assert_eq!(Deadlines::<Test>::get(), deadlines);
+				assert_eq!(Claims::<Test>::iter().count(), 0);
+				assert_eq!(Auctions::<Test>::get(nft_id), None);
+				assert_eq!(Deadlines::<Test>::get(), deadlines);
 
-			// Event.
-			let event = AuctionEvent::AuctionCompleted { nft_id, new_owner: Some(CHARLIE), amount: Some(bid) };
-			let event = Event::Auction(event);
-			System::assert_last_event(event);
-		})
+				// Event.
+				let event = AuctionEvent::AuctionCompleted {
+					nft_id,
+					new_owner: Some(CHARLIE),
+					amount: Some(bid),
+					marketplace_cut: Some(marketplace_fee),
+					royalty_cut: Some(royalty_fee),
+				};
+				let event = Event::Auction(event);
+				System::assert_last_event(event);
+			},
+		)
 	}
 
 	#[test]
 	fn complete_auction_with_two_bids() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000), (BOB, 1_000), (CHARLIE, 1_000)]).execute_with(|| {
-			prepare_tests();
+		ExtBuilder::new_build(vec![(ALICE, 1_000), (BOB, 1_000), (CHARLIE, 1_000)]).execute_with(
+			|| {
+				prepare_tests();
 
-			run_to_block(DEFAULT_STARTBLOCK);
+				run_to_block(DEFAULT_STARTBLOCK);
 
-			let nft_id = ALICE_NFT_ID_1;
-			let alice_balance = Balances::free_balance(ALICE);
-			let bob_balance = Balances::free_balance(BOB);
-			let charlie_balance = Balances::free_balance(CHARLIE);
-			let auction = Auctions::<Test>::get(nft_id).unwrap();
-			let mut deadlines = Deadlines::<Test>::get();
+				let nft_id = ALICE_NFT_ID_1;
+				let alice_balance = Balances::free_balance(ALICE);
+				let bob_balance = Balances::free_balance(BOB);
+				let charlie_balance = Balances::free_balance(CHARLIE);
+				let auction = Auctions::<Test>::get(nft_id).unwrap();
+				let mut deadlines = Deadlines::<Test>::get();
 
-			let bob_bid = auction.start_price + 1;
-			let charlie_bid = bob_bid + 1;
-			assert_ok!(Auction::add_bid(origin(BOB), nft_id, bob_bid));
-			assert_ok!(Auction::add_bid(origin(CHARLIE), nft_id, charlie_bid));
-			assert_ok!(Auction::complete_auction(root(), nft_id));
+				let bob_bid = auction.start_price + 1;
+				let charlie_bid = bob_bid + 1;
+				assert_ok!(Auction::add_bid(origin(BOB), nft_id, bob_bid));
+				assert_ok!(Auction::add_bid(origin(CHARLIE), nft_id, charlie_bid));
+				assert_ok!(Auction::complete_auction(root(), nft_id));
 
-			// Balance.
-			let alice_new_balance = Balances::free_balance(ALICE);
-			let bob_new_balance = Balances::free_balance(BOB);
-			let charlie_new_balance = Balances::free_balance(CHARLIE);
-			let pallet_new_balance = Balances::free_balance(Auction::account_id());
+				// Balance.
+				let alice_new_balance = Balances::free_balance(ALICE);
+				let bob_new_balance = Balances::free_balance(BOB);
+				let charlie_new_balance = Balances::free_balance(CHARLIE);
+				let pallet_new_balance = Balances::free_balance(Auction::account_id());
 
-			assert_eq!(alice_new_balance, alice_balance + charlie_bid);
-			assert_eq!(bob_new_balance, bob_balance - bob_bid);
-			assert_eq!(charlie_new_balance, charlie_balance - charlie_bid);
-			assert_eq!(pallet_new_balance, bob_bid);
+				assert_eq!(alice_new_balance, alice_balance + charlie_bid);
+				assert_eq!(bob_new_balance, bob_balance - bob_bid);
+				assert_eq!(charlie_new_balance, charlie_balance - charlie_bid);
+				assert_eq!(pallet_new_balance, bob_bid);
 
-			// NFT.
-			let nft = NFT::get_nft(nft_id).unwrap();
-			assert_eq!(nft.state.is_auctioned, false);
-			assert_eq!(nft.owner, CHARLIE);
+				// NFT.
+				let nft = NFT::get_nft(nft_id).unwrap();
+				assert_eq!(nft.state.is_auctioned, false);
+				assert_eq!(nft.owner, CHARLIE);
 
-			// Storage.
-			deadlines.remove(nft_id);
+				// Storage.
+				deadlines.remove(nft_id);
 
-			assert_eq!(Claims::<Test>::iter().count(), 1);
-			assert_eq!(Claims::<Test>::get(BOB), Some(bob_bid));
-			assert_eq!(Auctions::<Test>::get(nft_id), None);
-			assert_eq!(Deadlines::<Test>::get(), deadlines);
+				assert_eq!(Claims::<Test>::iter().count(), 1);
+				assert_eq!(Claims::<Test>::get(BOB), Some(bob_bid));
+				assert_eq!(Auctions::<Test>::get(nft_id), None);
+				assert_eq!(Deadlines::<Test>::get(), deadlines);
 
-			// Event.
-			let event = AuctionEvent::AuctionCompleted { nft_id, new_owner: Some(CHARLIE), amount: Some(charlie_bid) };
-			let event = Event::Auction(event);
-			System::assert_last_event(event);
-		})
+				// Event.
+				let event = AuctionEvent::AuctionCompleted {
+					nft_id,
+					new_owner: Some(CHARLIE),
+					amount: Some(charlie_bid),
+					marketplace_cut: Some(PERCENT_20 * charlie_bid),
+					royalty_cut: Some(PERCENT_0 * charlie_bid),
+				};
+				let event = Event::Auction(event);
+				System::assert_last_event(event);
+			},
+		)
 	}
 
 	#[test]
@@ -1365,40 +1441,42 @@ pub mod claim {
 
 	#[test]
 	fn claim() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000), (BOB, 1_000), (CHARLIE, 1_000)]).execute_with(|| {
-			prepare_tests();
+		ExtBuilder::new_build(vec![(ALICE, 1_000), (BOB, 1_000), (CHARLIE, 1_000)]).execute_with(
+			|| {
+				prepare_tests();
 
-			run_to_block(DEFAULT_STARTBLOCK);
+				run_to_block(DEFAULT_STARTBLOCK);
 
-			let nft_id = ALICE_NFT_ID_1;
-			let bob_balance = Balances::free_balance(BOB);
-			let pallet_balance = Balances::free_balance(Auction::account_id());
-			let auction = Auctions::<Test>::get(nft_id).unwrap();
+				let nft_id = ALICE_NFT_ID_1;
+				let bob_balance = Balances::free_balance(BOB);
+				let pallet_balance = Balances::free_balance(Auction::account_id());
+				let auction = Auctions::<Test>::get(nft_id).unwrap();
 
-			let bob_bid = auction.start_price + 1;
-			let charlie_bid = bob_bid + 1;
-			assert_ok!(Auction::add_bid(origin(BOB), nft_id, bob_bid));
-			assert_ok!(Auction::add_bid(origin(CHARLIE), nft_id, charlie_bid));
-			assert_ok!(Auction::complete_auction(root(), nft_id));
+				let bob_bid = auction.start_price + 1;
+				let charlie_bid = bob_bid + 1;
+				assert_ok!(Auction::add_bid(origin(BOB), nft_id, bob_bid));
+				assert_ok!(Auction::add_bid(origin(CHARLIE), nft_id, charlie_bid));
+				assert_ok!(Auction::complete_auction(root(), nft_id));
 
-			let claim = Claims::<Test>::get(BOB).unwrap();
-			assert_ok!(Auction::claim(origin(BOB)));
+				let claim = Claims::<Test>::get(BOB).unwrap();
+				assert_ok!(Auction::claim(origin(BOB)));
 
-			// Balance.
-			let bob_new_balance = Balances::free_balance(BOB);
+				// Balance.
+				let bob_new_balance = Balances::free_balance(BOB);
 
-			assert_eq!(bob_new_balance, bob_balance);
-			assert_eq!(pallet_balance, 0);
-			assert_eq!(claim, bob_bid);
+				assert_eq!(bob_new_balance, bob_balance);
+				assert_eq!(pallet_balance, 0);
+				assert_eq!(claim, bob_bid);
 
-			// Storage.
-			assert_eq!(Claims::<Test>::iter().count(), 0);
-			assert_eq!(Claims::<Test>::get(BOB), None);
-			// Event.
-			let event = AuctionEvent::BalanceClaimed { account: BOB, amount: claim };
-			let event = Event::Auction(event);
-			System::assert_last_event(event);
-		})
+				// Storage.
+				assert_eq!(Claims::<Test>::iter().count(), 0);
+				assert_eq!(Claims::<Test>::get(BOB), None);
+				// Event.
+				let event = AuctionEvent::BalanceClaimed { account: BOB, amount: claim };
+				let event = Event::Auction(event);
+				System::assert_last_event(event);
+			},
+		)
 	}
 
 	#[test]

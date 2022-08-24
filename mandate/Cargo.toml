@@ -2,24 +2,27 @@
 name = "ternoa-mandate"
 version = "1.0.0"
 edition = "2021"
-license = "GPL-3.0-or-later WITH Classpath-exception-2.0"
+license = "GPL-3.0-only"
 authors = [ "Eliott Teissonniere" ]
+homepage = "https://www.ternoa.com/"
+repository = "https://github.com/capsule-corp-ternoa/ternoa-pallets"
+description = "Ternoa Pallet for Mandate"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
 # Substrate Frame
-frame-benchmarking = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-03-24", default-features = false, optional = true }
-frame-support = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-03-24", default-features = false }
-frame-system = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-03-24", default-features = false }
+frame-benchmarking = { git = "https://github.com/capsule-corp-ternoa/substrate", tag = "ternoa-substrate-2022-08-22", default-features = false, optional = true }
+frame-support = { git = "https://github.com/capsule-corp-ternoa/substrate", tag = "ternoa-substrate-2022-08-22", default-features = false }
+frame-system = { git = "https://github.com/capsule-corp-ternoa/substrate", tag = "ternoa-substrate-2022-08-22", default-features = false }
 
 # Substrate Orubate
-sp-std = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-03-24", default-features = false }
+sp-std = { git = "https://github.com/capsule-corp-ternoa/substrate", tag = "ternoa-substrate-2022-08-22", default-features = false }
 
 # Rest
-parity-scale-codec = { default-features = false, features = ["derive", "max-encoded-len"], version = "3.1.2" }
-scale-info = { version = "2.0.1", default-features = false, features = ["derive"] }
+parity-scale-codec = { default-features = false, features = ["derive", "max-encoded-len"], version = "3.1.5" }
+scale-info = { version = "2.1.2", default-features = false, features = ["derive"] }
 
 [features]
 default = ["std"]
@@ -31,3 +34,4 @@ std = [
     "sp-std/std",
     "frame-benchmarking/std",
 ]
+try-runtime = ["frame-support/try-runtime"]

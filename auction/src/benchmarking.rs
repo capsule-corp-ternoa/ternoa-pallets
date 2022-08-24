@@ -74,13 +74,16 @@ pub fn prepare_benchmarks<T: Config>(state: Option<AuctionState>) -> BenchmarkDa
 	T::MarketplaceExt::set_marketplace(marketplace_id, marketplace_data).unwrap();
 
 	// Create NFTs
-	let alice_nft_id = T::NFTExt::create_nft(alice, BoundedVec::default(), PERCENT_0, None, false).unwrap();
-	let bob_nft_id = T::NFTExt::create_nft(bob, BoundedVec::default(), PERCENT_0, None, false).unwrap();
+	let alice_nft_id =
+		T::NFTExt::create_nft(alice, BoundedVec::default(), PERCENT_0, None, false).unwrap();
+	let bob_nft_id =
+		T::NFTExt::create_nft(bob, BoundedVec::default(), PERCENT_0, None, false).unwrap();
 
 	// Create auctions
 	if let Some(state) = state {
 		let (start_block, is_extended) = match state {
-			AuctionState::Before => (System::<T>::block_number() + T::MaxAuctionDelay::get(), false),
+			AuctionState::Before =>
+				(System::<T>::block_number() + T::MaxAuctionDelay::get(), false),
 			AuctionState::InProgress => (System::<T>::block_number(), false),
 			AuctionState::Extended => (System::<T>::block_number(), true),
 		};
@@ -124,7 +127,9 @@ pub fn run_to_block<T: Config>(n: T::BlockNumber) {
 		<System<T> as OnFinalize<T::BlockNumber>>::on_finalize(System::<T>::block_number());
 		System::<T>::set_block_number(System::<T>::block_number() + 1u16.into());
 		<System<T> as OnInitialize<T::BlockNumber>>::on_initialize(System::<T>::block_number());
-		<TernoaAuctions<T> as OnInitialize<T::BlockNumber>>::on_initialize(System::<T>::block_number());
+		<TernoaAuctions<T> as OnInitialize<T::BlockNumber>>::on_initialize(
+			System::<T>::block_number(),
+		);
 	}
 }
 
@@ -133,7 +138,8 @@ pub fn run_to_block<T: Config>(n: T::BlockNumber) {
 
 // 	// Create 10 000 additional auctions
 // 	for _i in 0..10_000 {
-// 		let nft_id = T::NFTExt::create_nft(alice.clone(), BoundedVec::default(), PERCENT_0, None, false).unwrap();
+// 		let nft_id = T::NFTExt::create_nft(alice.clone(), BoundedVec::default(), PERCENT_0, None,
+// false).unwrap();
 
 // 		let start_block = System::<T>::block_number() + T::MaxAuctionDelay::get() - 1u16.into();
 // 		let end_block = start_block + T::MinAuctionDuration::get();
@@ -278,4 +284,8 @@ benchmarks! {
 	}
 }
 
-impl_benchmark_test_suite!(TernoaAuctions, crate::tests::mock::new_test_ext(), crate::tests::mock::Test);
+impl_benchmark_test_suite!(
+	TernoaAuctions,
+	crate::tests::mock::new_test_ext(),
+	crate::tests::mock::Test
+);

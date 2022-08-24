@@ -32,7 +32,8 @@ mod bidder_list {
 		type MockBalance = u32;
 		type MockAccount = u32;
 
-		let mut bidders_list: BidderList<MockAccount, MockBalance, ListLengthLimit10> = BidderList::new();
+		let mut bidders_list: BidderList<MockAccount, MockBalance, ListLengthLimit10> =
+			BidderList::new();
 
 		// insert to list works.
 		bidders_list.insert_new_bid(1u32, 2u32);
@@ -55,7 +56,18 @@ mod bidder_list {
 		// ensure the insertion has worked correctly.
 		assert_eq!(
 			bidders_list.list,
-			vec![(1, 2), (2, 3), (4, 5), (5, 6), (6, 7), (7, 8), (8, 9), (9, 10), (10, 11), (11, 12)]
+			vec![
+				(1, 2),
+				(2, 3),
+				(4, 5),
+				(5, 6),
+				(6, 7),
+				(7, 8),
+				(8, 9),
+				(9, 10),
+				(10, 11),
+				(11, 12)
+			]
 		);
 
 		// inserting the new bid should replace the lowest bid.
@@ -65,7 +77,18 @@ mod bidder_list {
 		// ensure the insertion has worked correctly.
 		assert_eq!(
 			bidders_list.list,
-			vec![(2, 3), (4, 5), (5, 6), (6, 7), (7, 8), (8, 9), (9, 10), (10, 11), (11, 12), (1, 102)]
+			vec![
+				(2, 3),
+				(4, 5),
+				(5, 6),
+				(6, 7),
+				(7, 8),
+				(8, 9),
+				(9, 10),
+				(10, 11),
+				(11, 12),
+				(1, 102)
+			]
 		);
 
 		// ensure find_bid works.
@@ -83,7 +106,10 @@ mod bidder_list {
 
 		// ensure remove_bid works.
 		assert_eq!(bidders_list.remove_bid(11), Some((11, 12)));
-		assert_eq!(bidders_list.list, vec![(2, 3), (4, 5), (6, 7), (7, 8), (8, 9), (9, 10), (10, 11), (1, 102)]);
+		assert_eq!(
+			bidders_list.list,
+			vec![(2, 3), (4, 5), (6, 7), (7, 8), (8, 9), (9, 10), (10, 11), (1, 102)]
+		);
 		assert_eq!(bidders_list.remove_bid(2022), None);
 		// ensure remove_bid works till empty.
 		assert_eq!(bidders_list.remove_bid(2), Some((2, 3)));

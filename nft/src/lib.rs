@@ -29,8 +29,11 @@ pub mod weights;
 use frame_support::{
 	dispatch::DispatchResult,
 	ensure,
-	traits::{Currency, ExistenceRequirement::KeepAlive, Get, OnUnbalanced, StorageVersion, WithdrawReasons},
-	transactional, BoundedVec,
+	traits::{
+		Currency, ExistenceRequirement::KeepAlive, Get, OnUnbalanced, StorageVersion,
+		WithdrawReasons,
+	},
+	BoundedVec,
 };
 use frame_system::pallet_prelude::*;
 use primitives::{
@@ -44,9 +47,11 @@ use ternoa_common::traits;
 
 pub use weights::WeightInfo;
 
-pub type BalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
-pub type NegativeImbalanceOf<T> =
-	<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::NegativeImbalance;
+pub type BalanceOf<T> =
+	<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+pub type NegativeImbalanceOf<T> = <<T as Config>::Currency as Currency<
+	<T as frame_system::Config>::AccountId,
+>>::NegativeImbalance;
 
 const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
 
@@ -98,7 +103,8 @@ pub mod pallet {
 	/// How much does it cost to mint a NFT (extra fee on top of the tx fees).
 	#[pallet::storage]
 	#[pallet::getter(fn nft_mint_fee)]
-	pub(super) type NftMintFee<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery, T::InitialMintFee>;
+	pub(super) type NftMintFee<T: Config> =
+		StorageValue<_, BalanceOf<T>, ValueQuery, T::InitialMintFee>;
 
 	/// Counter for NFT ids.
 	#[pallet::storage]
@@ -113,8 +119,13 @@ pub mod pallet {
 	/// Data related to NFTs.
 	#[pallet::storage]
 	#[pallet::getter(fn nfts)]
-	pub type Nfts<T: Config> =
-		StorageMap<_, Blake2_128Concat, NFTId, NFTData<T::AccountId, T::NFTOffchainDataLimit>, OptionQuery>;
+	pub type Nfts<T: Config> = StorageMap<
+		_,
+		Blake2_128Concat,
+		NFTId,
+		NFTData<T::AccountId, T::NFTOffchainDataLimit>,
+		OptionQuery,
+	>;
 
 	/// Data related to collections.
 	#[pallet::storage]
@@ -130,7 +141,8 @@ pub mod pallet {
 	/// Host a map of delegated NFTs and the recipient.
 	#[pallet::storage]
 	#[pallet::getter(fn delegated_nfts)]
-	pub type DelegatedNFTs<T: Config> = StorageMap<_, Blake2_128Concat, NFTId, T::AccountId, OptionQuery>;
+	pub type DelegatedNFTs<T: Config> =
+		StorageMap<_, Blake2_128Concat, NFTId, T::AccountId, OptionQuery>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -268,7 +280,6 @@ pub mod pallet {
             },
 			DispatchClass::Normal
         ))]
-		#[transactional]
 		pub fn create_nft(
 			origin: OriginFor<T>,
 			offchain_data: U8BoundedVec<T::NFTOffchainDataLimit>,
@@ -291,7 +302,8 @@ pub mod pallet {
 			if let Some(collection_id) = &collection_id {
 				Collections::<T>::try_mutate(collection_id, |x| -> DispatchResult {
 					let collection = x.as_mut().ok_or(Error::<T>::CollectionNotFound)?;
-					let limit = collection.limit.unwrap_or_else(|| T::CollectionSizeLimit::get()) as usize;
+					let limit =
+						collection.limit.unwrap_or_else(|| T::CollectionSizeLimit::get()) as usize;
 					ensure!(collection.owner == who, Error::<T>::NotTheCollectionOwner);
 					ensure!(!collection.is_closed, Error::<T>::CollectionIsClosed);
 					ensure!(collection.nfts.len() < limit, Error::<T>::CollectionHasReachedLimit);
@@ -307,12 +319,24 @@ pub mod pallet {
 			}
 
 			let nft_id = next_nft_id.unwrap_or_else(|| Self::get_next_nft_id());
-			let nft =
-				NFTData::new_default(who.clone(), offchain_data.clone(), royalty, collection_id.clone(), is_soulbound);
+			let nft = NFTData::new_default(
+				who.clone(),
+				offchain_data.clone(),
+				royalty,
+				collection_id.clone(),
+				is_soulbound,
+			);
 			// Execute
 			Nfts::<T>::insert(nft_id, nft);
-			let event =
-				Event::NFTCreated { nft_id, owner: who, offchain_data, royalty, collection_id, is_soulbound, mint_fee };
+			let event = Event::NFTCreated {
+				nft_id,
+				owner: who,
+				offchain_data,
+				royalty,
+				collection_id,
+				is_soulbound,
+				mint_fee,
+			};
 			Self::deposit_event(event);
 
 			Ok(().into())
@@ -396,7 +420,10 @@ pub mod pallet {
 				ensure!(!nft.state.is_listed, Error::<T>::CannotTransferListedNFTs);
 				ensure!(!nft.state.is_capsule, Error::<T>::CannotTransferCapsuleNFTs);
 				ensure!(!nft.state.is_delegated, Error::<T>::CannotTransferDelegatedNFTs);
-				ensure!(!nft.state.is_soulbound, Error::<T>::CannotTransferSoulboundNFTs);
+				ensure!(
+					!(nft.state.is_soulbound && nft.creator != nft.owner),
+					Error::<T>::CannotTransferSoulboundNFTs
+				);
 				ensure!(!nft.state.is_rented, Error::<T>::CannotTransferRentedNFTs);
 				ensure!(!nft.state.is_auctioned, Error::<T>::CannotTransferAuctionedNFTs);
 
@@ -421,8 +448,11 @@ pub mod pallet {
 			recipient: Option<<T::Lookup as StaticLookup>::Source>,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
-			let recipient_account_id =
-				if let Some(recipient) = recipient { T::Lookup::lookup(recipient)? } else { who.clone() };
+			let recipient_account_id = if let Some(recipient) = recipient {
+				T::Lookup::lookup(recipient)?
+			} else {
+				who.clone()
+			};
 			let is_delegated = recipient_account_id != who;
 
 			Nfts::<T>::try_mutate(nft_id, |maybe_nft| -> DispatchResult {
@@ -457,7 +487,11 @@ pub mod pallet {
 		/// Set the royalty of an NFT.
 		/// Can only be called if the NFT is owned and has been created by the caller.
 		#[pallet::weight(T::WeightInfo::set_royalty())]
-		pub fn set_royalty(origin: OriginFor<T>, nft_id: NFTId, royalty: Permill) -> DispatchResultWithPostInfo {
+		pub fn set_royalty(
+			origin: OriginFor<T>,
+			nft_id: NFTId,
+			royalty: Permill,
+		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
 			Nfts::<T>::try_mutate(nft_id, |x| -> DispatchResult {
@@ -486,7 +520,10 @@ pub mod pallet {
 
 		/// Set the fee for minting an NFT if the caller is root.
 		#[pallet::weight(T::WeightInfo::set_nft_mint_fee())]
-		pub fn set_nft_mint_fee(origin: OriginFor<T>, fee: BalanceOf<T>) -> DispatchResultWithPostInfo {
+		pub fn set_nft_mint_fee(
+			origin: OriginFor<T>,
+			fee: BalanceOf<T>,
+		) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
 			NftMintFee::<T>::put(fee);
 			let event = Event::NFTMintFeeSet { fee };
@@ -508,7 +545,10 @@ pub mod pallet {
 
 			// Check size limit if it exists.
 			if let Some(limit) = &limit {
-				ensure!(*limit <= T::CollectionSizeLimit::get(), Error::<T>::CollectionLimitExceededMaximumAllowed);
+				ensure!(
+					*limit <= T::CollectionSizeLimit::get(),
+					Error::<T>::CollectionLimitExceededMaximumAllowed
+				);
 			}
 
 			// Execute
@@ -517,7 +557,8 @@ pub mod pallet {
 
 			// Save
 			Collections::<T>::insert(collection_id, collection);
-			let event = Event::CollectionCreated { collection_id, owner: who, offchain_data, limit };
+			let event =
+				Event::CollectionCreated { collection_id, owner: who, offchain_data, limit };
 			Self::deposit_event(event);
 
 			Ok(().into())
@@ -528,9 +569,13 @@ pub mod pallet {
 		/// get it back.
 		/// Must be called by the owner of the collection and collection must be empty.
 		#[pallet::weight(T::WeightInfo::burn_collection())]
-		pub fn burn_collection(origin: OriginFor<T>, collection_id: CollectionId) -> DispatchResultWithPostInfo {
+		pub fn burn_collection(
+			origin: OriginFor<T>,
+			collection_id: CollectionId,
+		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
-			let collection = Collections::<T>::get(collection_id).ok_or(Error::<T>::CollectionNotFound)?;
+			let collection =
+				Collections::<T>::get(collection_id).ok_or(Error::<T>::CollectionNotFound)?;
 
 			// Checks
 			ensure!(collection.owner == who, Error::<T>::NotTheCollectionOwner);
@@ -548,7 +593,10 @@ pub mod pallet {
 		/// possible to add new NFTs to the collection.
 		/// Can only be called by owner of the collection.
 		#[pallet::weight(T::WeightInfo::close_collection())]
-		pub fn close_collection(origin: OriginFor<T>, collection_id: CollectionId) -> DispatchResultWithPostInfo {
+		pub fn close_collection(
+			origin: OriginFor<T>,
+			collection_id: CollectionId,
+		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
 			Collections::<T>::try_mutate(collection_id, |x| -> DispatchResult {
@@ -582,8 +630,14 @@ pub mod pallet {
 				ensure!(collection.owner == who, Error::<T>::NotTheCollectionOwner);
 				ensure!(collection.limit == None, Error::<T>::CollectionLimitAlreadySet);
 				ensure!(!collection.is_closed, Error::<T>::CollectionIsClosed);
-				ensure!(collection.nfts.len() <= limit as usize, Error::<T>::CollectionHasTooManyNFTs);
-				ensure!(limit <= T::CollectionSizeLimit::get(), Error::<T>::CollectionLimitExceededMaximumAllowed);
+				ensure!(
+					collection.nfts.len() <= limit as usize,
+					Error::<T>::CollectionHasTooManyNFTs
+				);
+				ensure!(
+					limit <= T::CollectionSizeLimit::get(),
+					Error::<T>::CollectionLimitExceededMaximumAllowed
+				);
 
 				// Execute
 				collection.limit = Some(limit);
@@ -620,7 +674,8 @@ pub mod pallet {
 
 			Collections::<T>::try_mutate(collection_id, |x| -> DispatchResult {
 				let collection = x.as_mut().ok_or(Error::<T>::CollectionNotFound)?;
-				let limit = collection.limit.unwrap_or_else(|| T::CollectionSizeLimit::get()) as usize;
+				let limit =
+					collection.limit.unwrap_or_else(|| T::CollectionSizeLimit::get()) as usize;
 
 				// Checks
 				ensure!(collection.owner == who, Error::<T>::NotTheCollectionOwner);
@@ -681,15 +736,19 @@ impl<T: Config> traits::NFTExt for Pallet<T> {
 	) -> DispatchResult {
 		//Create full collection
 		let collection_offchain_data: U8BoundedVec<Self::CollectionOffchainDataLimit> =
-			U8BoundedVec::try_from(vec![1; Self::CollectionOffchainDataLimit::get().try_into().unwrap()])
-				.expect("It will never happen.");
+			U8BoundedVec::try_from(vec![
+				1;
+				Self::CollectionOffchainDataLimit::get()
+					.try_into()
+					.unwrap()
+			])
+			.expect("It will never happen.");
 
-		let mut collection =
-			Collection::<Self::AccountId, Self::CollectionOffchainDataLimit, Self::CollectionSizeLimit>::new(
-				owner.clone(),
-				collection_offchain_data,
-				None,
-			);
+		let mut collection = Collection::<
+			Self::AccountId,
+			Self::CollectionOffchainDataLimit,
+			Self::CollectionSizeLimit,
+		>::new(owner.clone(), collection_offchain_data, None);
 
 		let ids: Vec<u32> = (start_nft_id..amount_in_collection + start_nft_id).collect();
 		let nft_ids: BoundedVec<u32, Self::CollectionSizeLimit> =
@@ -700,9 +759,15 @@ impl<T: Config> traits::NFTExt for Pallet<T> {
 
 		// Create nfts
 		let nft_offchain_data: U8BoundedVec<Self::NFTOffchainDataLimit> =
-			U8BoundedVec::try_from(vec![1; Self::NFTOffchainDataLimit::get() as usize]).expect("It will never happen.");
-		let nft =
-			NFTData::new_default(owner.clone(), nft_offchain_data, Permill::from_parts(0), Some(collection_id), false);
+			U8BoundedVec::try_from(vec![1; Self::NFTOffchainDataLimit::get() as usize])
+				.expect("It will never happen.");
+		let nft = NFTData::new_default(
+			owner.clone(),
+			nft_offchain_data,
+			Permill::from_parts(0),
+			Some(collection_id),
+			false,
+		);
 		for i in start_nft_id..amount_in_collection + start_nft_id {
 			Nfts::<T>::insert(i, nft.clone());
 		}
@@ -714,7 +779,10 @@ impl<T: Config> traits::NFTExt for Pallet<T> {
 		Nfts::<T>::get(id)
 	}
 
-	fn set_nft(id: NFTId, nft_data: NFTData<Self::AccountId, Self::NFTOffchainDataLimit>) -> DispatchResult {
+	fn set_nft(
+		id: NFTId,
+		nft_data: NFTData<Self::AccountId, Self::NFTOffchainDataLimit>,
+	) -> DispatchResult {
 		Nfts::<T>::insert(id, nft_data);
 
 		Ok(())
@@ -728,7 +796,14 @@ impl<T: Config> traits::NFTExt for Pallet<T> {
 		is_soulbound: bool,
 	) -> Result<NFTId, DispatchResult> {
 		let nft_state = NFTState::new(false, false, false, false, is_soulbound, false, false);
-		let nft = NFTData::new(owner.clone(), owner.clone(), offchain_data, royalty, nft_state, collection_id);
+		let nft = NFTData::new(
+			owner.clone(),
+			owner.clone(),
+			offchain_data,
+			royalty,
+			nft_state,
+			collection_id,
+		);
 		let nft_id = Self::get_next_nft_id();
 		Nfts::<T>::insert(nft_id, nft);
 

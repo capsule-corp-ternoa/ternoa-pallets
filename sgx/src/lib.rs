@@ -41,7 +41,6 @@ pub mod pallet {
 	use frame_support::{
 		pallet_prelude::*,
 		traits::{Currency, ExistenceRequirement::KeepAlive, OnUnbalanced, WithdrawReasons},
-		transactional,
 	};
 	use frame_system::pallet_prelude::*;
 	use primitives::TextFormat;
@@ -101,7 +100,6 @@ pub mod pallet {
 		// Enclave
 		//
 		#[pallet::weight(T::WeightInfo::register_enclave())]
-		#[transactional]
 		pub fn register_enclave(
 			origin: OriginFor<T>,
 			api_uri: TextFormat,

@@ -51,14 +51,28 @@ pub fn prepare_benchmarks<T: Config>() -> BenchmarkData {
 	T::Currency::make_free_balance_be(&alice, BalanceOf::<T>::max_value());
 	T::Currency::make_free_balance_be(&bob, BalanceOf::<T>::max_value());
 
-	let nft_offchain_data = BoundedVec::try_from(vec![1; T::NFTOffchainDataLimit::get() as usize]).unwrap();
+	let nft_offchain_data =
+		BoundedVec::try_from(vec![1; T::NFTOffchainDataLimit::get() as usize]).unwrap();
 	let collection_offchain_data =
 		BoundedVec::try_from(vec![1; T::CollectionOffchainDataLimit::get() as usize]).unwrap();
 
 	// Create default NFT and collection.
-	assert_ok!(NFT::<T>::create_nft(origin::<T>("ALICE").into(), nft_offchain_data, PERCENT_100, None, false,));
-	assert_ok!(NFT::<T>::create_collection(origin::<T>("ALICE").into(), collection_offchain_data, None,));
-	BenchmarkData { nft_id: NFT::<T>::next_nft_id() - 1, collection_id: NFT::<T>::next_collection_id() - 1 }
+	assert_ok!(NFT::<T>::create_nft(
+		origin::<T>("ALICE").into(),
+		nft_offchain_data,
+		PERCENT_100,
+		None,
+		false,
+	));
+	assert_ok!(NFT::<T>::create_collection(
+		origin::<T>("ALICE").into(),
+		collection_offchain_data,
+		None,
+	));
+	BenchmarkData {
+		nft_id: NFT::<T>::next_nft_id() - 1,
+		collection_id: NFT::<T>::next_collection_id() - 1,
+	}
 }
 
 benchmarks! {

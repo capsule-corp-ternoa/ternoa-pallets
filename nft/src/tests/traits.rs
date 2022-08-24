@@ -80,7 +80,9 @@ fn set_nft() {
 #[test]
 fn create_nft() {
 	ExtBuilder::new_build(vec![(ALICE, 1000)]).execute_with(|| {
-		let nft_id = <NFT as NFTExt>::create_nft(ALICE, BoundedVec::default(), PERCENT_0, None, false).unwrap();
+		let nft_id =
+			<NFT as NFTExt>::create_nft(ALICE, BoundedVec::default(), PERCENT_0, None, false)
+				.unwrap();
 		let nft = NFT::get_nft(nft_id).unwrap();
 		assert_eq!(nft.owner, ALICE);
 	})

@@ -44,7 +44,8 @@ mod set_session_extra_reward_payout {
 			assert_ok!(ok);
 
 			// Final state checks
-			let expected = StakingRewardsData { session_era_payout: 0, session_extra_reward_payout: value };
+			let expected =
+				StakingRewardsData { session_era_payout: 0, session_extra_reward_payout: value };
 			assert_eq!(StakingRewards::session_era_payout(), expected);
 
 			// Events checks

@@ -25,7 +25,10 @@ pub mod weights;
 
 use frame_support::{
 	pallet_prelude::*,
-	traits::{Currency, ExistenceRequirement, Get, Imbalance, OnUnbalanced, StorageVersion, TryDrop, WithdrawReasons},
+	traits::{
+		Currency, ExistenceRequirement, Get, Imbalance, OnUnbalanced, StorageVersion, TryDrop,
+		WithdrawReasons,
+	},
 	PalletId,
 };
 use sp_runtime::traits::{AccountIdConversion, Saturating, Zero};
@@ -42,10 +45,12 @@ pub struct StakingRewardsData<Balance> {
 	pub session_extra_reward_payout: Balance,
 }
 
-pub type BalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+pub type BalanceOf<T> =
+	<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
-pub type NegativeImbalance<T> =
-	<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::NegativeImbalance;
+pub type NegativeImbalance<T> = <<T as Config>::Currency as Currency<
+	<T as frame_system::Config>::AccountId,
+>>::NegativeImbalance;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -116,7 +121,7 @@ pub mod pallet {
 impl<T: Config> Pallet<T> {
 	/// The account ID of the auctions pot.
 	pub fn account_id() -> T::AccountId {
-		T::PalletId::get().into_account()
+		T::PalletId::get().into_account_truncating()
 	}
 }
 
@@ -160,8 +165,10 @@ impl<T: Config> pallet_staking::EraPayout<BalanceOf<T>> for Pallet<T> {
 			stakers_pay = data.session_era_payout;
 			data.session_era_payout = 0u32.into();
 
-			let additional_pay =
-				sp_std::cmp::min(T::Currency::free_balance(&Self::account_id()), data.session_extra_reward_payout);
+			let additional_pay = sp_std::cmp::min(
+				T::Currency::free_balance(&Self::account_id()),
+				data.session_extra_reward_payout,
+			);
 
 			if !additional_pay.is_zero() {
 				let negative_imbalance = T::Currency::withdraw(

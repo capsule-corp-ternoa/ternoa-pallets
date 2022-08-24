@@ -1,20 +1,24 @@
 [package]
 name = "ternoa-common"
 version = "1.0.1"
+authors = ["Ternoa"]
 edition = "2021"
-license = "GPL-3.0-or-later WITH Classpath-exception-2.0"
+license = "GPL-3.0-only"
+homepage = "https://www.ternoa.com/"
+repository = "https://github.com/capsule-corp-ternoa/ternoa-pallets"
+description = "Ternoa Pallet for External Interfaces"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
 # Frame
-frame-support = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-03-24", default-features = false }
+frame-support = { git = "https://github.com/capsule-corp-ternoa/substrate", tag = "ternoa-substrate-2022-08-22", default-features = false }
 
 # Sp
-sp-runtime = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-03-24", default-features = false }
-sp-std = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-03-24", default-features = false }
-sp-arithmetic = { git = "https://github.com/capsule-corp-ternoa/substrate", branch = "ternoa-substrate-2022-03-24", default-features = false }
+sp-runtime = { git = "https://github.com/capsule-corp-ternoa/substrate", tag = "ternoa-substrate-2022-08-22", default-features = false }
+sp-std = { git = "https://github.com/capsule-corp-ternoa/substrate", tag = "ternoa-substrate-2022-08-22", default-features = false }
+sp-arithmetic = { git = "https://github.com/capsule-corp-ternoa/substrate", tag = "ternoa-substrate-2022-08-22", default-features = false }
 
 # Ternoa
 primitives = { package = "ternoa-pallets-primitives", default-features = false, path = "../primitives" }

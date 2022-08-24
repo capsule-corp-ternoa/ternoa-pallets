@@ -16,7 +16,9 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use frame_support::{traits::Get, BoundedVec, CloneNoBound, PartialEqNoBound, RuntimeDebug, RuntimeDebugNoBound};
+use frame_support::{
+	traits::Get, BoundedVec, CloneNoBound, PartialEqNoBound, RuntimeDebug, RuntimeDebugNoBound,
+};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_arithmetic::per_things::Permill;
@@ -59,7 +61,15 @@ impl NFTState {
 		is_rented: bool,
 		is_auctioned: bool,
 	) -> Self {
-		Self { is_capsule, is_listed, is_secret, is_delegated, is_soulbound, is_rented, is_auctioned }
+		Self {
+			is_capsule,
+			is_listed,
+			is_secret,
+			is_delegated,
+			is_soulbound,
+			is_rented,
+			is_auctioned,
+		}
 	}
 
 	pub fn new_default(is_soulbound: bool) -> Self {
@@ -68,7 +78,17 @@ impl NFTState {
 }
 
 /// Data related to an NFT, such as who is its owner.
-#[derive(Encode, Decode, Eq, Default, TypeInfo, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, MaxEncodedLen)]
+#[derive(
+	Encode,
+	Decode,
+	Eq,
+	Default,
+	TypeInfo,
+	CloneNoBound,
+	PartialEqNoBound,
+	RuntimeDebugNoBound,
+	MaxEncodedLen,
+)]
 #[scale_info(skip_type_params(NFTOffchainDataLimit))]
 #[codec(mel_bound(AccountId: MaxEncodedLen))]
 pub struct NFTData<AccountId, NFTOffchainDataLimit>
@@ -113,12 +133,29 @@ where
 		collection_id: Option<CollectionId>,
 		is_soulbound: bool,
 	) -> Self {
-		Self::new(owner.clone(), owner, offchain_data, royalty, NFTState::new_default(is_soulbound), collection_id)
+		Self::new(
+			owner.clone(),
+			owner,
+			offchain_data,
+			royalty,
+			NFTState::new_default(is_soulbound),
+			collection_id,
+		)
 	}
 }
 
 /// Data related to collections
-#[derive(Encode, Decode, Eq, Default, TypeInfo, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, MaxEncodedLen)]
+#[derive(
+	Encode,
+	Decode,
+	Eq,
+	Default,
+	TypeInfo,
+	CloneNoBound,
+	PartialEqNoBound,
+	RuntimeDebugNoBound,
+	MaxEncodedLen,
+)]
 #[scale_info(skip_type_params(CollectionOffChainDataLimit, CollectionSizeLimit,))]
 #[codec(mel_bound(AccountId: MaxEncodedLen))]
 pub struct Collection<AccountId, CollectionOffChainDataLimit, CollectionSizeLimit>
@@ -146,7 +183,11 @@ where
 	CollectionOffChainDataLimit: Get<u32>,
 	CollectionSizeLimit: Get<u32>,
 {
-	pub fn new(owner: AccountId, offchain_data: U8BoundedVec<CollectionOffChainDataLimit>, limit: Option<u32>) -> Self {
+	pub fn new(
+		owner: AccountId,
+		offchain_data: U8BoundedVec<CollectionOffChainDataLimit>,
+		limit: Option<u32>,
+	) -> Self {
 		Self { owner, offchain_data, nfts: BoundedVec::default(), limit, is_closed: false }
 	}
 }
