@@ -30,8 +30,8 @@ use frame_support::{
 	ensure,
 	pallet_prelude::DispatchResultWithPostInfo,
 	traits::{
-		Currency, ExistenceRequirement::KeepAlive, Get, OnUnbalanced, StorageVersion,
-		WithdrawReasons,
+		Currency, ExistenceRequirement::KeepAlive, Get, OnRuntimeUpgrade, OnUnbalanced,
+		StorageVersion, WithdrawReasons,
 	},
 	BoundedVec,
 };
@@ -97,7 +97,39 @@ pub mod pallet {
 	}
 
 	#[pallet::hooks]
-	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+		// This function is called before a runtime upgrade is executed. Here we can
+		// test if our remote data is in the desired state. It's important to say that
+		// pre_upgrade won't be called when a real runtime upgrade is executed.
+		#[cfg(feature = "try-runtime")]
+		fn pre_upgrade() -> Result<(), &'static str> {
+			<v1::MigrationV1<T> as OnRuntimeUpgrade>::pre_upgrade()
+		}
+
+		// This function is called when a runtime upgrade is called. We need to make sure that
+		// what ever we do here won't brick the chain or leave the data in a invalid state.
+		fn on_runtime_upgrade() -> frame_support::weights::Weight {
+			let mut weight = 0;
+
+			let version = StorageVersion::get::<Pallet<T>>();
+			if version == StorageVersion::new(0) {
+				weight = <v1::MigrationV1<T> as OnRuntimeUpgrade>::on_runtime_upgrade();
+
+				// Update the storage version.
+				StorageVersion::put::<Pallet<T>>(&StorageVersion::new(1));
+			}
+
+			weight
+		}
+
+		// This function is called after a runtime upgrade is executed. Here we can
+		// test if the new state of blockchain data is valid. It's important to say that
+		// post_upgrade won't be called when a real runtime upgrade is executed.
+		#[cfg(feature = "try-runtime")]
+		fn post_upgrade() -> Result<(), &'static str> {
+			<v1::MigrationV1<T> as OnRuntimeUpgrade>::post_upgrade()
+		}
+	}
 
 	/// How much does it cost to create a marketplace.
 	#[pallet::storage]
@@ -535,5 +567,49 @@ impl<T: Config> Pallet<T> {
 			return Ok(commission_fee)
 		}
 		Ok(0u32.into())
+	}
+}
+
+mod v1 {
+	use super::*;
+	use frame_support::traits::OnRuntimeUpgrade;
+
+	// Here you would copy and paste the old struct instead of typedefing it.
+	pub type OldMarketplaceData<T> = MarketplaceData<
+		<T as frame_system::Config>::AccountId,
+		BalanceOf<T>,
+		<T as Config>::AccountSizeLimit,
+		<T as Config>::OffchainDataLimit,
+	>;
+
+	pub struct MigrationV1<T>(sp_std::marker::PhantomData<T>);
+	impl<T: Config> OnRuntimeUpgrade for MigrationV1<T> {
+		#[cfg(feature = "try-runtime")]
+		fn pre_upgrade() -> Result<(), &'static str> {
+			log::info!("Pre-upgrade inside MigrationV1");
+			Ok(())
+		}
+
+		fn on_runtime_upgrade() -> frame_support::weights::Weight {
+			// If you want to change the existing storage so that it looks differently (adding new
+			// fields, deleting existing ones,....) then you would use translate.
+			Marketplaces::<T>::translate(|_id, old: OldMarketplaceData<T>| {
+				let mut new_val = old.clone();
+				new_val.commission_fee = None;
+				new_val.listing_fee = None;
+				new_val.account_list = None;
+				new_val.offchain_data = None;
+
+				Some(new_val)
+			});
+
+			frame_support::weights::Weight::MAX
+		}
+
+		#[cfg(feature = "try-runtime")]
+		fn post_upgrade() -> Result<(), &'static str> {
+			log::info!("Post-upgrade inside MigrationV1");
+			Ok(())
+		}
 	}
 }
