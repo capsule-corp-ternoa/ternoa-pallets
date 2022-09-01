@@ -54,7 +54,7 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {
 		#[pallet::weight({
 			let dispatch_info = call.get_dispatch_info();
-			(dispatch_info.weight.saturating_add(10_000), dispatch_info.class)
+			(dispatch_info.weight, dispatch_info.class)
 		})]
 		pub fn mandate(
 			origin: OriginFor<T>,

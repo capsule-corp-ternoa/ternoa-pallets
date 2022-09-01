@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Ternoa.  If not, see <http://www.gnu.org/licenses/>.
 
-use frame_support::weights::{constants::RocksDbWeight as DbWeight, Weight};
+use frame_support::weights::{RefTimeWeight, Weight};
 
 pub trait WeightInfo {
 	fn create_marketplace() -> Weight;
@@ -33,54 +33,40 @@ impl WeightInfo for () {
 	// Storage: Marketplace NextMarketplaceId (r:1 w:1)
 	// Storage: Marketplace Marketplaces (r:0 w:1)
 	fn create_marketplace() -> Weight {
-		(44_900_000 as Weight)
-			.saturating_add(DbWeight::get().reads(3 as Weight))
-			.saturating_add(DbWeight::get().writes(3 as Weight))
+		Weight::from_ref_time(10_000_000 as RefTimeWeight)
 	}
 	// Storage: Marketplace Marketplaces (r:1 w:1)
 	fn set_marketplace_owner() -> Weight {
-		(15_500_000 as Weight)
-			.saturating_add(DbWeight::get().reads(1 as Weight))
-			.saturating_add(DbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(10_000_000 as RefTimeWeight)
 	}
 	// Storage: Marketplace Marketplaces (r:1 w:1)
 	fn set_marketplace_kind() -> Weight {
-		(17_800_000 as Weight)
-			.saturating_add(DbWeight::get().reads(1 as Weight))
-			.saturating_add(DbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(10_000_000 as RefTimeWeight)
 	}
 	// Storage: Marketplace Marketplaces (r:1 w:1)
 	fn set_marketplace_configuration() -> Weight {
-		(42_900_000 as Weight)
-			.saturating_add(DbWeight::get().reads(1 as Weight))
-			.saturating_add(DbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(10_000_000 as RefTimeWeight)
 	}
 	// Storage: Marketplace MarketplaceMintFee (r:0 w:1)
 	fn set_marketplace_mint_fee() -> Weight {
-		(24_500_000 as Weight).saturating_add(DbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(10_000_000 as RefTimeWeight)
 	}
 	// Storage: NFT Nfts (r:1 w:1)
 	// Storage: Marketplace Marketplaces (r:1 w:0)
 	// Storage: Marketplace ListedNfts (r:0 w:1)
 	fn list_nft() -> Weight {
-		(23_700_000 as Weight)
-			.saturating_add(DbWeight::get().reads(2 as Weight))
-			.saturating_add(DbWeight::get().writes(2 as Weight))
+		Weight::from_ref_time(10_000_000 as RefTimeWeight)
 	}
 	// Storage: NFT Nfts (r:1 w:1)
 	// Storage: Marketplace ListedNfts (r:1 w:1)
 	fn unlist_nft() -> Weight {
-		(21_600_000 as Weight)
-			.saturating_add(DbWeight::get().reads(2 as Weight))
-			.saturating_add(DbWeight::get().writes(2 as Weight))
+		Weight::from_ref_time(10_000_000 as RefTimeWeight)
 	}
 	// Storage: NFT Nfts (r:1 w:1)
 	// Storage: Marketplace ListedNfts (r:1 w:1)
 	// Storage: Marketplace Marketplaces (r:1 w:0)
 	// Storage: System Account (r:2 w:2)
 	fn buy_nft() -> Weight {
-		(71_600_000 as Weight)
-			.saturating_add(DbWeight::get().reads(5 as Weight))
-			.saturating_add(DbWeight::get().writes(4 as Weight))
+		Weight::from_ref_time(10_000_000 as RefTimeWeight)
 	}
 }
