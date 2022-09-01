@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Ternoa.  If not, see <http://www.gnu.org/licenses/>.
 
-use frame_support::{traits::Get, weights::Weight};
+use frame_support::weights::{RefTimeWeight, Weight};
 use sp_std::marker::PhantomData;
 
 pub trait WeightInfo {
@@ -25,8 +25,6 @@ pub trait WeightInfo {
 pub struct TernoaWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for TernoaWeight<T> {
 	fn set_session_extra_reward_payout() -> Weight {
-		(46_461_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(5 as Weight))
-			.saturating_add(T::DbWeight::get().writes(5 as Weight))
+		Weight::from_ref_time(10_000_000 as RefTimeWeight)
 	}
 }
