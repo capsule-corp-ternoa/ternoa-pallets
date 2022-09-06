@@ -17,8 +17,11 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use frame_support::{dispatch::DispatchResult, traits::Get, BoundedVec};
-use primitives::nfts::{CollectionId, NFTData, NFTId, NFTState};
-use sp_runtime::Permill;
+use primitives::{
+	marketplace::{MarketplaceData, MarketplaceId},
+	nfts::{CollectionId, NFTData, NFTId, NFTState},
+};
+use sp_arithmetic::Permill;
 use sp_std::fmt::Debug;
 
 pub trait NFTExt {
@@ -28,7 +31,7 @@ pub trait NFTExt {
 	type CollectionOffchainDataLimit: Get<u32>;
 
 	/// Change the state data of an NFT.
-	fn set_nft_state(id: NFTId, nft_state: NFTState) -> DispatchResult;
+	fn set_nft_state(id: NFTId, value: NFTState) -> DispatchResult;
 
 	/// Create a collection filled with amount_in_collection NFTs.
 	fn create_filled_collection(
@@ -41,13 +44,13 @@ pub trait NFTExt {
 	/// Returns an NFT corresponding to its id.
 	fn get_nft(id: NFTId) -> Option<NFTData<Self::AccountId, Self::NFTOffchainDataLimit>>;
 
-	/// Set the NFT data
+	/// Set the NFT data.
 	fn set_nft(
 		id: NFTId,
-		nft_data: NFTData<Self::AccountId, Self::NFTOffchainDataLimit>,
+		value: NFTData<Self::AccountId, Self::NFTOffchainDataLimit>,
 	) -> DispatchResult;
 
-	/// Create an NFT
+	/// Create an NFT.
 	fn create_nft(
 		owner: Self::AccountId,
 		offchain_data: BoundedVec<u8, Self::NFTOffchainDataLimit>,
@@ -55,4 +58,34 @@ pub trait NFTExt {
 		collection_id: Option<CollectionId>,
 		is_soulbound: bool,
 	) -> Result<NFTId, DispatchResult>;
+}
+
+pub trait MarketplaceExt {
+	type AccountId: Clone + PartialEq + Debug;
+	type Balance: Clone + PartialEq + Debug + sp_std::cmp::PartialOrd;
+	type OffchainDataLimit: Get<u32>;
+	type AccountSizeLimit: Get<u32>;
+
+	/// Returns a marketplace corresponding to its id.
+	fn get_marketplace(
+		id: MarketplaceId,
+	) -> Option<
+		MarketplaceData<
+			Self::AccountId,
+			Self::Balance,
+			Self::AccountSizeLimit,
+			Self::OffchainDataLimit,
+		>,
+	>;
+
+	/// Set marketplace data for specified id.
+	fn set_marketplace(
+		id: MarketplaceId,
+		value: MarketplaceData<
+			Self::AccountId,
+			Self::Balance,
+			Self::AccountSizeLimit,
+			Self::OffchainDataLimit,
+		>,
+	) -> DispatchResult;
 }

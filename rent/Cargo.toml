@@ -1,12 +1,12 @@
 [package]
-name = "ternoa-auction"
+name = "ternoa-rent"
 version = "1.0.0"
 authors = ["Ternoa"]
 edition = "2021"
 license = "GPL-3.0-only"
 homepage = "https://www.ternoa.com/"
 repository = "https://github.com/capsule-corp-ternoa/ternoa-pallets"
-description = "Ternoa Pallet for Auctions"
+description = "Ternoa Pallet for Renting"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
@@ -34,7 +34,6 @@ primitives = { package = "ternoa-pallets-primitives", default-features = false, 
 # We needs this dependencies to run our tests
 [dev-dependencies]
 ternoa-nft = { default-features = false, path = "../nft" }
-ternoa-marketplace = { default-features = false, path = "../marketplace" }
 pallet-balances = { git = "https://github.com/capsule-corp-ternoa/substrate", tag = "ternoa-substrate-2022-09-01" }
 sp-core = { git = "https://github.com/capsule-corp-ternoa/substrate", tag = "ternoa-substrate-2022-09-01", default-features = false }
 sp-io = { git = "https://github.com/capsule-corp-ternoa/substrate", tag = "ternoa-substrate-2022-09-01", default-features = false }
@@ -52,7 +51,6 @@ std = [
     "primitives/std",
     "ternoa-nft/std",
     "scale-info/std",
-    "ternoa-marketplace/std",
 ]
 runtime-benchmarks = [
     "frame-benchmarking",

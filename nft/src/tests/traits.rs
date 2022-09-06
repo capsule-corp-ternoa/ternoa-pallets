@@ -31,7 +31,7 @@ fn set_nft_state() {
 		let alice: Origin = RawOrigin::Signed(ALICE).into();
 		NFT::create_nft(alice, BoundedVec::default(), PERCENT_0, None, false).unwrap();
 		let nft_id = mock::NFT::get_next_nft_id() - 1;
-		let nft_state = NFTState::new(true, true, true, true, true);
+		let nft_state = NFTState::new(true, true, true, true, true, false);
 		<NFT as NFTExt>::set_nft_state(nft_id, nft_state.clone()).unwrap();
 		let nft = NFT::nfts(nft_id).unwrap();
 		assert_eq!(nft.state, nft_state);

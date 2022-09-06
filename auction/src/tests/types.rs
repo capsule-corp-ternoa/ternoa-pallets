@@ -35,25 +35,25 @@ mod bidder_list {
 		let mut bidders_list: BidderList<MockAccount, MockBalance, ListLengthLimit10> =
 			BidderList::new();
 
-		// insert to list works
+		// insert to list works.
 		bidders_list.insert_new_bid(1u32, 2u32);
 		assert_eq!(bidders_list.list, vec![(1u32, 2u32)]);
 
 		bidders_list.insert_new_bid(2u32, 3u32);
 		assert_eq!(bidders_list.list, vec![(1u32, 2u32), (2u32, 3u32)]);
 
-		// get highest bid works
+		// get highest bid works.
 		assert_eq!(bidders_list.get_highest_bid(), Some(&(2u32, 3u32)));
 
-		// get lowest bid works
+		// get lowest bid works.
 		assert_eq!(bidders_list.get_lowest_bid(), Some(&(1u32, 2u32)));
 
-		// insert max bids
+		// insert max bids.
 		for n in 4..12 {
 			bidders_list.insert_new_bid(n, n + 1);
 		}
 
-		// ensure the insertion has worked correctly
+		// ensure the insertion has worked correctly.
 		assert_eq!(
 			bidders_list.list,
 			vec![
@@ -70,11 +70,11 @@ mod bidder_list {
 			]
 		);
 
-		// inserting the new bid should replace the lowest bid
+		// inserting the new bid should replace the lowest bid.
 		let lowest_bid = bidders_list.insert_new_bid(1u32, 102u32);
 		assert_eq!(lowest_bid, Some((1, 2)));
 
-		// ensure the insertion has worked correctly
+		// ensure the insertion has worked correctly.
 		assert_eq!(
 			bidders_list.list,
 			vec![
@@ -91,38 +91,38 @@ mod bidder_list {
 			]
 		);
 
-		// ensure find_bid works
-		assert_eq!(bidders_list.find_bid(5), Some(&(5, 6)));
-		assert_eq!(bidders_list.find_bid(11), Some(&(11, 12)));
-		assert_eq!(bidders_list.find_bid(7), Some(&(7, 8)));
-		assert_eq!(bidders_list.find_bid(2021), None);
+		// ensure find_bid works.
+		assert_eq!(bidders_list.find_bid(&5), Some(&(5, 6)));
+		assert_eq!(bidders_list.find_bid(&11), Some(&(11, 12)));
+		assert_eq!(bidders_list.find_bid(&7), Some(&(7, 8)));
+		assert_eq!(bidders_list.find_bid(&2021), None);
 
-		// ensure remove_bid works
-		assert_eq!(bidders_list.remove_bid(5), Some((5, 6)));
+		// ensure remove_bid works.
+		assert_eq!(bidders_list.remove_bid(&5), Some((5, 6)));
 		assert_eq!(
 			bidders_list.list,
 			vec![(2, 3), (4, 5), (6, 7), (7, 8), (8, 9), (9, 10), (10, 11), (11, 12), (1, 102)]
 		);
 
-		// ensure remove_bid works
-		assert_eq!(bidders_list.remove_bid(11), Some((11, 12)));
+		// ensure remove_bid works.
+		assert_eq!(bidders_list.remove_bid(&11), Some((11, 12)));
 		assert_eq!(
 			bidders_list.list,
 			vec![(2, 3), (4, 5), (6, 7), (7, 8), (8, 9), (9, 10), (10, 11), (1, 102)]
 		);
-		assert_eq!(bidders_list.remove_bid(2022), None);
-		// ensure remove_bid works till empty
-		assert_eq!(bidders_list.remove_bid(2), Some((2, 3)));
-		assert_eq!(bidders_list.remove_bid(4), Some((4, 5)));
-		assert_eq!(bidders_list.remove_bid(6), Some((6, 7)));
-		assert_eq!(bidders_list.remove_bid(7), Some((7, 8)));
-		assert_eq!(bidders_list.remove_bid(8), Some((8, 9)));
-		assert_eq!(bidders_list.remove_bid(9), Some((9, 10)));
-		assert_eq!(bidders_list.remove_bid(10), Some((10, 11)));
-		assert_eq!(bidders_list.remove_bid(1), Some((1, 102)));
+		assert_eq!(bidders_list.remove_bid(&2022), None);
+		// ensure remove_bid works till empty.
+		assert_eq!(bidders_list.remove_bid(&2), Some((2, 3)));
+		assert_eq!(bidders_list.remove_bid(&4), Some((4, 5)));
+		assert_eq!(bidders_list.remove_bid(&6), Some((6, 7)));
+		assert_eq!(bidders_list.remove_bid(&7), Some((7, 8)));
+		assert_eq!(bidders_list.remove_bid(&8), Some((8, 9)));
+		assert_eq!(bidders_list.remove_bid(&9), Some((9, 10)));
+		assert_eq!(bidders_list.remove_bid(&10), Some((10, 11)));
+		assert_eq!(bidders_list.remove_bid(&1), Some((1, 102)));
 		assert_eq!(bidders_list.list, vec![]);
 
-		// insert max bids
+		// insert max bids.
 		for n in 4..12 {
 			bidders_list.insert_new_bid(n, n + 1);
 		}
@@ -141,7 +141,7 @@ mod deadline_list {
 	fn insert_random_values() {
 		let mut deadlines = DeadlineList::<u32, ParallelAuctionLimit>(bounded_vec![]);
 
-		// Insert 5 different values and after every insert check if the order is correct
+		// Insert 5 different values and after every insert check if the order is correct.
 
 		let entires = vec![
 			(0, 100, vec![(0, 100)]),
@@ -161,7 +161,7 @@ mod deadline_list {
 	fn remove_random_values() {
 		let mut deadlines = DeadlineList::<u32, ParallelAuctionLimit>(bounded_vec![]);
 
-		// Insert 5 different values and after every insert check if the order is correct
+		// Insert 5 different values and after every insert check if the order is correct.
 
 		let entires = vec![
 			(0, 100, vec![]),
@@ -186,7 +186,7 @@ mod deadline_list {
 	fn update_values() {
 		let mut deadlines = DeadlineList::<u32, ParallelAuctionLimit>(bounded_vec![]);
 
-		// Insert 5 different values and after every insert check if the order is correct
+		// Insert 5 different values and after every insert check if the order is correct.
 
 		let entires = vec![(0, 100), (1, 50), (2, 150)];
 		let new_entires = vec![
@@ -210,7 +210,7 @@ mod deadline_list {
 	fn get_next_ready_blocks() {
 		let mut deadlines = DeadlineList::<u32, ParallelAuctionLimit>(bounded_vec![]);
 
-		// Insert 5 different values and after every insert check if the order is correct
+		// Insert 5 different values and after every insert check if the order is correct.
 
 		let entries = vec![(0, 100), (1, 50), (2, 150)];
 		for entry in entries.iter() {

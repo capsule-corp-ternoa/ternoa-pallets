@@ -37,29 +37,32 @@ pub type CollectionId = u32;
 pub struct NFTState {
 	/// Is NFT converted to capsule
 	pub is_capsule: bool,
-	/// Is NFT listed for sale
-	pub listed_for_sale: bool,
+	/// Is NFT listed for sale (direct or auctioned)
+	pub is_listed: bool,
 	/// Is NFT contains secret
 	pub is_secret: bool,
 	/// Is NFT delegated
 	pub is_delegated: bool,
 	/// Is NFT soulbound
 	pub is_soulbound: bool,
+	/// Is NFT Rented or available for rent
+	pub is_rented: bool,
 }
 
 impl NFTState {
 	pub fn new(
 		is_capsule: bool,
-		listed_for_sale: bool,
+		is_listed: bool,
 		is_secret: bool,
 		is_delegated: bool,
 		is_soulbound: bool,
+		is_rented: bool,
 	) -> Self {
-		Self { is_capsule, listed_for_sale, is_secret, is_delegated, is_soulbound }
+		Self { is_capsule, is_listed, is_secret, is_delegated, is_soulbound, is_rented }
 	}
 
 	pub fn new_default(is_soulbound: bool) -> Self {
-		Self::new(false, false, false, false, is_soulbound)
+		Self::new(false, false, false, false, is_soulbound, false)
 	}
 }
 

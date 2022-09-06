@@ -16,7 +16,8 @@
 
 use frame_support::{
 	parameter_types,
-	traits::{ConstU32, Contains, Currency},
+	traits::{ConstU32, Contains, Currency, Hooks},
+	PalletId,
 };
 use sp_core::H256;
 use sp_runtime::{
@@ -24,7 +25,7 @@ use sp_runtime::{
 	traits::{BlakeTwo256, IdentityLookup},
 };
 
-use crate::{self as ternoa_marketplace, Config, NegativeImbalanceOf};
+use crate::{self as ternoa_rent, Config, NegativeImbalanceOf};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -32,10 +33,8 @@ type Block = frame_system::mocking::MockBlock<Test>;
 pub const ALICE: u64 = 1;
 pub const BOB: u64 = 2;
 pub const CHARLIE: u64 = 3;
-pub const DAVE: u64 = 4;
 pub const COLLECTOR: u64 = 99;
 pub const NFT_MINT_FEE: Balance = 10;
-pub const MARKETPLACE_MINT_FEE: Balance = 100;
 
 frame_support::construct_runtime!(
 	pub enum Test where
@@ -46,7 +45,7 @@ frame_support::construct_runtime!(
 		System: frame_system,
 		Balances: pallet_balances,
 		NFT: ternoa_nft,
-		Marketplace: ternoa_marketplace,
+		Rent: ternoa_rent,
 	}
 );
 
@@ -69,7 +68,7 @@ pub type Balance = u64;
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
 	pub BlockWeights: frame_system::limits::BlockWeights =
-		frame_system::limits::BlockWeights::simple_max(frame_support::weights::Weight::from_ref_time(1024));
+	frame_system::limits::BlockWeights::simple_max(frame_support::weights::Weight::from_ref_time(1024));
 }
 impl frame_system::Config for Test {
 	type BaseCallFilter = TestBaseCallFilter;
@@ -122,11 +121,12 @@ parameter_types! {
 	pub const NFTOffchainDataLimit: u32 = 10;
 	pub const CollectionOffchainDataLimit: u32 = 10;
 	pub const CollectionSizeLimit: u32 = 10;
-	// Marketplace parameter types
-	pub const MarketplaceInitialMintFee: Balance = MARKETPLACE_MINT_FEE;
-	pub const OffchainDataLimit: u32 = 150;
-	pub const AccountSizeLimit: u32 = 100;
-
+	// Rent parameter types
+	pub const RentPalletId: PalletId = PalletId(*b"ter/rent");
+	pub const RentAccountSizeLimit: u32 = 3;
+	pub const SimultaneousContractLimit: u32 = 10;
+	pub const ActionsInBlockLimit: u32 = 10;
+	pub const ContractExpirationDuration: u32 = 2000;
 }
 
 impl ternoa_nft::Config for Test {
@@ -144,11 +144,12 @@ impl Config for Test {
 	type Event = Event;
 	type Currency = Balances;
 	type NFTExt = NFT;
-	type WeightInfo = ();
-	type FeesCollector = ();
-	type InitialMintFee = MarketplaceInitialMintFee;
-	type OffchainDataLimit = OffchainDataLimit;
-	type AccountSizeLimit = AccountSizeLimit;
+	type WeightInfo = ternoa_rent::weights::TernoaWeight<Test>;
+	type PalletId = RentPalletId;
+	type AccountSizeLimit = RentAccountSizeLimit;
+	type SimultaneousContractLimit = SimultaneousContractLimit;
+	type ActionsInBlockLimit = ActionsInBlockLimit;
+	type ContractExpirationDuration = ContractExpirationDuration;
 }
 
 pub struct MockFeeCollector;
@@ -195,4 +196,16 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 	let t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
 	t.into()
+}
+
+pub fn run_to_block(n: u64) {
+	while System::block_number() < n {
+		Rent::on_finalize(System::block_number());
+		Balances::on_finalize(System::block_number());
+		System::on_finalize(System::block_number());
+		System::set_block_number(System::block_number() + 1);
+		System::on_initialize(System::block_number());
+		Balances::on_initialize(System::block_number());
+		Rent::on_initialize(System::block_number());
+	}
 }

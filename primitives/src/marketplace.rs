@@ -71,4 +71,17 @@ where
 	) -> MarketplaceData<AccountId, Balance, AccountSizeLimit, OffchainDataLimit> {
 		Self { owner, kind, commission_fee, listing_fee, account_list, offchain_data }
 	}
+
+	pub fn allowed_to_list(&self, who: &AccountId) -> Option<()> {
+		let mut is_in_account_list = false;
+		if let Some(account_list) = &self.account_list {
+			is_in_account_list = account_list.contains(&who);
+		}
+		let is_allowed = match self.kind {
+			MarketplaceType::Public => !is_in_account_list,
+			MarketplaceType::Private => is_in_account_list,
+		};
+
+		is_allowed.then_some(())
+	}
 }

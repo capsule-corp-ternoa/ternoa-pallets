@@ -139,7 +139,7 @@ fn create_from_nft_unhappy() {
 
 			// Unhappy nft is listed for sale
 			let nft_id = help::create_nft_fast(alice.clone());
-			<NFT as NFTExt>::set_listed_for_sale(nft_id, true).unwrap();
+			<NFT as NFTExt>::set_listed(nft_id, true).unwrap();
 			let ok = Capsule::create_from_nft(alice.clone(), nft_id, bounded_vec![25]);
 			assert_noop!(ok, Error::<Test>::CannotCreateCapsulesFromNFTsListedForSale);
 

@@ -128,7 +128,7 @@ benchmarks! {
 		).unwrap();
 	}: _(origin::<T>("ALICE"), benchmark_data.nft_id, benchmark_data.marketplace_id, 10u32.into())
 	verify {
-		assert_eq!(T::NFTExt::get_nft(benchmark_data.nft_id).unwrap().state.listed_for_sale, true);
+		assert_eq!(T::NFTExt::get_nft(benchmark_data.nft_id).unwrap().state.is_listed, true);
 		assert!(Marketplace::<T>::listed_nfts(benchmark_data.nft_id).is_some());
 	}
 
@@ -138,7 +138,7 @@ benchmarks! {
 		Marketplace::<T>::list_nft(origin::<T>("ALICE").into(), benchmark_data.marketplace_id, benchmark_data.nft_id, 10u32.into()).unwrap();
 	}: _(origin::<T>("ALICE"), benchmark_data.nft_id)
 	verify {
-		assert_eq!(T::NFTExt::get_nft(benchmark_data.nft_id).unwrap().state.listed_for_sale, false);
+		assert_eq!(T::NFTExt::get_nft(benchmark_data.nft_id).unwrap().state.is_listed, false);
 		assert!(Marketplace::<T>::listed_nfts(benchmark_data.nft_id).is_none());
 	}
 

@@ -53,7 +53,7 @@ pub type NegativeImbalanceOf<T> = <<T as Config>::Currency as Currency<
 	<T as frame_system::Config>::AccountId,
 >>::NegativeImbalance;
 
-const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
+const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -207,11 +207,19 @@ pub mod pallet {
 		/// Operation is not allowed because the NFT is a capsule.
 		CannotDelegateCapsuleNFTs,
 		/// Operation is not allowed because the NFT is soulbound.
-		CannotTransferSoulboundNFTs,
+		CannotTransferNotCreatedSoulboundNFTs,
 		/// Operation is not allowed because the NFT is a capsule.
 		CannotSetRoyaltyForCapsuleNFTs,
 		/// Operation is not allowed because the NFT is owned by the caller.
 		CannotTransferNFTsToYourself,
+		/// Operation is not allowed because the NFT is rented
+		CannotTransferRentedNFTs,
+		/// Operation is not allowed because the NFT is rented
+		CannotBurnRentedNFTs,
+		/// Operation is not allowed because the NFT is rented
+		CannotSetRoyaltyForRentedNFTs,
+		/// Operation is not allowed because the NFT is rented
+		CannotDelegateRentedNFTs,
 		/// Operation is not allowed because the collection limit is too low.
 		CollectionLimitExceededMaximumAllowed,
 		/// No NFT was found with that NFT id.
@@ -250,17 +258,12 @@ pub mod pallet {
 		/// will become the owner of the new NFT.
 		#[pallet::weight((
             {
+				let mut s = 0;
 				if let Some(collection_id) = &collection_id {
-					let collection = Collections::<T>::get(collection_id).ok_or(Error::<T>::CollectionNotFound);
-					if let Ok(collection) = collection {
-						let s = collection.nfts.len();
-						T::WeightInfo::create_nft(s as u32)
-					} else {
-						T::WeightInfo::create_nft(1)
-					}
-				} else {
-					T::WeightInfo::create_nft(1)
+					s = Collections::<T>::get(collection_id)
+						.map_or_else(|| 0, |c| c.nfts.len());
 				}
+				T::WeightInfo::create_nft(s as u32)
             },
 			DispatchClass::Normal
         ))]
@@ -298,7 +301,7 @@ pub mod pallet {
 						.try_push(tmp_nft_id)
 						.map_err(|_| Error::<T>::CannotAddMoreNFTsToCollection)?;
 					next_nft_id = Some(tmp_nft_id);
-					Ok(().into())
+					Ok(())
 				})?;
 			}
 
@@ -332,22 +335,11 @@ pub mod pallet {
 		/// Must be called by the owner of the NFT.
 		#[pallet::weight((
             {
-				let nft = Nfts::<T>::get(nft_id).ok_or(Error::<T>::NFTNotFound);
-				if let Ok(nft) = nft {
-					if let Some(collection_id) = &nft.collection_id {
-						let collection = Collections::<T>::get(collection_id).ok_or(Error::<T>::CollectionNotFound);
-						if let Ok(collection) = collection {
-							let s = collection.nfts.len();
-							T::WeightInfo::burn_nft(s as u32)
-						} else {
-							T::WeightInfo::burn_nft(1)
-						}
-					} else {
-						T::WeightInfo::burn_nft(1)
-					}
-				} else {
-					T::WeightInfo::burn_nft(1)
-				}
+				let s = Nfts::<T>::get(nft_id)
+					.and_then(|n| n.collection_id)
+					.and_then(|cid| Collections::<T>::get(cid))
+					.map_or_else(|| 0, |c| c.nfts.len());
+				T::WeightInfo::burn_nft(s as u32)
             },
 			DispatchClass::Normal
         ))]
@@ -357,9 +349,10 @@ pub mod pallet {
 
 			// Checks
 			ensure!(nft.owner == who, Error::<T>::NotTheNFTOwner);
-			ensure!(!nft.state.listed_for_sale, Error::<T>::CannotBurnListedNFTs);
+			ensure!(!nft.state.is_listed, Error::<T>::CannotBurnListedNFTs);
 			ensure!(!nft.state.is_capsule, Error::<T>::CannotBurnCapsuleNFTs);
 			ensure!(!nft.state.is_delegated, Error::<T>::CannotBurnDelegatedNFTs);
+			ensure!(!nft.state.is_rented, Error::<T>::CannotBurnRentedNFTs);
 
 			// Check for collection to remove nft.
 			if let Some(collection_id) = &nft.collection_id {
@@ -372,7 +365,7 @@ pub mod pallet {
 						.ok_or(Error::<T>::NFTNotFoundInCollection)?;
 					// Execute
 					collection.nfts.swap_remove(index);
-					Ok(().into())
+					Ok(())
 				})?;
 			}
 			// Execute
@@ -399,15 +392,19 @@ pub mod pallet {
 				// Checks
 				ensure!(nft.owner == who, Error::<T>::NotTheNFTOwner);
 				ensure!(nft.owner != recipient, Error::<T>::CannotTransferNFTsToYourself);
-				ensure!(!nft.state.listed_for_sale, Error::<T>::CannotTransferListedNFTs);
+				ensure!(!nft.state.is_listed, Error::<T>::CannotTransferListedNFTs);
 				ensure!(!nft.state.is_capsule, Error::<T>::CannotTransferCapsuleNFTs);
 				ensure!(!nft.state.is_delegated, Error::<T>::CannotTransferDelegatedNFTs);
-				ensure!(!nft.state.is_soulbound, Error::<T>::CannotTransferSoulboundNFTs);
+				ensure!(
+					!(nft.state.is_soulbound && nft.creator != nft.owner),
+					Error::<T>::CannotTransferNotCreatedSoulboundNFTs
+				);
+				ensure!(!nft.state.is_rented, Error::<T>::CannotTransferRentedNFTs);
 
 				// Execute
 				nft.owner = recipient.clone();
 
-				Ok(().into())
+				Ok(())
 			})?;
 			// Execute
 			let event = Event::NFTTransferred { nft_id, sender: who, recipient };
@@ -437,13 +434,14 @@ pub mod pallet {
 
 				// Checks
 				ensure!(nft.owner == who, Error::<T>::NotTheNFTOwner);
-				ensure!(!nft.state.listed_for_sale, Error::<T>::CannotDelegateListedNFTs);
+				ensure!(!nft.state.is_listed, Error::<T>::CannotDelegateListedNFTs);
 				ensure!(!nft.state.is_capsule, Error::<T>::CannotDelegateCapsuleNFTs);
+				ensure!(!nft.state.is_rented, Error::<T>::CannotDelegateRentedNFTs);
 
 				// Execute
 				nft.state.is_delegated = is_delegated;
 
-				Ok(().into())
+				Ok(())
 			})?;
 
 			// Execute
@@ -475,14 +473,15 @@ pub mod pallet {
 				// Checks
 				ensure!(nft.owner == who, Error::<T>::NotTheNFTOwner);
 				ensure!(nft.creator == who, Error::<T>::NotTheNFTCreator);
-				ensure!(!nft.state.listed_for_sale, Error::<T>::CannotSetRoyaltyForListedNFTs);
+				ensure!(!nft.state.is_listed, Error::<T>::CannotSetRoyaltyForListedNFTs);
 				ensure!(!nft.state.is_capsule, Error::<T>::CannotSetRoyaltyForCapsuleNFTs);
 				ensure!(!nft.state.is_delegated, Error::<T>::CannotSetRoyaltyForDelegatedNFTs);
+				ensure!(!nft.state.is_rented, Error::<T>::CannotSetRoyaltyForRentedNFTs);
 
 				// Execute
 				nft.royalty = royalty;
 
-				Ok(().into())
+				Ok(())
 			})?;
 
 			let event = Event::NFTRoyaltySet { nft_id, royalty };
@@ -577,7 +576,7 @@ pub mod pallet {
 				ensure!(collection.owner == who, Error::<T>::NotTheCollectionOwner);
 				collection.is_closed = true;
 
-				Ok(().into())
+				Ok(())
 			})?;
 
 			Self::deposit_event(Event::CollectionClosed { collection_id });
@@ -615,7 +614,7 @@ pub mod pallet {
 				// Execute
 				collection.limit = Some(limit);
 
-				Ok(().into())
+				Ok(())
 			})?;
 
 			Self::deposit_event(Event::CollectionLimited { collection_id, limit });
@@ -628,13 +627,9 @@ pub mod pallet {
 		/// must not be in collection and collection must not be closed or has reached limit.
 		#[pallet::weight((
             {
-				let collection = Collections::<T>::get(collection_id).ok_or(Error::<T>::CollectionNotFound);
-				if let Ok(collection) = collection {
-					let s = collection.nfts.len();
-					T::WeightInfo::add_nft_to_collection(s as u32)
-				} else {
-					T::WeightInfo::add_nft_to_collection(1)
-				}
+				let s = Collections::<T>::get(collection_id)
+					.map_or_else(|| 0, |c| c.nfts.len());
+				T::WeightInfo::add_nft_to_collection(s as u32)
             },
 			DispatchClass::Normal
         ))]
@@ -665,7 +660,7 @@ pub mod pallet {
 					//Execution
 					nft.collection_id = Some(collection_id);
 
-					Ok(().into())
+					Ok(())
 				})?;
 
 				// Execute
@@ -674,7 +669,7 @@ pub mod pallet {
 					.try_push(nft_id)
 					.map_err(|_| Error::<T>::CannotAddMoreNFTsToCollection)?;
 
-				Ok(().into())
+				Ok(())
 			})?;
 
 			Self::deposit_event(Event::NFTAddedToCollection { nft_id, collection_id });
@@ -768,7 +763,7 @@ impl<T: Config> traits::NFTExt for Pallet<T> {
 		collection_id: Option<CollectionId>,
 		is_soulbound: bool,
 	) -> Result<NFTId, DispatchResult> {
-		let nft_state = NFTState::new(false, false, false, false, is_soulbound);
+		let nft_state = NFTState::new(false, false, false, false, is_soulbound, false);
 		let nft = NFTData::new(
 			owner.clone(),
 			owner.clone(),

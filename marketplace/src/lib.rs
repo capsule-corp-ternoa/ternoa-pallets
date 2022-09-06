@@ -44,7 +44,10 @@ use primitives::{
 	nfts::NFTId,
 	CompoundFee, ConfigOp, U8BoundedVec,
 };
-use ternoa_common::{config_op_field_exp, traits::NFTExt};
+use ternoa_common::{
+	config_op_field_exp,
+	traits::{MarketplaceExt, NFTExt},
+};
 pub use weights::WeightInfo;
 
 pub type BalanceOf<T> =
@@ -174,18 +177,20 @@ pub mod pallet {
 	pub enum Error<T> {
 		/// Account not allowed to list NFTs on that marketplace.
 		AccountNotAllowedToList,
+		/// Cannot list listed NFTs.
+		CannotListListedNFTs,
 		/// Cannot list delegated NFTs.
 		CannotListDelegatedNFTs,
 		/// Cannot list capsule NFTs.
 		CannotListCapsuleNFTs,
-		/// Cannot list soulbound NFTs.
-		CannotListSoulboundNFTs,
+		/// Cannot list soulbound NFTs that was not created from owner.
+		CannotListNotCreatedSoulboundNFTs,
+		/// Cannot list rented NFTs.
+		CannotListRentedNFTs,
 		/// Cannot buy owned NFT
 		CannotBuyOwnedNFT,
 		/// Sender is already the marketplace owner
 		CannotTransferMarketplaceToYourself,
-		/// NFT already listed
-		CannotListAlreadytListedNFTs,
 		/// The selected price is too low for commission fee
 		PriceCannotCoverMarketplaceFee,
 		/// Marketplace not found
@@ -353,15 +358,18 @@ pub mod pallet {
 			// Checks
 			let mut nft = T::NFTExt::get_nft(nft_id).ok_or(Error::<T>::NFTNotFound)?;
 			ensure!(nft.owner == who, Error::<T>::NotTheNFTOwner);
-			ensure!(!nft.state.listed_for_sale, Error::<T>::CannotListAlreadytListedNFTs);
+			ensure!(!nft.state.is_listed, Error::<T>::CannotListListedNFTs);
 			ensure!(!nft.state.is_capsule, Error::<T>::CannotListCapsuleNFTs);
 			ensure!(!nft.state.is_delegated, Error::<T>::CannotListDelegatedNFTs);
-			ensure!(!nft.state.is_soulbound, Error::<T>::CannotListSoulboundNFTs);
+			ensure!(
+				!(nft.state.is_soulbound && nft.creator != nft.owner),
+				Error::<T>::CannotListNotCreatedSoulboundNFTs
+			);
+			ensure!(!nft.state.is_rented, Error::<T>::CannotListRentedNFTs);
 
 			let marketplace =
 				Marketplaces::<T>::get(marketplace_id).ok_or(Error::<T>::MarketplaceNotFound)?;
-
-			Self::ensure_is_allowed_to_list(&who, &marketplace)?;
+			marketplace.allowed_to_list(&who).ok_or(Error::<T>::AccountNotAllowedToList)?;
 
 			// Check if the selected price can cover the marketplace commission_fee if it exists.
 			if let Some(commission_fee) = &marketplace.commission_fee {
@@ -376,7 +384,7 @@ pub mod pallet {
 			// Execute.
 			let sale = Sale::new(who, marketplace_id, price, marketplace.commission_fee);
 			ListedNfts::<T>::insert(nft_id, sale);
-			nft.state.listed_for_sale = true;
+			nft.state.is_listed = true;
 			T::NFTExt::set_nft_state(nft_id, nft.state)?;
 
 			let event = Event::NFTListed {
@@ -401,7 +409,7 @@ pub mod pallet {
 			ensure!(ListedNfts::<T>::contains_key(nft_id), Error::<T>::NFTNotForSale);
 
 			// Execute.
-			nft.state.listed_for_sale = false;
+			nft.state.is_listed = false;
 			T::NFTExt::set_nft_state(nft_id, nft.state)?;
 			ListedNfts::<T>::remove(nft_id);
 			Self::deposit_event(Event::NFTUnlisted { nft_id });
@@ -437,7 +445,7 @@ pub mod pallet {
 
 			//Execute.
 			nft.owner = who.clone();
-			nft.state.listed_for_sale = false;
+			nft.state.is_listed = false;
 			T::NFTExt::set_nft(nft_id, nft)?;
 			ListedNfts::<T>::remove(nft_id);
 			let event = Event::NFTSold {
@@ -455,6 +463,40 @@ pub mod pallet {
 	}
 }
 
+impl<T: Config> MarketplaceExt for Pallet<T> {
+	type AccountId = T::AccountId;
+	type Balance = BalanceOf<T>;
+	type OffchainDataLimit = T::OffchainDataLimit;
+	type AccountSizeLimit = T::AccountSizeLimit;
+
+	fn get_marketplace(
+		id: MarketplaceId,
+	) -> Option<
+		MarketplaceData<
+			Self::AccountId,
+			Self::Balance,
+			Self::AccountSizeLimit,
+			Self::OffchainDataLimit,
+		>,
+	> {
+		Marketplaces::<T>::get(id)
+	}
+
+	fn set_marketplace(
+		id: MarketplaceId,
+		marketplace_data: MarketplaceData<
+			T::AccountId,
+			BalanceOf<T>,
+			T::AccountSizeLimit,
+			T::OffchainDataLimit,
+		>,
+	) -> Result<(), DispatchError> {
+		Marketplaces::<T>::insert(id, marketplace_data);
+
+		Ok(())
+	}
+}
+
 impl<T: Config> Pallet<T> {
 	fn get_next_marketplace_id() -> MarketplaceId {
 		let marketplace_id = NextMarketplaceId::<T>::get();
@@ -464,27 +506,6 @@ impl<T: Config> Pallet<T> {
 		NextMarketplaceId::<T>::put(next_id);
 
 		marketplace_id
-	}
-
-	fn ensure_is_allowed_to_list(
-		who: &T::AccountId,
-		marketplace: &MarketplaceData<
-			T::AccountId,
-			BalanceOf<T>,
-			T::AccountSizeLimit,
-			T::OffchainDataLimit,
-		>,
-	) -> Result<(), Error<T>> {
-		let mut is_in_account_list = false;
-		if let Some(account_list) = &marketplace.account_list {
-			is_in_account_list = account_list.contains(&who);
-		}
-		let is_allowed = match marketplace.kind {
-			MarketplaceType::Public => !is_in_account_list,
-			MarketplaceType::Private => is_in_account_list,
-		};
-		ensure!(is_allowed, Error::<T>::AccountNotAllowedToList);
-		Ok(())
 	}
 
 	fn pay_mint_fee(who: &T::AccountId) -> Result<(), DispatchError> {
