@@ -52,7 +52,6 @@ const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
 pub mod pallet {
 	use super::*;
 	use frame_support::dispatch::DispatchResultWithPostInfo;
-	use frame_system::{ensure_root, RawOrigin};
 	use primitives::marketplace::MarketplaceId;
 
 	#[pallet::pallet]
@@ -437,12 +436,30 @@ pub mod pallet {
 		pub fn end_auction(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			let auction = Auctions::<T>::get(nft_id).ok_or(Error::<T>::AuctionDoesNotExist)?;
+			let mut nft = T::NFTExt::get_nft(nft_id).ok_or(Error::<T>::NFTNotFound)?;
+			let mut auction = Auctions::<T>::get(nft_id).ok_or(Error::<T>::AuctionDoesNotExist)?;
 
 			ensure!(auction.is_creator(&who), Error::<T>::NotTheAuctionCreator);
 			ensure!(auction.is_extended, Error::<T>::CannotEndAuctionThatWasNotExtended);
 
-			Self::complete_auction(RawOrigin::Root.into(), nft_id)?;
+			let highest_bid = auction.pop_highest_bid();
+			if let Some((new_owner, paid)) = highest_bid {
+				let cut = Self::pay_for_nft(&Self::account_id(), paid, &nft, &auction)?;
+				auction.for_each_bidder(&|(owner, amount)| Self::add_claim(owner, *amount));
+
+				// Change the owner
+				nft.owner = new_owner.clone();
+
+				Self::emit_auction_completed_event(nft_id, Some(new_owner), Some(paid), Some(cut));
+			} else {
+				// This should never happen.
+				Self::emit_auction_completed_event(nft_id, None, None, None);
+			}
+
+			nft.state.is_listed = false;
+			T::NFTExt::set_nft(nft_id, nft)?;
+			Auctions::<T>::remove(nft_id);
+			Deadlines::<T>::mutate(|x| x.remove(nft_id));
 
 			Ok(().into())
 		}
@@ -573,34 +590,6 @@ pub mod pallet {
 			Deadlines::<T>::mutate(|x| x.remove(nft_id));
 
 			Self::emit_auction_completed_event(nft_id, Some(who), Some(paid_amount), Some(cut));
-
-			Ok(().into())
-		}
-
-		#[pallet::weight(T::WeightInfo::complete_auction(Deadlines::<T>::get().len() as u32))]
-		pub fn complete_auction(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
-			let _who = ensure_root(origin)?;
-
-			let mut nft = T::NFTExt::get_nft(nft_id).ok_or(Error::<T>::NFTNotFound)?;
-			let mut auction = Auctions::<T>::get(nft_id).ok_or(Error::<T>::AuctionDoesNotExist)?;
-
-			let highest_bid = auction.pop_highest_bid();
-			if let Some((new_owner, paid)) = highest_bid {
-				let cut = Self::pay_for_nft(&Self::account_id(), paid, &nft, &auction)?;
-				auction.for_each_bidder(&|(owner, amount)| Self::add_claim(owner, *amount));
-
-				// Change the owner
-				nft.owner = new_owner.clone();
-
-				Self::emit_auction_completed_event(nft_id, Some(new_owner), Some(paid), Some(cut));
-			} else {
-				Self::emit_auction_completed_event(nft_id, None, None, None);
-			}
-
-			nft.state.is_listed = false;
-			T::NFTExt::set_nft(nft_id, nft)?;
-			Auctions::<T>::remove(nft_id);
-			Deadlines::<T>::mutate(|x| x.remove(nft_id));
 
 			Ok(().into())
 		}
