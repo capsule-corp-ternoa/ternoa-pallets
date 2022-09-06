@@ -158,7 +158,7 @@ mod create_contract {
 
 	#[test]
 	fn create_contract() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 
@@ -214,7 +214,7 @@ mod create_contract {
 
 	#[test]
 	fn subscription_change_for_subscription_only() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 
@@ -236,7 +236,7 @@ mod create_contract {
 
 	#[test]
 	fn no_nft_rent_fee_with_subscription() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 
@@ -258,7 +258,7 @@ mod create_contract {
 
 	#[test]
 	fn no_renter_cancellation_fee_with_no_revocation() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 
@@ -280,7 +280,7 @@ mod create_contract {
 
 	#[test]
 	fn flexible_fee_only_for_fixed_duration_renter() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 
@@ -302,7 +302,7 @@ mod create_contract {
 
 	#[test]
 	fn flexible_fee_only_for_fixed_duration_rentee() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 
@@ -324,7 +324,7 @@ mod create_contract {
 
 	#[test]
 	fn invalid_fee_nft() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 
@@ -346,7 +346,7 @@ mod create_contract {
 
 	#[test]
 	fn nft_not_found() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 
@@ -368,7 +368,7 @@ mod create_contract {
 
 	#[test]
 	fn not_the_nft_owner() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 
@@ -390,7 +390,7 @@ mod create_contract {
 
 	#[test]
 	fn cannot_use_nft() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 
@@ -473,7 +473,7 @@ mod create_contract {
 
 	#[test]
 	fn not_enough_balance_for_fixed_cancellation_fee() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 
@@ -495,7 +495,7 @@ mod create_contract {
 
 	#[test]
 	fn not_enough_balance_for_flexible_cancellation_fee() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 
@@ -517,7 +517,7 @@ mod create_contract {
 
 	#[test]
 	fn nft_not_found_for_cancellation_fee() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 
@@ -539,7 +539,7 @@ mod create_contract {
 
 	#[test]
 	fn not_the_nft_owner_for_cancellation_fee() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 
@@ -561,7 +561,7 @@ mod create_contract {
 
 	#[test]
 	fn cannot_use_nft_for_cancellation_fee() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 
@@ -648,7 +648,7 @@ mod revoke_contract {
 
 	#[test]
 	fn revoke_contract_before_start() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 
@@ -674,7 +674,7 @@ mod revoke_contract {
 
 	#[test]
 	fn revoke_contract_by_renter_fixed() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 			let bob: mock::Origin = origin(BOB);
@@ -710,7 +710,7 @@ mod revoke_contract {
 
 	#[test]
 	fn revoke_contract_by_rentee_fixed() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 			let bob: mock::Origin = origin(BOB);
@@ -746,7 +746,7 @@ mod revoke_contract {
 
 	#[test]
 	fn revoke_contract_by_renter_nft() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 			let bob: mock::Origin = origin(BOB);
@@ -780,7 +780,7 @@ mod revoke_contract {
 
 	#[test]
 	fn revoke_contract_by_rentee_nft() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let bob: mock::Origin = origin(BOB);
 
@@ -813,7 +813,7 @@ mod revoke_contract {
 
 	#[test]
 	fn revoke_contract_by_renter_flexible() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 			let bob: mock::Origin = origin(BOB);
@@ -854,7 +854,7 @@ mod revoke_contract {
 
 	#[test]
 	fn revoke_contract_by_rentee_flexible() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let bob: mock::Origin = origin(BOB);
 
@@ -894,7 +894,7 @@ mod revoke_contract {
 
 	#[test]
 	fn contract_not_found() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 
@@ -907,7 +907,7 @@ mod revoke_contract {
 
 	#[test]
 	fn not_the_renter_or_rentee() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let bob: mock::Origin = origin(BOB);
 
@@ -920,7 +920,7 @@ mod revoke_contract {
 
 	#[test]
 	fn cannot_revoke() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 			let bob: mock::Origin = origin(BOB);
@@ -939,7 +939,7 @@ mod rent {
 
 	#[test]
 	fn rent_auto() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let bob: mock::Origin = origin(BOB);
 
@@ -974,7 +974,7 @@ mod rent {
 
 	#[test]
 	fn rent_manual() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 			let bob: mock::Origin = origin(BOB);
@@ -1013,7 +1013,7 @@ mod rent {
 
 	#[test]
 	fn contract_not_found() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 
@@ -1025,7 +1025,7 @@ mod rent {
 
 	#[test]
 	fn cannot_rent_own_contract() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 
@@ -1037,7 +1037,7 @@ mod rent {
 
 	#[test]
 	fn not_enough_balance_for_cancellation_fee() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let bob: mock::Origin = origin(BOB);
 
@@ -1051,7 +1051,7 @@ mod rent {
 
 	#[test]
 	fn not_enough_balance_for_rent_fee() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let bob: mock::Origin = origin(BOB);
 
@@ -1065,7 +1065,7 @@ mod rent {
 
 	#[test]
 	fn not_enough_balance() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let bob: mock::Origin = origin(BOB);
 
@@ -1079,7 +1079,7 @@ mod rent {
 
 	#[test]
 	fn not_the_nft_owner_for_cancellation_fee() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let bob: mock::Origin = origin(BOB);
 
@@ -1096,7 +1096,7 @@ mod rent {
 
 	#[test]
 	fn not_the_nft_owner_for_rent_fee() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let bob: mock::Origin = origin(BOB);
 
@@ -1113,7 +1113,7 @@ mod rent {
 
 	#[test]
 	fn not_authorized() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000), (CHARLIE, 1_000_000)])
+		ExtBuilder::new_build(None)
 			.execute_with(|| {
 				prepare_tests();
 				let charlie: mock::Origin = origin(CHARLIE);
@@ -1134,7 +1134,7 @@ mod accept_rent_offer {
 
 	#[test]
 	fn accept_rent_offer() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 			let bob: mock::Origin = origin(BOB);
@@ -1177,7 +1177,7 @@ mod accept_rent_offer {
 
 	#[test]
 	fn not_the_renter() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let bob: mock::Origin = origin(BOB);
 
@@ -1192,7 +1192,7 @@ mod accept_rent_offer {
 
 	#[test]
 	fn cannot_accept_offer_for_auto_acceptance() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 
@@ -1204,7 +1204,7 @@ mod accept_rent_offer {
 
 	#[test]
 	fn no_offers_for_this_contract() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 
@@ -1216,7 +1216,7 @@ mod accept_rent_offer {
 
 	#[test]
 	fn no_offer_from_rentee() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 			let bob: mock::Origin = origin(BOB);
@@ -1232,7 +1232,7 @@ mod accept_rent_offer {
 
 	#[test]
 	fn not_enough_balance_for_cancellation_fee() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 			let bob: mock::Origin = origin(BOB);
@@ -1248,7 +1248,7 @@ mod accept_rent_offer {
 
 	#[test]
 	fn not_enough_balance_for_rent_fee() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 			let bob: mock::Origin = origin(BOB);
@@ -1264,7 +1264,7 @@ mod accept_rent_offer {
 
 	#[test]
 	fn not_enough_balance() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 			let bob: mock::Origin = origin(BOB);
@@ -1280,7 +1280,7 @@ mod accept_rent_offer {
 
 	#[test]
 	fn not_the_nft_owner_for_cancellation_fee() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 			let bob: mock::Origin = origin(BOB);
@@ -1298,7 +1298,7 @@ mod accept_rent_offer {
 
 	#[test]
 	fn not_the_nft_owner_for_rent_fee() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 			let bob: mock::Origin = origin(BOB);
@@ -1320,7 +1320,7 @@ mod retract_rent_offer {
 
 	#[test]
 	fn retract_rent_offer() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let bob: mock::Origin = origin(BOB);
 
@@ -1345,7 +1345,7 @@ mod retract_rent_offer {
 
 	#[test]
 	fn contract_not_found() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let bob: mock::Origin = origin(BOB);
 
@@ -1357,7 +1357,7 @@ mod retract_rent_offer {
 
 	#[test]
 	fn cannot_retract_offer_for_auto_acceptance() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let bob: mock::Origin = origin(BOB);
 
@@ -1369,7 +1369,7 @@ mod retract_rent_offer {
 
 	#[test]
 	fn contract_has_started() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 			let bob: mock::Origin = origin(BOB);
@@ -1389,7 +1389,7 @@ mod change_subscription_terms {
 
 	#[test]
 	fn change_subscription_terms() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 			let bob: mock::Origin = origin(BOB);
@@ -1426,7 +1426,7 @@ mod change_subscription_terms {
 
 	#[test]
 	fn contract_not_found() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 
@@ -1443,7 +1443,7 @@ mod change_subscription_terms {
 
 	#[test]
 	fn not_the_renter() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let bob: mock::Origin = origin(BOB);
 
@@ -1460,7 +1460,7 @@ mod change_subscription_terms {
 
 	#[test]
 	fn contract_has_not_started() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 
@@ -1477,7 +1477,7 @@ mod change_subscription_terms {
 
 	#[test]
 	fn can_change_term_for_subscription_only() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 			let bob: mock::Origin = origin(BOB);
@@ -1497,7 +1497,7 @@ mod change_subscription_terms {
 
 	#[test]
 	fn can_set_term_for_subscription_only() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 			let bob: mock::Origin = origin(BOB);
@@ -1522,7 +1522,7 @@ mod accept_subscription_terms {
 
 	#[test]
 	fn accept_subscription_terms() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 			let bob: mock::Origin = origin(BOB);
@@ -1557,7 +1557,7 @@ mod accept_subscription_terms {
 
 	#[test]
 	fn not_the_rentee() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let bob: mock::Origin = origin(BOB);
 
@@ -1569,7 +1569,7 @@ mod accept_subscription_terms {
 
 	#[test]
 	fn contract_terms_already_accepted() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let bob: mock::Origin = origin(BOB);
 
@@ -1587,7 +1587,7 @@ mod end_contract {
 
 	#[test]
 	fn end_contract_fixed() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let bob: mock::Origin = origin(BOB);
 
@@ -1613,7 +1613,7 @@ mod end_contract {
 
 	#[test]
 	fn end_contract_subscription() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 			let bob: mock::Origin = origin(BOB);
@@ -1649,7 +1649,7 @@ mod end_contract {
 
 	#[test]
 	fn end_contract_renter() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 			let bob: mock::Origin = origin(BOB);
@@ -1686,7 +1686,7 @@ mod end_contract {
 
 	#[test]
 	fn end_contract_rentee() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 			let bob: mock::Origin = origin(BOB);
@@ -1716,7 +1716,7 @@ mod end_contract {
 
 	#[test]
 	fn bad_origin() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 			let err = Rent::end_contract(alice, INVALID_NFT, None);
@@ -1726,7 +1726,7 @@ mod end_contract {
 
 	#[test]
 	fn contract_not_found() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let err = Rent::end_contract(root(), INVALID_NFT, None);
 			assert_noop!(err, Error::<Test>::ContractNotFound);
@@ -1735,7 +1735,7 @@ mod end_contract {
 
 	#[test]
 	fn contract_has_not_started() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let err = Rent::end_contract(root(), FIXED_AUTO_ANY_TOK_FLEXTOK_FLEXTOK, None);
 			assert_noop!(err, Error::<Test>::ContractHasNotStarted);
@@ -1748,7 +1748,7 @@ mod renew_contract {
 
 	#[test]
 	fn renew_contract() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 			let bob: mock::Origin = origin(BOB);
@@ -1783,7 +1783,7 @@ mod renew_contract {
 
 	#[test]
 	fn bad_origin() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 			let err = Rent::renew_contract(alice, INVALID_NFT);
@@ -1793,7 +1793,7 @@ mod renew_contract {
 
 	#[test]
 	fn contract_not_found() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let err = Rent::renew_contract(root(), INVALID_NFT);
 			assert_noop!(err, Error::<Test>::ContractNotFound);
@@ -1802,7 +1802,7 @@ mod renew_contract {
 
 	#[test]
 	fn contract_has_not_started() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let err = Rent::renew_contract(root(), FIXED_AUTO_ANY_TOK_FLEXTOK_FLEXTOK);
 			assert_noop!(err, Error::<Test>::ContractHasNotStarted);
@@ -1811,7 +1811,7 @@ mod renew_contract {
 
 	#[test]
 	fn renewal_only_for_subscription() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let bob: mock::Origin = origin(BOB);
 
@@ -1828,7 +1828,7 @@ mod remove_expired_contract {
 
 	#[test]
 	fn remove_expired_contract() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 
 			run_to_block((ContractExpirationDuration::get() + 1).into());
@@ -1886,7 +1886,7 @@ mod remove_expired_contract {
 
 	#[test]
 	fn bad_origin() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 			let err = Rent::remove_expired_contract(alice, INVALID_NFT);
@@ -1896,7 +1896,7 @@ mod remove_expired_contract {
 
 	#[test]
 	fn contract_not_found() {
-		ExtBuilder::new_build(vec![(ALICE, 1_000_000), (BOB, 1_000_000)]).execute_with(|| {
+		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let err = Rent::remove_expired_contract(root(), INVALID_NFT);
 			assert_noop!(err, Error::<Test>::ContractNotFound);

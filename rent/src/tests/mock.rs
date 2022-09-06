@@ -174,8 +174,11 @@ impl ExtBuilder {
 		Self { balances }
 	}
 
-	pub fn new_build(balances: Vec<(u64, Balance)>) -> sp_io::TestExternalities {
-		Self::new(balances).build()
+	pub fn new_build(balances: Option<Vec<(u64, Balance)>>) -> sp_io::TestExternalities {
+		Self::new(balances.unwrap_or_else(|| {
+			vec![(ALICE, 1_000_000), (BOB, 1_000_000), (CHARLIE, 1_000_000)]
+		}))
+		.build()
 	}
 
 	pub fn build(self) -> sp_io::TestExternalities {
