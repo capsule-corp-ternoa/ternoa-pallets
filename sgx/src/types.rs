@@ -14,33 +14,46 @@
 // You should have received a copy of the GNU General Public License
 // along with Ternoa.  If not, see <http://www.gnu.org/licenses/>.
 
-use parity_scale_codec::{Decode, Encode};
-use primitives::TextFormat;
+use frame_support::{pallet_prelude::Get, BoundedVec};
+use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_runtime::RuntimeDebug;
-use sp_std::vec::Vec;
 
 pub type EnclaveId = u32;
 pub type ClusterId = u32;
 
-#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo)]
-pub struct Enclave {
-	pub api_uri: TextFormat,
+#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
+#[scale_info(skip_type_params(APIURILegnthLimit))]
+pub struct Enclave<APIURILegnthLimit>
+where
+	APIURILegnthLimit: Get<u32>,
+{
+	pub api_uri: BoundedVec<u8, APIURILegnthLimit>,
 }
 
-impl Enclave {
-	pub fn new(api_uri: TextFormat) -> Self {
+impl<APIURILegnthLimit> Enclave<APIURILegnthLimit>
+where
+	APIURILegnthLimit: Get<u32>,
+{
+	pub fn new(api_uri: BoundedVec<u8, APIURILegnthLimit>) -> Self {
 		Self { api_uri }
 	}
 }
 
-#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo)]
-pub struct Cluster {
-	pub enclaves: Vec<EnclaveId>,
+#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
+#[scale_info(skip_type_params(MaxEnclaveLimit))]
+pub struct Cluster<MaxEnclaveLimit>
+where
+	MaxEnclaveLimit: Get<u32>,
+{
+	pub enclaves: BoundedVec<ClusterId, MaxEnclaveLimit>,
 }
 
-impl Cluster {
-	pub fn new(enclaves: Vec<EnclaveId>) -> Self {
+impl<MaxEnclaveLimit> Cluster<MaxEnclaveLimit>
+where
+	MaxEnclaveLimit: Get<u32>,
+{
+	pub fn new(enclaves: BoundedVec<ClusterId, MaxEnclaveLimit>) -> Self {
 		Self { enclaves }
 	}
 }

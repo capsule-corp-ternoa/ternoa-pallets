@@ -23,7 +23,7 @@ mod benchmarking;
 mod tests;
 
 mod types;
-mod weights;
+pub mod weights;
 
 use frame_support::dispatch::DispatchResultWithPostInfo;
 pub use pallet::*;
@@ -43,9 +43,7 @@ pub mod pallet {
 		traits::{Currency, ExistenceRequirement::KeepAlive, OnUnbalanced, WithdrawReasons},
 	};
 	use frame_system::pallet_prelude::*;
-	use primitives::TextFormat;
 	use sp_runtime::traits::StaticLookup;
-	use ternoa_common::helpers::check_bounds;
 
 	pub type BalanceOf<T> =
 		<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
@@ -76,41 +74,121 @@ pub mod pallet {
 		#[pallet::constant]
 		type ClusterSize: Get<u32>;
 
-		/// Min Uri len
+		/// Length Limit
 		#[pallet::constant]
-		type MinUriLen: Get<u16>;
+		type APIURILegnthLimit: Get<u32>;
 
-		/// Max Uri len
+		/// Enclave Limit
 		#[pallet::constant]
-		type MaxUriLen: Get<u16>;
+		type MaxEnclaveLimit: Get<u32>;
 	}
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
 	#[pallet::storage_version(STORAGE_VERSION)]
-	#[pallet::without_storage_info]
 	pub struct Pallet<T>(PhantomData<T>);
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
 
+	//
+	// Enclave
+	//
+	#[pallet::storage]
+	#[pallet::getter(fn enclave_registry)]
+	pub type EnclaveRegistry<T: Config> =
+		StorageMap<_, Blake2_128Concat, EnclaveId, Enclave<T::APIURILegnthLimit>, OptionQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn enclave_id_generator)]
+	pub type EnclaveIdGenerator<T: Config> = StorageValue<_, EnclaveId, ValueQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn enclave_index)]
+	pub type EnclaveIndex<T: Config> =
+		StorageMap<_, Blake2_128Concat, T::AccountId, EnclaveId, OptionQuery>;
+
+	//
+	// Cluster
+	//
+	#[pallet::storage]
+	#[pallet::getter(fn cluster_registry)]
+	pub type ClusterRegistry<T: Config> =
+		StorageMap<_, Blake2_128Concat, ClusterId, Cluster<T::MaxEnclaveLimit>, OptionQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn cluster_id_generator)]
+	pub type ClusterIdGenerator<T: Config> = StorageValue<_, ClusterId, ValueQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn cluster_index)]
+	pub type ClusterIndex<T: Config> =
+		StorageMap<_, Blake2_128Concat, EnclaveId, ClusterId, OptionQuery>;
+
+	#[pallet::genesis_config]
+	pub struct GenesisConfig<T: Config> {
+		pub enclaves: Vec<(T::AccountId, EnclaveId, BoundedVec<u8, T::APIURILegnthLimit>)>,
+		pub clusters: Vec<(ClusterId, Vec<EnclaveId>)>,
+	}
+
+	#[pallet::event]
+	#[pallet::generate_deposit(pub(super) fn deposit_event)]
+	pub enum Event<T: Config> {
+		// Enclave
+		AddedEnclave {
+			account: T::AccountId,
+			api_uri: BoundedVec<u8, T::APIURILegnthLimit>,
+			enclave_id: EnclaveId,
+		},
+		AssignedEnclave {
+			enclave_id: EnclaveId,
+			cluster_id: ClusterId,
+		},
+		UnAssignedEnclave {
+			enclave_id: EnclaveId,
+		},
+		UpdatedEnclave {
+			enclave_id: EnclaveId,
+			api_uri: BoundedVec<u8, T::APIURILegnthLimit>,
+		},
+		NewEnclaveOwner {
+			enclave_id: EnclaveId,
+			owner: T::AccountId,
+		},
+		// Cluster
+		AddedCluster {
+			cluster_id: ClusterId,
+		},
+		RemovedCluster {
+			cluster_id: ClusterId,
+		},
+	}
+
+	#[pallet::error]
+	pub enum Error<T> {
+		UnknownEnclaveId,
+		UnknownClusterId,
+		NotEnclaveOwner,
+		PublicKeyAlreadyTiedToACluster,
+		UriTooShort,
+		UriTooLong,
+		EnclaveIdOverflow,
+		ClusterIdOverflow,
+		ClusterIsAlreadyFull,
+		EnclaveAlreadyAssigned,
+		EnclaveNotAssigned,
+		CannotAssignToSameCluster,
+		InternalLogicalError,
+	}
+
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		//
-		// Enclave
-		//
 		#[pallet::weight(T::WeightInfo::register_enclave())]
 		pub fn register_enclave(
 			origin: OriginFor<T>,
-			api_uri: TextFormat,
+			api_uri: BoundedVec<u8, T::APIURILegnthLimit>,
 		) -> DispatchResultWithPostInfo {
 			let account = ensure_signed(origin)?;
-
-			check_bounds(
-				api_uri.len(),
-				(T::MinUriLen::get(), Error::<T>::UriTooShort),
-				(T::MaxUriLen::get(), Error::<T>::UriTooLong),
-			)?;
 
 			ensure!(
 				!EnclaveIndex::<T>::contains_key(&account),
@@ -155,7 +233,7 @@ pub mod pallet {
 						return Err(Error::<T>::ClusterIsAlreadyFull)
 					}
 
-					cluster.enclaves.push(enclave_id);
+					cluster.enclaves.try_push(enclave_id).unwrap();
 					ClusterIndex::<T>::insert(enclave_id, cluster_id);
 
 					Ok(())
@@ -197,16 +275,10 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::update_enclave())]
 		pub fn update_enclave(
 			origin: OriginFor<T>,
-			api_uri: TextFormat,
+			api_uri: BoundedVec<u8, T::APIURILegnthLimit>,
 		) -> DispatchResultWithPostInfo {
 			let account = ensure_signed(origin)?;
 			let enclave_id = EnclaveIndex::<T>::get(&account).ok_or(Error::<T>::NotEnclaveOwner)?;
-
-			check_bounds(
-				api_uri.len(),
-				(T::MinUriLen::get(), Error::<T>::UriTooShort),
-				(T::MaxUriLen::get(), Error::<T>::UriTooLong),
-			)?;
 
 			EnclaveRegistry::<T>::mutate(enclave_id, |enclave| -> DispatchResult {
 				let enclave = enclave.as_mut().ok_or(Error::<T>::UnknownEnclaveId)?;
@@ -288,77 +360,6 @@ pub mod pallet {
 		}
 	}
 
-	#[pallet::event]
-	#[pallet::generate_deposit(pub(super) fn deposit_event)]
-	pub enum Event<T: Config> {
-		// Enclave
-		AddedEnclave { account: T::AccountId, api_uri: TextFormat, enclave_id: EnclaveId },
-		AssignedEnclave { enclave_id: EnclaveId, cluster_id: ClusterId },
-		UnAssignedEnclave { enclave_id: EnclaveId },
-		UpdatedEnclave { enclave_id: EnclaveId, api_uri: TextFormat },
-		NewEnclaveOwner { enclave_id: EnclaveId, owner: T::AccountId },
-		// Cluster
-		AddedCluster { cluster_id: ClusterId },
-		RemovedCluster { cluster_id: ClusterId },
-	}
-
-	#[pallet::error]
-	pub enum Error<T> {
-		UnknownEnclaveId,
-		UnknownClusterId,
-		NotEnclaveOwner,
-		PublicKeyAlreadyTiedToACluster,
-		UriTooShort,
-		UriTooLong,
-		EnclaveIdOverflow,
-		ClusterIdOverflow,
-		ClusterIsAlreadyFull,
-		EnclaveAlreadyAssigned,
-		EnclaveNotAssigned,
-		CannotAssignToSameCluster,
-		InternalLogicalError,
-	}
-
-	//
-	// Enclave
-	//
-	#[pallet::storage]
-	#[pallet::getter(fn enclave_registry)]
-	pub type EnclaveRegistry<T: Config> =
-		StorageMap<_, Blake2_128Concat, EnclaveId, Enclave, OptionQuery>;
-
-	#[pallet::storage]
-	#[pallet::getter(fn enclave_id_generator)]
-	pub type EnclaveIdGenerator<T: Config> = StorageValue<_, EnclaveId, ValueQuery>;
-
-	#[pallet::storage]
-	#[pallet::getter(fn enclave_index)]
-	pub type EnclaveIndex<T: Config> =
-		StorageMap<_, Blake2_128Concat, T::AccountId, EnclaveId, OptionQuery>;
-
-	//
-	// Cluster
-	//
-	#[pallet::storage]
-	#[pallet::getter(fn cluster_registry)]
-	pub type ClusterRegistry<T: Config> =
-		StorageMap<_, Blake2_128Concat, ClusterId, Cluster, OptionQuery>;
-
-	#[pallet::storage]
-	#[pallet::getter(fn cluster_id_generator)]
-	pub type ClusterIdGenerator<T: Config> = StorageValue<_, ClusterId, ValueQuery>;
-
-	#[pallet::storage]
-	#[pallet::getter(fn cluster_index)]
-	pub type ClusterIndex<T: Config> =
-		StorageMap<_, Blake2_128Concat, EnclaveId, ClusterId, OptionQuery>;
-
-	#[pallet::genesis_config]
-	pub struct GenesisConfig<T: Config> {
-		pub enclaves: Vec<(T::AccountId, EnclaveId, TextFormat)>,
-		pub clusters: Vec<(ClusterId, Vec<EnclaveId>)>,
-	}
-
 	#[cfg(feature = "std")]
 	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self {
@@ -388,7 +389,10 @@ pub mod pallet {
 				for enclave_id in cluster.1.iter() {
 					ClusterIndex::<T>::insert(*enclave_id, cluster.0);
 				}
-				ClusterRegistry::<T>::insert(cluster.0, Cluster::new(cluster.1));
+				ClusterRegistry::<T>::insert(
+					cluster.0,
+					Cluster::new(BoundedVec::try_from(cluster.1).unwrap()),
+				);
 			}
 		}
 	}
