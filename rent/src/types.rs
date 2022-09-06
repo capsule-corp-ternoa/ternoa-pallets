@@ -267,12 +267,9 @@ where
 		expiration_block: BlockNumber,
 	) -> Result<(), ()> {
 		match duration {
-			Duration::Fixed(_) => {
-				self.fixed_queue.insert(nft_id, expiration_block).map_err(|_| ())
-			},
-			Duration::Subscription(_, _) => {
-				self.subscription_queue.insert(nft_id, expiration_block).map_err(|_| ())
-			},
+			Duration::Fixed(_) => self.fixed_queue.insert(nft_id, expiration_block).map_err(|_| ()),
+			Duration::Subscription(_, _) =>
+				self.subscription_queue.insert(nft_id, expiration_block).map_err(|_| ()),
 			Duration::Infinite => Ok(()),
 		}
 	}
