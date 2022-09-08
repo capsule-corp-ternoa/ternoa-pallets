@@ -260,8 +260,8 @@ pub mod pallet {
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
 		/// Weight: see `begin_block`
 		fn on_initialize(now: T::BlockNumber) -> Weight {
-			let mut read = 0;
-			let mut write = 0;
+			let mut read = 0u64;
+			let mut write = 0u64;
 			let mut current_actions = 0;
 			let max_actions = T::ActionsInBlockLimit::get();
 
@@ -270,8 +270,8 @@ pub mod pallet {
 			// Fixed queue management
 			while let Some(nft_id) = queues.fixed_queue.pop_next(now) {
 				let _ = Self::end_contract(RawOrigin::Root.into(), nft_id, None);
-				read += 1;
-				write += 1;
+				read += 3;
+				write += 4;
 				current_actions += 1;
 				if current_actions >= max_actions {
 					break
@@ -284,6 +284,7 @@ pub mod pallet {
 					Some(x) => x,
 					None => continue,
 				};
+				read += 1;
 				let (should_renew, revoker) = match Self::should_renew(&contract, now) {
 					Err(_err) => continue,
 					Ok(x) => x,
@@ -301,11 +302,13 @@ pub mod pallet {
 							Ok(()) => (),
 						}
 					}
+					read += 3;
+					write += 1;
 				} else {
 					let _ = Self::end_contract(RawOrigin::Root.into(), nft_id, revoker);
+					read += 2;
+					write += 2;
 				}
-				read += 1;
-				write += 1;
 				current_actions += 1;
 				if current_actions >= max_actions {
 					break
@@ -315,8 +318,8 @@ pub mod pallet {
 			// Available queue management
 			while let Some(nft_id) = queues.available_queue.pop_next(now) {
 				let _ = Self::remove_expired_contract(RawOrigin::Root.into(), nft_id);
-				read += 1;
-				write += 1;
+				read += 3;
+				write += 5;
 				current_actions += 1;
 				if current_actions >= max_actions {
 					break
@@ -328,11 +331,7 @@ pub mod pallet {
 				write += 1;
 			}
 
-			if write == 0 {
-				T::DbWeight::get().reads(read)
-			} else {
-				T::DbWeight::get().reads_writes(read, write)
-			}
+			T::DbWeight::get().reads_writes(read, write)
 		}
 	}
 
