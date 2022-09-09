@@ -144,6 +144,10 @@ pub mod pallet {
 	pub type DelegatedNFTs<T: Config> =
 		StorageMap<_, Blake2_128Concat, NFTId, T::AccountId, OptionQuery>;
 
+	#[pallet::storage]
+	#[pallet::getter(fn stacked_nfts)]
+	pub type StackedNFTs<T: Config> = StorageMap<_, Blake2_128Concat, NFTId, u32, OptionQuery>;
+
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
@@ -182,6 +186,8 @@ pub mod pallet {
 		CollectionLimited { collection_id: CollectionId, limit: u32 },
 		/// An NFT has been added to a collection.
 		NFTAddedToCollection { nft_id: NFTId, collection_id: CollectionId },
+		/// A collection has limit set.
+		StackCreated { nft_id: NFTId, quantity: u32 },
 	}
 
 	#[pallet::error]
@@ -241,6 +247,16 @@ pub mod pallet {
 		CollectionHasTooManyNFTs,
 		/// Operation is not permitted because collection nfts is full.
 		CannotAddMoreNFTsToCollection,
+		/// Ups
+		CannotConvertStackToStack,
+		/// Uneven
+		CannotSplitUneven,
+		/// Not a stack
+		NotAStack,
+		/// Quantity of 1
+		NeedsMoreThan1Quantity,
+		/// This function can only be called by the owner of the NFT.
+		CannotCombineTwoDifferentNFTs,
 	}
 
 	#[pallet::call]
@@ -678,6 +694,98 @@ pub mod pallet {
 			})?;
 
 			Self::deposit_event(Event::NFTAddedToCollection { nft_id, collection_id });
+
+			Ok(().into())
+		}
+
+		#[pallet::weight(T::WeightInfo::limit_collection())]
+		pub fn convert_to_stack(
+			origin: OriginFor<T>,
+			nft_id: NFTId,
+			quantity: u32,
+		) -> DispatchResultWithPostInfo {
+			let who = ensure_signed(origin)?;
+
+			Nfts::<T>::try_mutate(nft_id, |x| -> DispatchResult {
+				let nft = x.as_mut().ok_or(Error::<T>::NFTNotFound)?;
+
+				// Checks
+				ensure!(nft.owner == who, Error::<T>::NotTheNFTOwner);
+				ensure!(nft.creator == who, Error::<T>::NotTheNFTCreator);
+				ensure!(!nft.state.is_stacked, Error::<T>::CannotConvertStackToStack);
+				ensure!(quantity > 1, Error::<T>::NeedsMoreThan1Quantity);
+
+				// Create a Stack
+				StackedNFTs::<T>::insert(nft_id, quantity);
+
+				Ok(().into())
+			})?;
+
+			Self::deposit_event(Event::StackCreated { nft_id, quantity });
+
+			Ok(().into())
+		}
+
+		#[pallet::weight(T::WeightInfo::limit_collection())]
+		pub fn split_stack(
+			origin: OriginFor<T>,
+			nft_id: NFTId,
+			split_1: u32,
+			split_2: u32,
+		) -> DispatchResultWithPostInfo {
+			let who = ensure_signed(origin)?;
+
+			let mut nft = Nfts::<T>::get(nft_id).unwrap();
+			let quantity = StackedNFTs::<T>::get(nft_id).unwrap();
+
+			ensure!(nft.owner == who, Error::<T>::NotTheNFTOwner);
+			ensure!((split_1 + split_2) == quantity, Error::<T>::CannotSplitUneven);
+			ensure!(split_1 != 0 && split_2 != 0, Error::<T>::CannotSplitUneven);
+
+			let mut new_nft = nft.clone();
+			let next_nft_id = Self::get_next_nft_id();
+
+			new_nft.state.is_stacked = split_2 > 1;
+
+			Nfts::<T>::insert(next_nft_id, new_nft);
+
+			if split_1 > 1 {
+				StackedNFTs::<T>::insert(nft_id, split_1);
+				nft.state.is_stacked = false;
+				Nfts::<T>::insert(nft_id, nft);
+			} else {
+				StackedNFTs::<T>::remove(nft_id);
+			}
+
+			if split_2 > 1 {
+				StackedNFTs::<T>::insert(next_nft_id, split_2);
+			}
+
+			Ok(().into())
+		}
+
+		#[pallet::weight(T::WeightInfo::limit_collection())]
+		pub fn combine_stacks(
+			origin: OriginFor<T>,
+			nft_id_1: NFTId,
+			nft_id_2: NFTId,
+		) -> DispatchResultWithPostInfo {
+			let who = ensure_signed(origin)?;
+
+			let mut nft_1 = Nfts::<T>::get(nft_id_1).unwrap();
+			let nft_2 = Nfts::<T>::take(nft_id_2).unwrap();
+
+			ensure!(nft_1.owner == who, Error::<T>::NotTheNFTOwner);
+			ensure!(nft_2.owner == who, Error::<T>::NotTheNFTOwner);
+			ensure!(nft_1 == nft_2, Error::<T>::CannotCombineTwoDifferentNFTs);
+
+			let first_stack_quantity = StackedNFTs::<T>::get(nft_id_1).unwrap_or(0);
+			let second_stack_quantity = StackedNFTs::<T>::take(nft_id_2).unwrap_or(0);
+
+			StackedNFTs::<T>::insert(nft_id_1, first_stack_quantity + second_stack_quantity);
+
+			nft_1.state.is_stacked = true;
+			Nfts::<T>::insert(nft_id_1, nft_1);
 
 			Ok(().into())
 		}

@@ -45,6 +45,8 @@ pub struct NFTState {
 	pub is_delegated: bool,
 	/// Is NFT soulbound
 	pub is_soulbound: bool,
+	/// Is stacked
+	pub is_stacked: bool,
 }
 
 impl NFTState {
@@ -55,7 +57,14 @@ impl NFTState {
 		is_delegated: bool,
 		is_soulbound: bool,
 	) -> Self {
-		Self { is_capsule, listed_for_sale, is_secret, is_delegated, is_soulbound }
+		Self {
+			is_capsule,
+			listed_for_sale,
+			is_secret,
+			is_delegated,
+			is_soulbound,
+			is_stacked: false,
+		}
 	}
 
 	pub fn new_default(is_soulbound: bool) -> Self {
