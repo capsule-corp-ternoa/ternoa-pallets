@@ -779,8 +779,8 @@ pub mod pallet {
 			ensure!(nft_2.owner == who, Error::<T>::NotTheNFTOwner);
 			ensure!(nft_1 == nft_2, Error::<T>::CannotCombineTwoDifferentNFTs);
 
-			let first_stack_quantity = StackedNFTs::<T>::get(nft_id_1).unwrap_or(0);
-			let second_stack_quantity = StackedNFTs::<T>::take(nft_id_2).unwrap_or(0);
+			let first_stack_quantity = StackedNFTs::<T>::get(nft_id_1).unwrap_or(1);
+			let second_stack_quantity = StackedNFTs::<T>::take(nft_id_2).unwrap_or(1);
 
 			StackedNFTs::<T>::insert(nft_id_1, first_stack_quantity + second_stack_quantity);
 
