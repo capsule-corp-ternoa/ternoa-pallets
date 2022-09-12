@@ -7,4 +7,5 @@ members = [
     'staking-rewards',
     'bridge',
     'marketplace',
+    'auction',
 ]

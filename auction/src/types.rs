@@ -29,7 +29,8 @@ use sp_std::{fmt::Debug, vec::Vec};
 pub struct AuctionData<AccountId, BlockNumber, Balance, BidderListLengthLimit>
 where
 	AccountId: Clone + PartialEq + Debug + sp_std::cmp::Ord,
-	BlockNumber: Clone + PartialEq + Debug + sp_std::cmp::PartialOrd,
+	BlockNumber:
+		Copy + PartialEq + Debug + sp_std::cmp::PartialOrd + sp_runtime::traits::Saturating,
 	Balance: Clone + PartialEq + Debug + sp_std::cmp::PartialOrd,
 	BidderListLengthLimit: Get<u32>,
 {
@@ -55,50 +56,73 @@ impl<AccountId, BlockNumber, Balance, BidderListLengthLimit>
 	AuctionData<AccountId, BlockNumber, Balance, BidderListLengthLimit>
 where
 	AccountId: Clone + PartialEq + Debug + sp_std::cmp::Ord,
-	BlockNumber: Clone + PartialEq + Debug + sp_std::cmp::PartialOrd,
+	BlockNumber:
+		Copy + PartialEq + Debug + sp_std::cmp::PartialOrd + sp_runtime::traits::Saturating,
 	Balance: Clone + PartialEq + Debug + sp_std::cmp::PartialOrd,
 	BidderListLengthLimit: Get<u32>,
 {
-	pub fn to_raw(&self, nft_id: NFTId) -> AuctionsGenesis<AccountId, BlockNumber, Balance> {
-		(
-			nft_id,
-			self.creator.clone(),
-			self.start_block.clone(),
-			self.end_block.clone(),
-			self.start_price.clone(),
-			self.buy_it_price.clone(),
-			self.bidders.to_raw(),
-			self.marketplace_id.clone(),
-			self.is_extended.clone(),
-		)
+	pub fn pop_highest_bid(&mut self) -> Option<(AccountId, Balance)> {
+		self.bidders.remove_highest_bid()
 	}
 
-	pub fn from_raw(raw: AuctionsGenesis<AccountId, BlockNumber, Balance>) -> Self {
-		Self {
-			creator: raw.1,
-			start_block: raw.2,
-			end_block: raw.3,
-			start_price: raw.4,
-			buy_it_price: raw.5,
-			bidders: BidderList::from_raw(raw.6),
-			marketplace_id: raw.7,
-			is_extended: raw.8,
+	pub fn get_bidders(&self) -> &BoundedVec<(AccountId, Balance), BidderListLengthLimit> {
+		&self.bidders.list
+	}
+
+	pub fn get_highest_bid(&self) -> Option<&(AccountId, Balance)> {
+		self.bidders.get_highest_bid()
+	}
+
+	pub fn has_started(&self, now: BlockNumber) -> bool {
+		now >= self.start_block
+	}
+
+	pub fn is_creator(&self, account_id: &AccountId) -> bool {
+		self.creator == *account_id
+	}
+
+	pub fn for_each_bidder(&self, f: &dyn Fn(&(AccountId, Balance))) {
+		self.bidders.list.iter().for_each(f);
+	}
+
+	/// Remove a specific bid from `account_id` from list if it exists
+	pub fn remove_bid(&mut self, account_id: &AccountId) -> Option<(AccountId, Balance)> {
+		self.bidders.remove_bid(account_id)
+	}
+
+	/// Return the bid of `account_id` if it exists
+	pub fn find_bid(&self, account_id: &AccountId) -> Option<&(AccountId, Balance)> {
+		self.bidders.find_bid(account_id)
+	}
+
+	pub fn insert_new_bid(
+		&mut self,
+		account_id: AccountId,
+		value: Balance,
+	) -> Option<(AccountId, Balance)> {
+		self.bidders.insert_new_bid(account_id, value)
+	}
+
+	pub fn extend_if_necessary(
+		&mut self,
+		now: BlockNumber,
+		grace_period: BlockNumber,
+	) -> Option<BlockNumber> {
+		let end_block = self.end_block;
+		let remaining_blocks = end_block.saturating_sub(now);
+
+		if remaining_blocks < grace_period {
+			let blocks_to_add = grace_period.saturating_sub(remaining_blocks);
+
+			self.end_block = end_block.saturating_add(blocks_to_add);
+			self.is_extended = true;
+
+			return Some(self.end_block)
 		}
+
+		None
 	}
 }
-
-// nft id, creator, start_block, end_block, start_price, buy it
-pub type AuctionsGenesis<AccountId, BlockNumber, Balance> = (
-	NFTId,
-	AccountId,
-	BlockNumber,
-	BlockNumber,
-	Balance,
-	Option<Balance>,
-	Vec<(AccountId, Balance)>,
-	MarketplaceId,
-	bool,
-);
 
 #[derive(
 	Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen,
@@ -175,19 +199,19 @@ where
 	}
 
 	/// Remove a specific bid from `account_id` from list if it exists
-	pub fn remove_bid(&mut self, account_id: AccountId) -> Option<(AccountId, Balance)> {
-		match self.list.iter().position(|x| x.0 == account_id) {
+	pub fn remove_bid(&mut self, account_id: &AccountId) -> Option<(AccountId, Balance)> {
+		match self.list.iter().position(|x| x.0 == *account_id) {
 			Some(index) => Some(self.list.remove(index)),
 			None => None,
 		}
 	}
 
 	/// Return the bid of `account_id` if it exists
-	pub fn find_bid(&self, account_id: AccountId) -> Option<&(AccountId, Balance)> {
+	pub fn find_bid(&self, account_id: &AccountId) -> Option<&(AccountId, Balance)> {
 		// this is not optimal since we traverse the entire link, but we cannot use binary search
 		// here since the list is not sorted by accountId but rather by bid value, this should not
 		// drastically affect performance as long as max_size remains small.
-		self.list.iter().find(|&x| x.0 == account_id)
+		self.list.iter().find(|&x| x.0 == *account_id)
 	}
 
 	pub fn to_raw(&self) -> Vec<(AccountId, Balance)> {
@@ -251,6 +275,21 @@ where
 		} else {
 			None
 		}
+	}
+
+	pub fn pop_next(&mut self, block_number: BlockNumber) -> Option<NFTId> {
+		let front = self.0.get(0)?;
+		if front.1 <= block_number {
+			let nft_id = front.0;
+			self.remove(nft_id);
+			Some(nft_id)
+		} else {
+			None
+		}
+	}
+
+	pub fn len(&self) -> usize {
+		self.0.len()
 	}
 }
 
