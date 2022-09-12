@@ -502,7 +502,7 @@ mod transfer_nft {
 	}
 
 	#[test]
-	fn cannot_transfer_soulbound_nfts() {
+	fn cannot_transfer_not_created_soulbound_nfts() {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
@@ -510,10 +510,14 @@ mod transfer_nft {
 			let ok = NFT::create_nft(alice.clone(), BoundedVec::default(), PERCENT_0, None, true);
 			assert_ok!(ok);
 			let nft_id = NFT::get_next_nft_id() - 1;
+			let mut nft = NFT::get_nft(nft_id).unwrap();
+			nft.creator = BOB;
+			NFT::set_nft(nft_id, nft).unwrap();
+			
 			// Try to transfer.
 			let err = NFT::transfer_nft(alice, nft_id, BOB);
 			// Should fail because NFT is soulbound.
-			assert_noop!(err, Error::<Test>::CannotTransferSoulboundNFTs);
+			assert_noop!(err, Error::<Test>::CannotTransferNotCreatedSoulboundNFTs);
 		})
 	}
 }

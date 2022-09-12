@@ -206,8 +206,8 @@ pub mod pallet {
 		CannotBurnCapsuleNFTs,
 		/// Operation is not allowed because the NFT is a capsule.
 		CannotDelegateCapsuleNFTs,
-		/// Operation is not allowed because the NFT is soulbound.
-		CannotTransferSoulboundNFTs,
+		/// Operation is not allowed because the NFT is  and signer is not the creator.
+		CannotTransferNotCreatedSoulboundNFTs,
 		/// Operation is not allowed because the NFT is a capsule.
 		CannotSetRoyaltyForCapsuleNFTs,
 		/// Operation is not allowed because the NFT is owned by the caller.
@@ -402,7 +402,10 @@ pub mod pallet {
 				ensure!(!nft.state.is_listed, Error::<T>::CannotTransferListedNFTs);
 				ensure!(!nft.state.is_capsule, Error::<T>::CannotTransferCapsuleNFTs);
 				ensure!(!nft.state.is_delegated, Error::<T>::CannotTransferDelegatedNFTs);
-				ensure!(!nft.state.is_soulbound, Error::<T>::CannotTransferSoulboundNFTs);
+				ensure!(
+					!(nft.state.is_soulbound && nft.creator != nft.owner),
+					Error::<T>::CannotTransferNotCreatedSoulboundNFTs
+				);
 
 				// Execute
 				nft.owner = recipient.clone();
