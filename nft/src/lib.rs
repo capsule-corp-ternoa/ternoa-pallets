@@ -242,6 +242,7 @@ pub mod pallet {
 		CannotAddMoreNFTsToCollection,
 	}
 
+	// TODO Write Tests for Runtime upgrade
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
 		#[cfg(feature = "try-runtime")]
