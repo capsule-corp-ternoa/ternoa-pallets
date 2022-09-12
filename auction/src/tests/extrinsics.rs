@@ -1182,14 +1182,14 @@ pub mod claim {
 	}
 }
 
-struct AuctionBuilder {
-	origin: mock::Origin,
-	nft_id: NFTId,
-	mp_id: MarketplaceId,
-	start: BlockNumber,
-	end: BlockNumber,
-	price: u128,
-	now_buy: Option<u128>,
+pub struct AuctionBuilder {
+	pub origin: mock::Origin,
+	pub nft_id: NFTId,
+	pub mp_id: MarketplaceId,
+	pub start: BlockNumber,
+	pub end: BlockNumber,
+	pub price: u128,
+	pub now_buy: Option<u128>,
 }
 
 impl AuctionBuilder {

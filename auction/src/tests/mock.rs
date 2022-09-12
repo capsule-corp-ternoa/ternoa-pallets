@@ -39,7 +39,7 @@ pub const CHARLIE: u64 = 3;
 pub const DAVE: u64 = 4;
 pub const EVE: u64 = 5;
 
-pub const PARALLEL_AUCTION_LIMIT: u32 = 10;
+pub const PARALLEL_AUCTION_LIMIT: u32 = 20;
 pub const MIN_AUCTION_DURATION: u64 = 100;
 pub const MAX_AUCTION_DURATION: u64 = 1000;
 pub const MAX_AUCTION_DELAY: u64 = 50;

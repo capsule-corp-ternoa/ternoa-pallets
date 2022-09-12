@@ -304,6 +304,8 @@ pub mod pallet {
 		PriceCannotCoverMarketplaceFee,
 		/// Not Allowed To List On MP
 		AccountNotAllowedToList,
+		/// Cannot end auction without bids
+		CannotEndAuctionWithoutBids,
 	}
 
 	#[pallet::call]
@@ -313,8 +315,8 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			nft_id: NFTId,
 			marketplace_id: MarketplaceId,
-			#[pallet::compact] start_block: T::BlockNumber,
-			#[pallet::compact] end_block: T::BlockNumber,
+			start_block: T::BlockNumber,
+			end_block: T::BlockNumber,
 			start_price: BalanceOf<T>,
 			buy_it_price: Option<BalanceOf<T>>,
 		) -> DispatchResultWithPostInfo {
@@ -441,24 +443,21 @@ pub mod pallet {
 			ensure!(auction.is_creator(&who), Error::<T>::NotTheAuctionCreator);
 			ensure!(auction.is_extended, Error::<T>::CannotEndAuctionThatWasNotExtended);
 
-			let highest_bid = auction.pop_highest_bid();
-			if let Some((new_owner, paid)) = highest_bid {
-				let cut = Self::pay_for_nft(&Self::account_id(), paid, &nft, &auction)?;
-				auction.for_each_bidder(&|(owner, amount)| Self::add_claim(owner, *amount));
+			let (new_owner, paid) =
+				auction.pop_highest_bid().ok_or(Error::<T>::CannotEndAuctionWithoutBids)?;
 
-				// Change the owner
-				nft.owner = new_owner.clone();
+			let cut = Self::pay_for_nft(&Self::account_id(), paid, &nft, &auction)?;
+			auction.for_each_bidder(&|(owner, amount)| Self::add_claim(owner, *amount));
 
-				Self::emit_auction_completed_event(nft_id, Some(new_owner), Some(paid), Some(cut));
-			} else {
-				// This should never happen.
-				Self::emit_auction_completed_event(nft_id, None, None, None);
-			}
-
+			// Change the owner
+			nft.owner = new_owner.clone();
 			nft.state.is_listed = false;
+
 			T::NFTExt::set_nft(nft_id, nft)?;
 			Auctions::<T>::remove(nft_id);
 			Deadlines::<T>::mutate(|x| x.remove(nft_id));
+
+			Self::emit_auction_completed_event(nft_id, Some(new_owner), Some(paid), Some(cut));
 
 			Ok(().into())
 		}

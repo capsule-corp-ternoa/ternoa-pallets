@@ -21,9 +21,9 @@ use primitives::{marketplace::MarketplaceType, nfts::NFTId};
 use sp_runtime::Permill;
 
 use crate::{
-	tests::mock,
+	tests::{extrinsics::AuctionBuilder, mock},
 	types::{AuctionData, BidderList, DeadlineList},
-	Auctions as AuctionsStorage, Deadlines,
+	Auctions as AuctionsStorage, Config, Deadlines,
 };
 
 const PERCENT_0: Permill = Permill::from_parts(0);
@@ -121,6 +121,44 @@ fn on_initialize() {
 		let deadlines = DeadlineList(bounded_vec![]);
 
 		assert_eq!(Deadlines::<Test>::get(), deadlines);
+		assert_eq!(AuctionsStorage::<Test>::iter().count(), 0);
+	})
+}
+
+#[test]
+fn auctions_in_block() {
+	ExtBuilder::new_build(None).execute_with(|| {
+		let alice: mock::Origin = origin(ALICE);
+
+		let auctions_in_block = <Test as Config>::ActionsInBlockLimit::get();
+		let offset = 10;
+
+		// Create Marketplace
+		Marketplace::create_marketplace(alice.clone(), MarketplaceType::Public).unwrap();
+
+		// Create NFTs and auction them
+		for _i in 0..auctions_in_block + offset {
+			// Create NFTs
+			NFT::create_nft(alice.clone(), BoundedVec::default(), PERCENT_0, None, false).unwrap();
+			let id = NFT::next_nft_id() - 1;
+
+			AuctionBuilder::new().nft_id(id).execute().unwrap();
+		}
+
+		let default_auction = AuctionBuilder::new();
+
+		run_to_block(default_auction.end - 1);
+
+		let expected_len = auctions_in_block + offset;
+		assert_eq!(Deadlines::<Test>::get().len(), expected_len as usize);
+		assert_eq!(AuctionsStorage::<Test>::iter().count(), expected_len as usize);
+
+		run_to_block(default_auction.end);
+		assert_eq!(Deadlines::<Test>::get().len(), offset as usize);
+		assert_eq!(AuctionsStorage::<Test>::iter().count(), offset as usize);
+
+		run_to_block(default_auction.end + 1);
+		assert_eq!(Deadlines::<Test>::get().len(), 0);
 		assert_eq!(AuctionsStorage::<Test>::iter().count(), 0);
 	})
 }
