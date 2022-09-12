@@ -16,7 +16,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-pub use pallet::*;
+mod migrations;
 
 #[cfg(test)]
 mod tests;
@@ -26,12 +26,14 @@ mod benchmarking;
 
 pub mod weights;
 
+pub use pallet::*;
+
 use frame_support::{
 	dispatch::DispatchResult,
 	ensure,
 	traits::{
-		Currency, ExistenceRequirement::KeepAlive, Get, OnUnbalanced, StorageVersion,
-		WithdrawReasons,
+		Currency, ExistenceRequirement::KeepAlive, Get, OnRuntimeUpgrade, OnUnbalanced,
+		StorageVersion, WithdrawReasons,
 	},
 	BoundedVec,
 };
@@ -53,7 +55,7 @@ pub type NegativeImbalanceOf<T> = <<T as Config>::Currency as Currency<
 	<T as frame_system::Config>::AccountId,
 >>::NegativeImbalance;
 
-const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
+const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -96,9 +98,6 @@ pub mod pallet {
 		#[pallet::constant]
 		type CollectionOffchainDataLimit: Get<u32>;
 	}
-
-	#[pallet::hooks]
-	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
 
 	/// How much does it cost to mint a NFT (extra fee on top of the tx fees).
 	#[pallet::storage]
@@ -243,6 +242,39 @@ pub mod pallet {
 		CannotAddMoreNFTsToCollection,
 	}
 
+	// TODO Write Tests for Runtime upgrade
+	#[pallet::hooks]
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+		#[cfg(feature = "try-runtime")]
+		fn pre_upgrade() -> Result<(), &'static str> {
+			<migrations::v2::MigrationV2<T> as OnRuntimeUpgrade>::pre_upgrade()
+		}
+
+		// This function is called when a runtime upgrade is called. We need to make sure that
+		// what ever we do here won't brick the chain or leave the data in a invalid state.
+		fn on_runtime_upgrade() -> frame_support::weights::Weight {
+			let mut weight = Weight::zero();
+
+			let version = StorageVersion::get::<Pallet<T>>();
+			if version == StorageVersion::new(1) {
+				weight = <migrations::v2::MigrationV2<T> as OnRuntimeUpgrade>::on_runtime_upgrade();
+
+				// Update the storage version.
+				StorageVersion::put::<Pallet<T>>(&StorageVersion::new(2));
+			}
+
+			weight
+		}
+
+		// This function is called after a runtime upgrade is executed. Here we can
+		// test if the new state of blockchain data is valid. It's important to say that
+		// post_upgrade won't be called when a real runtime upgrade is executed.
+		#[cfg(feature = "try-runtime")]
+		fn post_upgrade() -> Result<(), &'static str> {
+			<migrations::v2::MigrationV2<T> as OnRuntimeUpgrade>::post_upgrade()
+		}
+	}
+
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		/// Create a new NFT with the provided details. An ID will be auto
@@ -357,7 +389,7 @@ pub mod pallet {
 
 			// Checks
 			ensure!(nft.owner == who, Error::<T>::NotTheNFTOwner);
-			ensure!(!nft.state.listed_for_sale, Error::<T>::CannotBurnListedNFTs);
+			ensure!(!nft.state.is_listed, Error::<T>::CannotBurnListedNFTs);
 			ensure!(!nft.state.is_capsule, Error::<T>::CannotBurnCapsuleNFTs);
 			ensure!(!nft.state.is_delegated, Error::<T>::CannotBurnDelegatedNFTs);
 
@@ -399,7 +431,7 @@ pub mod pallet {
 				// Checks
 				ensure!(nft.owner == who, Error::<T>::NotTheNFTOwner);
 				ensure!(nft.owner != recipient, Error::<T>::CannotTransferNFTsToYourself);
-				ensure!(!nft.state.listed_for_sale, Error::<T>::CannotTransferListedNFTs);
+				ensure!(!nft.state.is_listed, Error::<T>::CannotTransferListedNFTs);
 				ensure!(!nft.state.is_capsule, Error::<T>::CannotTransferCapsuleNFTs);
 				ensure!(!nft.state.is_delegated, Error::<T>::CannotTransferDelegatedNFTs);
 				ensure!(
@@ -440,7 +472,7 @@ pub mod pallet {
 
 				// Checks
 				ensure!(nft.owner == who, Error::<T>::NotTheNFTOwner);
-				ensure!(!nft.state.listed_for_sale, Error::<T>::CannotDelegateListedNFTs);
+				ensure!(!nft.state.is_listed, Error::<T>::CannotDelegateListedNFTs);
 				ensure!(!nft.state.is_capsule, Error::<T>::CannotDelegateCapsuleNFTs);
 
 				// Execute
@@ -478,7 +510,7 @@ pub mod pallet {
 				// Checks
 				ensure!(nft.owner == who, Error::<T>::NotTheNFTOwner);
 				ensure!(nft.creator == who, Error::<T>::NotTheNFTCreator);
-				ensure!(!nft.state.listed_for_sale, Error::<T>::CannotSetRoyaltyForListedNFTs);
+				ensure!(!nft.state.is_listed, Error::<T>::CannotSetRoyaltyForListedNFTs);
 				ensure!(!nft.state.is_capsule, Error::<T>::CannotSetRoyaltyForCapsuleNFTs);
 				ensure!(!nft.state.is_delegated, Error::<T>::CannotSetRoyaltyForDelegatedNFTs);
 

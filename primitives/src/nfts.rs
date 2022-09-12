@@ -38,7 +38,7 @@ pub struct NFTState {
 	/// Is NFT converted to capsule
 	pub is_capsule: bool,
 	/// Is NFT listed for sale
-	pub listed_for_sale: bool,
+	pub is_listed: bool,
 	/// Is NFT contains secret
 	pub is_secret: bool,
 	/// Is NFT delegated
@@ -50,12 +50,12 @@ pub struct NFTState {
 impl NFTState {
 	pub fn new(
 		is_capsule: bool,
-		listed_for_sale: bool,
+		is_listed: bool,
 		is_secret: bool,
 		is_delegated: bool,
 		is_soulbound: bool,
 	) -> Self {
-		Self { is_capsule, listed_for_sale, is_secret, is_delegated, is_soulbound }
+		Self { is_capsule, is_listed, is_secret, is_delegated, is_soulbound }
 	}
 
 	pub fn new_default(is_soulbound: bool) -> Self {
