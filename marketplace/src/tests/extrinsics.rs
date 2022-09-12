@@ -677,18 +677,20 @@ mod list_nft {
 	}
 
 	#[test]
-	fn cannot_list_soulbound_nfts() {
+	fn cannot_list_not_created_soulbound_nfts() {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
 			|| {
 				prepare_tests();
 				let alice: mock::Origin = origin(ALICE);
 
 				// Set soulbound to true for Alice's NFT.
-				let nft_state = NFTState::new(false, false, false, false, true);
-				NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
+				let mut nft = NFT::get_nft(ALICE_NFT_ID).unwrap();
+				nft.state.is_soulbound = true;
+				nft.creator = BOB;
+				NFT::set_nft(ALICE_NFT_ID, nft).unwrap();
 
 				let err = Marketplace::list_nft(alice, ALICE_NFT_ID, ALICE_MARKETPLACE_ID, 10);
-				assert_noop!(err, Error::<Test>::CannotListSoulboundNFTs);
+				assert_noop!(err, Error::<Test>::CannotListNotCreatedSoulboundNFTs);
 			},
 		)
 	}

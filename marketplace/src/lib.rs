@@ -178,8 +178,8 @@ pub mod pallet {
 		CannotListDelegatedNFTs,
 		/// Cannot list capsule NFTs.
 		CannotListCapsuleNFTs,
-		/// Cannot list soulbound NFTs.
-		CannotListSoulboundNFTs,
+		/// Cannot list soulbound NFTs that was not created from owner.
+		CannotListNotCreatedSoulboundNFTs,
 		/// Cannot buy owned NFT
 		CannotBuyOwnedNFT,
 		/// Sender is already the marketplace owner
@@ -356,8 +356,10 @@ pub mod pallet {
 			ensure!(!nft.state.listed_for_sale, Error::<T>::CannotListAlreadytListedNFTs);
 			ensure!(!nft.state.is_capsule, Error::<T>::CannotListCapsuleNFTs);
 			ensure!(!nft.state.is_delegated, Error::<T>::CannotListDelegatedNFTs);
-			ensure!(!nft.state.is_soulbound, Error::<T>::CannotListSoulboundNFTs);
-
+			ensure!(
+				!(nft.state.is_soulbound && nft.creator != nft.owner),
+				Error::<T>::CannotListNotCreatedSoulboundNFTs
+			);
 			let marketplace =
 				Marketplaces::<T>::get(marketplace_id).ok_or(Error::<T>::MarketplaceNotFound)?;
 
