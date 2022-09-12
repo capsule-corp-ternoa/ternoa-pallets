@@ -357,7 +357,7 @@ pub mod pallet {
 
 			// Checks
 			ensure!(nft.owner == who, Error::<T>::NotTheNFTOwner);
-			ensure!(!nft.state.listed_for_sale, Error::<T>::CannotBurnListedNFTs);
+			ensure!(!nft.state.is_listed, Error::<T>::CannotBurnListedNFTs);
 			ensure!(!nft.state.is_capsule, Error::<T>::CannotBurnCapsuleNFTs);
 			ensure!(!nft.state.is_delegated, Error::<T>::CannotBurnDelegatedNFTs);
 
@@ -399,7 +399,7 @@ pub mod pallet {
 				// Checks
 				ensure!(nft.owner == who, Error::<T>::NotTheNFTOwner);
 				ensure!(nft.owner != recipient, Error::<T>::CannotTransferNFTsToYourself);
-				ensure!(!nft.state.listed_for_sale, Error::<T>::CannotTransferListedNFTs);
+				ensure!(!nft.state.is_listed, Error::<T>::CannotTransferListedNFTs);
 				ensure!(!nft.state.is_capsule, Error::<T>::CannotTransferCapsuleNFTs);
 				ensure!(!nft.state.is_delegated, Error::<T>::CannotTransferDelegatedNFTs);
 				ensure!(!nft.state.is_soulbound, Error::<T>::CannotTransferSoulboundNFTs);
@@ -437,7 +437,7 @@ pub mod pallet {
 
 				// Checks
 				ensure!(nft.owner == who, Error::<T>::NotTheNFTOwner);
-				ensure!(!nft.state.listed_for_sale, Error::<T>::CannotDelegateListedNFTs);
+				ensure!(!nft.state.is_listed, Error::<T>::CannotDelegateListedNFTs);
 				ensure!(!nft.state.is_capsule, Error::<T>::CannotDelegateCapsuleNFTs);
 
 				// Execute
@@ -475,7 +475,7 @@ pub mod pallet {
 				// Checks
 				ensure!(nft.owner == who, Error::<T>::NotTheNFTOwner);
 				ensure!(nft.creator == who, Error::<T>::NotTheNFTCreator);
-				ensure!(!nft.state.listed_for_sale, Error::<T>::CannotSetRoyaltyForListedNFTs);
+				ensure!(!nft.state.is_listed, Error::<T>::CannotSetRoyaltyForListedNFTs);
 				ensure!(!nft.state.is_capsule, Error::<T>::CannotSetRoyaltyForCapsuleNFTs);
 				ensure!(!nft.state.is_delegated, Error::<T>::CannotSetRoyaltyForDelegatedNFTs);
 

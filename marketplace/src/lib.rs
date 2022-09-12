@@ -353,7 +353,7 @@ pub mod pallet {
 			// Checks
 			let mut nft = T::NFTExt::get_nft(nft_id).ok_or(Error::<T>::NFTNotFound)?;
 			ensure!(nft.owner == who, Error::<T>::NotTheNFTOwner);
-			ensure!(!nft.state.listed_for_sale, Error::<T>::CannotListAlreadytListedNFTs);
+			ensure!(!nft.state.is_listed, Error::<T>::CannotListAlreadytListedNFTs);
 			ensure!(!nft.state.is_capsule, Error::<T>::CannotListCapsuleNFTs);
 			ensure!(!nft.state.is_delegated, Error::<T>::CannotListDelegatedNFTs);
 			ensure!(!nft.state.is_soulbound, Error::<T>::CannotListSoulboundNFTs);
@@ -376,7 +376,7 @@ pub mod pallet {
 			// Execute.
 			let sale = Sale::new(who, marketplace_id, price, marketplace.commission_fee);
 			ListedNfts::<T>::insert(nft_id, sale);
-			nft.state.listed_for_sale = true;
+			nft.state.is_listed = true;
 			T::NFTExt::set_nft_state(nft_id, nft.state)?;
 
 			let event = Event::NFTListed {
@@ -401,7 +401,7 @@ pub mod pallet {
 			ensure!(ListedNfts::<T>::contains_key(nft_id), Error::<T>::NFTNotForSale);
 
 			// Execute.
-			nft.state.listed_for_sale = false;
+			nft.state.is_listed = false;
 			T::NFTExt::set_nft_state(nft_id, nft.state)?;
 			ListedNfts::<T>::remove(nft_id);
 			Self::deposit_event(Event::NFTUnlisted { nft_id });
@@ -437,7 +437,7 @@ pub mod pallet {
 
 			//Execute.
 			nft.owner = who.clone();
-			nft.state.listed_for_sale = false;
+			nft.state.is_listed = false;
 			T::NFTExt::set_nft(nft_id, nft)?;
 			ListedNfts::<T>::remove(nft_id);
 			let event = Event::NFTSold {
