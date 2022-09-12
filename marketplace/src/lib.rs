@@ -44,7 +44,10 @@ use primitives::{
 	nfts::NFTId,
 	CompoundFee, ConfigOp, U8BoundedVec,
 };
-use ternoa_common::{config_op_field_exp, traits::NFTExt};
+use ternoa_common::{
+	config_op_field_exp,
+	traits::{MarketplaceExt, NFTExt},
+};
 pub use weights::WeightInfo;
 
 pub type BalanceOf<T> =
@@ -362,8 +365,7 @@ pub mod pallet {
 			);
 			let marketplace =
 				Marketplaces::<T>::get(marketplace_id).ok_or(Error::<T>::MarketplaceNotFound)?;
-
-			Self::ensure_is_allowed_to_list(&who, &marketplace)?;
+			marketplace.allowed_to_list(&who).ok_or(Error::<T>::AccountNotAllowedToList)?;
 
 			// Check if the selected price can cover the marketplace commission_fee if it exists.
 			if let Some(commission_fee) = &marketplace.commission_fee {
@@ -468,27 +470,6 @@ impl<T: Config> Pallet<T> {
 		marketplace_id
 	}
 
-	fn ensure_is_allowed_to_list(
-		who: &T::AccountId,
-		marketplace: &MarketplaceData<
-			T::AccountId,
-			BalanceOf<T>,
-			T::AccountSizeLimit,
-			T::OffchainDataLimit,
-		>,
-	) -> Result<(), Error<T>> {
-		let mut is_in_account_list = false;
-		if let Some(account_list) = &marketplace.account_list {
-			is_in_account_list = account_list.contains(&who);
-		}
-		let is_allowed = match marketplace.kind {
-			MarketplaceType::Public => !is_in_account_list,
-			MarketplaceType::Private => is_in_account_list,
-		};
-		ensure!(is_allowed, Error::<T>::AccountNotAllowedToList);
-		Ok(())
-	}
-
 	fn pay_mint_fee(who: &T::AccountId) -> Result<(), DispatchError> {
 		let mint_fee = MarketplaceMintFee::<T>::get();
 		let reason = WithdrawReasons::FEE;
@@ -537,5 +518,39 @@ impl<T: Config> Pallet<T> {
 			return Ok(commission_fee)
 		}
 		Ok(0u32.into())
+	}
+}
+
+impl<T: Config> MarketplaceExt for Pallet<T> {
+	type AccountId = T::AccountId;
+	type Balance = BalanceOf<T>;
+	type OffchainDataLimit = T::OffchainDataLimit;
+	type AccountSizeLimit = T::AccountSizeLimit;
+
+	fn get_marketplace(
+		id: MarketplaceId,
+	) -> Option<
+		MarketplaceData<
+			Self::AccountId,
+			Self::Balance,
+			Self::AccountSizeLimit,
+			Self::OffchainDataLimit,
+		>,
+	> {
+		Marketplaces::<T>::get(id)
+	}
+
+	fn set_marketplace(
+		id: MarketplaceId,
+		marketplace_data: MarketplaceData<
+			T::AccountId,
+			BalanceOf<T>,
+			T::AccountSizeLimit,
+			T::OffchainDataLimit,
+		>,
+	) -> Result<(), DispatchError> {
+		Marketplaces::<T>::insert(id, marketplace_data);
+
+		Ok(())
 	}
 }

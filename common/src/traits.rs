@@ -17,7 +17,10 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use frame_support::{dispatch::DispatchResult, traits::Get, BoundedVec};
-use primitives::nfts::{CollectionId, NFTData, NFTId, NFTState};
+use primitives::{
+	marketplace::{MarketplaceData, MarketplaceId},
+	nfts::{CollectionId, NFTData, NFTId, NFTState},
+};
 use sp_runtime::Permill;
 use sp_std::fmt::Debug;
 
@@ -55,4 +58,34 @@ pub trait NFTExt {
 		collection_id: Option<CollectionId>,
 		is_soulbound: bool,
 	) -> Result<NFTId, DispatchResult>;
+}
+
+pub trait MarketplaceExt {
+	type AccountId: Clone + PartialEq + Debug;
+	type Balance: Clone + PartialEq + Debug + sp_std::cmp::PartialOrd;
+	type OffchainDataLimit: Get<u32>;
+	type AccountSizeLimit: Get<u32>;
+
+	/// Returns a marketplace corresponding to its id.
+	fn get_marketplace(
+		id: MarketplaceId,
+	) -> Option<
+		MarketplaceData<
+			Self::AccountId,
+			Self::Balance,
+			Self::AccountSizeLimit,
+			Self::OffchainDataLimit,
+		>,
+	>;
+
+	/// Set marketplace data for specified id.
+	fn set_marketplace(
+		id: MarketplaceId,
+		value: MarketplaceData<
+			Self::AccountId,
+			Self::Balance,
+			Self::AccountSizeLimit,
+			Self::OffchainDataLimit,
+		>,
+	) -> DispatchResult;
 }
