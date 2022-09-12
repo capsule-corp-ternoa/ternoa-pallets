@@ -232,28 +232,6 @@ benchmarks! {
 		assert_eq!(nft.owner, charlie);
 	}
 
-	complete_auction {
-		let s in 0 .. T::ParallelAuctionLimit::get() - 1;
-		let bench_data = prepare_benchmarks::<T>(Some(AuctionState::InProgress));
-		Auction::<T>::fill_deadline_queue(s, 99u32.into(), 10u32.into()).unwrap();
-		let bob: T::AccountId = get_account::<T>("BOB");
-		let nft_id = bench_data.bob_nft_id;
-
-		let auction = AuctionsStorage::<T>::get(nft_id).unwrap();
-		let charlie_bid = auction.buy_it_price.unwrap();
-		let eve_bid = charlie_bid.saturating_mul(2u16.into());
-
-		assert_ok!(TernoaAuctions::<T>::add_bid(origin::<T>("CHARLIE"), nft_id, charlie_bid));
-		assert_ok!(TernoaAuctions::<T>::add_bid(origin::<T>("EVE"), nft_id, eve_bid));
-
-	}: _(RawOrigin::Root, nft_id)
-	verify {
-		let eve: T::AccountId = get_account::<T>("EVE");
-		let nft = T::NFTExt::get_nft(nft_id).unwrap();
-		assert_eq!(nft.state.is_listed, false);
-		assert_eq!(nft.owner, eve);
-	}
-
 	claim {
 		let bench_data = prepare_benchmarks::<T>(Some(AuctionState::InProgress));
 		let charlie: T::AccountId = get_account::<T>("CHARLIE");
@@ -265,8 +243,8 @@ benchmarks! {
 
 		assert_ok!(TernoaAuctions::<T>::add_bid(origin::<T>("CHARLIE"), nft_id, charlie_bid));
 		assert_ok!(TernoaAuctions::<T>::add_bid(origin::<T>("EVE"), nft_id, eve_bid));
-		assert_ok!(TernoaAuctions::<T>::complete_auction(RawOrigin::Root.into(), nft_id));
 
+		run_to_block::<T>(auction.end_block + 1u32.into());
 	}: _(RawOrigin::Signed(charlie.clone()))
 	verify {
 		assert_eq!(Claims::<T>::get(charlie), None);

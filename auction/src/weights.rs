@@ -23,7 +23,6 @@ pub trait WeightInfo {
 	fn add_bid(s: u32) -> Weight;
 	fn remove_bid(s: u32) -> Weight;
 	fn buy_it_now(_s: u32) -> Weight;
-	fn complete_auction(_s: u32) -> Weight;
 	fn claim() -> Weight;
 }
 
@@ -73,16 +72,6 @@ impl WeightInfo for () {
 	// Storage: Auction Deadlines (r:1 w:1)
 	/// The range of component `s` is `[0, 99]`.
 	fn buy_it_now(_s: u32) -> Weight {
-		Weight::from_ref_time(10_000_000 as RefTimeWeight)
-	}
-	// Storage: Auction Auctions (r:1 w:1)
-	// Storage: Marketplace Marketplaces (r:1 w:0)
-	// Storage: NFT Nfts (r:1 w:1)
-	// Storage: System Account (r:3 w:3)
-	// Storage: Auction Deadlines (r:1 w:1)
-	// Storage: Auction Claims (r:1 w:1)
-	/// The range of component `s` is `[0, 99]`.
-	fn complete_auction(_s: u32) -> Weight {
 		Weight::from_ref_time(10_000_000 as RefTimeWeight)
 	}
 	// Storage: Auction Claims (r:1 w:1)
