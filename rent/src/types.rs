@@ -32,6 +32,35 @@ pub enum Duration<BlockNumber> {
 	Infinite,
 }
 
+impl<Blocknumber> Duration<Blocknumber> {
+	pub fn allows_rent_fee<Balance: Clone>(&self, rent_fee: &RentFee<Balance>) -> Option<()> {
+		match self {
+			Self::Subscription(_, _) => rent_fee.get_nft().is_none(),
+			_ => true,
+		}
+		.then(|| ())
+	}
+
+	pub fn allows_revocation(&self, revocation: &RevocationType) -> Option<()> {
+		match self {
+			Self::Subscription(_, _) => true,
+			_ => *revocation != RevocationType::OnSubscriptionChange,
+		}
+		.then(|| ())
+	}
+
+	pub fn allows_cancellation<Balance: Clone>(
+		&self,
+		cancellation: &CancellationFee<Balance>,
+	) -> Option<()> {
+		match self {
+			Self::Fixed(_) => true,
+			_ => !matches!(*cancellation, CancellationFee::FlexibleTokens { .. }),
+		}
+		.then(|| ())
+	}
+}
+
 /// Enumeration of contract acceptance type.
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 pub enum AcceptanceType<AccountList> {
@@ -45,6 +74,19 @@ pub enum RevocationType {
 	NoRevocation,
 	OnSubscriptionChange,
 	Anytime,
+}
+
+impl RevocationType {
+	pub fn allows_cancellation<Balance: Clone>(
+		&self,
+		_cancellation: &CancellationFee<Balance>,
+	) -> Option<()> {
+		match self {
+			Self::NoRevocation => false,
+			_ => true,
+		}
+		.then(|| ())
+	}
 }
 
 /// Enumeration of contract rent fees.

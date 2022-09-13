@@ -256,6 +256,14 @@ pub mod pallet {
 		InternalMathError,
 		/// Offer not found.
 		OfferNotFound,
+		/// Duration and Revocation Mismatch
+		DurationAndRevocationMismatch,
+		/// Duration and Revocation Mismatch
+		DurationAndRentFeeMismatch,
+		/// Duration and Cancellation Mismatch
+		DurationAndCancellationFeeMismatch,
+		/// Revocation and Cancellation Mismatch
+		RevocationAndCancellationFeeMismatch,
 	}
 
 	#[pallet::hooks]
@@ -360,40 +368,49 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 			let mut queues = Queues::<T>::get();
 
-			// Check number of contract
+			// Queue ✅
 			ensure!(
 				queues.total_size() + 1 <= queues.limit(),
 				Error::<T>::MaxSimultaneousContractReached
 			);
 
-			// Check nft data.
+			// NFT Check ✅
 			let mut nft = T::NFTExt::get_nft(nft_id).ok_or(Error::<T>::NFTNotFound)?;
 			ensure!(nft.owner == who, Error::<T>::NotTheNFTOwner);
 			Self::check_nft_state_validity(&nft)?;
 
-			Self::check_contract_parameters(
-				nft_id,
-				&duration,
-				&revocation_type,
-				&rent_fee,
-				&renter_cancellation_fee,
-				&rentee_cancellation_fee,
-			)?;
+			// Duration and Revocation Check ✅
+			duration
+				.allows_revocation(&revocation_type)
+				.ok_or(Error::<T>::DurationAndRevocationMismatch)?;
+			duration
+				.allows_rent_fee(&rent_fee)
+				.ok_or(Error::<T>::DurationAndRentFeeMismatch)?;
+			if let Some(x) = &renter_cancellation_fee {
+				duration
+					.allows_cancellation(x)
+					.ok_or(Error::<T>::DurationAndCancellationFeeMismatch)?;
+				revocation_type
+					.allows_cancellation(x)
+					.ok_or(Error::<T>::RevocationAndCancellationFeeMismatch)?;
+			}
+			if let Some(x) = &rentee_cancellation_fee {
+				duration
+					.allows_cancellation(x)
+					.ok_or(Error::<T>::DurationAndCancellationFeeMismatch)?;
+			}
 
-			// Rent fee checked ✅
+			// Rent Fee Check ✅
 			if let Some(nft_id) = rent_fee.get_nft() {
 				T::NFTExt::get_nft(nft_id).ok_or(Error::<T>::NFTNotFoundForRentFee)?;
 			}
 
-			// Renter Cancellation checked  ✅
+			// Renter Cancellation Check  ✅
 			if let Some(id) = renter_cancellation_fee.clone().and_then(|x| x.get_nft()) {
-				let nft =
-					T::NFTExt::get_nft(id).ok_or(Error::<T>::NFTNotFoundForCancellationFee)?;
-				ensure!(nft.owner == who, Error::<T>::NotTheNFTOwnerForCancellationFee);
-				Self::check_nft_state_validity(&nft)?;
+				T::NFTExt::get_nft(id).ok_or(Error::<T>::NFTNotFoundForCancellationFee)?;
 			}
 
-			// Rentee Cancellation fee checked  ✅
+			// Rentee Cancellation Check  ✅
 			if let Some(id) = rentee_cancellation_fee.clone().and_then(|x| x.get_nft()) {
 				T::NFTExt::get_nft(id).ok_or(Error::<T>::NFTNotFoundForCancellationFee)?;
 			}
@@ -995,95 +1012,6 @@ impl<T: Config> Pallet<T> {
 				CancellationFee::NFT(_) => (),
 			}
 			ensure!(T::Currency::free_balance(from) > total, Error::<T>::NotEnoughBalance);
-		}
-
-		Ok(())
-	}
-
-	/// Check contract parameters.
-	pub fn check_contract_parameters(
-		nft_id: NFTId,
-		duration: &Duration<T::BlockNumber>,
-		revocation_type: &RevocationType,
-		rent_fee: &RentFee<BalanceOf<T>>,
-		renter_cancellation_fee: &Option<CancellationFee<BalanceOf<T>>>,
-		rentee_cancellation_fee: &Option<CancellationFee<BalanceOf<T>>>,
-	) -> Result<(), DispatchError> {
-		// Checks
-		let is_subscription = matches!(*duration, Duration::Subscription { .. });
-		let is_on_subscription_change =
-			matches!(*revocation_type, RevocationType::OnSubscriptionChange { .. });
-		let is_nft_rent_fee = matches!(rent_fee, RentFee::NFT { .. });
-		let is_flexible_token_renter =
-			matches!(*renter_cancellation_fee, Some(CancellationFee::FlexibleTokens { .. }));
-		let is_flexible_token_rentee =
-			matches!(*rentee_cancellation_fee, Some(CancellationFee::FlexibleTokens { .. }));
-		ensure!(
-			!(is_on_subscription_change && !is_subscription),
-			Error::<T>::SubscriptionChangeForSubscriptionOnly
-		);
-		ensure!(!(is_nft_rent_fee && is_subscription), Error::<T>::NoNFTRentFeeWithSubscription);
-		ensure!(
-			!(*revocation_type == RevocationType::NoRevocation &&
-				renter_cancellation_fee.is_some()),
-			Error::<T>::NoRenterCancellationFeeWithNoRevocation
-		);
-		ensure!(
-			!((is_flexible_token_renter || is_flexible_token_rentee) &&
-				(is_subscription || *duration == Duration::Infinite)),
-			Error::<T>::FlexibleFeeOnlyForFixedDuration
-		);
-
-		let nft_id = Some(nft_id);
-		let mut rent_fee_nft_id: Option<u32> = None;
-		let mut renter_cancellation_nft_id: Option<u32> = None;
-		let mut rentee_cancellation_nft_id: Option<u32> = None;
-		match rent_fee {
-			RentFee::NFT(nft_id) => {
-				rent_fee_nft_id = Some(*nft_id);
-			},
-			_ => (),
-		}
-		if let Some(renter_cancellation_fee) = renter_cancellation_fee {
-			match renter_cancellation_fee {
-				CancellationFee::NFT(nft_id) => {
-					renter_cancellation_nft_id = Some(*nft_id);
-				},
-				_ => (),
-			}
-		}
-		if let Some(rentee_cancellation_fee) = rentee_cancellation_fee {
-			match rentee_cancellation_fee {
-				CancellationFee::NFT(nft_id) => rentee_cancellation_nft_id = Some(*nft_id),
-				_ => (),
-			}
-		}
-		ensure!(nft_id != rent_fee_nft_id, Error::<T>::InvalidFeeNFT);
-		ensure!(nft_id != renter_cancellation_nft_id, Error::<T>::InvalidFeeNFT);
-		ensure!(nft_id != rentee_cancellation_nft_id, Error::<T>::InvalidFeeNFT);
-		if rent_fee_nft_id.is_some() {
-			ensure!(
-				rent_fee_nft_id != nft_id &&
-					rent_fee_nft_id != renter_cancellation_nft_id &&
-					rent_fee_nft_id != rentee_cancellation_nft_id,
-				Error::<T>::InvalidFeeNFT
-			);
-		}
-		if renter_cancellation_nft_id.is_some() {
-			ensure!(
-				renter_cancellation_nft_id != nft_id &&
-					renter_cancellation_nft_id != rent_fee_nft_id &&
-					renter_cancellation_nft_id != rentee_cancellation_nft_id,
-				Error::<T>::InvalidFeeNFT
-			);
-		}
-		if rentee_cancellation_nft_id.is_some() {
-			ensure!(
-				rentee_cancellation_nft_id != nft_id &&
-					rentee_cancellation_nft_id != rent_fee_nft_id &&
-					rentee_cancellation_nft_id != renter_cancellation_nft_id,
-				Error::<T>::InvalidFeeNFT
-			);
 		}
 
 		Ok(())
