@@ -407,7 +407,10 @@ pub mod pallet {
 
 			// Renter Cancellation Check  ✅
 			if let Some(id) = renter_cancellation_fee.clone().and_then(|x| x.get_nft()) {
-				T::NFTExt::get_nft(id).ok_or(Error::<T>::NFTNotFoundForCancellationFee)?;
+				let nft =
+					T::NFTExt::get_nft(id).ok_or(Error::<T>::NFTNotFoundForCancellationFee)?;
+				ensure!(nft.owner == who, Error::<T>::NotTheNFTOwner);
+				Self::check_nft_state_validity(&nft)?;
 			}
 
 			// Rentee Cancellation Check  ✅
