@@ -35,16 +35,18 @@ pub type CollectionId = u32;
 /// Data related to an NFT state, such as if it is listed for sale.
 #[derive(Encode, Decode, Eq, Default, TypeInfo, Clone, PartialEq, RuntimeDebug, MaxEncodedLen)]
 pub struct NFTState {
-	/// Is NFT converted to capsule
+	/// Is NFT converted to capsule.
 	pub is_capsule: bool,
-	/// Is NFT listed for sale
+	/// Is NFT listed for sale.
 	pub is_listed: bool,
-	/// Is NFT contains secret
+	/// Is NFT contains secret.
 	pub is_secret: bool,
-	/// Is NFT delegated
+	/// Is NFT delegated.
 	pub is_delegated: bool,
-	/// Is NFT soulbound
+	/// Is NFT soulbound.
 	pub is_soulbound: bool,
+	/// Is NFT Rented or available for rent.
+	pub is_rented: bool,
 }
 
 impl NFTState {
@@ -54,12 +56,13 @@ impl NFTState {
 		is_secret: bool,
 		is_delegated: bool,
 		is_soulbound: bool,
+		is_rented: bool,
 	) -> Self {
-		Self { is_capsule, is_listed, is_secret, is_delegated, is_soulbound }
+		Self { is_capsule, is_listed, is_secret, is_delegated, is_soulbound, is_rented }
 	}
 
 	pub fn new_default(is_soulbound: bool) -> Self {
-		Self::new(false, false, false, false, is_soulbound)
+		Self::new(false, false, false, false, is_soulbound, false)
 	}
 }
 

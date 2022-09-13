@@ -207,6 +207,8 @@ pub mod pallet {
 		InternalMathError,
 		/// Not enough balance for the operation
 		NotEnoughBalanceToBuy,
+		/// Cannot list rented NFTs.
+		CannotListRentedNFTs,
 	}
 
 	#[pallet::call]
@@ -363,6 +365,8 @@ pub mod pallet {
 				!(nft.state.is_soulbound && nft.creator != nft.owner),
 				Error::<T>::CannotListNotCreatedSoulboundNFTs
 			);
+			ensure!(!nft.state.is_rented, Error::<T>::CannotListRentedNFTs);
+
 			let marketplace =
 				Marketplaces::<T>::get(marketplace_id).ok_or(Error::<T>::MarketplaceNotFound)?;
 			marketplace.allowed_to_list(&who).ok_or(Error::<T>::AccountNotAllowedToList)?;
