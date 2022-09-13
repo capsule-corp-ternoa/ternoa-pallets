@@ -114,7 +114,7 @@ pub mod pallet {
 
 	/// Data related to contracts queues.
 	#[pallet::storage]
-	#[pallet::getter(fn renting_queues)]
+	#[pallet::getter(fn queues)]
 	pub type Queues<T: Config> =
 		StorageValue<_, RentingQueues<T::BlockNumber, T::SimultaneousContractLimit>, ValueQuery>;
 

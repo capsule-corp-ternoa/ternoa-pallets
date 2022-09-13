@@ -251,7 +251,7 @@ benchmarks! {
 	}: _(root::<T>(), NFT_ID_0)
 	verify {
 		assert!(Rent::<T>::contracts(NFT_ID_0).is_some());
-		let next_renew_block = Rent::<T>::renting_queues().subscription_queue.get(NFT_ID_0).unwrap();
+		let next_renew_block = Rent::<T>::queues().subscription_queue.get(NFT_ID_0).unwrap();
 		assert_eq!(next_renew_block, 1000u32.into());
 	}
 
