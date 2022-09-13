@@ -49,17 +49,61 @@ pub enum RevocationType {
 
 /// Enumeration of contract rent fees.
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo, MaxEncodedLen)]
-pub enum RentFee<Balance> {
+pub enum RentFee<Balance>
+where
+	Balance: Clone,
+{
 	Tokens(Balance),
 	NFT(NFTId),
 }
 
+impl<Balance> RentFee<Balance>
+where
+	Balance: Clone,
+{
+	pub fn get_balance(&self) -> Option<Balance> {
+		match self {
+			Self::Tokens(x) => Some(x.clone()),
+			_ => None,
+		}
+	}
+
+	pub fn get_nft(&self) -> Option<NFTId> {
+		match self {
+			Self::NFT(x) => Some(*x),
+			_ => None,
+		}
+	}
+}
+
 /// Enumeration of contract rent fees.
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo, MaxEncodedLen)]
-pub enum CancellationFee<Balance> {
+pub enum CancellationFee<Balance>
+where
+	Balance: Clone,
+{
 	FixedTokens(Balance),
 	FlexibleTokens(Balance),
 	NFT(NFTId),
+}
+
+impl<Balance> CancellationFee<Balance>
+where
+	Balance: Clone,
+{
+	pub fn get_balance(&self) -> Option<Balance> {
+		match self {
+			Self::FixedTokens(x) | Self::FlexibleTokens(x) => Some(x.clone()),
+			_ => None,
+		}
+	}
+
+	pub fn get_nft(&self) -> Option<NFTId> {
+		match self {
+			Self::NFT(x) => Some(*x),
+			_ => None,
+		}
+	}
 }
 
 #[derive(
