@@ -53,6 +53,13 @@ pub type NegativeImbalanceOf<T> = <<T as Config>::Currency as Currency<
 	<T as frame_system::Config>::AccountId,
 >>::NegativeImbalance;
 
+pub type RentContractDataOf<T> = RentContractData<
+	<T as frame_system::Config>::AccountId,
+	<T as frame_system::Config>::BlockNumber,
+	BalanceOf<T>,
+	<T as Config>::AccountSizeLimit,
+>;
+
 const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
 
 #[frame_support::pallet]
@@ -327,7 +334,23 @@ pub mod pallet {
 
 			// Available queue management
 			while let Some(nft_id) = queues.available_queue.pop_next(now) {
-				let _ = Self::remove_expired_contract(RawOrigin::Root.into(), nft_id);
+				let contract = Contracts::<T>::get(nft_id).expect("Should not happen. qed");
+				let mut nft = T::NFTExt::get_nft(nft_id).expect("Should not happen. qed");
+
+				// Return Cancellation fees
+				if let Some(fee) = &contract.renter_cancellation_fee {
+					Self::return_cancellation_fee(fee, &contract.renter)
+						.expect("This cannot happen. qed");
+				}
+
+				nft.state.is_rented = false;
+				T::NFTExt::set_nft(nft_id, nft).expect("This cannot happen. qed");
+				Offers::<T>::remove(nft_id);
+				Contracts::<T>::remove(nft_id);
+
+				let event = Event::ContractAvailableExpired { nft_id };
+				Self::deposit_event(event);
+
 				read += 3;
 				write += 5;
 				current_actions += 1;
@@ -882,39 +905,6 @@ pub mod pallet {
 
 			Ok(().into())
 		}
-
-		/// Remove a contract from available list if expiration has been reached.
-		#[pallet::weight((
-			{
-				let mut queues = Queues::<T>::get();
-				let s = queues.available_queue.size();
-				T::WeightInfo::remove_expired_contract(s as u32)
-			},
-			DispatchClass::Normal
-		))]
-		pub fn remove_expired_contract(
-			origin: OriginFor<T>,
-			nft_id: NFTId,
-		) -> DispatchResultWithPostInfo {
-			ensure_root(origin)?;
-			let contract = Contracts::<T>::get(nft_id).ok_or(Error::<T>::ContractNotFound)?;
-			let mut nft = T::NFTExt::get_nft(nft_id).ok_or(Error::<T>::NFTNotFound)?;
-
-			Self::process_cancellation_fees(nft_id, &contract, None)?;
-
-			nft.state.is_rented = false;
-			T::NFTExt::set_nft(nft_id, nft)?;
-
-			Offers::<T>::remove(nft_id);
-
-			Contracts::<T>::remove(nft_id);
-
-			// Deposit event.
-			let event = Event::ContractAvailableExpired { nft_id };
-			Self::deposit_event(event);
-
-			Ok(().into())
-		}
 	}
 }
 
@@ -1401,5 +1391,23 @@ impl<T: Config> Pallet<T> {
 			Duration::Subscription(blocks, _) => Some(now + *blocks),
 			Duration::Infinite => None,
 		}
+	}
+
+	pub fn return_cancellation_fee(
+		fee: &CancellationFee<BalanceOf<T>>,
+		dst: &T::AccountId,
+	) -> Result<(), DispatchError> {
+		if let Some(amount) = fee.get_balance() {
+			let src = &Self::account_id();
+			T::Currency::transfer(src, dst, amount, AllowDeath)?
+		}
+
+		if let Some(nft_id) = fee.get_nft() {
+			let mut nft = T::NFTExt::get_nft(nft_id).ok_or(Error::<T>::NFTNotFound)?;
+			nft.owner = dst.clone();
+			T::NFTExt::set_nft(nft_id, nft)?;
+		}
+
+		Ok(())
 	}
 }
