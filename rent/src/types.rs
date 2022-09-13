@@ -283,6 +283,11 @@ where
 	BlockNumber: Clone + PartialEq + Debug + sp_std::cmp::PartialOrd,
 	Limit: Get<u32>,
 {
+	/// Returns the queue limit.
+	pub fn limit(&self) -> u32 {
+		Limit::get()
+	}
+
 	/// Returns the addition of queues length.
 	pub fn total_size(&mut self) -> u32 {
 		(self.fixed_queue.0.len() + self.subscription_queue.0.len() + self.available_queue.0.len())

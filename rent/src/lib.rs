@@ -43,7 +43,7 @@ use sp_runtime::{
 };
 use sp_std::prelude::*;
 
-use primitives::nfts::{NFTData, NFTId};
+use primitives::nfts::{NFTData, NFTId, NFTStateModifiers::*};
 use ternoa_common::traits::NFTExt;
 pub use weights::WeightInfo;
 
@@ -362,14 +362,14 @@ pub mod pallet {
 
 			// Check number of contract
 			ensure!(
-				queues.total_size() + 1 <= T::SimultaneousContractLimit::get(),
+				queues.total_size() + 1 <= queues.limit(),
 				Error::<T>::MaxSimultaneousContractReached
 			);
 
 			// Check nft data.
 			let mut nft = T::NFTExt::get_nft(nft_id).ok_or(Error::<T>::NFTNotFound)?;
 			ensure!(nft.owner == who, Error::<T>::NotTheNFTOwner);
-			Self::ensure_nft_available(&nft)?;
+			Self::check_nft_state_validity(&nft)?;
 
 			Self::check_contract_parameters(
 				nft_id,
@@ -379,21 +379,48 @@ pub mod pallet {
 				&renter_cancellation_fee,
 				&rentee_cancellation_fee,
 			)?;
-			Self::ensure_rent_fee_valid(&rent_fee)?;
-			Self::ensure_cancellation_fee_valid(&rentee_cancellation_fee)?;
-			Self::ensure_enough_for_cancellation_fee(&renter_cancellation_fee, &who)?;
-			Self::take_cancellation_fee(&who, &renter_cancellation_fee)?;
 
-			// Insert in available queue with expiration.
-			let now = <frame_system::Pallet<T>>::block_number();
-			let expiration_duration = T::ContractExpirationDuration::get();
-			let expiration_block = now + expiration_duration.into();
+			// Rent fee checked ✅
+			if let Some(nft_id) = rent_fee.get_nft() {
+				T::NFTExt::get_nft(nft_id).ok_or(Error::<T>::NFTNotFoundForRentFee)?;
+			}
+
+			// Renter Cancellation checked  ✅
+			if let Some(id) = renter_cancellation_fee.clone().and_then(|x| x.get_nft()) {
+				let nft =
+					T::NFTExt::get_nft(id).ok_or(Error::<T>::NFTNotFoundForCancellationFee)?;
+				ensure!(nft.owner == who, Error::<T>::NotTheNFTOwnerForCancellationFee);
+				Self::check_nft_state_validity(&nft)?;
+			}
+
+			// Rentee Cancellation fee checked  ✅
+			if let Some(id) = rentee_cancellation_fee.clone().and_then(|x| x.get_nft()) {
+				T::NFTExt::get_nft(id).ok_or(Error::<T>::NFTNotFoundForCancellationFee)?;
+			}
+
+			// Checking done, time to change the storage 📦
+			// Renter Cancellation fee taken  📦
+			if let Some(fee) = rentee_cancellation_fee.clone() {
+				if let Some(amount) = fee.get_balance() {
+					T::Currency::transfer(&who, &Self::account_id(), amount, KeepAlive)?;
+				}
+
+				if let Some(id) = fee.get_nft() {
+					let mut nft = T::NFTExt::get_nft(id).expect("Checked before. qed");
+					nft.owner = Self::account_id();
+					T::NFTExt::set_nft(nft_id, nft)?;
+				}
+			}
+
+			// Queue Updated  📦
+			let expiration_block = frame_system::Pallet::<T>::block_number() +
+				T::ContractExpirationDuration::get().into();
 			queues
 				.insert_in_available_queue(nft_id, expiration_block)
-				.map_err(|_| Error::<T>::MaxSimultaneousContractReached)?;
+				.expect("We already checked for this. qed");
 			Queues::<T>::set(queues);
 
-			// Insert new contract.
+			// Contract Created 📦
 			let contract = RentContractData::new(
 				false,
 				None,
@@ -409,7 +436,7 @@ pub mod pallet {
 			);
 			Contracts::<T>::insert(nft_id, contract);
 
-			// Set NFT state.
+			// NFT Updated 📦
 			nft.state.is_rented = true;
 			T::NFTExt::set_nft(nft_id, nft)?;
 
@@ -878,15 +905,20 @@ impl<T: Config> Pallet<T> {
 	}
 
 	/// Check that an NFT is available for rent.
-	pub fn ensure_nft_available(
+	pub fn check_nft_state_validity(
 		nft: &NFTData<T::AccountId, <T::NFTExt as NFTExt>::NFTOffchainDataLimit>,
-	) -> Result<(), DispatchError> {
-		ensure!(!nft.state.is_listed, Error::<T>::CannotUseListedNFTs);
-		ensure!(!nft.state.is_capsule, Error::<T>::CannotUseCapsuleNFTs);
-		ensure!(!nft.state.is_delegated, Error::<T>::CannotUseDelegatedNFTs);
-		ensure!(!nft.state.is_soulbound, Error::<T>::CannotUseSoulboundNFTs);
-		ensure!(!nft.state.is_rented, Error::<T>::CannotUseRentedNFTs);
-		Ok(())
+	) -> Result<(), pallet::Error<T>> {
+		nft.not_in_state(vec![Capsule, IsListed, Delegated, Soulbound, Rented])
+			.map_err(|err| {
+				return match err {
+					Capsule => Error::<T>::CannotUseCapsuleNFTs,
+					IsListed => Error::<T>::CannotUseListedNFTs,
+					Delegated => Error::<T>::CannotUseDelegatedNFTs,
+					Soulbound => Error::<T>::CannotUseSoulboundNFTs,
+					Rented => Error::<T>::CannotUseRentedNFTs,
+					_ => panic!("This should never happen"),
+				}
+			})
 	}
 
 	/// Check that address has NFT / Balance to cover cancellation fee.
@@ -908,35 +940,9 @@ impl<T: Config> Pallet<T> {
 			let nft =
 				T::NFTExt::get_nft(nft_id).ok_or(Error::<T>::NFTNotFoundForCancellationFee)?;
 			ensure!(nft.owner == *from, Error::<T>::NotTheNFTOwnerForCancellationFee);
-			Self::ensure_nft_available(&nft)?;
+			Self::check_nft_state_validity(&nft)?;
 		}
 
-		Ok(())
-	}
-
-	/// Check the cancellation fee NFT for existence
-	pub fn ensure_cancellation_fee_valid(
-		cancellation_fee: &Option<CancellationFee<BalanceOf<T>>>,
-	) -> Result<(), DispatchError> {
-		if let Some(cancellation_fee) = cancellation_fee {
-			match cancellation_fee {
-				CancellationFee::NFT(nft_id) => {
-					T::NFTExt::get_nft(*nft_id).ok_or(Error::<T>::NFTNotFoundForCancellationFee)?;
-				},
-				_ => (),
-			}
-		}
-		Ok(())
-	}
-
-	/// Check the rent fee NFT for existence
-	pub fn ensure_rent_fee_valid(rent_fee: &RentFee<BalanceOf<T>>) -> Result<(), DispatchError> {
-		match rent_fee {
-			RentFee::NFT(nft_id) => {
-				T::NFTExt::get_nft(*nft_id).ok_or(Error::<T>::NFTNotFoundForRentFee)?;
-			},
-			_ => (),
-		}
 		Ok(())
 	}
 
@@ -955,7 +961,7 @@ impl<T: Config> Pallet<T> {
 			RentFee::NFT(nft_id) => {
 				let nft = T::NFTExt::get_nft(*nft_id).ok_or(Error::<T>::NFTNotFoundForRentFee)?;
 				ensure!(nft.owner == *from, Error::<T>::NotTheNFTOwnerForRentFee);
-				Self::ensure_nft_available(&nft)?;
+				Self::check_nft_state_validity(&nft)?;
 			},
 		}
 		Ok(())
@@ -1121,7 +1127,7 @@ impl<T: Config> Pallet<T> {
 				let mut fee_nft =
 					T::NFTExt::get_nft(*nft_id).ok_or(Error::<T>::NFTNotFoundForRentFee)?;
 				ensure!(fee_nft.owner == *from, Error::<T>::NotTheNFTOwnerForRentFee);
-				Self::ensure_nft_available(&fee_nft)?;
+				Self::check_nft_state_validity(&fee_nft)?;
 				fee_nft.owner = to;
 				T::NFTExt::set_nft(*nft_id, fee_nft)?;
 			},
@@ -1147,8 +1153,6 @@ impl<T: Config> Pallet<T> {
 		};
 
 		if let Some(amount) = cancellation_fee.get_balance() {
-			let free_balance = T::Currency::free_balance(from);
-			ensure!(free_balance > amount, Error::<T>::NotEnoughBalanceForCancellationFee);
 			T::Currency::transfer(from, &Self::account_id(), amount, KeepAlive)?;
 		}
 
@@ -1156,7 +1160,7 @@ impl<T: Config> Pallet<T> {
 			let mut cancellation_nft =
 				T::NFTExt::get_nft(nft_id).ok_or(Error::<T>::NFTNotFoundForCancellationFee)?;
 			ensure!(cancellation_nft.owner == *from, Error::<T>::NotTheNFTOwnerForCancellationFee);
-			Self::ensure_nft_available(&cancellation_nft)?;
+			Self::check_nft_state_validity(&cancellation_nft)?;
 			cancellation_nft.owner = Self::account_id();
 			T::NFTExt::set_nft(nft_id, cancellation_nft)?;
 		}

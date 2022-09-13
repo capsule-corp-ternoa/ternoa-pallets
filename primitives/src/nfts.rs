@@ -32,6 +32,15 @@ pub type NFTId = u32;
 /// How collection IDs are encoded.
 pub type CollectionId = u32;
 
+pub enum NFTStateModifiers {
+	Capsule = 0x01,
+	IsListed = 0x02,
+	Secret = 0x03,
+	Delegated = 0x04,
+	Soulbound = 0x05,
+	Rented = 0x06,
+}
+
 /// Data related to an NFT state, such as if it is listed for sale.
 #[derive(Encode, Decode, Eq, Default, TypeInfo, Clone, PartialEq, RuntimeDebug, MaxEncodedLen)]
 pub struct NFTState {
@@ -130,6 +139,24 @@ where
 			NFTState::new_default(is_soulbound),
 			collection_id,
 		)
+	}
+
+	pub fn not_in_state(&self, list: Vec<NFTStateModifiers>) -> Result<(), NFTStateModifiers> {
+		for modifier in list {
+			let in_state = match modifier {
+				NFTStateModifiers::Capsule => self.state.is_capsule == true,
+				NFTStateModifiers::IsListed => self.state.is_listed == true,
+				NFTStateModifiers::Secret => self.state.is_secret == true,
+				NFTStateModifiers::Delegated => self.state.is_delegated == true,
+				NFTStateModifiers::Soulbound => self.state.is_soulbound == true,
+				NFTStateModifiers::Rented => self.state.is_rented == true,
+			};
+			if in_state {
+				return Err(modifier)
+			}
+		}
+
+		Ok(())
 	}
 }
 
