@@ -20,19 +20,20 @@ use frame_support::{
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use primitives::nfts::NFTId;
 use scale_info::TypeInfo;
+use sp_arithmetic::traits::AtLeast32BitUnsigned;
 use sp_std::fmt::Debug;
 
 pub type AccountList<AccountId, AccountSizeLimit> = BoundedVec<AccountId, AccountSizeLimit>;
 
 /// Enumeration of contract duration.
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo, MaxEncodedLen)]
-pub enum Duration<BlockNumber> {
+pub enum Duration<BlockNumber: Clone> {
 	Fixed(BlockNumber),
 	Subscription(BlockNumber, Option<BlockNumber>),
 	Infinite,
 }
 
-impl<Blocknumber> Duration<Blocknumber> {
+impl<Blocknumber: Clone> Duration<Blocknumber> {
 	pub fn allows_rent_fee<Balance: Clone>(&self, rent_fee: &RentFee<Balance>) -> Option<()> {
 		match self {
 			Self::Subscription(_, _) => rent_fee.get_nft().is_none(),
@@ -58,6 +59,13 @@ impl<Blocknumber> Duration<Blocknumber> {
 			_ => !matches!(*cancellation, CancellationFee::FlexibleTokens { .. }),
 		}
 		.then(|| ())
+	}
+
+	pub fn get_sub_period(&self) -> Option<Blocknumber> {
+		match self {
+			Self::Subscription(x, _) => Some(x.clone()),
+			_ => None,
+		}
 	}
 }
 
@@ -157,7 +165,7 @@ pub struct RentContractData<AccountId, BlockNumber, Balance, AccountSizeLimit>
 where
 	AccountId: Clone + PartialEq + Debug,
 	Balance: Clone + PartialEq + Debug + sp_std::cmp::PartialOrd,
-	BlockNumber: Clone + PartialEq + Debug + sp_std::cmp::PartialOrd,
+	BlockNumber: Clone + PartialEq + Debug + sp_std::cmp::PartialOrd + AtLeast32BitUnsigned + Copy,
 	AccountSizeLimit: Get<u32>,
 {
 	/// Flag indicating if the renting contract has starter.
@@ -176,8 +184,8 @@ where
 	pub revocation_type: RevocationType,
 	/// Rent fee paid by rentee.
 	pub rent_fee: RentFee<Balance>,
-	/// Flag indicating if terms were accepted in case of change.
-	pub terms_accepted: bool,
+	/// Flag indicating if terms were changed.
+	pub terms_changed: bool,
 	/// Optional cancellation fee for renter.
 	pub renter_cancellation_fee: Option<CancellationFee<Balance>>,
 	/// Optional cancellation fee for rentee.
@@ -189,7 +197,7 @@ impl<AccountId, BlockNumber, Balance, AccountSizeLimit>
 where
 	AccountId: Clone + PartialEq + Debug,
 	Balance: Clone + PartialEq + Debug + sp_std::cmp::PartialOrd,
-	BlockNumber: Clone + PartialEq + Debug + sp_std::cmp::PartialOrd,
+	BlockNumber: Clone + PartialEq + Debug + sp_std::cmp::PartialOrd + AtLeast32BitUnsigned + Copy,
 	AccountSizeLimit: Get<u32>,
 {
 	pub fn new(
@@ -201,7 +209,7 @@ where
 		acceptance_type: AcceptanceType<AccountList<AccountId, AccountSizeLimit>>,
 		revocation_type: RevocationType,
 		rent_fee: RentFee<Balance>,
-		terms_accepted: bool,
+		terms_changed: bool,
 		renter_cancellation_fee: Option<CancellationFee<Balance>>,
 		rentee_cancellation_fee: Option<CancellationFee<Balance>>,
 	) -> RentContractData<AccountId, BlockNumber, Balance, AccountSizeLimit> {
@@ -214,10 +222,34 @@ where
 			acceptance_type,
 			revocation_type,
 			rent_fee,
-			terms_accepted,
+			terms_changed,
 			renter_cancellation_fee,
 			rentee_cancellation_fee,
 		}
+	}
+
+	pub fn has_ended(&self, now: &BlockNumber) -> bool {
+		let start = match self.start_block {
+			Some(x) => x,
+			None => return false,
+		};
+
+		let end = match self.duration {
+			Duration::Fixed(x) => Some(x),
+			Duration::Subscription(_, x) => x,
+			Duration::Infinite => None,
+		};
+
+		let end = match end {
+			Some(x) => x,
+			None => return false,
+		};
+
+		if start > *now {
+			return false
+		}
+
+		(*now - start) > end
 	}
 }
 

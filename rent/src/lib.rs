@@ -36,7 +36,7 @@ use frame_support::{
 	},
 	BoundedVec, PalletId,
 };
-use frame_system::{pallet_prelude::*, RawOrigin};
+use frame_system::pallet_prelude::*;
 use sp_runtime::{
 	traits::{AccountIdConversion, CheckedDiv, CheckedSub, Saturating},
 	SaturatedConversion,
@@ -286,7 +286,11 @@ pub mod pallet {
 			read += 1;
 			// Fixed queue management
 			while let Some(nft_id) = queues.fixed_queue.pop_next(now) {
-				let _ = Self::end_contract(RawOrigin::Root.into(), nft_id, None);
+				Self::handle_finished_or_unused_contract(nft_id);
+				// Deposit event.
+				let event = Event::ContractEnded { nft_id, revoked_by: None };
+				Self::deposit_event(event);
+
 				read += 3;
 				write += 4;
 				current_actions += 1;
@@ -297,35 +301,21 @@ pub mod pallet {
 
 			// Subscription queue management
 			while let Some(nft_id) = queues.subscription_queue.pop_next(now) {
-				let contract = match Contracts::<T>::get(nft_id) {
-					Some(x) => x,
-					None => continue,
-				};
-				read += 1;
-				let (should_renew, revoker) = match Self::should_renew(&contract, now) {
-					Err(_err) => continue,
-					Ok(x) => x,
-				};
-				if should_renew {
-					match Self::renew_contract(RawOrigin::Root.into(), nft_id) {
-						Err(_err) => continue,
-						Ok(_) => (),
-					}
-					if let Some(expiration_block) =
-						Self::get_expiration_block(&contract.duration, now)
-					{
-						match queues.insert_in_queue(nft_id, &contract.duration, expiration_block) {
-							Err(_err) => continue,
-							Ok(()) => (),
-						}
-					}
-					read += 3;
-					write += 1;
+				if let Some(block_number) = Self::handle_subscription_contract(nft_id, &now) {
+					queues
+						.subscription_queue
+						.insert(nft_id, block_number)
+						.expect("This cannot happen. qed");
+					let event = Event::ContractSubscriptionPeriodStarted { nft_id };
+					Self::deposit_event(event);
 				} else {
-					let _ = Self::end_contract(RawOrigin::Root.into(), nft_id, revoker);
-					read += 2;
-					write += 2;
-				}
+					Self::handle_finished_or_unused_contract(nft_id);
+					let event = Event::ContractEnded { nft_id, revoked_by: None };
+					Self::deposit_event(event);
+				};
+
+				read += 3;
+				write += 2;
 				current_actions += 1;
 				if current_actions >= max_actions {
 					break
@@ -334,19 +324,7 @@ pub mod pallet {
 
 			// Available queue management
 			while let Some(nft_id) = queues.available_queue.pop_next(now) {
-				let contract = Contracts::<T>::get(nft_id).expect("Should not happen. qed");
-				let mut nft = T::NFTExt::get_nft(nft_id).expect("Should not happen. qed");
-
-				// Return Cancellation fees
-				if let Some(fee) = &contract.renter_cancellation_fee {
-					Self::return_cancellation_fee(fee, &contract.renter)
-						.expect("This cannot happen. qed");
-				}
-
-				nft.state.is_rented = false;
-				T::NFTExt::set_nft(nft_id, nft).expect("This cannot happen. qed");
-				Offers::<T>::remove(nft_id);
-				Contracts::<T>::remove(nft_id);
+				Self::handle_finished_or_unused_contract(nft_id);
 
 				let event = Event::ContractAvailableExpired { nft_id };
 				Self::deposit_event(event);
@@ -631,7 +609,7 @@ pub mod pallet {
 
 						Offers::<T>::remove(nft_id);
 
-						contract.terms_accepted = true;
+						contract.terms_changed = true;
 						contract.rentee = Some(who.clone());
 						contract.has_started = true;
 						contract.start_block = Some(<frame_system::Pallet<T>>::block_number());
@@ -721,7 +699,7 @@ pub mod pallet {
 
 				Offers::<T>::remove(nft_id);
 
-				contract.terms_accepted = true;
+				contract.terms_changed = true;
 				contract.rentee = Some(rentee.clone());
 				contract.has_started = true;
 				contract.start_block = Some(<frame_system::Pallet<T>>::block_number());
@@ -791,7 +769,7 @@ pub mod pallet {
 
 				contract.duration = duration.clone();
 				contract.rent_fee = RentFee::Tokens(amount);
-				contract.terms_accepted = false;
+				contract.terms_changed = false;
 
 				Ok(())
 			})?;
@@ -819,88 +797,15 @@ pub mod pallet {
 				let contract = x.as_mut().ok_or(Error::<T>::ContractNotFound)?;
 
 				ensure!(Some(who) == contract.rentee, Error::<T>::NotTheRentee);
-				ensure!(!contract.terms_accepted, Error::<T>::ContractTermsAlreadyAccepted);
+				ensure!(!contract.terms_changed, Error::<T>::ContractTermsAlreadyAccepted);
 
-				contract.terms_accepted = true;
+				contract.terms_changed = true;
 
 				Ok(())
 			})?;
 
 			// Deposit event.
 			let event = Event::ContractSubscriptionTermsAccepted { nft_id };
-			Self::deposit_event(event);
-
-			Ok(().into())
-		}
-
-		/// End a rent contract.
-		#[pallet::weight((
-			{
-				let s = Contracts::<T>::get(nft_id)
-					.map_or_else(||0, |c| {
-						let mut queues = Queues::<T>::get();
-						match c.duration {
-							Duration::Subscription(_, _) => queues.subscription_queue.size(),
-							Duration::Fixed(_) => queues.fixed_queue.size(),
-							Duration::Infinite => 0
-						}
-					});
-				T::WeightInfo::end_contract(s as u32)
-			},
-			DispatchClass::Normal
-		))]
-		pub fn end_contract(
-			origin: OriginFor<T>,
-			nft_id: NFTId,
-			revoker: Option<T::AccountId>,
-		) -> DispatchResultWithPostInfo {
-			ensure_root(origin)?;
-			let contract = Contracts::<T>::get(nft_id).ok_or(Error::<T>::ContractNotFound)?;
-			let mut nft = T::NFTExt::get_nft(nft_id).ok_or(Error::<T>::NFTNotFound)?;
-
-			ensure!(contract.has_started, Error::<T>::ContractHasNotStarted);
-
-			Self::process_cancellation_fees(nft_id, &contract, revoker.clone())?;
-
-			nft.state.is_rented = false;
-			T::NFTExt::set_nft(nft_id, nft)?;
-
-			Contracts::<T>::remove(nft_id);
-
-			// Deposit event.
-			let event = Event::ContractEnded { nft_id, revoked_by: revoker };
-			Self::deposit_event(event);
-
-			Ok(().into())
-		}
-
-		/// Renew a rent contract for a subscription period.
-		#[pallet::weight((
-			{
-				let s = Contracts::<T>::get(nft_id)
-					.map_or_else(||0, |c| {
-						let mut queues = Queues::<T>::get();
-						match c.duration {
-							Duration::Subscription(_, _) => queues.subscription_queue.size(),
-							Duration::Fixed(_) => 0,
-							Duration::Infinite => 0
-						}
-					});
-				T::WeightInfo::renew_contract(s as u32)
-			},
-			DispatchClass::Normal
-		))]
-		pub fn renew_contract(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
-			ensure_root(origin)?;
-			let contract = Contracts::<T>::get(nft_id).ok_or(Error::<T>::ContractNotFound)?;
-			ensure!(contract.has_started, Error::<T>::ContractHasNotStarted);
-			let is_subscription = matches!(contract.duration, Duration::Subscription { .. });
-			ensure!(is_subscription, Error::<T>::RenewalOnlyForSubscription);
-			if let Some(rentee) = contract.rentee {
-				Self::take_rent_fee(&rentee, contract.renter.clone(), &contract.rent_fee)?;
-			}
-			// Deposit event.
-			let event = Event::ContractSubscriptionPeriodStarted { nft_id };
 			Self::deposit_event(event);
 
 			Ok(().into())
@@ -1332,56 +1237,6 @@ impl<T: Config> Pallet<T> {
 		Ok(())
 	}
 
-	pub fn should_renew(
-		contract: &RentContractData<
-			T::AccountId,
-			T::BlockNumber,
-			BalanceOf<T>,
-			T::AccountSizeLimit,
-		>,
-		now: T::BlockNumber,
-	) -> Result<(bool, Option<T::AccountId>), DispatchError> {
-		let mut should_renew = true;
-		let mut revoker: Option<T::AccountId> = None;
-		ensure!(contract.has_started, Error::<T>::ContractHasNotStarted);
-		let is_subscription = matches!(contract.duration, Duration::Subscription { .. });
-		ensure!(is_subscription, Error::<T>::RenewalOnlyForSubscription);
-		if !contract.terms_accepted {
-			should_renew = false;
-			revoker = Some(contract.renter.clone());
-		} else {
-			match contract.duration {
-				Duration::Subscription(_, max_blocks) => {
-					if let Some(max_blocks) = max_blocks {
-						if let Some(start_block) = contract.start_block {
-							if now - start_block >= max_blocks {
-								should_renew = false;
-								revoker = None;
-							}
-						}
-					}
-					if should_renew {
-						// Contract subscription is renewed
-						if let Some(rentee) = &contract.rentee {
-							let has_rent_fee =
-								Self::ensure_enough_for_rent_fee(&contract.rent_fee, rentee);
-							match has_rent_fee {
-								Err(_) => {
-									should_renew = false;
-									revoker = contract.rentee.clone();
-								},
-								Ok(_) => (),
-							}
-						}
-					}
-				},
-				Duration::Fixed(_) => (),
-				Duration::Infinite => (),
-			}
-		}
-		Ok((should_renew, revoker))
-	}
-
 	pub fn get_expiration_block(
 		duration: &Duration<T::BlockNumber>,
 		now: T::BlockNumber,
@@ -1409,5 +1264,52 @@ impl<T: Config> Pallet<T> {
 		}
 
 		Ok(())
+	}
+
+	pub fn handle_subscription_contract(
+		nft_id: NFTId,
+		now: &T::BlockNumber,
+	) -> Option<T::BlockNumber> {
+		let contract = Contracts::<T>::get(nft_id).expect("Should not happen. qed");
+		let rentee = contract.rentee.clone().expect("Should not happen. qed");
+		let rent_fee = contract.rent_fee.get_balance().expect("This cannot happen. qed");
+
+		let mut cancel_subscription = contract.terms_changed || contract.has_ended(now);
+		if !cancel_subscription {
+			cancel_subscription =
+				T::Currency::transfer(&rentee, &contract.renter, rent_fee, KeepAlive).is_err();
+		}
+
+		if cancel_subscription {
+			return None
+		}
+
+		let sub_duration = contract.duration.get_sub_period().expect("This cannot happen. qed");
+
+		// TODO This is not correct.
+		// It can happen that this rent contract is processed later than it should so we need to
+		// adjust for that.
+		Some(*now + sub_duration)
+	}
+
+	pub fn handle_finished_or_unused_contract(nft_id: NFTId) {
+		let contract = Contracts::<T>::get(nft_id).expect("Should not happen. qed");
+		let mut nft = T::NFTExt::get_nft(nft_id).expect("Should not happen. qed");
+
+		// Return Cancellation fees
+		if let Some(fee) = &contract.renter_cancellation_fee {
+			Self::return_cancellation_fee(fee, &contract.renter).expect("This cannot happen. qed");
+		}
+
+		if let Some(rentee) = &contract.rentee {
+			if let Some(fee) = &contract.rentee_cancellation_fee {
+				Self::return_cancellation_fee(fee, rentee).expect("This cannot happen. qed");
+			}
+		}
+
+		nft.state.is_rented = false;
+		T::NFTExt::set_nft(nft_id, nft).expect("This cannot happen. qed");
+		Offers::<T>::remove(nft_id);
+		Contracts::<T>::remove(nft_id);
 	}
 }
