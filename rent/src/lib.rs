@@ -37,10 +37,7 @@ use frame_support::{
 	BoundedVec, PalletId,
 };
 use frame_system::pallet_prelude::*;
-use sp_runtime::{
-	traits::{AccountIdConversion, CheckedDiv, CheckedSub, Saturating},
-	SaturatedConversion,
-};
+use sp_runtime::traits::{AccountIdConversion, CheckedSub, Saturating};
 use sp_std::prelude::*;
 
 use primitives::nfts::{NFTData, NFTId, NFTStateModifiers::*};
@@ -282,13 +279,12 @@ pub mod pallet {
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
 		/// Weight: see `begin_block`
 		fn on_initialize(now: T::BlockNumber) -> Weight {
-			let mut read = 0u64;
+			let mut read = 1u64;
 			let mut write = 0u64;
 			let mut current_actions = 0;
 			let max_actions = T::ActionsInBlockLimit::get();
 
 			let mut queues = Queues::<T>::get();
-			read += 1;
 			// Fixed queue management
 			while let Some(nft_id) = queues.fixed_queue.pop_next(now) {
 				Self::handle_finished_or_unused_contract(nft_id);
@@ -354,13 +350,7 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		/// Create a new rent contract with the provided details.
-		#[pallet::weight((
-			{
-				let s = Queues::<T>::get().available_queue.size();
-				T::WeightInfo::create_contract(s as u32)
-			},
-			DispatchClass::Normal
-		))]
+		#[pallet::weight(T::WeightInfo::create_contract(Queues::<T>::get().available_queue.size() as u32))]
 		pub fn create_contract(
 			origin: OriginFor<T>,
 			nft_id: NFTId,
@@ -442,7 +432,8 @@ pub mod pallet {
 			let expiration_block = frame_system::Pallet::<T>::block_number() +
 				T::ContractExpirationDuration::get().into();
 			queues
-				.insert_in_available_queue(nft_id, expiration_block)
+				.available_queue
+				.insert(nft_id, expiration_block)
 				.expect("We already checked for this. qed");
 			Queues::<T>::set(queues);
 
@@ -846,14 +837,7 @@ pub mod pallet {
 		}
 
 		/// Retract a rent offer for manual acceptance contract.
-		#[pallet::weight((
-			{
-				let s = Offers::<T>::get(nft_id)
-					.map_or_else(|| 0, |o| o.len());
-				T::WeightInfo::retract_rent_offer(s as u32)
-			},
-			DispatchClass::Normal
-		))]
+		#[pallet::weight(T::WeightInfo::retract_rent_offer(Offers::<T>::get(nft_id).map_or_else(|| 0, |o| o.len()) as u32))]
 		pub fn retract_rent_offer(
 			origin: OriginFor<T>,
 			nft_id: NFTId,

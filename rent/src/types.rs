@@ -433,59 +433,6 @@ where
 		(self.fixed_queue.0.len() + self.subscription_queue.0.len() + self.available_queue.0.len())
 			as u32
 	}
-
-	/// Put the contract in available queue.
-	pub fn insert_in_available_queue(
-		&mut self,
-		nft_id: NFTId,
-		expiration_block: BlockNumber,
-	) -> Result<(), ()> {
-		self.available_queue.insert(nft_id, expiration_block)
-	}
-
-	/// Remove contract from available for rent queue.
-	pub fn remove_from_available_queue(&mut self, nft_id: NFTId) -> bool {
-		self.available_queue.remove(nft_id)
-	}
-
-	/// Put contract deadlines in fixed / subscription queue.
-	pub fn insert_in_queue(
-		&mut self,
-		nft_id: NFTId,
-		duration: &Duration<BlockNumber>,
-		expiration_block: BlockNumber,
-	) -> Result<(), ()> {
-		match duration {
-			Duration::Fixed(_) => self.fixed_queue.insert(nft_id, expiration_block).map_err(|_| ()),
-			Duration::Subscription(_, _) =>
-				self.subscription_queue.insert(nft_id, expiration_block).map_err(|_| ()),
-		}
-	}
-
-	/// Remove a contract from all queues and remove offers if some exist.
-	pub fn remove_from_queue(
-		&mut self,
-		nft_id: NFTId,
-		has_started: bool,
-		duration: &Duration<BlockNumber>,
-	) -> bool {
-		let mut removed = false;
-		if !has_started {
-			// Remove from available queue
-			removed = self.available_queue.remove(nft_id);
-		} else {
-			// Remove from fixed queue
-			if let Duration::Fixed(_) = duration {
-				removed = self.fixed_queue.remove(nft_id);
-			}
-
-			// Remove from subscription queue
-			if let Duration::Subscription(_, _) = duration {
-				removed = self.subscription_queue.remove(nft_id);
-			}
-		};
-		removed
-	}
 }
 impl<BlockNumber, Limit> Default for RentingQueues<BlockNumber, Limit>
 where
