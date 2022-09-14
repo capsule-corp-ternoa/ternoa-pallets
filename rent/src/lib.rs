@@ -32,7 +32,7 @@ use frame_support::{
 	traits::{
 		Currency,
 		ExistenceRequirement::{AllowDeath, KeepAlive},
-		Get, StorageVersion,
+		Get, StorageVersion, WithdrawReasons,
 	},
 	BoundedVec, PalletId,
 };
@@ -564,67 +564,125 @@ pub mod pallet {
 		))]
 		pub fn rent(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
+			let pallet = Self::account_id();
+			let now = frame_system::Pallet::<T>::block_number();
 
 			Contracts::<T>::try_mutate(nft_id, |x| -> DispatchResult {
 				let contract = x.as_mut().ok_or(Error::<T>::ContractNotFound)?;
+
 				ensure!(contract.renter != who, Error::<T>::CannotRentOwnContract);
+				ensure!(!contract.is_manual_acceptance(), Error::<T>::CannotRentOwnContract);
 
-				Self::ensure_enough_for_rent(
-					&who,
-					&contract.rent_fee,
-					&contract.rentee_cancellation_fee,
-				)?;
+				let rent_fee = contract.rent_fee.clone();
+				let cancellation_fee = contract.rentee_cancellation_fee.clone();
 
-				match contract.acceptance_type.clone() {
-					AcceptanceType::ManualAcceptance(accounts) => {
-						if let Some(accounts) = accounts {
-							ensure!(accounts.contains(&who), Error::<T>::NotAuthorizedForRent);
-						}
+				// Let's see if he is on the allowed list
+				if let Some(list) = contract.acceptance_type.get_allow_list() {
+					ensure!(list.contains(&who), Error::<T>::NotAuthorizedForRent);
+				}
 
-						Self::insert_offer(nft_id, who.clone())?;
+				// Balance Check  ✅
+				if let Some(amount) = rent_fee.get_balance() {
+					T::Currency::transfer(&who, &contract.renter, amount, KeepAlive)?;
+				}
 
-						// Deposit event.
-						let event = Event::ContractOfferCreated { nft_id, rentee: who };
-						Self::deposit_event(event);
-					},
-					AcceptanceType::AutoAcceptance(accounts) => {
-						if let Some(accounts) = accounts {
-							ensure!(accounts.contains(&who), Error::<T>::NotAuthorizedForRent);
-						}
+				// Rent and Renter Cancellation fee Check  ✅
+				let rent_nft =
+					contract.rent_fee.get_nft().and_then(|x| Some((x, contract.renter.clone())));
+				let cancellation_nft = cancellation_fee
+					.and_then(|x| x.get_nft())
+					.and_then(|x| Some((x, pallet.clone())));
+				let nfts: Vec<(NFTId, T::AccountId)> =
+					vec![rent_nft, cancellation_nft].into_iter().flatten().collect();
 
-						let mut queues = Queues::<T>::get();
-						let now = <frame_system::Pallet<T>>::block_number();
-						Self::take_rent_fee(&who, contract.renter.clone(), &contract.rent_fee)?;
-						Self::take_cancellation_fee(&who, &contract.rentee_cancellation_fee)?;
+				// Rent and Renter Cancellation fee Check  ✅
+				for (nft_id, _) in &nfts {
+					let nft = T::NFTExt::get_nft(*nft_id).ok_or(Error::<T>::NFTNotFound)?;
+					ensure!(nft.owner == who, Error::<T>::NotTheNFTOwner);
+					Self::check_nft_state_validity(&nft)?;
+				}
 
-						if let Some(expiration_block) =
-							Self::get_expiration_block(&contract.duration, now)
-						{
-							queues
-								.insert_in_queue(nft_id, &contract.duration, expiration_block)
-								.map_err(|_| Error::<T>::MaxSimultaneousContractReached)?;
-						}
+				// Rent and Renter Cancellation fee Taken 📦
+				for (nft_id, dst) in &nfts {
+					let mut nft = T::NFTExt::get_nft(*nft_id).expect("qed");
+					nft.owner = dst.clone();
+					T::NFTExt::set_nft(*nft_id, nft).expect("qed");
+				}
 
-						queues.remove_from_available_queue(nft_id);
-						Queues::<T>::set(queues);
+				// Queue and Offers updated 📦
+				let mut queues = Queues::<T>::get();
+				queues.available_queue.remove(nft_id);
 
-						Offers::<T>::remove(nft_id);
+				match &contract.duration {
+					Duration::Fixed(x) => queues.fixed_queue.insert(nft_id, x.clone()),
+					Duration::Subscription(x, _) =>
+						queues.subscription_queue.insert(nft_id, now + *x),
+				}
+				.expect("qed");
 
-						contract.terms_changed = true;
-						contract.rentee = Some(who.clone());
-						contract.has_started = true;
-						contract.start_block = Some(<frame_system::Pallet<T>>::block_number());
+				Queues::<T>::set(queues);
+				Offers::<T>::remove(nft_id);
 
-						Contracts::<T>::insert(nft_id, contract);
-
-						// Deposit event.
-						let event = Event::ContractStarted { nft_id, rentee: who };
-						Self::deposit_event(event);
-					},
-				};
+				contract.rentee = Some(who.clone());
+				contract.has_started = true;
+				contract.start_block = Some(now);
 
 				Ok(())
 			})?;
+
+			let event = Event::ContractStarted { nft_id, rentee: who };
+			Self::deposit_event(event);
+
+			Ok(().into())
+		}
+
+		/// Rent an nft if contract exist, makes an offer if it's manual acceptance.
+		#[pallet::weight(1)]
+		pub fn make_rent_offer(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
+			let who = ensure_signed(origin)?;
+			let contract = Contracts::<T>::get(nft_id).ok_or(Error::<T>::ContractNotFound)?;
+
+			ensure!(contract.renter != who, Error::<T>::CannotRentOwnContract);
+			ensure!(contract.is_manual_acceptance(), Error::<T>::CannotRentOwnContract);
+
+			let rent_fee = contract.rent_fee.clone();
+			let cancellation_fee = contract.rentee_cancellation_fee.clone();
+
+			// Let's see if he is on the allowed list
+			if let Some(list) = contract.acceptance_type.get_allow_list() {
+				ensure!(list.contains(&who), Error::<T>::NotAuthorizedForRent);
+			}
+
+			// Balance Check  ✅
+			if let Some(amount) = rent_fee.get_balance() {
+				Self::balance_check(&who, amount).ok_or(Error::<T>::NFTNotFound)?;
+			}
+
+			// Rent and Renter Cancellation fee Check  ✅
+			let nft_ids = vec![rent_fee.get_nft(), cancellation_fee.and_then(|x| x.get_nft())];
+			let nft_ids = nft_ids.iter().flatten();
+			for nft_id in nft_ids {
+				let nft = T::NFTExt::get_nft(*nft_id).ok_or(Error::<T>::NFTNotFound)?;
+				ensure!(nft.owner == who, Error::<T>::NotTheNFTOwner);
+				Self::check_nft_state_validity(&nft)?;
+			}
+
+			// Offers Updated 📦
+			Offers::<T>::try_mutate(nft_id, |x| -> DispatchResult {
+				if let Some(offers) = x.as_mut() {
+					offers.try_push(who.clone()).map_err(|_| Error::<T>::MaximumOffersReached)?;
+				} else {
+					let offers = BoundedVec::try_from(vec![who.clone()])
+						.map_err(|_| Error::<T>::MaximumOffersReached)?;
+					*x = Some(offers);
+				}
+
+				Ok(())
+			})?;
+
+			// Deposit event.
+			let event = Event::ContractOfferCreated { nft_id, rentee: who };
+			Self::deposit_event(event);
 
 			Ok(().into())
 		}
@@ -781,9 +839,10 @@ pub mod pallet {
 				let contract = x.as_mut().ok_or(Error::<T>::ContractNotFound)?;
 
 				ensure!(who == contract.renter, Error::<T>::NotTheRenter);
-				contract
-					.can_adjust_subscription()
-					.ok_or(Error::<T>::CannotAdjustSubscriptionTerms)?;
+				ensure!(
+					contract.can_adjust_subscription(),
+					Error::<T>::CannotAdjustSubscriptionTerms
+				);
 
 				contract.duration = Duration::Subscription(period, max_duration);
 				contract.rent_fee = RentFee::Tokens(rent_fee);
@@ -851,85 +910,6 @@ impl<T: Config> Pallet<T> {
 			})
 	}
 
-	/// Check that address has NFT / Balance to cover cancellation fee.
-	pub fn ensure_enough_for_cancellation_fee(
-		cancellation_fee: &Option<CancellationFee<BalanceOf<T>>>,
-		from: &T::AccountId,
-	) -> Result<(), DispatchError> {
-		let cancellation_fee = match cancellation_fee {
-			Some(x) => x,
-			None => return Ok(()),
-		};
-
-		if let Some(amount) = cancellation_fee.get_balance() {
-			let free_balance = T::Currency::free_balance(from);
-			ensure!(free_balance > amount, Error::<T>::NotEnoughBalanceForCancellationFee);
-		}
-
-		if let Some(nft_id) = cancellation_fee.get_nft() {
-			let nft =
-				T::NFTExt::get_nft(nft_id).ok_or(Error::<T>::NFTNotFoundForCancellationFee)?;
-			ensure!(nft.owner == *from, Error::<T>::NotTheNFTOwnerForCancellationFee);
-			Self::check_nft_state_validity(&nft)?;
-		}
-
-		Ok(())
-	}
-
-	/// Check that address has NFT / Balance to cover first rent fee.
-	pub fn ensure_enough_for_rent_fee(
-		rent_fee: &RentFee<BalanceOf<T>>,
-		from: &T::AccountId,
-	) -> Result<(), DispatchError> {
-		match rent_fee {
-			RentFee::Tokens(amount) => {
-				ensure!(
-					T::Currency::free_balance(from) > *amount,
-					Error::<T>::NotEnoughBalanceForRentFee
-				);
-			},
-			RentFee::NFT(nft_id) => {
-				let nft = T::NFTExt::get_nft(*nft_id).ok_or(Error::<T>::NFTNotFoundForRentFee)?;
-				ensure!(nft.owner == *from, Error::<T>::NotTheNFTOwnerForRentFee);
-				Self::check_nft_state_validity(&nft)?;
-			},
-		}
-		Ok(())
-	}
-
-	/// Check that address has NFTs / Balance to cover cancellation fee and first rent fee.
-	pub fn ensure_enough_for_rent(
-		from: &T::AccountId,
-		rent_fee: &RentFee<BalanceOf<T>>,
-		cancellation_fee: &Option<CancellationFee<BalanceOf<T>>>,
-	) -> Result<(), DispatchError> {
-		Self::ensure_enough_for_cancellation_fee(cancellation_fee, from)?;
-		Self::ensure_enough_for_rent_fee(rent_fee, from)?;
-
-		let cancellation_fee = match cancellation_fee {
-			Some(x) => x,
-			None => return Ok(()),
-		};
-
-		let is_cancellation_fee_balance = !matches!(*cancellation_fee, CancellationFee::NFT { .. });
-		let is_rent_fee_balance = matches!(*rent_fee, RentFee::Tokens { .. });
-		if is_rent_fee_balance && is_cancellation_fee_balance {
-			let mut total: BalanceOf<T> = 0u32.into();
-			match rent_fee {
-				RentFee::Tokens(amount) => total += *amount,
-				RentFee::NFT(_) => (),
-			}
-			match cancellation_fee {
-				CancellationFee::FixedTokens(amount) => total += *amount,
-				CancellationFee::FlexibleTokens(amount) => total += *amount,
-				CancellationFee::NFT(_) => (),
-			}
-			ensure!(T::Currency::free_balance(from) > total, Error::<T>::NotEnoughBalance);
-		}
-
-		Ok(())
-	}
-
 	/// Get contract total blocks.
 	pub fn get_contract_total_blocks(duration: &Duration<T::BlockNumber>) -> T::BlockNumber {
 		match duration {
@@ -953,58 +933,6 @@ impl<T: Config> Pallet<T> {
 			Duration::Fixed(_) => queues.fixed_queue.get(nft_id),
 			Duration::Subscription(_, _) => queues.subscription_queue.get(nft_id),
 		}
-	}
-
-	/// Takes the rent fee from the rentee.
-	pub fn take_rent_fee(
-		from: &T::AccountId,
-		to: T::AccountId,
-		rent_fee: &RentFee<BalanceOf<T>>,
-	) -> Result<(), DispatchError> {
-		match rent_fee {
-			RentFee::NFT(nft_id) => {
-				let mut fee_nft =
-					T::NFTExt::get_nft(*nft_id).ok_or(Error::<T>::NFTNotFoundForRentFee)?;
-				ensure!(fee_nft.owner == *from, Error::<T>::NotTheNFTOwnerForRentFee);
-				Self::check_nft_state_validity(&fee_nft)?;
-				fee_nft.owner = to;
-				T::NFTExt::set_nft(*nft_id, fee_nft)?;
-			},
-			RentFee::Tokens(amount) => {
-				ensure!(
-					T::Currency::free_balance(&from) >= *amount,
-					Error::<T>::NotEnoughBalanceForRentFee
-				);
-				T::Currency::transfer(&from, &to, *amount, KeepAlive)?;
-			},
-		}
-		Ok(())
-	}
-
-	/// Takes the cancellation fee from renter or rentee.
-	pub fn take_cancellation_fee(
-		from: &T::AccountId,
-		cancellation_fee: &Option<CancellationFee<BalanceOf<T>>>,
-	) -> Result<(), DispatchError> {
-		let cancellation_fee = match cancellation_fee {
-			Some(x) => x,
-			None => return Ok(()),
-		};
-
-		if let Some(amount) = cancellation_fee.get_balance() {
-			T::Currency::transfer(from, &Self::account_id(), amount, KeepAlive)?;
-		}
-
-		if let Some(nft_id) = cancellation_fee.get_nft() {
-			let mut cancellation_nft =
-				T::NFTExt::get_nft(nft_id).ok_or(Error::<T>::NFTNotFoundForCancellationFee)?;
-			ensure!(cancellation_nft.owner == *from, Error::<T>::NotTheNFTOwnerForCancellationFee);
-			Self::check_nft_state_validity(&cancellation_nft)?;
-			cancellation_nft.owner = Self::account_id();
-			T::NFTExt::set_nft(nft_id, cancellation_nft)?;
-		}
-
-		Ok(())
 	}
 
 	/// Return all the cancellation fee to recipient without any calculation.
@@ -1159,21 +1087,6 @@ impl<T: Config> Pallet<T> {
 		Ok(())
 	}
 
-	/// Insert an address into contract offers account list.
-	pub fn insert_offer(nft_id: NFTId, rentee: T::AccountId) -> Result<(), DispatchError> {
-		if let Some(mut offers) = Offers::<T>::get(nft_id) {
-			if !offers.contains(&rentee) {
-				offers.try_push(rentee.clone()).map_err(|_| Error::<T>::MaximumOffersReached)?;
-				Offers::<T>::insert(nft_id, offers);
-			}
-		} else {
-			let mut offers: AccountList<T::AccountId, T::AccountSizeLimit> = BoundedVec::default();
-			offers.try_push(rentee.clone()).map_err(|_| Error::<T>::MaximumOffersReached)?;
-			Offers::<T>::insert(nft_id, offers);
-		}
-		Ok(())
-	}
-
 	/// Fill available queue with any number of data.
 	pub fn fill_available_queue(
 		number: u32,
@@ -1238,16 +1151,6 @@ impl<T: Config> Pallet<T> {
 		Ok(())
 	}
 
-	pub fn get_expiration_block(
-		duration: &Duration<T::BlockNumber>,
-		now: T::BlockNumber,
-	) -> Option<T::BlockNumber> {
-		match duration {
-			Duration::Fixed(blocks) => Some(now + *blocks),
-			Duration::Subscription(blocks, _) => Some(now + *blocks),
-		}
-	}
-
 	pub fn return_cancellation_fee(
 		fee: &CancellationFee<BalanceOf<T>>,
 		dst: &T::AccountId,
@@ -1310,5 +1213,11 @@ impl<T: Config> Pallet<T> {
 		nft.state.is_rented = false;
 		T::NFTExt::set_nft(nft_id, nft).expect("This cannot happen. qed");
 		Contracts::<T>::remove(nft_id);
+	}
+
+	pub fn balance_check(account: &T::AccountId, amount: BalanceOf<T>) -> Option<()> {
+		let current_balance = T::Currency::free_balance(account);
+		let new_balance = current_balance.checked_sub(&amount)?;
+		T::Currency::ensure_can_withdraw(&account, amount, WithdrawReasons::FEE, new_balance).ok()
 	}
 }

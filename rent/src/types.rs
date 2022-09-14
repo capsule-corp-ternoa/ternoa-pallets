@@ -89,6 +89,15 @@ pub enum AcceptanceType<AccountList> {
 	ManualAcceptance(Option<AccountList>),
 }
 
+impl<AccountList> AcceptanceType<AccountList> {
+	pub fn get_allow_list(&self) -> &Option<AccountList> {
+		match self {
+			AcceptanceType::AutoAcceptance(x) => x,
+			AcceptanceType::ManualAcceptance(x) => x,
+		}
+	}
+}
+
 /// Enumeration of contract revocation type.
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 pub enum RevocationType {
@@ -264,15 +273,22 @@ where
 		(*now - start) > end
 	}
 
-	pub fn can_adjust_subscription(&self) -> Option<()> {
+	pub fn can_adjust_subscription(&self) -> bool {
 		if matches!(self.revocation_type, RevocationType::OnSubscriptionChange { .. }) {
-			return Some(())
+			return true
 		}
 		if self.rentee.is_none() && self.duration.is_subscription() {
-			return Some(())
+			return true
 		}
 
-		None
+		false
+	}
+
+	pub fn is_manual_acceptance(&self) -> bool {
+		match self.acceptance_type {
+			AcceptanceType::ManualAcceptance(_) => true,
+			_ => false,
+		}
 	}
 }
 
