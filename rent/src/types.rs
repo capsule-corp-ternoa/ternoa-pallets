@@ -205,8 +205,6 @@ where
 	BlockNumber: Clone + PartialEq + Debug + sp_std::cmp::PartialOrd + AtLeast32BitUnsigned + Copy,
 	AccountSizeLimit: Get<u32>,
 {
-	/// Flag indicating if the renting contract has starter.
-	pub has_started: bool,
 	/// Start block of the contract.
 	pub start_block: Option<BlockNumber>,
 	/// Renter of the NFT.
@@ -238,7 +236,6 @@ where
 	AccountSizeLimit: Get<u32>,
 {
 	pub fn new(
-		has_started: bool,
 		start_block: Option<BlockNumber>,
 		renter: AccountId,
 		rentee: Option<AccountId>,
@@ -251,7 +248,6 @@ where
 		rentee_cancellation_fee: Option<CancellationFee<Balance>>,
 	) -> RentContractData<AccountId, BlockNumber, Balance, AccountSizeLimit> {
 		Self {
-			has_started,
 			start_block,
 			renter,
 			rentee,
@@ -429,9 +425,14 @@ where
 	}
 
 	/// Returns the addition of queues length.
-	pub fn total_size(&mut self) -> u32 {
+	pub fn size(&self) -> u32 {
 		(self.fixed_queue.0.len() + self.subscription_queue.0.len() + self.available_queue.0.len())
 			as u32
+	}
+
+	/// Returns the addition of queues length.
+	pub fn can_be_increased(&self, len: u32) -> Option<()> {
+		(self.size() + len <= self.limit()).then(|| {})
 	}
 }
 impl<BlockNumber, Limit> Default for RentingQueues<BlockNumber, Limit>

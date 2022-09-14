@@ -180,87 +180,27 @@ pub mod pallet {
 		NFTNotFound,
 		/// Not the owner of the NFT.
 		NotTheNFTOwner,
-		/// Operation is not permitted because NFT is listed.
-		CannotUseListedNFTs,
-		/// Operation is not permitted because NFT is capsule.
-		CannotUseCapsuleNFTs,
-		/// Operation is not permitted because NFT is delegated.
-		CannotUseDelegatedNFTs,
-		/// Operation is not permitted because NFT is delegated.
-		CannotUseSoulboundNFTs,
-		/// Operation is not permitted because NFT is rented.
-		CannotUseRentedNFTs,
-		/// Operation is not permitted because NFT for cancellation fee was not found.
-		NFTNotFoundForCancellationFee,
-		/// Operation is not permitted because NFT for cancellation fee is not owned by caller.
-		NotTheNFTOwnerForCancellationFee,
-		/// Operation is not permitted because NFT for rent_fee fee is not owned by caller.
-		NotTheNFTOwnerForRentFee,
+		/// Operation is not permitted because NFT is in invalid state.
+		NFTInInvalidState,
 		/// Operation is not permitted because the maximum number au parallel rent contract has
 		/// been reached.
 		MaxSimultaneousContractReached,
-		/// Cannot create a contract with fixed / infinite duration and onSubscriptionChange
-		/// revocation type.
-		SubscriptionChangeForSubscriptionOnly,
-		/// Cannot create a contract with infinite or subscription duration and flexible tokens
-		/// cancellation fee.
-		FlexibleFeeOnlyForFixedDuration,
-		/// Cannot create a contract with no revocation type and a renter cancellation fee.
-		NoRenterCancellationFeeWithNoRevocation,
-		/// Cannot create a contract with NFT id rent fee type and subscription duration.
-		NoNFTRentFeeWithSubscription,
 		/// The contract was not found for the given nft_id.
 		ContractNotFound,
 		/// The caller is neither the renter or rentee.
 		NotTheRenterOrRentee,
-		/// The caller is not the renter.
-		NotTheRenter,
-		/// The caller is not the rentee.
-		NotTheRentee,
-		/// Operation is not permitted because revocation type is not anytime.
-		CannotRevoke,
-		/// End block not found for flexible fee calculation.
-		FlexibleFeeEndBlockNotFound,
+		/// TODO name
+		AccessDenied,
 		/// Cannot Rent your own contract.
 		CannotRentOwnContract,
 		/// Rentee is not on authorized account list.
 		NotAuthorizedForRent,
-		/// Operation is not permitted because user has not enough funds.
-		NotEnoughBalance,
-		/// Operation is not permitted because user has not enough funds for cancellation fee.
-		NotEnoughBalanceForCancellationFee,
-		/// Operation is not permitted because user has not enough funds for rent fee.
-		NotEnoughBalanceForRentFee,
-		/// Fee NFT not found.
-		NFTNotFoundForRentFee,
 		/// Maximum offers reached.
 		MaximumOffersReached,
-		/// Operation is not permitted because acceptance type is not manual.
-		CannotAcceptOfferForAutoAcceptance,
-		/// Operation is not permitted because acceptance type is not manual.
-		CannotRetractOfferForAutoAcceptance,
-		/// Operation is not permitted because contract has started.
-		ContractHasStarted,
-		/// Operation is not permitted because contract has not started yet.
-		ContractHasNotStarted,
-		/// Terms can only be set for subscription duration and OnSubscriptionChange revocation
-		/// type.
-		CanChangeTermForSubscriptionOnly,
-		/// New term must be suvscription.
-		CanSetTermsForSubscriptionOnly,
 		/// Operation is not permitted because contract terms are already accepted
 		ContractTermsAlreadyAccepted,
-		/// Operation is allowed only for subscription
-		RenewalOnlyForSubscription,
-		/// Operation is not allowed because same nft was used for contract /
-		/// renter_cancellation_fee / rentee_cancellation_fee / rent_fee
-		InvalidFeeNFT,
 		/// No offers was found for the contract
 		NoOffersForThisContract,
-		/// No offer was made by the rentee
-		NoOfferFromRentee,
-		/// Math error.
-		InternalMathError,
 		/// Offer not found.
 		OfferNotFound,
 		/// Duration and Revocation Mismatch
@@ -365,14 +305,11 @@ pub mod pallet {
 			let mut queues = Queues::<T>::get();
 
 			// Queue ✅
-			ensure!(
-				queues.total_size() + 1 <= queues.limit(),
-				Error::<T>::MaxSimultaneousContractReached
-			);
+			queues.can_be_increased(1).ok_or(Error::<T>::MaxSimultaneousContractReached)?;
 
 			// NFT Check ✅
 			let mut nft = T::NFTExt::get_nft(nft_id).ok_or(Error::<T>::NFTNotFound)?;
-			ensure!(nft.owner == who, Error::<T>::NotTheNFTOwner);
+			nft.is_owner(&who).ok_or(Error::<T>::NotTheNFTOwner)?;
 			Self::check_nft_state_validity(&nft)?;
 
 			// Duration and Revocation Check ✅
@@ -398,20 +335,19 @@ pub mod pallet {
 
 			// Rent Fee Check ✅
 			if let Some(nft_id) = rent_fee.get_nft() {
-				T::NFTExt::get_nft(nft_id).ok_or(Error::<T>::NFTNotFoundForRentFee)?;
+				T::NFTExt::get_nft(nft_id).ok_or(Error::<T>::NFTNotFound)?;
 			}
 
 			// Renter Cancellation Check  ✅
 			if let Some(id) = renter_cancellation_fee.clone().and_then(|x| x.get_nft()) {
-				let nft =
-					T::NFTExt::get_nft(id).ok_or(Error::<T>::NFTNotFoundForCancellationFee)?;
-				ensure!(nft.owner == who, Error::<T>::NotTheNFTOwner);
+				let nft = T::NFTExt::get_nft(id).ok_or(Error::<T>::NFTNotFound)?;
+				nft.is_owner(&who).ok_or(Error::<T>::NotTheNFTOwner)?;
 				Self::check_nft_state_validity(&nft)?;
 			}
 
 			// Rentee Cancellation Check  ✅
 			if let Some(id) = rentee_cancellation_fee.clone().and_then(|x| x.get_nft()) {
-				T::NFTExt::get_nft(id).ok_or(Error::<T>::NFTNotFoundForCancellationFee)?;
+				T::NFTExt::get_nft(id).ok_or(Error::<T>::NFTNotFound)?;
 			}
 
 			// Checking done, time to change the storage 📦
@@ -422,7 +358,7 @@ pub mod pallet {
 				}
 
 				if let Some(id) = fee.get_nft() {
-					let mut nft = T::NFTExt::get_nft(id).expect("Checked before. qed");
+					let mut nft = T::NFTExt::get_nft(id).ok_or(Error::<T>::NFTNotFound)?;
 					nft.owner = Self::account_id();
 					T::NFTExt::set_nft(nft_id, nft)?;
 				}
@@ -434,12 +370,11 @@ pub mod pallet {
 			queues
 				.available_queue
 				.insert(nft_id, expiration_block)
-				.expect("We already checked for this. qed");
+				.expect("Checked on line 368. qed");
 			Queues::<T>::set(queues);
 
 			// Contract Created 📦
 			let contract = RentContractData::new(
-				false,
 				None,
 				who.clone(),
 				None,
@@ -457,7 +392,7 @@ pub mod pallet {
 			nft.state.is_rented = true;
 			T::NFTExt::set_nft(nft_id, nft)?;
 
-			// Deposit event.
+			// Event 🎁
 			let event = Event::ContractCreated {
 				nft_id,
 				renter: who,
@@ -474,24 +409,7 @@ pub mod pallet {
 		}
 
 		/// Revoke a rent contract, cancel it if it has not started.
-		#[pallet::weight((
-			{
-				let s = Contracts::<T>::get(nft_id)
-					.map_or_else(|| 0, |c| {
-						let mut queues = Queues::<T>::get();
-						if !c.has_started {
-							queues.available_queue.size()
-						} else {
-							match c.duration {
-								Duration::Subscription(_, _) => queues.subscription_queue.size(),
-								Duration::Fixed(_) => queues.fixed_queue.size(),
-							}
-						}
-					});
-				T::WeightInfo::revoke_contract(s as u32)
-			},
-			DispatchClass::Normal
-		))]
+		#[pallet::weight(T::WeightInfo::revoke_contract(Queues::<T>::get().size() as u32))]
 		pub fn revoke_contract(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 			let now = frame_system::Pallet::<T>::block_number();
@@ -554,7 +472,7 @@ pub mod pallet {
 			T::NFTExt::set_nft(nft_id, nft)?;
 			Contracts::<T>::remove(nft_id);
 
-			// Deposit event.
+			// Event 🎁
 			let event = Event::ContractRevoked { nft_id, revoked_by: who };
 			Self::deposit_event(event);
 
@@ -579,7 +497,7 @@ pub mod pallet {
 			// NFT Sent back to original owner 📦
 			Self::handle_finished_or_unused_contract(nft_id);
 
-			// Deposit event.
+			// Event 🎁
 			let event = Event::ContractCanceled { nft_id };
 			Self::deposit_event(event);
 
@@ -674,6 +592,7 @@ pub mod pallet {
 				Ok(())
 			})?;
 
+			// Event 🎁
 			let event = Event::ContractStarted { nft_id, rentee: who };
 			Self::deposit_event(event);
 
@@ -724,7 +643,7 @@ pub mod pallet {
 				Ok(())
 			})?;
 
-			// Deposit event.
+			// Event 🎁
 			let event = Event::ContractOfferCreated { nft_id, rentee: who };
 			Self::deposit_event(event);
 
@@ -770,7 +689,7 @@ pub mod pallet {
 				let cancellation_fee = contract.rentee_cancellation_fee.clone();
 				let pallet = Self::account_id();
 
-				ensure!(contract.renter == who, Error::<T>::NotTheRenter);
+				ensure!(contract.renter == who, Error::<T>::AccessDenied);
 				let offers = Offers::<T>::get(nft_id).ok_or(Error::<T>::NoOffersForThisContract)?;
 				let offer_found = offers.contains(&rentee);
 				ensure!(offer_found, Error::<T>::NoOffersForThisContract);
@@ -829,7 +748,7 @@ pub mod pallet {
 				Ok(())
 			})?;
 
-			// Deposit event.
+			// Event 🎁
 			let event = Event::ContractStarted { nft_id, rentee };
 			Self::deposit_event(event);
 
@@ -853,7 +772,7 @@ pub mod pallet {
 				Ok(())
 			})?;
 
-			// Deposit event.
+			// Event 🎁
 			let event = Event::ContractOfferRetracted { nft_id, rentee: who };
 			Self::deposit_event(event);
 
@@ -874,7 +793,7 @@ pub mod pallet {
 			Contracts::<T>::try_mutate(nft_id, |x| -> DispatchResult {
 				let contract = x.as_mut().ok_or(Error::<T>::ContractNotFound)?;
 
-				ensure!(who == contract.renter, Error::<T>::NotTheRenter);
+				ensure!(who == contract.renter, Error::<T>::AccessDenied);
 				ensure!(
 					contract.can_adjust_subscription(),
 					Error::<T>::CannotAdjustSubscriptionTerms
@@ -887,7 +806,7 @@ pub mod pallet {
 				Ok(())
 			})?;
 
-			// Deposit event.
+			// Event 🎁
 			let event =
 				Event::ContractSubscriptionTermsChanged { nft_id, period, max_duration, rent_fee };
 			Self::deposit_event(event);
@@ -906,7 +825,7 @@ pub mod pallet {
 			Contracts::<T>::try_mutate(nft_id, |x| -> DispatchResult {
 				let contract = x.as_mut().ok_or(Error::<T>::ContractNotFound)?;
 
-				ensure!(Some(who) == contract.rentee, Error::<T>::NotTheRentee);
+				ensure!(Some(who) == contract.rentee, Error::<T>::AccessDenied);
 				ensure!(!contract.terms_changed, Error::<T>::ContractTermsAlreadyAccepted);
 
 				contract.terms_changed = false;
@@ -914,7 +833,7 @@ pub mod pallet {
 				Ok(())
 			})?;
 
-			// Deposit event.
+			// Event 🎁
 			let event = Event::ContractSubscriptionTermsAccepted { nft_id };
 			Self::deposit_event(event);
 
@@ -934,16 +853,7 @@ impl<T: Config> Pallet<T> {
 		nft: &NFTData<T::AccountId, <T::NFTExt as NFTExt>::NFTOffchainDataLimit>,
 	) -> Result<(), pallet::Error<T>> {
 		nft.not_in_state(vec![Capsule, IsListed, Delegated, Soulbound, Rented])
-			.map_err(|err| {
-				return match err {
-					Capsule => Error::<T>::CannotUseCapsuleNFTs,
-					IsListed => Error::<T>::CannotUseListedNFTs,
-					Delegated => Error::<T>::CannotUseDelegatedNFTs,
-					Soulbound => Error::<T>::CannotUseSoulboundNFTs,
-					Rented => Error::<T>::CannotUseRentedNFTs,
-					_ => panic!("This should never happen"),
-				}
-			})
+			.map_err(|_| Error::<T>::NFTInInvalidState)
 	}
 
 	pub fn return_cancellation_fee(

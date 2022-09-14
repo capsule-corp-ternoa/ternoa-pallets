@@ -158,6 +158,10 @@ where
 
 		Ok(())
 	}
+
+	pub fn is_owner(&self, who: &AccountId) -> Option<()> {
+		(self.owner == *who).then(|| {})
+	}
 }
 
 /// Data related to collections
