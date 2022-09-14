@@ -161,8 +161,9 @@ pub mod pallet {
 		/// A contract subscription's terms were changed by renter.
 		ContractSubscriptionTermsChanged {
 			nft_id: NFTId,
-			duration: Duration<T::BlockNumber>,
-			rent_fee: RentFee<BalanceOf<T>>,
+			period: T::BlockNumber,
+			max_duration: Option<T::BlockNumber>,
+			rent_fee: BalanceOf<T>,
 		},
 		/// A contract new subscription's terms were accpeted by rentee.
 		ContractSubscriptionTermsAccepted { nft_id: NFTId },
@@ -271,6 +272,8 @@ pub mod pallet {
 		DurationAndCancellationFeeMismatch,
 		/// Revocation and Cancellation Mismatch
 		RevocationAndCancellationFeeMismatch,
+		/// Cannot adjust subscription Terms.
+		CannotAdjustSubscriptionTerms,
 	}
 
 	#[pallet::hooks]
@@ -489,7 +492,6 @@ pub mod pallet {
 							match c.duration {
 								Duration::Subscription(_, _) => queues.subscription_queue.size(),
 								Duration::Fixed(_) => queues.fixed_queue.size(),
-								Duration::Infinite => 0
 							}
 						}
 					});
@@ -551,7 +553,6 @@ pub mod pallet {
 								match c.duration {
 									Duration::Subscription(_, _) => (available_size, queues.subscription_queue.size()),
 									Duration::Fixed(_) =>  (available_size, queues.fixed_queue.size()),
-									Duration::Infinite => (available_size, 0)
 								}
 							},
 							AcceptanceType::ManualAcceptance(_) => (0, 0)
@@ -644,7 +645,6 @@ pub mod pallet {
 								match c.duration {
 									Duration::Subscription(_, _) => (available_size, queues.subscription_queue.size(), offers_size),
 									Duration::Fixed(_) => (available_size, queues.fixed_queue.size(), offers_size),
-									Duration::Infinite => (available_size, 0, offers_size),
 								}
 							},
 							AcceptanceType::AutoAcceptance(_) => (0,0,0)
@@ -664,45 +664,66 @@ pub mod pallet {
 
 			Contracts::<T>::try_mutate(nft_id, |x| -> DispatchResult {
 				let contract = x.as_mut().ok_or(Error::<T>::ContractNotFound)?;
+				let cancellation_fee = contract.rentee_cancellation_fee.clone();
+				let pallet = Self::account_id();
 
 				ensure!(contract.renter == who, Error::<T>::NotTheRenter);
-				let is_manual_acceptance =
-					matches!(contract.acceptance_type, AcceptanceType::ManualAcceptance { .. });
-				ensure!(is_manual_acceptance, Error::<T>::CannotAcceptOfferForAutoAcceptance);
 				let offers = Offers::<T>::get(nft_id).ok_or(Error::<T>::NoOffersForThisContract)?;
-				ensure!(offers.contains(&rentee), Error::<T>::NoOfferFromRentee);
-				match contract.acceptance_type.clone() {
-					AcceptanceType::AutoAcceptance(_) => (),
-					AcceptanceType::ManualAcceptance(accounts) =>
-						if let Some(accounts) = accounts {
-							ensure!(accounts.contains(&rentee), Error::<T>::NotAuthorizedForRent);
-						},
+				let offer_found = offers.contains(&rentee);
+				ensure!(offer_found, Error::<T>::NoOffersForThisContract);
+
+				// Let's take rentee's token. In case an error happens those balance transactions
+				// will be reverted.
+				if let Some(amount) = contract.rent_fee.get_balance() {
+					T::Currency::transfer(&rentee, &who, amount, KeepAlive)?;
 				}
 
-				Self::ensure_enough_for_rent(
-					&rentee,
-					&contract.rent_fee,
-					&contract.rentee_cancellation_fee,
-				)?;
+				if let Some(amount) = cancellation_fee.clone().and_then(|x| x.get_balance()) {
+					T::Currency::transfer(&rentee, &pallet, amount, KeepAlive)?;
+				}
+
+				// Let's see if those NFTs are OK to be taken.
+				let rent_nft =
+					contract.rent_fee.get_nft().and_then(|x| Some((x, contract.renter.clone())));
+				let cancellation_nft = cancellation_fee
+					.and_then(|x| x.get_nft())
+					.and_then(|x| Some((x, pallet.clone())));
+				let nfts: Vec<(NFTId, T::AccountId)> =
+					vec![rent_nft, cancellation_nft].into_iter().flatten().collect();
+
+				// Rent and Renter Cancellation fee Check  ✅
+				for (nft_id, _) in &nfts {
+					let nft = T::NFTExt::get_nft(*nft_id).ok_or(Error::<T>::NFTNotFound)?;
+					ensure!(nft.owner == rentee, Error::<T>::NotTheNFTOwner);
+					Self::check_nft_state_validity(&nft)?;
+				}
+
+				// Rent and Renter Cancellation fee Taken 📦
+				for (nft_id, dst) in &nfts {
+					let mut nft = T::NFTExt::get_nft(*nft_id).expect("qed");
+					nft.owner = dst.clone();
+					T::NFTExt::set_nft(*nft_id, nft).expect("qed");
+				}
+
+				// All good ☀️
+				let now = frame_system::Pallet::<T>::block_number();
+
 				let mut queues = Queues::<T>::get();
-				let now = <frame_system::Pallet<T>>::block_number();
-				Self::take_rent_fee(&rentee, contract.renter.clone(), &contract.rent_fee)?;
-				Self::take_cancellation_fee(&rentee, &contract.rentee_cancellation_fee)?;
-				if let Some(expiration_block) = Self::get_expiration_block(&contract.duration, now)
-				{
-					queues
-						.insert_in_queue(nft_id, &contract.duration, expiration_block)
-						.map_err(|_| Error::<T>::MaxSimultaneousContractReached)?;
-				}
-				queues.remove_from_available_queue(nft_id);
-				Queues::<T>::set(queues);
+				queues.available_queue.remove(nft_id);
 
+				match &contract.duration {
+					Duration::Fixed(x) => queues.fixed_queue.insert(nft_id, x.clone()),
+					Duration::Subscription(x, _) =>
+						queues.subscription_queue.insert(nft_id, now + *x),
+				}
+				.expect("qed");
+
+				Queues::<T>::set(queues);
 				Offers::<T>::remove(nft_id);
 
-				contract.terms_changed = true;
 				contract.rentee = Some(rentee.clone());
 				contract.has_started = true;
-				contract.start_block = Some(<frame_system::Pallet<T>>::block_number());
+				contract.start_block = Some(now);
 
 				Ok(())
 			})?;
@@ -728,12 +749,15 @@ pub mod pallet {
 			nft_id: NFTId,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
-			let contract = Contracts::<T>::get(nft_id).ok_or(Error::<T>::ContractNotFound)?;
-			let is_manual_acceptance =
-				matches!(contract.acceptance_type, AcceptanceType::ManualAcceptance { .. });
-			ensure!(is_manual_acceptance, Error::<T>::CannotRetractOfferForAutoAcceptance);
-			ensure!(!contract.has_started, Error::<T>::ContractHasStarted);
-			Self::remove_offer(nft_id, who.clone()).ok_or(Error::<T>::OfferNotFound)?;
+			Offers::<T>::try_mutate(nft_id, |x| -> DispatchResult {
+				// TODO Error naming.
+				let offers = x.as_mut().ok_or(Error::<T>::OfferNotFound)?;
+				let index =
+					offers.iter().position(|x| *x == who).ok_or(Error::<T>::OfferNotFound)?;
+				offers.remove(index);
+
+				Ok(())
+			})?;
 
 			// Deposit event.
 			let event = Event::ContractOfferRetracted { nft_id, rentee: who };
@@ -747,8 +771,9 @@ pub mod pallet {
 		pub fn change_subscription_terms(
 			origin: OriginFor<T>,
 			nft_id: NFTId,
-			duration: Duration<T::BlockNumber>,
-			amount: BalanceOf<T>,
+			period: T::BlockNumber,
+			max_duration: Option<T::BlockNumber>,
+			rent_fee: BalanceOf<T>,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
@@ -756,30 +781,20 @@ pub mod pallet {
 				let contract = x.as_mut().ok_or(Error::<T>::ContractNotFound)?;
 
 				ensure!(who == contract.renter, Error::<T>::NotTheRenter);
-				ensure!(contract.has_started, Error::<T>::ContractHasNotStarted);
-				let is_on_subscription_change =
-					matches!(contract.revocation_type, RevocationType::OnSubscriptionChange { .. });
-				let is_subscription = matches!(contract.duration, Duration::Subscription { .. });
-				ensure!(
-					is_on_subscription_change && is_subscription,
-					Error::<T>::CanChangeTermForSubscriptionOnly
-				);
-				let is_new_term_subscription = matches!(duration, Duration::Subscription { .. });
-				ensure!(is_new_term_subscription, Error::<T>::CanSetTermsForSubscriptionOnly);
+				contract
+					.can_adjust_subscription()
+					.ok_or(Error::<T>::CannotAdjustSubscriptionTerms)?;
 
-				contract.duration = duration.clone();
-				contract.rent_fee = RentFee::Tokens(amount);
-				contract.terms_changed = false;
+				contract.duration = Duration::Subscription(period, max_duration);
+				contract.rent_fee = RentFee::Tokens(rent_fee);
+				contract.terms_changed = contract.rentee.is_some();
 
 				Ok(())
 			})?;
 
 			// Deposit event.
-			let event = Event::ContractSubscriptionTermsChanged {
-				nft_id,
-				duration,
-				rent_fee: RentFee::Tokens(amount),
-			};
+			let event =
+				Event::ContractSubscriptionTermsChanged { nft_id, period, max_duration, rent_fee };
 			Self::deposit_event(event);
 
 			Ok(().into())
@@ -799,7 +814,7 @@ pub mod pallet {
 				ensure!(Some(who) == contract.rentee, Error::<T>::NotTheRentee);
 				ensure!(!contract.terms_changed, Error::<T>::ContractTermsAlreadyAccepted);
 
-				contract.terms_changed = true;
+				contract.terms_changed = false;
 
 				Ok(())
 			})?;
@@ -925,7 +940,6 @@ impl<T: Config> Pallet<T> {
 				} else {
 					*value
 				},
-			Duration::Infinite => T::BlockNumber::from(0u32),
 		}
 	}
 
@@ -938,7 +952,6 @@ impl<T: Config> Pallet<T> {
 		match duration {
 			Duration::Fixed(_) => queues.fixed_queue.get(nft_id),
 			Duration::Subscription(_, _) => queues.subscription_queue.get(nft_id),
-			Duration::Infinite => Some(T::BlockNumber::from(0u32)),
 		}
 	}
 
@@ -1161,18 +1174,6 @@ impl<T: Config> Pallet<T> {
 		Ok(())
 	}
 
-	/// Remove an address from contract offers account list.
-	pub fn remove_offer(nft_id: NFTId, rentee: T::AccountId) -> Option<()> {
-		Offers::<T>::try_mutate(nft_id, |x| -> Result<(), ()> {
-			let offers = x.as_mut().ok_or(())?;
-			let index = offers.iter().position(|x| *x == rentee).ok_or(())?;
-			offers.remove(index);
-
-			Ok(())
-		})
-		.ok()
-	}
-
 	/// Fill available queue with any number of data.
 	pub fn fill_available_queue(
 		number: u32,
@@ -1244,7 +1245,6 @@ impl<T: Config> Pallet<T> {
 		match duration {
 			Duration::Fixed(blocks) => Some(now + *blocks),
 			Duration::Subscription(blocks, _) => Some(now + *blocks),
-			Duration::Infinite => None,
 		}
 	}
 
@@ -1309,7 +1309,6 @@ impl<T: Config> Pallet<T> {
 
 		nft.state.is_rented = false;
 		T::NFTExt::set_nft(nft_id, nft).expect("This cannot happen. qed");
-		Offers::<T>::remove(nft_id);
 		Contracts::<T>::remove(nft_id);
 	}
 }

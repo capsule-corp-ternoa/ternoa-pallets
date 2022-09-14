@@ -30,7 +30,6 @@ pub type AccountList<AccountId, AccountSizeLimit> = BoundedVec<AccountId, Accoun
 pub enum Duration<BlockNumber: Clone> {
 	Fixed(BlockNumber),
 	Subscription(BlockNumber, Option<BlockNumber>),
-	Infinite,
 }
 
 impl<Blocknumber: Clone> Duration<Blocknumber> {
@@ -64,6 +63,20 @@ impl<Blocknumber: Clone> Duration<Blocknumber> {
 	pub fn get_sub_period(&self) -> Option<Blocknumber> {
 		match self {
 			Self::Subscription(x, _) => Some(x.clone()),
+			_ => None,
+		}
+	}
+
+	pub fn is_subscription(&self) -> bool {
+		match self {
+			Self::Subscription(_, _) => true,
+			_ => false,
+		}
+	}
+
+	pub fn as_subscription(&self) -> Option<(&Blocknumber, &Option<Blocknumber>)> {
+		match self {
+			Self::Subscription(x, y) => Some((x, y)),
 			_ => None,
 		}
 	}
@@ -237,7 +250,6 @@ where
 		let end = match self.duration {
 			Duration::Fixed(x) => Some(x),
 			Duration::Subscription(_, x) => x,
-			Duration::Infinite => None,
 		};
 
 		let end = match end {
@@ -250,6 +262,17 @@ where
 		}
 
 		(*now - start) > end
+	}
+
+	pub fn can_adjust_subscription(&self) -> Option<()> {
+		if matches!(self.revocation_type, RevocationType::OnSubscriptionChange { .. }) {
+			return Some(())
+		}
+		if self.rentee.is_none() && self.duration.is_subscription() {
+			return Some(())
+		}
+
+		None
 	}
 }
 
@@ -393,7 +416,6 @@ where
 			Duration::Fixed(_) => self.fixed_queue.insert(nft_id, expiration_block).map_err(|_| ()),
 			Duration::Subscription(_, _) =>
 				self.subscription_queue.insert(nft_id, expiration_block).map_err(|_| ()),
-			Duration::Infinite => Ok(()),
 		}
 	}
 
