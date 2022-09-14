@@ -173,6 +173,8 @@ pub mod pallet {
 		ContractSubscriptionPeriodStarted { nft_id: NFTId },
 		/// A contract available for sale was expired before its acceptance.
 		ContractAvailableExpired { nft_id: NFTId },
+		/// Contract was canceled.
+		ContractCanceled { nft_id: NFTId },
 	}
 
 	#[pallet::error]
@@ -501,41 +503,93 @@ pub mod pallet {
 		))]
 		pub fn revoke_contract(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
+			let now = frame_system::Pallet::<T>::block_number();
 			let contract = Contracts::<T>::get(nft_id).ok_or(Error::<T>::ContractNotFound)?;
 			let mut nft = T::NFTExt::get_nft(nft_id).ok_or(Error::<T>::NFTNotFound)?;
 
-			ensure!(
-				contract.renter == who || contract.rentee == Some(who.clone()),
-				Error::<T>::NotTheRenterOrRentee
-			);
-			ensure!(
-				!(contract.renter == who &&
-					contract.has_started && contract.revocation_type == RevocationType::NoRevocation),
-				Error::<T>::CannotRevoke
-			);
+			let is_renter = contract.renter == who.clone();
+			let is_rentee = contract.rentee == Some(who.clone());
+			ensure!(is_renter || is_rentee, Error::<T>::NotTheRenterOrRentee);
+			ensure!(contract.rentee.is_some(), Error::<T>::NotTheRenterOrRentee);
+			let rentee = contract.rentee.clone().expect("qed");
 
-			// Apply cancel_fees transfers.
-			Self::process_cancellation_fees(nft_id, &contract, Some(who.clone()))?;
+			if is_renter {
+				ensure!(
+					contract.revocation_type != RevocationType::NoRevocation,
+					Error::<T>::NotTheRenterOrRentee
+				);
+			}
+
+			// Let's first return the cancellation fee of the damaged party. 📦
+			let return_fee = if is_renter {
+				(contract.rentee_cancellation_fee.clone(), rentee.clone())
+			} else {
+				(contract.renter_cancellation_fee.clone(), contract.renter.clone())
+			};
+			if let Some(fee) = &return_fee.0 {
+				Self::return_cancellation_fee(&fee, &return_fee.1)?;
+			}
+
+			// Now let's move the revoker cancellation fee to the damaged party. 📦
+			// Since we have flexible tokens we need to calculate how much we need to return.
+			let return_fee = if is_renter {
+				(contract.renter_cancellation_fee.clone(), rentee.clone())
+			} else {
+				(contract.rentee_cancellation_fee.clone(), contract.renter.clone())
+			};
+			if let Some(fee) = &return_fee.0 {
+				// God help us if it is flexible
+				if let Some(full_amount) = fee.as_flexible() {
+					let completion = contract.completion(&now);
+					let to_damaged_party = completion * full_amount;
+					let to_caller = full_amount.saturating_sub(to_damaged_party);
+
+					let src = &Self::account_id();
+					T::Currency::transfer(src, &return_fee.1, to_damaged_party, AllowDeath)?;
+					T::Currency::transfer(src, &who, to_caller, AllowDeath)?;
+				} else {
+					Self::return_cancellation_fee(&fee, &return_fee.1)?;
+				}
+			}
 
 			// Remove from corresponding queues / mappings.
 			let mut queues = Queues::<T>::get();
-			queues.remove_from_queue(nft_id, contract.has_started, &contract.duration);
+			match &contract.duration {
+				Duration::Fixed(_) => queues.fixed_queue.remove(nft_id),
+				Duration::Subscription(_, _) => queues.subscription_queue.remove(nft_id),
+			};
 			Queues::<T>::set(queues);
-
-			// Remove offers
-			if !contract.has_started {
-				Offers::<T>::remove(nft_id);
-			}
-
-			// Set NFT state back.
 			nft.state.is_rented = false;
 			T::NFTExt::set_nft(nft_id, nft)?;
-
-			// Remove contract.
 			Contracts::<T>::remove(nft_id);
 
 			// Deposit event.
 			let event = Event::ContractRevoked { nft_id, revoked_by: who };
+			Self::deposit_event(event);
+
+			Ok(().into())
+		}
+
+		/// Revoke a rent contract, cancel it if it has not started.
+		#[pallet::weight(1)]
+		pub fn cancel_contract(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
+			let who = ensure_signed(origin)?;
+			let contract = Contracts::<T>::get(nft_id).ok_or(Error::<T>::ContractNotFound)?;
+
+			// Caller check ✅
+			ensure!(contract.renter == who, Error::<T>::NotTheRenterOrRentee);
+			ensure!(contract.rentee.is_none(), Error::<T>::NotTheRenterOrRentee);
+
+			// Queue updated 📦
+			Queues::<T>::mutate(|x| {
+				x.available_queue.remove(nft_id);
+			});
+
+			// NFT Sent back to original owner 📦
+			Self::handle_finished_or_unused_contract(nft_id);
+
+			// Deposit event.
+			let event = Event::ContractCanceled { nft_id };
 			Self::deposit_event(event);
 
 			Ok(().into())
@@ -906,183 +960,6 @@ impl<T: Config> Pallet<T> {
 					_ => panic!("This should never happen"),
 				}
 			})
-	}
-
-	/// Get contract total blocks.
-	pub fn get_contract_total_blocks(duration: &Duration<T::BlockNumber>) -> T::BlockNumber {
-		match duration {
-			Duration::Fixed(value) => *value,
-			Duration::Subscription(value, max_value) =>
-				if let Some(max_value) = *max_value {
-					max_value
-				} else {
-					*value
-				},
-		}
-	}
-
-	/// Get contract end block.
-	pub fn get_contract_end_block(
-		nft_id: NFTId,
-		duration: &Duration<T::BlockNumber>,
-		queues: &mut RentingQueues<T::BlockNumber, T::SimultaneousContractLimit>,
-	) -> Option<T::BlockNumber> {
-		match duration {
-			Duration::Fixed(_) => queues.fixed_queue.get(nft_id),
-			Duration::Subscription(_, _) => queues.subscription_queue.get(nft_id),
-		}
-	}
-
-	/// Return all the cancellation fee to recipient without any calculation.
-	pub fn return_full_cancellation_fee(
-		to: T::AccountId,
-		cancellation_fee: &Option<CancellationFee<BalanceOf<T>>>,
-	) -> Result<(), DispatchError> {
-		let cancellation_fee = match cancellation_fee {
-			Some(x) => x,
-			None => return Ok(()),
-		};
-
-		if let Some(amount) = cancellation_fee.get_balance() {
-			T::Currency::transfer(&Self::account_id(), &to, amount, AllowDeath)?;
-		}
-
-		if let Some(nft_id) = cancellation_fee.get_nft() {
-			let mut cancellation_nft =
-				T::NFTExt::get_nft(nft_id).ok_or(Error::<T>::NFTNotFoundForCancellationFee)?;
-			ensure!(
-				cancellation_nft.owner == Self::account_id(),
-				Error::<T>::NotTheNFTOwnerForCancellationFee
-			);
-			cancellation_nft.owner = to.clone();
-			T::NFTExt::set_nft(nft_id, cancellation_nft)?;
-		}
-		Ok(())
-	}
-
-	/// Pay the cancellation fee to renter or rentee impacted by revoker's cancellation.
-	pub fn pay_cancellation_fee(
-		from: &T::AccountId,
-		to: T::AccountId,
-		cancellation_fee: &Option<CancellationFee<BalanceOf<T>>>,
-		nft_id: NFTId,
-		duration: &Duration<T::BlockNumber>,
-	) -> Result<(), DispatchError> {
-		if let Some(cancellation_fee) = cancellation_fee {
-			match cancellation_fee {
-				CancellationFee::NFT(cancellation_nft_id) => {
-					let mut cancellation_nft = T::NFTExt::get_nft(*cancellation_nft_id)
-						.ok_or(Error::<T>::NFTNotFoundForCancellationFee)?;
-					ensure!(
-						cancellation_nft.owner == Self::account_id(),
-						Error::<T>::NotTheNFTOwnerForCancellationFee
-					);
-					cancellation_nft.owner = to;
-					T::NFTExt::set_nft(*cancellation_nft_id, cancellation_nft)?;
-				},
-				CancellationFee::FixedTokens(amount) => {
-					T::Currency::transfer(&Self::account_id(), &to, *amount, AllowDeath)?;
-				},
-				CancellationFee::FlexibleTokens(amount) => {
-					let mut queues = Queues::<T>::get();
-					let end_block = Self::get_contract_end_block(nft_id, &duration, &mut queues);
-					let total_blocks = Self::get_contract_total_blocks(&duration);
-					ensure!(end_block.is_some(), Error::<T>::FlexibleFeeEndBlockNotFound);
-					if let Some(end_block) = end_block {
-						let current_block: u128 =
-							<frame_system::Pallet<T>>::block_number().saturated_into();
-						let end_block: u128 = end_block.saturated_into();
-						let remaining_blocks: u128 = end_block
-							.checked_sub(current_block)
-							.ok_or(Error::<T>::InternalMathError)?;
-						let total_blocks: u128 = total_blocks.saturated_into();
-						let taken = amount
-							.saturating_mul(remaining_blocks.saturated_into::<BalanceOf<T>>())
-							.checked_div(&total_blocks.saturated_into::<BalanceOf<T>>())
-							.ok_or(Error::<T>::InternalMathError)?;
-						let returned =
-							amount.checked_sub(&taken).ok_or(Error::<T>::InternalMathError)?;
-
-						T::Currency::transfer(&Self::account_id(), &to, taken, AllowDeath)?;
-						T::Currency::transfer(&Self::account_id(), &from, returned, AllowDeath)?;
-					}
-				},
-			};
-		}
-		Ok(())
-	}
-
-	/// Give back the cancellation fees depending on revoker and revocation timing.
-	pub fn process_cancellation_fees(
-		nft_id: NFTId,
-		contract: &RentContractData<
-			T::AccountId,
-			T::BlockNumber,
-			BalanceOf<T>,
-			T::AccountSizeLimit,
-		>,
-		revoker: Option<T::AccountId>,
-	) -> Result<(), DispatchError> {
-		if !contract.has_started {
-			Self::return_full_cancellation_fee(
-				contract.renter.clone(),
-				&contract.renter_cancellation_fee,
-			)?;
-
-			return Ok(())
-		}
-
-		if let Some(revoker) = revoker {
-			if revoker == contract.renter {
-				if let Some(rentee) = &contract.rentee {
-					// Revoked by renter, rentee receive renter's cancellation fee.
-					Self::pay_cancellation_fee(
-						&contract.renter,
-						rentee.clone(),
-						&contract.renter_cancellation_fee,
-						nft_id,
-						&contract.duration,
-					)?;
-
-					// Rentee gets back his cancellation fee.
-					Self::return_full_cancellation_fee(
-						rentee.clone(),
-						&contract.rentee_cancellation_fee,
-					)?;
-				};
-			} else if let Some(rentee) = &contract.rentee {
-				if revoker == *rentee {
-					// Revoked by rentee or Subscription payment stopped, renters receive
-					// rentees's cancellation fee.
-					Self::pay_cancellation_fee(
-						&rentee,
-						contract.renter.clone(),
-						&contract.rentee_cancellation_fee,
-						nft_id,
-						&contract.duration,
-					)?;
-
-					// Renter gets back his cancellation fee.
-					Self::return_full_cancellation_fee(
-						contract.renter.clone(),
-						&contract.renter_cancellation_fee,
-					)?;
-				}
-			}
-		} else {
-			// Revoked cause contract ended (fixed, or maxSubscription reached).
-			Self::return_full_cancellation_fee(
-				contract.renter.clone(),
-				&contract.renter_cancellation_fee,
-			)?;
-			if let Some(rentee) = &contract.rentee {
-				Self::return_full_cancellation_fee(
-					rentee.clone(),
-					&contract.rentee_cancellation_fee,
-				)?;
-			};
-		};
-		Ok(())
 	}
 
 	pub fn return_cancellation_fee(

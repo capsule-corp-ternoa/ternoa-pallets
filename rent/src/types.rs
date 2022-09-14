@@ -21,6 +21,7 @@ use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use primitives::nfts::NFTId;
 use scale_info::TypeInfo;
 use sp_arithmetic::traits::AtLeast32BitUnsigned;
+use sp_runtime::{Permill, SaturatedConversion};
 use sp_std::fmt::Debug;
 
 pub type AccountList<AccountId, AccountSizeLimit> = BoundedVec<AccountId, AccountSizeLimit>;
@@ -78,6 +79,13 @@ impl<Blocknumber: Clone> Duration<Blocknumber> {
 		match self {
 			Self::Subscription(x, y) => Some((x, y)),
 			_ => None,
+		}
+	}
+
+	pub fn get_full_duration(&self) -> Blocknumber {
+		match self {
+			Duration::Fixed(x) => x.clone(),
+			Duration::Subscription(x, y) => y.clone().unwrap_or_else(|| x.clone()),
 		}
 	}
 }
@@ -173,6 +181,13 @@ where
 	pub fn get_nft(&self) -> Option<NFTId> {
 		match self {
 			Self::NFT(x) => Some(*x),
+			_ => None,
+		}
+	}
+
+	pub fn as_flexible(&self) -> Option<Balance> {
+		match self {
+			CancellationFee::FlexibleTokens(x) => Some(x.clone()),
 			_ => None,
 		}
 	}
@@ -289,6 +304,18 @@ where
 			AcceptanceType::ManualAcceptance(_) => true,
 			_ => false,
 		}
+	}
+
+	// TODO need better name
+	pub fn completion(&self, now: &BlockNumber) -> Permill {
+		let now: u32 = (*now).saturated_into();
+		let full_duration: u32 = self.duration.get_full_duration().saturated_into();
+		let start: u32 = self.start_block.expect("qed").saturated_into();
+		let remaining_duration: u32 = start + full_duration - now;
+		let percent = (remaining_duration as u32)
+			.saturating_mul(100)
+			.saturating_div(full_duration as u32);
+		Permill::from_percent(percent)
 	}
 }
 
