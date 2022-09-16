@@ -22,11 +22,10 @@ mod tests;
 mod types;
 mod weights;
 
-use core::convert::TryFrom;
-
 pub use pallet::*;
 pub use types::*;
 
+use core::convert::TryFrom;
 use frame_support::{
 	dispatch::{DispatchError, DispatchResult},
 	ensure,
@@ -827,8 +826,6 @@ impl<T: Config> Pallet<T> {
 		fee: &CancellationFee<BalanceOf<T>>,
 		dst: &T::AccountId,
 	) -> Result<(), DispatchError> {
-		let src = &Self::account_id();
-
 		if let Some(amount) = fee.get_balance() {
 			let src = &Self::account_id();
 			T::Currency::transfer(src, dst, amount, AllowDeath)?

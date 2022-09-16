@@ -300,69 +300,6 @@ benchmarks! {
 		let contract = Rent::<T>::contracts(NFT_ID_0).unwrap();
 		// TODO!
 	}
-
-
-	/*
-
-	accept_subscription_terms {
-		prepare_benchmarks::<T>();
-		let bob: T::AccountId = get_account::<T>("BOB");
-		Rent::<T>::create_contract(
-			origin::<T>("ALICE").into(),
-			NFT_ID_1,
-			Duration::Subscription(1000u32.into(), Some(10000u32.into())),
-			AcceptanceType::AutoAcceptance(None),
-			RevocationType::OnSubscriptionChange,
-			RentFee::Tokens(1000u32.into()),
-			Some(CancellationFee::FixedTokens(100u32.into())),
-			Some(CancellationFee::FixedTokens(100u32.into()))
-		).unwrap();
-		Rent::<T>::rent(origin::<T>("BOB").into(), NFT_ID_1).unwrap();
-		Rent::<T>::change_subscription_terms(
-			origin::<T>("ALICE").into(),
-			NFT_ID_1,
-			Duration::Subscription(500u32.into(), Some(5000u32.into())),
-			150u32.into()
-		).unwrap();
-	}: _(origin::<T>("BOB"), NFT_ID_1)
-	verify {
-		// Get The contract.
-		let contract = Rent::<T>::contracts(NFT_ID_1).unwrap();
-		assert!(contract.terms_accepted);
-		assert_eq!(contract.duration, Duration::Subscription(500u32.into(), Some(5000u32.into())));
-		assert_eq!(contract.rent_fee, RentFee::Tokens(150u32.into()));
-	}
-
-	end_contract {
-		let s in 0 .. T::SimultaneousContractLimit::get() - 1;
-		prepare_benchmarks::<T>();
-		Rent::<T>::fill_subscription_queue(s, 99u32.into(), 10u32.into()).unwrap();
-		Rent::<T>::rent(origin::<T>("BOB").into(), NFT_ID_0).unwrap();
-	}: _(root::<T>(), NFT_ID_0, None)
-	verify {
-		assert!(Rent::<T>::contracts(NFT_ID_0).is_none());
-	}
-
-	renew_contract {
-		let s in 0 .. T::SimultaneousContractLimit::get() - 1;
-		prepare_benchmarks::<T>();
-		Rent::<T>::fill_subscription_queue(s, 99u32.into(), 10u32.into()).unwrap();
-		Rent::<T>::rent(origin::<T>("BOB").into(), NFT_ID_0).unwrap();
-	}: _(root::<T>(), NFT_ID_0)
-	verify {
-		assert!(Rent::<T>::contracts(NFT_ID_0).is_some());
-		let next_renew_block = Rent::<T>::queues().subscription_queue.get(NFT_ID_0).unwrap();
-		assert_eq!(next_renew_block, 1000u32.into());
-	}
-
-	remove_expired_contract {
-		let s in 0 .. T::SimultaneousContractLimit::get() - 1;
-		prepare_benchmarks::<T>();
-		Rent::<T>::fill_available_queue(s, 99u32.into(), 10u32.into()).unwrap();
-	}: _(root::<T>(), NFT_ID_0)
-	verify {
-		assert!(Rent::<T>::contracts(NFT_ID_0).is_none());
-	} */
 }
 
 impl_benchmark_test_suite!(Rent, crate::tests::mock::new_test_ext(), crate::tests::mock::Test);
