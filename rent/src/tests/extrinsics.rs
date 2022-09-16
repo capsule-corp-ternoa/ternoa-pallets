@@ -1,4 +1,4 @@
-// Copyright 2022 Capsule Corp (France) SAS.
+/* // Copyright 2022 Capsule Corp (France) SAS.
 // This file is part of Ternoa.
 
 // Ternoa is free software: you can redistribute it and/or modify
@@ -1869,3 +1869,4 @@ mod remove_expired_contract {
 		})
 	}
 }
+ */

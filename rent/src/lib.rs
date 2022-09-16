@@ -22,6 +22,8 @@ mod tests;
 mod types;
 mod weights;
 
+use core::convert::TryFrom;
+
 pub use pallet::*;
 pub use types::*;
 
@@ -37,7 +39,10 @@ use frame_support::{
 	BoundedVec, PalletId,
 };
 use frame_system::pallet_prelude::*;
-use sp_runtime::traits::{AccountIdConversion, CheckedSub, Saturating};
+use sp_runtime::{
+	traits::{AccountIdConversion, CheckedSub, Saturating},
+	Permill,
+};
 use sp_std::prelude::*;
 
 use primitives::nfts::{NFTData, NFTId, NFTStateModifiers::*};
@@ -494,8 +499,9 @@ pub mod pallet {
 				x.available_queue.remove(nft_id);
 			});
 
-			// NFT Sent back to original owner 📦
+			// NFT Sent back to original owner. Remove Contract and Offers 📦
 			Self::handle_finished_or_unused_contract(nft_id);
+			Offers::<T>::remove(nft_id);
 
 			// Event 🎁
 			let event = Event::ContractCanceled { nft_id };
@@ -544,7 +550,7 @@ pub mod pallet {
 					ensure!(list.contains(&who), Error::<T>::NotAuthorizedForRent);
 				}
 
-				// Balance Check  ✅
+				// Balance Check ✅ 📦
 				if let Some(amount) = rent_fee.get_balance() {
 					T::Currency::transfer(&who, &contract.renter, amount, KeepAlive)?;
 				}
@@ -790,6 +796,7 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
+			// Changing Contracts and Cleared Offers 📦
 			Contracts::<T>::try_mutate(nft_id, |x| -> DispatchResult {
 				let contract = x.as_mut().ok_or(Error::<T>::ContractNotFound)?;
 
@@ -798,6 +805,10 @@ pub mod pallet {
 					contract.can_adjust_subscription(),
 					Error::<T>::CannotAdjustSubscriptionTerms
 				);
+
+				if contract.rentee.is_none() {
+					Offers::<T>::remove(nft_id);
+				}
 
 				contract.duration = Duration::Subscription(period, max_duration);
 				contract.rent_fee = RentFee::Tokens(rent_fee);
@@ -822,6 +833,7 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
+			// Changing Contracts 📦
 			Contracts::<T>::try_mutate(nft_id, |x| -> DispatchResult {
 				let contract = x.as_mut().ok_or(Error::<T>::ContractNotFound)?;
 
@@ -928,6 +940,29 @@ impl<T: Config> Pallet<T> {
 }
 
 impl<T: Config> Pallet<T> {
+	pub fn prep_rent_benchmark(
+		account: &T::AccountId,
+		contract_amount: u32,
+	) -> Result<(), DispatchResult> {
+		let offchain_data = BoundedVec::try_from(
+			"I like to drink milk, eat sugar and dance the orange dance".as_bytes().to_vec(),
+		)
+		.unwrap();
+		let royalty = Permill::from_percent(0);
+
+		for _i in 0..contract_amount {
+			let nft_id = T::NFTExt::create_nft(
+				account.clone(),
+				offchain_data.clone(),
+				royalty,
+				None,
+				false,
+			)?;
+		}
+
+		Ok(())
+	}
+
 	/// Fill available queue with any number of data.
 	pub fn fill_available_queue(
 		number: u32,

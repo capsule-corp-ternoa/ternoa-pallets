@@ -118,7 +118,7 @@ impl pallet_balances::Config for Test {
 parameter_types! {
 	// NFT parameter types
 	pub const NFTInitialMintFee: Balance = NFT_MINT_FEE;
-	pub const NFTOffchainDataLimit: u32 = 10;
+	pub const NFTOffchainDataLimit: u32 = 100;
 	pub const CollectionOffchainDataLimit: u32 = 10;
 	pub const CollectionSizeLimit: u32 = 10;
 	// Rent parameter types

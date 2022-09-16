@@ -56,7 +56,7 @@ impl<Blocknumber: Clone> Duration<Blocknumber> {
 	) -> Option<()> {
 		match self {
 			Self::Fixed(_) => true,
-			_ => !matches!(*cancellation, CancellationFee::FlexibleTokens { .. }),
+			_ => cancellation.as_flexible().is_none(),
 		}
 		.then(|| ())
 	}
