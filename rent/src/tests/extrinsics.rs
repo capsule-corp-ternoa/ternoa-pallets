@@ -1,4 +1,4 @@
-/* // Copyright 2022 Capsule Corp (France) SAS.
+// Copyright 2022 Capsule Corp (France) SAS.
 // This file is part of Ternoa.
 
 // Ternoa is free software: you can redistribute it and/or modify
@@ -26,6 +26,52 @@ use crate::{
 	RentContractData, RentFee, RevocationType,
 };
 
+fn origin(account: u64) -> mock::Origin {
+	RawOrigin::Signed(account).into()
+}
+
+const PERCENT_0: Permill = Permill::from_parts(0);
+
+/* #[test]
+fn revoke_contract_before_start() {
+	ExtBuilder::new_build(None).execute_with(|| {
+		/* prepare_tests(); */
+		let alice: mock::Origin = origin(ALICE);
+		let bob: mock::Origin = origin(BOB);
+		let id = <NFT as NFTExt>::create_nft(ALICE, BoundedVec::default(), PERCENT_0, None, false)
+			.unwrap();
+
+		Rent::create_contract(
+			alice.clone(),
+			id,
+			Duration::Fixed(100u32.into()),
+			AcceptanceType::AutoAcceptance(None),
+			RevocationType::Anytime,
+			RentFee::Tokens(100u32.into()),
+			Some(CancellationFee::FixedTokens(200u32.into())),
+			Some(CancellationFee::FixedTokens(200u32.into())),
+		)
+		.unwrap();
+		Rent::rent(bob.clone(), id).unwrap();
+		Rent::revoke_contract(bob.clone(), id).unwrap();
+
+		// Alice creates NFT
+
+		/* 		// Revoke before start.
+		Rent::revoke_contract(alice, FIXED_AUTO_ANY_TOK_FLEXTOK_FLEXTOK).unwrap();
+		// State check.
+		let nft = NFT::nfts(FIXED_AUTO_ANY_TOK_FLEXTOK_FLEXTOK).unwrap();
+		assert!(Rent::contracts(FIXED_AUTO_ANY_TOK_FLEXTOK_FLEXTOK).is_none());
+		assert!(Rent::queues().available_queue.get(FIXED_AUTO_ANY_TOK_FLEXTOK_FLEXTOK).is_none());
+		assert!(!nft.state.is_rented); */
+		// Event check.
+		let event = RentEvent::ContractRevoked { nft_id: 0, revoked_by: ALICE };
+		let event = Event::Rent(event);
+		System::assert_last_event(event);
+	})
+} */
+
+/*
 const ALICE_NFT_ID_0: NFTId = 0;
 const ALICE_NFT_ID_1: NFTId = 1;
 const ALICE_NFT_ID_2: NFTId = 2;

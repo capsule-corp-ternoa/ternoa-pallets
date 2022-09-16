@@ -36,6 +36,7 @@ use frame_support::{
 		ExistenceRequirement::{AllowDeath, KeepAlive},
 		Get, StorageVersion, WithdrawReasons,
 	},
+	weights::PostDispatchInfo,
 	BoundedVec, PalletId,
 };
 use frame_system::pallet_prelude::*;
@@ -295,7 +296,7 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		/// Create a new rent contract with the provided details.
-		#[pallet::weight(T::WeightInfo::create_contract(Queues::<T>::get().available_queue.size() as u32))]
+		#[pallet::weight(T::WeightInfo::create_contract(Queues::<T>::get().size() as u32))]
 		pub fn create_contract(
 			origin: OriginFor<T>,
 			nft_id: NFTId,
@@ -451,6 +452,7 @@ pub mod pallet {
 			} else {
 				(contract.rentee_cancellation_fee.clone(), contract.renter.clone())
 			};
+
 			if let Some(fee) = &return_fee.0 {
 				// God help us if it is flexible
 				if let Some(full_amount) = fee.as_flexible() {
@@ -485,7 +487,7 @@ pub mod pallet {
 		}
 
 		/// Revoke a rent contract, cancel it if it has not started.
-		#[pallet::weight(1)]
+		#[pallet::weight(T::WeightInfo::cancel_contract(Queues::<T>::get().size() as u32))]
 		pub fn cancel_contract(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 			let contract = Contracts::<T>::get(nft_id).ok_or(Error::<T>::ContractNotFound)?;
@@ -511,26 +513,7 @@ pub mod pallet {
 		}
 
 		/// Rent an nft if contract exist, makes an offer if it's manual acceptance.
-		#[pallet::weight((
-			{
-				let (s, t) = Contracts::<T>::get(nft_id)
-					.map_or_else(|| (0, 0), |c| {
-						let mut queues = Queues::<T>::get();
-						let available_size = queues.available_queue.size();
-						match c.acceptance_type {
-							AcceptanceType::AutoAcceptance(_) => {
-								match c.duration {
-									Duration::Subscription(_, _) => (available_size, queues.subscription_queue.size()),
-									Duration::Fixed(_) =>  (available_size, queues.fixed_queue.size()),
-								}
-							},
-							AcceptanceType::ManualAcceptance(_) => (0, 0)
-						}
-					});
-				T::WeightInfo::rent(s as u32, t as u32)
-			},
-			DispatchClass::Normal
-		))]
+		#[pallet::weight(T::WeightInfo::rent(Queues::<T>::get().size() as u32))]
 		pub fn rent(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 			let pallet = Self::account_id();
@@ -549,13 +532,17 @@ pub mod pallet {
 				if let Some(list) = contract.acceptance_type.get_allow_list() {
 					ensure!(list.contains(&who), Error::<T>::NotAuthorizedForRent);
 				}
-
-				// Balance Check ✅ 📦
+				// Rent Balance Check ✅ 📦
 				if let Some(amount) = rent_fee.get_balance() {
 					T::Currency::transfer(&who, &contract.renter, amount, KeepAlive)?;
 				}
 
-				// Rent and Renter Cancellation fee Check  ✅
+				// Cancellation Fee Balance Check ✅ 📦
+				if let Some(amount) = cancellation_fee.clone().and_then(|x| x.get_balance()) {
+					T::Currency::transfer(&who, &Self::account_id(), amount, KeepAlive)?;
+				}
+
+				// Rent and Renter Cancellation NFT Check  ✅
 				let rent_nft =
 					contract.rent_fee.get_nft().and_then(|x| Some((x, contract.renter.clone())));
 				let cancellation_nft = cancellation_fee
@@ -606,7 +593,7 @@ pub mod pallet {
 		}
 
 		/// Rent an nft if contract exist, makes an offer if it's manual acceptance.
-		#[pallet::weight(1)]
+		#[pallet::weight(T::WeightInfo::make_rent_offer(Queues::<T>::get().size() as u32))]
 		pub fn make_rent_offer(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 			let contract = Contracts::<T>::get(nft_id).ok_or(Error::<T>::ContractNotFound)?;
@@ -617,7 +604,7 @@ pub mod pallet {
 			let rent_fee = contract.rent_fee.clone();
 			let cancellation_fee = contract.rentee_cancellation_fee.clone();
 
-			// Let's see if he is on the allowed list
+			// Let's see if he is on the allowed list ✅
 			if let Some(list) = contract.acceptance_type.get_allow_list() {
 				ensure!(list.contains(&who), Error::<T>::NotAuthorizedForRent);
 			}
@@ -657,31 +644,7 @@ pub mod pallet {
 		}
 
 		/// Accept a rent offer for manual acceptance contract.
-		#[pallet::weight((
-			{
-				let (s, t, u) = Contracts::<T>::get(nft_id)
-					.map_or_else(|| (0, 0, 0), |c| {
-						match c.acceptance_type {
-							AcceptanceType::ManualAcceptance(_) => {
-								let mut queues = Queues::<T>::get();
-								let available_size = queues.available_queue.size();
-								let offers_size = Offers::<T>::get(nft_id)
-									.map_or_else(|| 0, |o| {
-										o.len()
-									});
-								match c.duration {
-									Duration::Subscription(_, _) => (available_size, queues.subscription_queue.size(), offers_size),
-									Duration::Fixed(_) => (available_size, queues.fixed_queue.size(), offers_size),
-								}
-							},
-							AcceptanceType::AutoAcceptance(_) => (0,0,0)
-						}
-
-					});
-				T::WeightInfo::accept_rent_offer(s as u32, t as u32, u as u32)
-			},
-			DispatchClass::Normal
-		))]
+		#[pallet::weight(T::WeightInfo::accept_rent_offer(Queues::<T>::get().size() as u32))]
 		pub fn accept_rent_offer(
 			origin: OriginFor<T>,
 			nft_id: NFTId,
@@ -786,7 +749,7 @@ pub mod pallet {
 		}
 
 		/// Change the subscription terms for subscription contracts.
-		#[pallet::weight(T::WeightInfo::change_subscription_terms())]
+		#[pallet::weight(T::WeightInfo::accept_rent_offer(Queues::<T>::get().size() as u32))]
 		pub fn change_subscription_terms(
 			origin: OriginFor<T>,
 			nft_id: NFTId,
@@ -872,8 +835,13 @@ impl<T: Config> Pallet<T> {
 		fee: &CancellationFee<BalanceOf<T>>,
 		dst: &T::AccountId,
 	) -> Result<(), DispatchError> {
+		let src = &Self::account_id();
+		let src_balance = T::Currency::free_balance(src);
+		let dst_balance = T::Currency::free_balance(dst);
+
 		if let Some(amount) = fee.get_balance() {
 			let src = &Self::account_id();
+
 			T::Currency::transfer(src, dst, amount, AllowDeath)?
 		}
 
@@ -940,26 +908,60 @@ impl<T: Config> Pallet<T> {
 }
 
 impl<T: Config> Pallet<T> {
-	pub fn prep_rent_benchmark(
+	pub fn prep_benchmark_0(
 		account: &T::AccountId,
+		origin: frame_system::Origin<T>,
 		contract_amount: u32,
-	) -> Result<(), DispatchResult> {
-		let offchain_data = BoundedVec::try_from(
-			"I like to drink milk, eat sugar and dance the orange dance".as_bytes().to_vec(),
-		)
-		.unwrap();
+	) -> Result<(), DispatchError> {
+		let text = "I like to drink milk, eat sugar and dance the orange dance".as_bytes().to_vec();
+		let offchain_data = BoundedVec::try_from(text).unwrap();
 		let royalty = Permill::from_percent(0);
+		let duration = Duration::Fixed(100u32.into());
+		let acceptance_type = AcceptanceType::AutoAcceptance(None);
+		let revocation_type = RevocationType::NoRevocation;
+		let rent_fee = RentFee::Tokens(200u32.into());
 
 		for _i in 0..contract_amount {
 			let nft_id = T::NFTExt::create_nft(
 				account.clone(),
 				offchain_data.clone(),
-				royalty,
+				royalty.clone(),
 				None,
 				false,
-			)?;
+			);
+			if let Err(res) = nft_id {
+				if let Err(err) = res {
+					return Err(err.into())
+				}
+			}
+			let nft_id = nft_id.unwrap();
+
+			Self::create_contract(
+				origin.clone().into(),
+				nft_id,
+				duration.clone(),
+				acceptance_type.clone(),
+				revocation_type.clone(),
+				rent_fee.clone(),
+				None,
+				None,
+			)
+			.map_err(|x| x.error)?;
 		}
 
+		Ok(())
+	}
+
+	/// Fill offers vector with any number of data.
+	pub fn prep_benchmark_1(
+		number: u32,
+		nft_id: NFTId,
+		account: T::AccountId,
+	) -> Result<(), DispatchError> {
+		let offers: AccountList<T::AccountId, T::AccountSizeLimit> =
+			BoundedVec::try_from(vec![account; number as usize])
+				.map_err(|_| Error::<T>::MaximumOffersReached)?;
+		Offers::<T>::insert(nft_id, offers);
 		Ok(())
 	}
 
@@ -1011,19 +1013,6 @@ impl<T: Config> Pallet<T> {
 				.map_err(|_| Error::<T>::MaxSimultaneousContractReached)?;
 		}
 		Queues::<T>::set(queues);
-		Ok(())
-	}
-
-	/// Fill offers vector with any number of data.
-	pub fn fill_offers_vector(
-		number: u32,
-		nft_id: NFTId,
-		account: T::AccountId,
-	) -> Result<(), DispatchError> {
-		let offers: AccountList<T::AccountId, T::AccountSizeLimit> =
-			BoundedVec::try_from(vec![account; number as usize])
-				.map_err(|_| Error::<T>::MaximumOffersReached)?;
-		Offers::<T>::insert(nft_id, offers);
 		Ok(())
 	}
 }
