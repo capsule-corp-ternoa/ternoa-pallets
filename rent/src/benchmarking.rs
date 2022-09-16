@@ -137,8 +137,6 @@ benchmarks! {
 		assert!(contract.is_none());
 	}
 
-
-
 	rent {
 		let s in 0 .. T::SimultaneousContractLimit::get();
 		prepare_benchmarks::<T>();
@@ -281,7 +279,7 @@ benchmarks! {
 		// TODO!
 	}
 
-/* 	accept_subscription_terms {
+	 accept_subscription_terms {
 		let s in 0 .. T::SimultaneousContractLimit::get();
 		prepare_benchmarks::<T>();
 
@@ -295,14 +293,14 @@ benchmarks! {
 
 		Rent::<T>::prep_benchmark_0(&alice.clone(), org.clone(), new_contracts_amount).unwrap();
 		Rent::<T>::rent(origin::<T>("BOB").into(), NFT_ID_0).unwrap();
-		Rent::<T>::change_subscription_terms(origin::<T>("ALICE").into(), NFT_ID_0, 500u32.into(), Some(5000u32.into()), 150u32.into()).unwrap();
+		Rent::<T>::change_subscription_terms(origin::<T>("ALICE").into(), NFT_ID_0, 500u32.into(), Some(5000u32.into()), 150u32.into(), true).unwrap();
 	}: _(origin::<T>("BOB"), NFT_ID_0)
 	verify {
 		// Get The contract.
 		let contract = Rent::<T>::contracts(NFT_ID_0).unwrap();
 		// TODO!
 	}
- */
+
 
 	/*
 

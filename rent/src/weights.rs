@@ -26,10 +26,7 @@ pub trait WeightInfo {
 	fn accept_rent_offer(s: u32) -> Weight;
 	fn retract_rent_offer(_s: u32) -> Weight;
 	fn change_subscription_terms(_s: u32) -> Weight;
-	fn accept_subscription_terms() -> Weight;
-	fn renew_contract(s: u32) -> Weight;
-	fn remove_expired_contract(s: u32) -> Weight;
-	fn end_contract(_s: u32) -> Weight;
+	fn accept_subscription_terms(_s: u32) -> Weight;
 }
 
 /// Weight functions for `ternoa_rent`.
@@ -91,33 +88,7 @@ impl<T: frame_system::Config> WeightInfo for TernoaWeight<T> {
 		Weight::from_ref_time(10_000_000 as RefTimeWeight)
 	}
 	// Storage: Rent Contracts (r:1 w:1)
-	fn accept_subscription_terms() -> Weight {
-		Weight::from_ref_time(10_000_000 as RefTimeWeight)
-	}
-	// Storage: Rent Contracts (r:1 w:1)
-	// Storage: NFT Nfts (r:1 w:1)
-	// Storage: System Account (r:3 w:3)
-	// Storage: Rent SubscriptionQueue (r:1 w:1)
-	// Storage: Rent NumberOfCurrentContracts (r:1 w:1)
-	/// The range of component `s` is `[0, 9]`.
-	fn end_contract(_s: u32) -> Weight {
-		Weight::from_ref_time(10_000_000 as RefTimeWeight)
-	}
-	// Storage: Rent Contracts (r:1 w:0)
-	// Storage: System Account (r:2 w:2)
-	// Storage: Rent SubscriptionQueue (r:1 w:1)
-	/// The range of component `s` is `[0, 9]`.
-	fn renew_contract(_s: u32) -> Weight {
-		Weight::from_ref_time(10_000_000 as RefTimeWeight)
-	}
-	// Storage: Rent Contracts (r:1 w:1)
-	// Storage: NFT Nfts (r:1 w:1)
-	// Storage: System Account (r:2 w:2)
-	// Storage: Rent AvailableQueue (r:1 w:1)
-	// Storage: Rent NumberOfCurrentContracts (r:1 w:1)
-	// Storage: Rent Offers (r:0 w:1)
-	/// The range of component `s` is `[0, 9]`.
-	fn remove_expired_contract(_s: u32) -> Weight {
+	fn accept_subscription_terms(_s: u32) -> Weight {
 		Weight::from_ref_time(10_000_000 as RefTimeWeight)
 	}
 }

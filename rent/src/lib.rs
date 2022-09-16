@@ -740,7 +740,7 @@ pub mod pallet {
 		}
 
 		/// Change the subscription terms for subscription contracts.
-		#[pallet::weight(T::WeightInfo::accept_rent_offer(Queues::<T>::get().size() as u32))]
+		#[pallet::weight(T::WeightInfo::change_subscription_terms(Queues::<T>::get().size() as u32))]
 		pub fn change_subscription_terms(
 			origin: OriginFor<T>,
 			nft_id: NFTId,
@@ -781,7 +781,7 @@ pub mod pallet {
 		}
 
 		/// Accept the new contract terms.
-		#[pallet::weight(T::WeightInfo::accept_subscription_terms())]
+		#[pallet::weight(T::WeightInfo::accept_subscription_terms(Queues::<T>::get().size() as u32))]
 		pub fn accept_subscription_terms(
 			origin: OriginFor<T>,
 			nft_id: NFTId,
@@ -793,7 +793,7 @@ pub mod pallet {
 				let contract = x.as_mut().ok_or(Error::<T>::ContractNotFound)?;
 
 				ensure!(Some(who) == contract.rentee, Error::<T>::AccessDenied);
-				ensure!(!contract.terms_changed, Error::<T>::ContractTermsAlreadyAccepted);
+				ensure!(contract.terms_changed, Error::<T>::ContractTermsAlreadyAccepted);
 
 				contract.terms_changed = false;
 
@@ -828,12 +828,9 @@ impl<T: Config> Pallet<T> {
 		dst: &T::AccountId,
 	) -> Result<(), DispatchError> {
 		let src = &Self::account_id();
-		let src_balance = T::Currency::free_balance(src);
-		let dst_balance = T::Currency::free_balance(dst);
 
 		if let Some(amount) = fee.get_balance() {
 			let src = &Self::account_id();
-
 			T::Currency::transfer(src, dst, amount, AllowDeath)?
 		}
 
@@ -953,57 +950,6 @@ impl<T: Config> Pallet<T> {
 			BoundedVec::try_from(vec![account; number as usize])
 				.map_err(|_| Error::<T>::MaximumOffersReached)?;
 		Offers::<T>::insert(nft_id, offers);
-		Ok(())
-	}
-
-	/// Fill available queue with any number of data.
-	pub fn fill_available_queue(
-		number: u32,
-		nft_id: NFTId,
-		block_number: T::BlockNumber,
-	) -> Result<(), DispatchError> {
-		let mut queues = Queues::<T>::get();
-		for _i in 0..number {
-			queues
-				.available_queue
-				.insert(nft_id, block_number)
-				.map_err(|_| Error::<T>::MaxSimultaneousContractReached)?;
-		}
-		Queues::<T>::set(queues);
-		Ok(())
-	}
-
-	/// Fill fixed queue with any number of data.
-	pub fn fill_fixed_queue(
-		number: u32,
-		nft_id: NFTId,
-		block_number: T::BlockNumber,
-	) -> Result<(), DispatchError> {
-		let mut queues = Queues::<T>::get();
-		for _i in 0..number {
-			queues
-				.fixed_queue
-				.insert(nft_id, block_number)
-				.map_err(|_| Error::<T>::MaxSimultaneousContractReached)?;
-		}
-		Queues::<T>::set(queues);
-		Ok(())
-	}
-
-	/// Fill subscription queue with any number of data.
-	pub fn fill_subscription_queue(
-		number: u32,
-		nft_id: NFTId,
-		block_number: T::BlockNumber,
-	) -> Result<(), DispatchError> {
-		let mut queues = Queues::<T>::get();
-		for _i in 0..number {
-			queues
-				.subscription_queue
-				.insert(nft_id, block_number)
-				.map_err(|_| Error::<T>::MaxSimultaneousContractReached)?;
-		}
-		Queues::<T>::set(queues);
 		Ok(())
 	}
 }
