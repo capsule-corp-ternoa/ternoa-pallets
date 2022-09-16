@@ -65,9 +65,9 @@ pub fn prepare_benchmarks<T: Config>() -> () {
 	let ok = Rent::<T>::create_contract(
 		origin::<T>("ALICE").into(),
 		NFT_ID_0,
-		Duration::Subscription(1000u32.into(), Some(10000u32.into())),
+		Duration::Subscription(1000u32.into(), Some(10000u32.into()), true),
 		AcceptanceType::AutoAcceptance(None),
-		RevocationType::Anytime,
+		true,
 		RentFee::Tokens(rent_fee),
 		Some(CancellationFee::FixedTokens(cancellation_fee)),
 		Some(CancellationFee::FixedTokens(cancellation_fee)),
@@ -89,7 +89,7 @@ benchmarks! {
 		let org = origin::<T>("ALICE");
 		Rent::<T>::prep_benchmark_0(&alice.clone(), org.clone(),  new_contracts_amount).unwrap();
 
-	}: _(org, NFT_ID_1, Duration::Subscription(1000u32.into(), Some(10000u32.into())), AcceptanceType::AutoAcceptance(None), RevocationType::Anytime, RentFee::Tokens(1000u32.into()), Some(CancellationFee::FixedTokens(100u32.into())),Some(CancellationFee::FixedTokens(100u32.into())))
+	}: _(org, NFT_ID_1, Duration::Subscription(1000u32.into(), Some(10000u32.into()), false), AcceptanceType::AutoAcceptance(None), true, RentFee::Tokens(1000u32.into()), Some(CancellationFee::FixedTokens(100u32.into())),Some(CancellationFee::FixedTokens(100u32.into())))
 	verify {
 		// Get The contract.
 		let contract = Rent::<T>::contracts(NFT_ID_1).unwrap();
@@ -178,7 +178,7 @@ benchmarks! {
 			NFT_ID_1,
 			Duration::Fixed(100u32.into()),
 			AcceptanceType::ManualAcceptance(None),
-			RevocationType::Anytime,
+			true,
 			RentFee::Tokens(100u32.into()),
 			None,
 			None,
@@ -211,7 +211,7 @@ benchmarks! {
 			NFT_ID_1,
 			Duration::Fixed(100u32.into()),
 			AcceptanceType::ManualAcceptance(None),
-			RevocationType::Anytime,
+			true,
 			RentFee::Tokens(100u32.into()),
 			None,
 			None,
@@ -244,7 +244,7 @@ benchmarks! {
 			NFT_ID_1,
 			Duration::Fixed(100u32.into()),
 			AcceptanceType::ManualAcceptance(None),
-			RevocationType::Anytime,
+			true,
 			RentFee::Tokens(100u32.into()),
 			None,
 			None,
@@ -274,7 +274,7 @@ benchmarks! {
 		let org = origin::<T>("ALICE");
 
 		Rent::<T>::prep_benchmark_0(&alice.clone(), org.clone(), new_contracts_amount).unwrap();
-	}: _(origin::<T>("ALICE"), NFT_ID_0, 500u32.into(), Some(5000u32.into()), 150u32.into())
+	}: _(origin::<T>("ALICE"), NFT_ID_0, 500u32.into(), Some(5000u32.into()), 150u32.into(), true)
 	verify {
 		// Get The contract.
 		let contract = Rent::<T>::contracts(NFT_ID_0).unwrap();

@@ -148,7 +148,7 @@ pub mod pallet {
 			renter: T::AccountId,
 			duration: Duration<T::BlockNumber>,
 			acceptance_type: AcceptanceType<AccountList<T::AccountId, T::AccountSizeLimit>>,
-			revocation_type: RevocationType,
+			renter_can_cancel: bool,
 			rent_fee: RentFee<BalanceOf<T>>,
 			renter_cancellation_fee: Option<CancellationFee<BalanceOf<T>>>,
 			rentee_cancellation_fee: Option<CancellationFee<BalanceOf<T>>>,
@@ -302,7 +302,7 @@ pub mod pallet {
 			nft_id: NFTId,
 			duration: Duration<T::BlockNumber>,
 			acceptance_type: AcceptanceType<AccountList<T::AccountId, T::AccountSizeLimit>>,
-			revocation_type: RevocationType,
+			renter_can_cancel: bool,
 			rent_fee: RentFee<BalanceOf<T>>,
 			renter_cancellation_fee: Option<CancellationFee<BalanceOf<T>>>,
 			rentee_cancellation_fee: Option<CancellationFee<BalanceOf<T>>>,
@@ -318,10 +318,7 @@ pub mod pallet {
 			nft.is_owner(&who).ok_or(Error::<T>::NotTheNFTOwner)?;
 			Self::check_nft_state_validity(&nft)?;
 
-			// Duration and Revocation Check ✅
-			duration
-				.allows_revocation(&revocation_type)
-				.ok_or(Error::<T>::DurationAndRevocationMismatch)?;
+			// Duration Check ✅
 			duration
 				.allows_rent_fee(&rent_fee)
 				.ok_or(Error::<T>::DurationAndRentFeeMismatch)?;
@@ -329,9 +326,6 @@ pub mod pallet {
 				duration
 					.allows_cancellation(x)
 					.ok_or(Error::<T>::DurationAndCancellationFeeMismatch)?;
-				revocation_type
-					.allows_cancellation(x)
-					.ok_or(Error::<T>::RevocationAndCancellationFeeMismatch)?;
 			}
 			if let Some(x) = &rentee_cancellation_fee {
 				duration
@@ -386,7 +380,7 @@ pub mod pallet {
 				None,
 				duration.clone(),
 				acceptance_type.clone(),
-				revocation_type.clone(),
+				renter_can_cancel,
 				rent_fee.clone(),
 				false,
 				renter_cancellation_fee.clone(),
@@ -404,7 +398,7 @@ pub mod pallet {
 				renter: who,
 				duration,
 				acceptance_type,
-				revocation_type,
+				renter_can_cancel,
 				rent_fee,
 				renter_cancellation_fee,
 				rentee_cancellation_fee,
@@ -429,10 +423,7 @@ pub mod pallet {
 			let rentee = contract.rentee.clone().expect("qed");
 
 			if is_renter {
-				ensure!(
-					contract.revocation_type != RevocationType::NoRevocation,
-					Error::<T>::NotTheRenterOrRentee
-				);
+				ensure!(contract.renter_can_cancel, Error::<T>::NotTheRenterOrRentee);
 			}
 
 			// Let's first return the cancellation fee of the damaged party. 📦
@@ -472,7 +463,7 @@ pub mod pallet {
 			let mut queues = Queues::<T>::get();
 			match &contract.duration {
 				Duration::Fixed(_) => queues.fixed_queue.remove(nft_id),
-				Duration::Subscription(_, _) => queues.subscription_queue.remove(nft_id),
+				Duration::Subscription(_, _, _) => queues.subscription_queue.remove(nft_id),
 			};
 			Queues::<T>::set(queues);
 			nft.state.is_rented = false;
@@ -571,7 +562,7 @@ pub mod pallet {
 
 				match &contract.duration {
 					Duration::Fixed(x) => queues.fixed_queue.insert(nft_id, x.clone()),
-					Duration::Subscription(x, _) =>
+					Duration::Subscription(x, _, _) =>
 						queues.subscription_queue.insert(nft_id, now + *x),
 				}
 				.expect("qed");
@@ -703,7 +694,7 @@ pub mod pallet {
 
 				match &contract.duration {
 					Duration::Fixed(x) => queues.fixed_queue.insert(nft_id, x.clone()),
-					Duration::Subscription(x, _) =>
+					Duration::Subscription(x, _, _) =>
 						queues.subscription_queue.insert(nft_id, now + *x),
 				}
 				.expect("qed");
@@ -756,6 +747,7 @@ pub mod pallet {
 			period: T::BlockNumber,
 			max_duration: Option<T::BlockNumber>,
 			rent_fee: BalanceOf<T>,
+			changeable: bool,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
@@ -773,7 +765,7 @@ pub mod pallet {
 					Offers::<T>::remove(nft_id);
 				}
 
-				contract.duration = Duration::Subscription(period, max_duration);
+				contract.duration = Duration::Subscription(period, max_duration, changeable);
 				contract.rent_fee = RentFee::Tokens(rent_fee);
 				contract.terms_changed = contract.rentee.is_some();
 
@@ -918,7 +910,6 @@ impl<T: Config> Pallet<T> {
 		let royalty = Permill::from_percent(0);
 		let duration = Duration::Fixed(100u32.into());
 		let acceptance_type = AcceptanceType::AutoAcceptance(None);
-		let revocation_type = RevocationType::NoRevocation;
 		let rent_fee = RentFee::Tokens(200u32.into());
 
 		for _i in 0..contract_amount {
@@ -941,7 +932,7 @@ impl<T: Config> Pallet<T> {
 				nft_id,
 				duration.clone(),
 				acceptance_type.clone(),
-				revocation_type.clone(),
+				false,
 				rent_fee.clone(),
 				None,
 				None,

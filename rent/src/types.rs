@@ -30,22 +30,14 @@ pub type AccountList<AccountId, AccountSizeLimit> = BoundedVec<AccountId, Accoun
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 pub enum Duration<BlockNumber: Clone> {
 	Fixed(BlockNumber),
-	Subscription(BlockNumber, Option<BlockNumber>),
+	Subscription(BlockNumber, Option<BlockNumber>, bool),
 }
 
 impl<Blocknumber: Clone> Duration<Blocknumber> {
 	pub fn allows_rent_fee<Balance: Clone>(&self, rent_fee: &RentFee<Balance>) -> Option<()> {
 		match self {
-			Self::Subscription(_, _) => rent_fee.get_nft().is_none(),
+			Self::Subscription(_, _, _) => rent_fee.get_nft().is_none(),
 			_ => true,
-		}
-		.then(|| ())
-	}
-
-	pub fn allows_revocation(&self, revocation: &RevocationType) -> Option<()> {
-		match self {
-			Self::Subscription(_, _) => true,
-			_ => *revocation != RevocationType::OnSubscriptionChange,
 		}
 		.then(|| ())
 	}
@@ -63,21 +55,14 @@ impl<Blocknumber: Clone> Duration<Blocknumber> {
 
 	pub fn get_sub_period(&self) -> Option<Blocknumber> {
 		match self {
-			Self::Subscription(x, _) => Some(x.clone()),
+			Self::Subscription(x, _, _) => Some(x.clone()),
 			_ => None,
 		}
 	}
 
-	pub fn is_subscription(&self) -> bool {
+	pub fn as_subscription(&self) -> Option<(&Blocknumber, &Option<Blocknumber>, &bool)> {
 		match self {
-			Self::Subscription(_, _) => true,
-			_ => false,
-		}
-	}
-
-	pub fn as_subscription(&self) -> Option<(&Blocknumber, &Option<Blocknumber>)> {
-		match self {
-			Self::Subscription(x, y) => Some((x, y)),
+			Self::Subscription(x, y, z) => Some((x, y, z)),
 			_ => None,
 		}
 	}
@@ -85,7 +70,7 @@ impl<Blocknumber: Clone> Duration<Blocknumber> {
 	pub fn get_full_duration(&self) -> Blocknumber {
 		match self {
 			Duration::Fixed(x) => x.clone(),
-			Duration::Subscription(x, y) => y.clone().unwrap_or_else(|| x.clone()),
+			Duration::Subscription(x, y, _) => y.clone().unwrap_or_else(|| x.clone()),
 		}
 	}
 }
@@ -103,27 +88,6 @@ impl<AccountList> AcceptanceType<AccountList> {
 			AcceptanceType::AutoAcceptance(x) => x,
 			AcceptanceType::ManualAcceptance(x) => x,
 		}
-	}
-}
-
-/// Enumeration of contract revocation type.
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo, MaxEncodedLen)]
-pub enum RevocationType {
-	NoRevocation,
-	OnSubscriptionChange,
-	Anytime,
-}
-
-impl RevocationType {
-	pub fn allows_cancellation<Balance: Clone>(
-		&self,
-		_cancellation: &CancellationFee<Balance>,
-	) -> Option<()> {
-		match self {
-			Self::NoRevocation => false,
-			_ => true,
-		}
-		.then(|| ())
 	}
 }
 
@@ -215,8 +179,8 @@ where
 	pub duration: Duration<BlockNumber>,
 	/// Acceptance type of the renting contract.
 	pub acceptance_type: AcceptanceType<AccountList<AccountId, AccountSizeLimit>>,
-	/// Revocation type of the renting contract.
-	pub revocation_type: RevocationType,
+	/// Renter can cancel. TODO
+	pub renter_can_cancel: bool,
 	/// Rent fee paid by rentee.
 	pub rent_fee: RentFee<Balance>,
 	/// Flag indicating if terms were changed.
@@ -241,7 +205,7 @@ where
 		rentee: Option<AccountId>,
 		duration: Duration<BlockNumber>,
 		acceptance_type: AcceptanceType<AccountList<AccountId, AccountSizeLimit>>,
-		revocation_type: RevocationType,
+		renter_can_cancel: bool,
 		rent_fee: RentFee<Balance>,
 		terms_changed: bool,
 		renter_cancellation_fee: Option<CancellationFee<Balance>>,
@@ -253,7 +217,7 @@ where
 			rentee,
 			duration,
 			acceptance_type,
-			revocation_type,
+			renter_can_cancel,
 			rent_fee,
 			terms_changed,
 			renter_cancellation_fee,
@@ -269,7 +233,7 @@ where
 
 		let end = match self.duration {
 			Duration::Fixed(x) => Some(x),
-			Duration::Subscription(_, x) => x,
+			Duration::Subscription(_, x, _) => x,
 		};
 
 		let end = match end {
@@ -285,14 +249,7 @@ where
 	}
 
 	pub fn can_adjust_subscription(&self) -> bool {
-		if matches!(self.revocation_type, RevocationType::OnSubscriptionChange { .. }) {
-			return true
-		}
-		if self.rentee.is_none() && self.duration.is_subscription() {
-			return true
-		}
-
-		false
+		self.duration.as_subscription().and_then(|x| Some(*x.2)).unwrap_or(false)
 	}
 
 	pub fn is_manual_acceptance(&self) -> bool {

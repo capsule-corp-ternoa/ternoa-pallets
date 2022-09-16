@@ -23,7 +23,7 @@ use ternoa_common::traits::NFTExt;
 
 use crate::{
 	tests::mock, AcceptanceType, CancellationFee, Duration, Error, Event as RentEvent,
-	RentContractData, RentFee, RevocationType,
+	RentContractData, RentFee,
 };
 
 fn origin(account: u64) -> mock::Origin {
