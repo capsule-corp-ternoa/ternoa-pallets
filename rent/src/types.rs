@@ -73,6 +73,20 @@ impl<Blocknumber: Clone> Duration<Blocknumber> {
 			Duration::Subscription(x, y, _) => y.clone().unwrap_or_else(|| x.clone()),
 		}
 	}
+
+	pub fn get_duration_or_period(&self) -> &Blocknumber {
+		match self {
+			Duration::Fixed(x) => &x,
+			Duration::Subscription(x, _, _) => &x,
+		}
+	}
+
+	pub fn queue_kind(&self) -> QueueKind {
+		match self {
+			Duration::Fixed(_) => QueueKind::Fixed,
+			Duration::Subscription(_, _, _) => QueueKind::Subscription,
+		}
+	}
 }
 
 /// Enumeration of contract acceptance type.
@@ -270,6 +284,10 @@ where
 			.saturating_div(full_duration as u32);
 		Permill::from_percent(percent)
 	}
+
+	pub fn is_renter(&self, account: &AccountId) -> Option<()> {
+		(self.renter == *account).then(|| {})
+	}
 }
 
 /// wrapper type to store queues of either fixed duration contracts, subscription contract or
@@ -358,6 +376,12 @@ where
 	}
 }
 
+pub enum QueueKind {
+	Fixed,
+	Subscription,
+	Available,
+}
+
 #[derive(
 	Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen,
 )]
@@ -390,6 +414,27 @@ where
 	/// Returns the addition of queues length.
 	pub fn can_be_increased(&self, len: u32) -> Option<()> {
 		(self.size() + len <= self.limit()).then(|| {})
+	}
+
+	pub fn insert(
+		&mut self,
+		nft_id: NFTId,
+		block_number: BlockNumber,
+		kind: QueueKind,
+	) -> Result<(), ()> {
+		match kind {
+			QueueKind::Fixed => self.fixed_queue.insert(nft_id, block_number),
+			QueueKind::Subscription => self.subscription_queue.insert(nft_id, block_number),
+			QueueKind::Available => self.available_queue.insert(nft_id, block_number),
+		}
+	}
+
+	pub fn remove(&mut self, nft_id: NFTId, kind: QueueKind) {
+		match kind {
+			QueueKind::Fixed => self.fixed_queue.remove(nft_id),
+			QueueKind::Subscription => self.subscription_queue.remove(nft_id),
+			QueueKind::Available => self.available_queue.remove(nft_id),
+		};
 	}
 }
 impl<BlockNumber, Limit> Default for RentingQueues<BlockNumber, Limit>
