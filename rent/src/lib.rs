@@ -370,11 +370,10 @@ pub mod pallet {
 				.ok_or(Error::<T>::DurationAndCancellationFeeMismatch)?;
 
 			// Rent Fee Check ✅
+			// Rentee Cancellation Check  ✅
 			if let Some(id) = rent_fee.get_nft() {
 				ensure!(T::NFTExt::exists(id), Error::<T>::RentNFTNotFound);
 			}
-
-			// Rentee Cancellation Check  ✅
 			if let Some(id) = rentee_cancellation_fee.get_nft() {
 				ensure!(T::NFTExt::exists(id), Error::<T>::CancellationNFTNotFound);
 			}
@@ -385,15 +384,13 @@ pub mod pallet {
 			if let Some(amount) = renter_cancellation_fee.get_balance() {
 				T::Currency::transfer(&who, &pallet, amount, KeepAlive)?;
 			}
-
 			if let Some(id) = renter_cancellation_fee.get_nft() {
 				T::NFTExt::mutate_nft(id, |x| -> DispatchResult {
 					let nft = x.as_mut().ok_or(Error::<T>::CancellationNFTNotFound)?;
+					let is_valid = nft.not_in_state(&Self::invalid_state()).is_ok();
 					ensure!(nft.owner == who, Error::<T>::NotTheCancellationNFTOwner);
-					ensure!(
-						nft.not_in_state(&Self::invalid_state()).is_ok(),
-						Error::<T>::CancellationNFTNotInValidState
-					);
+					ensure!(is_valid, Error::<T>::CancellationNFTNotInValidState);
+
 					nft.owner = pallet;
 					Ok(())
 				})?;
@@ -451,7 +448,7 @@ pub mod pallet {
 			let mut nft = T::NFTExt::get_nft(nft_id).ok_or(Error::<T>::NFTNotFound)?;
 
 			let rentee = contract.rentee.as_ref().ok_or(Error::<T>::ContractIsNotRunning)?;
-			let is_renter = contract.is_renter(&who).is_some();
+			let is_renter = contract.renter == who;
 			let is_rentee = rentee == &who;
 			ensure!(is_renter || is_rentee, Error::<T>::NotAContractParticipant);
 
@@ -469,21 +466,15 @@ pub mod pallet {
 
 			// Now let's move the revoker cancellation fee to the damaged party. 📦
 			// Since we have flexible tokens we need to calculate how much we need to return.
+			// God help us if it is flexible
 			let return_fee = if is_renter {
 				(contract.renter_cancellation_fee.clone(), rentee.clone())
 			} else {
 				(contract.rentee_cancellation_fee.clone(), contract.renter.clone())
 			};
-
-			// God help us if it is flexible
 			if let Some(full_amount) = return_fee.0.as_flexible() {
-				let completion = contract.completion(&now);
-				let to_damaged_party = completion * full_amount;
-				let to_caller = full_amount.saturating_sub(to_damaged_party);
-
-				let src = &Self::account_id();
-				T::Currency::transfer(src, &return_fee.1, to_damaged_party, AllowDeath)?;
-				T::Currency::transfer(src, &who, to_caller, AllowDeath)?;
+				let percent = contract.completion(&now);
+				Self::return_flexible_fee(&who, &return_fee.1, percent, full_amount)?;
 			} else {
 				Self::return_cancellation_fee(&return_fee.0, &return_fee.1)?;
 			}
@@ -799,6 +790,21 @@ impl<T: Config> Pallet<T> {
 			nft.owner = new_owner.clone();
 			Ok(())
 		})
+	}
+
+	pub fn return_flexible_fee(
+		offender: &T::AccountId,
+		damaged_party: &T::AccountId,
+		percent: Permill,
+		full_amount: BalanceOf<T>,
+	) -> DispatchResult {
+		let to_offender = percent * full_amount;
+		let to_damaged_party = full_amount.saturating_sub(to_offender);
+
+		let src = &Self::account_id();
+		T::Currency::transfer(src, &offender, to_offender, AllowDeath)?;
+		T::Currency::transfer(src, &damaged_party, to_damaged_party, AllowDeath)?;
+		Ok(())
 	}
 
 	pub fn return_cancellation_fee(
