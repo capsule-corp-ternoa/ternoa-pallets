@@ -32,6 +32,7 @@ pub type NFTId = u32;
 /// How collection IDs are encoded.
 pub type CollectionId = u32;
 
+#[derive(Encode, Decode, Eq, TypeInfo, Clone, Copy, PartialEq, RuntimeDebug, MaxEncodedLen)]
 pub enum NFTStateModifiers {
 	Capsule = 0x01,
 	IsListed = 0x02,
@@ -141,7 +142,7 @@ where
 		)
 	}
 
-	pub fn not_in_state(&self, list: Vec<NFTStateModifiers>) -> Result<(), NFTStateModifiers> {
+	pub fn not_in_state(&self, list: &Vec<NFTStateModifiers>) -> Result<(), NFTStateModifiers> {
 		for modifier in list {
 			let in_state = match modifier {
 				NFTStateModifiers::Capsule => self.state.is_capsule == true,
@@ -152,7 +153,7 @@ where
 				NFTStateModifiers::Rented => self.state.is_rented == true,
 			};
 			if in_state {
-				return Err(modifier)
+				return Err(*modifier)
 			}
 		}
 

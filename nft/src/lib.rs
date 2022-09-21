@@ -829,6 +829,21 @@ impl<T: Config> traits::NFTExt for Pallet<T> {
 
 		Ok(nft_id)
 	}
+
+	fn mutate_nft<
+		R,
+		E,
+		F: FnOnce(&mut Option<NFTData<Self::AccountId, Self::NFTOffchainDataLimit>>) -> Result<R, E>,
+	>(
+		id: NFTId,
+		f: F,
+	) -> Result<R, E> {
+		Nfts::<T>::try_mutate(id, f)
+	}
+
+	fn exists(id: NFTId) -> bool {
+		Nfts::<T>::contains_key(id)
+	}
 }
 
 impl<T: Config> Pallet<T> {
