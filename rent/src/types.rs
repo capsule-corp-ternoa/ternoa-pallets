@@ -140,6 +140,7 @@ pub enum CancellationFee<Balance>
 where
 	Balance: Clone,
 {
+	None,
 	FixedTokens(Balance),
 	FlexibleTokens(Balance),
 	NFT(NFTId),
@@ -200,9 +201,9 @@ where
 	/// Flag indicating if terms were changed.
 	pub terms_changed: bool,
 	/// Optional cancellation fee for renter.
-	pub renter_cancellation_fee: Option<CancellationFee<Balance>>,
+	pub renter_cancellation_fee: CancellationFee<Balance>,
 	/// Optional cancellation fee for rentee.
-	pub rentee_cancellation_fee: Option<CancellationFee<Balance>>,
+	pub rentee_cancellation_fee: CancellationFee<Balance>,
 }
 
 impl<AccountId, BlockNumber, Balance, AccountSizeLimit>
@@ -222,8 +223,8 @@ where
 		renter_can_cancel: bool,
 		rent_fee: RentFee<Balance>,
 		terms_changed: bool,
-		renter_cancellation_fee: Option<CancellationFee<Balance>>,
-		rentee_cancellation_fee: Option<CancellationFee<Balance>>,
+		renter_cancellation_fee: CancellationFee<Balance>,
+		rentee_cancellation_fee: CancellationFee<Balance>,
 	) -> RentContractData<AccountId, BlockNumber, Balance, AccountSizeLimit> {
 		Self {
 			start_block,

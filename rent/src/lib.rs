@@ -151,8 +151,8 @@ pub mod pallet {
 			acceptance_type: AcceptanceType<AccountList<T::AccountId, T::AccountSizeLimit>>,
 			renter_can_cancel: bool,
 			rent_fee: RentFee<BalanceOf<T>>,
-			renter_cancellation_fee: Option<CancellationFee<BalanceOf<T>>>,
-			rentee_cancellation_fee: Option<CancellationFee<BalanceOf<T>>>,
+			renter_cancellation_fee: CancellationFee<BalanceOf<T>>,
+			rentee_cancellation_fee: CancellationFee<BalanceOf<T>>,
 		},
 		/// Contract was accepted and has started.
 		ContractStarted { nft_id: NFTId, rentee: T::AccountId },
@@ -340,10 +340,11 @@ pub mod pallet {
 			acceptance_type: AcceptanceType<AccountList<T::AccountId, T::AccountSizeLimit>>,
 			renter_can_cancel: bool,
 			rent_fee: RentFee<BalanceOf<T>>,
-			renter_cancellation_fee: Option<CancellationFee<BalanceOf<T>>>,
-			rentee_cancellation_fee: Option<CancellationFee<BalanceOf<T>>>,
+			renter_cancellation_fee: CancellationFee<BalanceOf<T>>,
+			rentee_cancellation_fee: CancellationFee<BalanceOf<T>>,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
+			let pallet = Self::account_id();
 			let mut queues = Queues::<T>::get();
 
 			// Queue ✅
@@ -361,16 +362,12 @@ pub mod pallet {
 			duration
 				.allows_rent_fee(&rent_fee)
 				.ok_or(Error::<T>::DurationAndRentFeeMismatch)?;
-			if let Some(x) = &renter_cancellation_fee {
-				duration
-					.allows_cancellation(x)
-					.ok_or(Error::<T>::DurationAndCancellationFeeMismatch)?;
-			}
-			if let Some(x) = &rentee_cancellation_fee {
-				duration
-					.allows_cancellation(x)
-					.ok_or(Error::<T>::DurationAndCancellationFeeMismatch)?;
-			}
+			duration
+				.allows_cancellation(&renter_cancellation_fee)
+				.ok_or(Error::<T>::DurationAndCancellationFeeMismatch)?;
+			duration
+				.allows_cancellation(&rentee_cancellation_fee)
+				.ok_or(Error::<T>::DurationAndCancellationFeeMismatch)?;
 
 			// Rent Fee Check ✅
 			if let Some(id) = rent_fee.get_nft() {
@@ -378,30 +375,28 @@ pub mod pallet {
 			}
 
 			// Rentee Cancellation Check  ✅
-			if let Some(id) = rentee_cancellation_fee.as_ref().and_then(|x| x.get_nft()) {
+			if let Some(id) = rentee_cancellation_fee.get_nft() {
 				ensure!(T::NFTExt::exists(id), Error::<T>::CancellationNFTNotFound);
 			}
 
 			// Checking done, time to change the storage 📦
 			// Renter Cancellation fee ✅ taken  📦
 			// Renter Cancellation NFT Check and Taken  📦
-			if let Some(fee) = rentee_cancellation_fee.as_ref() {
-				if let Some(amount) = fee.get_balance() {
-					T::Currency::transfer(&who, &Self::account_id(), amount, KeepAlive)?;
-				}
+			if let Some(amount) = renter_cancellation_fee.get_balance() {
+				T::Currency::transfer(&who, &pallet, amount, KeepAlive)?;
+			}
 
-				if let Some(id) = fee.get_nft() {
-					T::NFTExt::mutate_nft(id, |x| -> DispatchResult {
-						let nft = x.as_mut().ok_or(Error::<T>::CancellationNFTNotFound)?;
-						ensure!(nft.owner == who, Error::<T>::NotTheCancellationNFTOwner);
-						ensure!(
-							nft.not_in_state(&Self::invalid_state()).is_ok(),
-							Error::<T>::CancellationNFTNotInValidState
-						);
-						nft.owner = Self::account_id();
-						Ok(())
-					})?;
-				}
+			if let Some(id) = renter_cancellation_fee.get_nft() {
+				T::NFTExt::mutate_nft(id, |x| -> DispatchResult {
+					let nft = x.as_mut().ok_or(Error::<T>::CancellationNFTNotFound)?;
+					ensure!(nft.owner == who, Error::<T>::NotTheCancellationNFTOwner);
+					ensure!(
+						nft.not_in_state(&Self::invalid_state()).is_ok(),
+						Error::<T>::CancellationNFTNotInValidState
+					);
+					nft.owner = pallet;
+					Ok(())
+				})?;
 			}
 
 			// Queue Updated  📦
@@ -470,9 +465,7 @@ pub mod pallet {
 			} else {
 				(contract.renter_cancellation_fee.clone(), contract.renter.clone())
 			};
-			if let Some(fee) = &return_fee.0 {
-				Self::return_cancellation_fee(&fee, &return_fee.1)?;
-			}
+			Self::return_cancellation_fee(&return_fee.0, &return_fee.1)?;
 
 			// Now let's move the revoker cancellation fee to the damaged party. 📦
 			// Since we have flexible tokens we need to calculate how much we need to return.
@@ -482,19 +475,17 @@ pub mod pallet {
 				(contract.rentee_cancellation_fee.clone(), contract.renter.clone())
 			};
 
-			if let Some(fee) = &return_fee.0 {
-				// God help us if it is flexible
-				if let Some(full_amount) = fee.as_flexible() {
-					let completion = contract.completion(&now);
-					let to_damaged_party = completion * full_amount;
-					let to_caller = full_amount.saturating_sub(to_damaged_party);
+			// God help us if it is flexible
+			if let Some(full_amount) = return_fee.0.as_flexible() {
+				let completion = contract.completion(&now);
+				let to_damaged_party = completion * full_amount;
+				let to_caller = full_amount.saturating_sub(to_damaged_party);
 
-					let src = &Self::account_id();
-					T::Currency::transfer(src, &return_fee.1, to_damaged_party, AllowDeath)?;
-					T::Currency::transfer(src, &who, to_caller, AllowDeath)?;
-				} else {
-					Self::return_cancellation_fee(&fee, &return_fee.1)?;
-				}
+				let src = &Self::account_id();
+				T::Currency::transfer(src, &return_fee.1, to_damaged_party, AllowDeath)?;
+				T::Currency::transfer(src, &who, to_caller, AllowDeath)?;
+			} else {
+				Self::return_cancellation_fee(&return_fee.0, &return_fee.1)?;
 			}
 
 			// Remove from corresponding queues / mappings. 📦
@@ -608,7 +599,7 @@ pub mod pallet {
 			}
 
 			// Balance Check  ✅
-			if let Some(amount) = cancellation_fee.as_ref().and_then(|x| x.get_balance()) {
+			if let Some(amount) = cancellation_fee.get_balance() {
 				ensure!(
 					Self::balance_check(&who, amount),
 					Error::<T>::NotEnoughFundsForCancellationFee
@@ -617,7 +608,7 @@ pub mod pallet {
 
 			// Rent and Renter Cancellation NFT Check ✅
 			let maybe_rent_nft = contract.rent_fee.get_nft();
-			let maybe_cancel_nft = cancellation_fee.as_ref().and_then(|x| x.get_nft());
+			let maybe_cancel_nft = cancellation_fee.get_nft();
 
 			if let Some(nft_id) = &maybe_rent_nft {
 				let nft = T::NFTExt::get_nft(*nft_id).ok_or(Error::<T>::RentNFTNotFound)?;
@@ -867,23 +858,23 @@ impl<T: Config> Pallet<T> {
 			let rentee_cancellation = &contract.rentee_cancellation_fee;
 
 			// Let's first do the transactions
-			if let Some(amount) = renter_cancellation.as_ref().and_then(|x| x.get_balance()) {
+			if let Some(amount) = renter_cancellation.get_balance() {
 				T::Currency::transfer(src, renter, amount, AllowDeath)?;
 			}
 
 			if let Some(rentee) = &contract.rentee {
-				if let Some(amount) = rentee_cancellation.as_ref().and_then(|x| x.get_balance()) {
+				if let Some(amount) = rentee_cancellation.get_balance() {
 					T::Currency::transfer(src, rentee, amount, AllowDeath)?;
 				}
 			}
 
 			// Now lets get the NFTs
-			if let Some(nft_id) = renter_cancellation.as_ref().and_then(|x| x.get_nft()) {
+			if let Some(nft_id) = renter_cancellation.get_nft() {
 				Self::change_nft_ownership(nft_id, &renter)?;
 			}
 
 			if let Some(rentee) = &contract.rentee {
-				if let Some(nft_id) = rentee_cancellation.as_ref().and_then(|x| x.get_nft()) {
+				if let Some(nft_id) = rentee_cancellation.get_nft() {
 					Self::change_nft_ownership(nft_id, rentee)?;
 				}
 			}
@@ -922,14 +913,14 @@ impl<T: Config> Pallet<T> {
 				.map_err(|_| Error::<T>::NotEnoughFundsForRentFee)?;
 		}
 
-		if let Some(amount) = cancellation_fee.clone().and_then(|x| x.get_balance()) {
+		if let Some(amount) = cancellation_fee.get_balance() {
 			T::Currency::transfer(rentee, pallet, amount, KeepAlive)
 				.map_err(|_| Error::<T>::NotEnoughFundsForCancellationFee)?;
 		}
 
 		// Let's take source's NFTs.
 		let maybe_rent_nft = contract.rent_fee.get_nft();
-		let maybe_cancel_nft = cancellation_fee.and_then(|x| x.get_nft());
+		let maybe_cancel_nft = cancellation_fee.get_nft();
 
 		// Rent and Renter Cancellation NFT Check ✅
 		if let Some(nft_id) = &maybe_rent_nft {
@@ -1002,8 +993,8 @@ impl<T: Config> Pallet<T> {
 				acceptance_type.clone(),
 				false,
 				rent_fee.clone(),
-				None,
-				None,
+				CancellationFee::None,
+				CancellationFee::None,
 			)
 			.map_err(|x| x.error)?;
 		}
