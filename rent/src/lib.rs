@@ -22,11 +22,12 @@ mod tests;
 mod types;
 mod weights;
 
-use frame_benchmarking::Zero;
 pub use pallet::*;
 pub use types::*;
+pub use weights::WeightInfo;
 
 use core::convert::TryFrom;
+use frame_benchmarking::Zero;
 use frame_support::{
 	dispatch::{DispatchError, DispatchResult},
 	ensure,
@@ -39,25 +40,22 @@ use frame_support::{
 	BoundedVec, PalletId,
 };
 use frame_system::pallet_prelude::*;
+use primitives::nfts::{
+	NFTId,
+	NFTStateModifiers::{self, *},
+};
 use sp_runtime::{
 	traits::{AccountIdConversion, CheckedSub, Saturating},
 	Permill,
 };
 use sp_std::prelude::*;
-
-use primitives::nfts::{
-	NFTId,
-	NFTStateModifiers::{self, *},
-};
 use ternoa_common::traits::NFTExt;
-pub use weights::WeightInfo;
 
 pub type BalanceOf<T> =
 	<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 pub type NegativeImbalanceOf<T> = <<T as Config>::Currency as Currency<
 	<T as frame_system::Config>::AccountId,
 >>::NegativeImbalance;
-
 pub type RentContractDataOf<T> = RentContractData<
 	<T as frame_system::Config>::AccountId,
 	<T as frame_system::Config>::BlockNumber,
@@ -184,78 +182,72 @@ pub mod pallet {
 
 	#[pallet::error]
 	pub enum Error<T> {
-		/// NFT not found.
+		/// NFT was not found.
 		NFTNotFound,
-		/// TODO
+		/// Rented NFT was not found.
 		RentNFTNotFound,
-		/// TODO
+		/// Cancellation NFT was not found.
 		CancellationNFTNotFound,
-		/// TODO
+		/// The caller is not the renter or rentee.
 		NotAContractParticipant,
-		/// TODO
-		ContractIsNotRunning,
-		/// TODO
-		ContractIsRunning,
-		/// TODO
+		/// Cannot revoke a non running contract.
+		CannotRevokeNonRunningContract,
+		/// Cannot cancel a running contract.
+		CannotCancelRunningContract,
+		/// Contract is not allowed to be canceled by renter.
 		ContractCannotBeCanceledByRenter,
-		/// TODO
+		/// Contract does not support automatic rent.
 		ContractDoesNotSupportAutomaticRent,
-		/// TODO
+		/// Contract does not allow for offers to be made.
 		ContractDoesNotSupportOffers,
-		/// TODO
+		/// The caller is not whitelisted.
 		NotWhitelisted,
-		/// TODO
-		NotTheRentedNFTOwner,
-		/// TODO
+		/// The caller does not own the rent NFT.
+		CallerDoesNotOwnRentNFT,
+		/// The caller does not own the cancellation NFT.
+		CallerDoesNotOwnCancellationNFT,
+		/// Rentee does not own the rent NFT.
 		RenteeDoesNotOwnTheRentNFT,
-		/// TODO
+		/// Rentee does not own the cancellation NFT.
 		RenteeDoesNotOwnTheCancellationNFT,
-		/// TODO
-		RentedNFTNotInValidState,
-		/// TODO
-		NotTheCancellationNFTOwner,
-		/// TODO
-		CancellationNFTNotInValidState,
-		/// TODO
+		/// Not Enough funds for rent fee.
 		NotEnoughFundsForRentFee,
-		/// TODO
+		/// Not Enough funds for cancellation fee.
 		NotEnoughFundsForCancellationFee,
-		/// TODO
+		/// The caller is not the contract owner.
 		NotTheContractOwner,
-		/// TODO
+		/// The caller is not the contract rentee.
 		NotTheContractRentee,
-		/// TODO
+		/// Contract NFT is not in a valid state.
 		ContractNFTNotInAValidState,
-		/// TODO
-		/// Not the owner of the NFT.
+		/// Rent NFT is not in a valid state.
+		RentNFTNotInValidState,
+		/// Cancellation NFT is not in a valid state.
+		CancellationNFTNotInValidState,
+		/// The caller is not the owner of the contract NFT.
 		NotTheNFTOwner,
-		/// Operation is not permitted because NFT is in invalid state.
-		NFTInInvalidState,
-		/// Operation is not permitted because the maximum number au parallel rent contract has
-		/// been reached.
+		/// The chain cannot accept new NFT contracts. Maximum limit reached.
 		MaxSimultaneousContractReached,
-		/// The contract was not found for the given nft_id.
+		/// The contract was not found.
 		ContractNotFound,
-		/// The caller is neither the renter or rentee.
-		NotTheRenterOrRentee,
 		/// Cannot Rent your own contract.
 		CannotRentOwnContract,
-		/// Maximum offers reached.
+		/// The contract cannot accept new offers. Maximum limit reached.
 		MaximumOffersReached,
-		/// Operation is not permitted because contract terms are already accepted
+		/// Operation is not permitted because contract terms are already accepted.
 		ContractTermsAlreadyAccepted,
-		/// No offers was found for the contract
+		/// No offers were found for that contract.
 		NoOffersForThisContract,
-		/// TODO
+		/// No offers were found for that address.
 		NoOfferFromThisAddress,
-		/// Offer not found.
-		OfferNotFound,
-		/// Duration and Revocation Mismatch
+		/// Duration and revocation mismatch.
 		DurationAndRentFeeMismatch,
-		/// Duration and Cancellation Mismatch
+		/// Duration and cancellation mismatch.
 		DurationAndCancellationFeeMismatch,
 		/// Cannot adjust subscription Terms.
 		CannotAdjustSubscriptionTerms,
+		/// Contract is not running.
+		ContractIsNotRunning,
 	}
 
 	#[pallet::hooks]
@@ -388,7 +380,7 @@ pub mod pallet {
 				T::NFTExt::mutate_nft(id, |x| -> DispatchResult {
 					let nft = x.as_mut().ok_or(Error::<T>::CancellationNFTNotFound)?;
 					let is_valid = nft.not_in_state(&Self::invalid_state()).is_ok();
-					ensure!(nft.owner == who, Error::<T>::NotTheCancellationNFTOwner);
+					ensure!(nft.owner == who, Error::<T>::CallerDoesNotOwnCancellationNFT);
 					ensure!(is_valid, Error::<T>::CancellationNFTNotInValidState);
 
 					nft.owner = pallet;
@@ -444,7 +436,7 @@ pub mod pallet {
 
 			// Checks ✅
 			ensure!(contract.renter == who, Error::<T>::NotTheContractOwner);
-			ensure!(contract.rentee.is_none(), Error::<T>::ContractIsRunning);
+			ensure!(contract.rentee.is_none(), Error::<T>::CannotCancelRunningContract);
 
 			// Storage Activity 📦
 			// 1. Remove Contract From Queue
@@ -476,7 +468,8 @@ pub mod pallet {
 			let renter = &contract.renter;
 
 			// Checks ✅
-			let rentee = contract.rentee.as_ref().ok_or(Error::<T>::ContractIsNotRunning)?;
+			let rentee =
+				contract.rentee.as_ref().ok_or(Error::<T>::CannotRevokeNonRunningContract)?;
 			let is_renter = contract.renter == who;
 			let is_rentee = rentee == &who;
 			ensure!(is_renter || is_rentee, Error::<T>::NotAContractParticipant);
@@ -603,15 +596,15 @@ pub mod pallet {
 			let maybe_cancel_nft = cancellation_fee.get_nft();
 			if let Some(nft_id) = &maybe_rent_nft {
 				let nft = T::NFTExt::get_nft(*nft_id).ok_or(Error::<T>::RentNFTNotFound)?;
-				ensure!(nft.owner == who, Error::<T>::NotTheRentedNFTOwner);
+				ensure!(nft.owner == who, Error::<T>::CallerDoesNotOwnRentNFT);
 				ensure!(
 					nft.not_in_state(&Self::invalid_state()).is_ok(),
-					Error::<T>::RentedNFTNotInValidState
+					Error::<T>::RentNFTNotInValidState
 				);
 			}
 			if let Some(nft_id) = &maybe_cancel_nft {
 				let nft = T::NFTExt::get_nft(*nft_id).ok_or(Error::<T>::CancellationNFTNotFound)?;
-				ensure!(nft.owner == who, Error::<T>::NotTheCancellationNFTOwner);
+				ensure!(nft.owner == who, Error::<T>::CallerDoesNotOwnCancellationNFT);
 				ensure!(
 					nft.not_in_state(&Self::invalid_state()).is_ok(),
 					Error::<T>::CancellationNFTNotInValidState
@@ -838,14 +831,14 @@ impl<T: Config> Pallet<T> {
 		nft_id: NFTId,
 		now: &T::BlockNumber,
 	) -> Option<T::BlockNumber> {
-		let contract = Contracts::<T>::get(nft_id).expect("Should not happen. qed");
-		let rentee = contract.rentee.clone().expect("Should not happen. qed");
-		let rent_fee = contract.rent_fee.get_balance().expect("This cannot happen. qed");
+		let contract = Contracts::<T>::get(nft_id)?;
+		let rentee = contract.rentee.as_ref()?;
+		let rent_fee = contract.rent_fee.get_balance()?;
 
 		let mut cancel_subscription = contract.terms_changed || contract.has_ended(now);
 		if !cancel_subscription {
 			cancel_subscription =
-				T::Currency::transfer(&rentee, &contract.renter, rent_fee, KeepAlive).is_err();
+				T::Currency::transfer(rentee, &contract.renter, rent_fee, KeepAlive).is_err();
 		}
 
 		if cancel_subscription {
@@ -853,6 +846,10 @@ impl<T: Config> Pallet<T> {
 		}
 
 		let sub_duration = contract.duration.get_sub_period().expect("This cannot happen. qed");
+		/* 		let mut block = contract.start_block.clone()?;
+		while block < *now {
+
+		} */
 
 		// TODO This is not correct.
 		// It can happen that this rent contract is processed later than it should so we need to
@@ -937,7 +934,7 @@ impl<T: Config> Pallet<T> {
 			ensure!(nft.owner == *renter, Error::<T>::RenteeDoesNotOwnTheRentNFT);
 			ensure!(
 				nft.not_in_state(&Self::invalid_state()).is_ok(),
-				Error::<T>::RentedNFTNotInValidState
+				Error::<T>::RentNFTNotInValidState
 			);
 		}
 		if let Some(nft_id) = &maybe_cancel_nft {
