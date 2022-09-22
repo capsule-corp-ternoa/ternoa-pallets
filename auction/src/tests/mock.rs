@@ -136,6 +136,8 @@ parameter_types! {
 	pub const MarketplaceInitialMintFee: Balance = MARKETPLACE_MINT_FEE;
 	pub const OffchainDataLimit: u32 = 150;
 	pub const AccountSizeLimit: u32 = 100;
+	pub const CollectionListSizeLimit: u32 = 100;
+
 }
 
 impl ternoa_nft::Config for Test {
@@ -158,6 +160,7 @@ impl ternoa_marketplace::Config for Test {
 	type InitialMintFee = MarketplaceInitialMintFee;
 	type OffchainDataLimit = OffchainDataLimit;
 	type AccountSizeLimit = AccountSizeLimit;
+	type CollectionSizeLimit = CollectionListSizeLimit;
 }
 
 parameter_types! {

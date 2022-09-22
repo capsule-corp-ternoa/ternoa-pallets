@@ -36,6 +36,7 @@ use crate::{
 
 const PERCENT_0: Permill = Permill::from_parts(0);
 const PERCENT_20: Permill = Permill::from_parts(200000);
+const ALICE_COLLECTION_ID_0: NFTId = 0;
 const ALICE_NFT_ID_0: NFTId = 0;
 const ALICE_NFT_ID_1: NFTId = 1;
 const ALICE_MARKETPLACE_ID: u32 = 0;
@@ -54,8 +55,18 @@ pub fn prepare_tests() {
 	let alice: mock::Origin = origin(ALICE);
 	let bob: mock::Origin = origin(BOB);
 
+	//Create Collection
+	NFT::create_collection(alice.clone(), BoundedVec::default(), None).unwrap();
+
 	//Create NFTs.
-	NFT::create_nft(alice.clone(), BoundedVec::default(), PERCENT_0, None, false).unwrap();
+	NFT::create_nft(
+		alice.clone(),
+		BoundedVec::default(),
+		PERCENT_0,
+		Some(ALICE_COLLECTION_ID_0),
+		false,
+	)
+	.unwrap();
 	NFT::create_nft(alice.clone(), BoundedVec::default(), PERCENT_0, None, false).unwrap();
 	NFT::create_nft(bob, BoundedVec::default(), PERCENT_0, None, false).unwrap();
 
@@ -65,6 +76,7 @@ pub fn prepare_tests() {
 		alice.clone(),
 		ALICE_MARKETPLACE_ID,
 		ConfigOp::Set(CompoundFee::Percentage(PERCENT_20)),
+		ConfigOp::Noop,
 		ConfigOp::Noop,
 		ConfigOp::Noop,
 		ConfigOp::Noop,
@@ -312,7 +324,7 @@ pub mod create_auction {
 	}
 
 	#[test]
-	fn account_not_allowed_to_list() {
+	fn account_not_allowed_to_list_banned() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
@@ -325,11 +337,85 @@ pub mod create_auction {
 				ConfigOp::Noop,
 				ConfigOp::Set(BoundedVec::try_from(vec![ALICE]).unwrap()),
 				ConfigOp::Noop,
+				ConfigOp::Noop,
 			)
 			.unwrap();
 
 			let ok = AuctionBuilder::new().execute();
 			assert_noop!(ok, Error::<Test>::AccountNotAllowedToList);
+		})
+	}
+
+	#[test]
+	fn account_not_allowed_to_list_not_authorized() {
+		ExtBuilder::new_build(None).execute_with(|| {
+			prepare_tests();
+			let alice: mock::Origin = origin(ALICE);
+
+			// Set marketplace private (without alice's account in account list / allow list).
+			Marketplace::set_marketplace_kind(
+				alice.clone(),
+				ALICE_MARKETPLACE_ID,
+				MarketplaceType::Private,
+			)
+			.unwrap();
+
+			let ok = AuctionBuilder::new().execute();
+			assert_noop!(ok, Error::<Test>::AccountNotAllowedToList);
+		})
+	}
+
+	#[test]
+	fn collection_not_allowed_banned() {
+		ExtBuilder::new_build(None).execute_with(|| {
+			prepare_tests();
+			let alice: mock::Origin = origin(ALICE);
+
+			// Set public marketplace collection list (ban list) with bob's collection.
+			Marketplace::set_marketplace_configuration(
+				alice.clone(),
+				ALICE_MARKETPLACE_ID,
+				ConfigOp::Noop,
+				ConfigOp::Noop,
+				ConfigOp::Noop,
+				ConfigOp::Noop,
+				ConfigOp::Set(BoundedVec::try_from(vec![ALICE_COLLECTION_ID_0]).unwrap()),
+			)
+			.unwrap();
+
+			let err = AuctionBuilder::new().execute();
+			assert_noop!(err, Error::<Test>::CollectionNotAllowed);
+		})
+	}
+
+	#[test]
+	fn collection_not_allowed_not_authorized() {
+		ExtBuilder::new_build(None).execute_with(|| {
+			prepare_tests();
+			let alice: mock::Origin = origin(ALICE);
+
+			// Set marketplace private (without bob's collection in collection list (allow list)).
+			Marketplace::set_marketplace_kind(
+				alice.clone(),
+				ALICE_MARKETPLACE_ID,
+				MarketplaceType::Private,
+			)
+			.unwrap();
+
+			// Set public marketplace collection list (ban list) with bob's collection.
+			Marketplace::set_marketplace_configuration(
+				alice.clone(),
+				ALICE_MARKETPLACE_ID,
+				ConfigOp::Noop,
+				ConfigOp::Noop,
+				ConfigOp::Set(BoundedVec::try_from(vec![ALICE]).unwrap()),
+				ConfigOp::Noop,
+				ConfigOp::Noop,
+			)
+			.unwrap();
+
+			let err = AuctionBuilder::new().execute();
+			assert_noop!(err, Error::<Test>::CollectionNotAllowed);
 		})
 	}
 
@@ -344,6 +430,7 @@ pub mod create_auction {
 				origin(ALICE),
 				ALICE_MARKETPLACE_ID,
 				ConfigOp::Set(CompoundFee::Flat(price)),
+				ConfigOp::Noop,
 				ConfigOp::Noop,
 				ConfigOp::Noop,
 				ConfigOp::Noop,

@@ -126,6 +126,7 @@ parameter_types! {
 	// Marketplace parameter types
 	pub const OffchainDataLimit: u32 = 150;
 	pub const AccountSizeLimit: u32 = 100;
+	pub const CollectionListSizeLimit: u32 = 100;
 
 }
 
@@ -149,6 +150,7 @@ impl Config for Test {
 	type InitialMintFee = MarketplaceInitialMintFee;
 	type OffchainDataLimit = OffchainDataLimit;
 	type AccountSizeLimit = AccountSizeLimit;
+	type CollectionSizeLimit = CollectionListSizeLimit;
 }
 
 pub struct MockFeeCollector;

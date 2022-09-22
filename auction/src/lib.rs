@@ -306,6 +306,8 @@ pub mod pallet {
 		AccountNotAllowedToList,
 		/// Cannot end auction without bids
 		CannotEndAuctionWithoutBids,
+		/// Collection not allowed on MP
+		CollectionNotAllowed,
 	}
 
 	#[pallet::call]
@@ -358,6 +360,11 @@ pub mod pallet {
 				.ok_or(Error::<T>::MarketplaceNotFound)?;
 
 			marketplace.allowed_to_list(&who).ok_or(Error::<T>::AccountNotAllowedToList)?;
+			if let Some(collection_id) = nft.collection_id {
+				marketplace
+					.collection_allowed(&collection_id)
+					.ok_or(Error::<T>::CollectionNotAllowed)?;
+			}
 
 			// Check if the start price can cover the marketplace commission_fee if it exists.
 			if let Some(commission_fee) = &marketplace.commission_fee {
