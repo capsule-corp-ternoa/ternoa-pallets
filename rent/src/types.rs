@@ -195,7 +195,7 @@ where
 	/// Acceptance type of the renting contract.
 	pub acceptance_type: AcceptanceType<AccountList<AccountId, AccountSizeLimit>>,
 	/// Renter can cancel. TODO
-	pub renter_can_cancel: bool,
+	pub renter_can_revoke: bool,
 	/// Rent fee paid by rentee.
 	pub rent_fee: RentFee<Balance>,
 	/// Flag indicating if terms were changed.
@@ -220,7 +220,7 @@ where
 		rentee: Option<AccountId>,
 		duration: Duration<BlockNumber>,
 		acceptance_type: AcceptanceType<AccountList<AccountId, AccountSizeLimit>>,
-		renter_can_cancel: bool,
+		renter_can_revoke: bool,
 		rent_fee: RentFee<Balance>,
 		terms_changed: bool,
 		renter_cancellation_fee: CancellationFee<Balance>,
@@ -232,7 +232,7 @@ where
 			rentee,
 			duration,
 			acceptance_type,
-			renter_can_cancel,
+			renter_can_revoke,
 			rent_fee,
 			terms_changed,
 			renter_cancellation_fee,

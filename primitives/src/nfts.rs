@@ -160,6 +160,31 @@ where
 		Ok(())
 	}
 
+	pub fn set_state(&mut self, state: NFTStateModifiers, active: bool) -> Option<()> {
+		let is_already_in_state = match state {
+			NFTStateModifiers::Capsule => self.state.is_capsule == active,
+			NFTStateModifiers::IsListed => self.state.is_listed == active,
+			NFTStateModifiers::Secret => self.state.is_secret == active,
+			NFTStateModifiers::Delegated => self.state.is_delegated == active,
+			NFTStateModifiers::Soulbound => self.state.is_soulbound == active,
+			NFTStateModifiers::Rented => self.state.is_rented == active,
+		};
+		if is_already_in_state {
+			return None
+		}
+
+		match state {
+			NFTStateModifiers::Capsule => self.state.is_capsule = active,
+			NFTStateModifiers::IsListed => self.state.is_listed = active,
+			NFTStateModifiers::Secret => self.state.is_secret = active,
+			NFTStateModifiers::Delegated => self.state.is_delegated = active,
+			NFTStateModifiers::Soulbound => self.state.is_soulbound = active,
+			NFTStateModifiers::Rented => self.state.is_rented = active,
+		};
+
+		Some(())
+	}
+
 	pub fn is_owner(&self, who: &AccountId) -> Option<()> {
 		(self.owner == *who).then(|| {})
 	}
