@@ -108,7 +108,11 @@ pub mod pallet {
 
 		/// Maximum number of blocks during which a rent contract is available for acceptance.
 		#[pallet::constant]
-		type ContractExpirationDuration: Get<u32>;
+		type MaximumContractAvailabilityLimit: Get<u32>;
+
+		/// Maximum number of blocks that a contract can last for.
+		#[pallet::constant]
+		type MaximumContractDurationLimit: Get<u32>;
 	}
 
 	/// Data related to rent contracts.
@@ -165,7 +169,8 @@ pub mod pallet {
 		ContractSubscriptionTermsChanged {
 			nft_id: NFTId,
 			period: T::BlockNumber,
-			max_duration: Option<T::BlockNumber>,
+			max_duration: T::BlockNumber,
+			is_changeable: bool,
 			rent_fee: BalanceOf<T>,
 		},
 		/// A contract new subscription's terms were accpeted by rentee.
@@ -248,6 +253,8 @@ pub mod pallet {
 		CannotAdjustSubscriptionTerms,
 		/// Contract is not running.
 		ContractIsNotRunning,
+		/// Duration exceeds maximum limit
+		DurationExceedsMaximumLimit,
 	}
 
 	#[pallet::hooks]
@@ -329,7 +336,7 @@ pub mod pallet {
 		pub fn create_contract(
 			origin: OriginFor<T>,
 			nft_id: NFTId,
-			duration: Duration<T::BlockNumber>,
+			duration: DurationInput<T::BlockNumber>,
 			acceptance_type: AcceptanceType<AccountList<T::AccountId, T::AccountSizeLimit>>,
 			renter_can_revoke: bool,
 			rent_fee: RentFee<BalanceOf<T>>,
@@ -350,6 +357,12 @@ pub mod pallet {
 				Error::<T>::ContractNFTNotInAValidState
 			);
 
+			let duration_limit: T::BlockNumber = T::MaximumContractDurationLimit::get().into();
+			let duration = duration.to_duration(duration_limit.clone());
+			ensure!(
+				*duration.get_full_duration() <= duration_limit,
+				Error::<T>::DurationExceedsMaximumLimit
+			);
 			duration
 				.allows_rent_fee(&rent_fee)
 				.ok_or(Error::<T>::DurationAndRentFeeMismatch)?;
@@ -389,7 +402,7 @@ pub mod pallet {
 			}
 
 			let now = frame_system::Pallet::<T>::block_number();
-			let expiration_block = now + T::ContractExpirationDuration::get().into();
+			let expiration_block = now + T::MaximumContractAvailabilityLimit::get().into();
 			queues
 				.insert(nft_id, expiration_block, QueueKind::Available)
 				.map_err(|_| Error::<T>::MaxSimultaneousContractReached)?; // This should never happen since we already did the check.
@@ -403,7 +416,6 @@ pub mod pallet {
 				acceptance_type.clone(),
 				renter_can_revoke,
 				rent_fee.clone(),
-				false,
 				renter_cancellation_fee.clone(),
 				rentee_cancellation_fee.clone(),
 			);
@@ -714,16 +726,17 @@ pub mod pallet {
 		pub fn change_subscription_terms(
 			origin: OriginFor<T>,
 			nft_id: NFTId,
-			period: T::BlockNumber,
-			max_duration: Option<T::BlockNumber>,
 			rent_fee: BalanceOf<T>,
-			changeable: bool,
+			period: T::BlockNumber,
+			max_duration: T::BlockNumber,
+			is_changeable: bool,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
 			Contracts::<T>::try_mutate(nft_id, |x| -> DispatchResult {
 				let contract = x.as_mut().ok_or(Error::<T>::ContractNotFound)?;
 				let contract_active = contract.rentee.is_some();
+				let duration_limit: T::BlockNumber = T::MaximumContractDurationLimit::get().into();
 
 				// Checks ✅
 				ensure!(who == contract.renter, Error::<T>::NotTheContractOwner);
@@ -731,6 +744,7 @@ pub mod pallet {
 					contract.can_adjust_subscription(),
 					Error::<T>::CannotAdjustSubscriptionTerms
 				);
+				ensure!(max_duration < duration_limit, Error::<T>::DurationExceedsMaximumLimit);
 				if !contract_active {
 					Offers::<T>::remove(nft_id);
 				}
@@ -738,16 +752,26 @@ pub mod pallet {
 				// Storage Activity 📦
 				// 1. Change Contract Duration, Rent Fee
 				// 2. Set Contract Terms Changed field to true (or false if there is no rentee)
-				contract.duration = Duration::Subscription(period, max_duration, changeable);
+				contract.duration = Duration::Subscription(Subscription {
+					period_length: period,
+					max_duration,
+					is_changeable,
+					new_terms: contract_active,
+				});
 				contract.rent_fee = RentFee::Tokens(rent_fee);
-				contract.terms_changed = contract_active;
+				contract.duration.set_terms_changed(true);
 
 				Ok(())
 			})?;
 
 			// Event 🎁
-			let event =
-				Event::ContractSubscriptionTermsChanged { nft_id, period, max_duration, rent_fee };
+			let event = Event::ContractSubscriptionTermsChanged {
+				nft_id,
+				period,
+				max_duration,
+				is_changeable,
+				rent_fee,
+			};
 			Self::deposit_event(event);
 
 			Ok(().into())
@@ -766,11 +790,14 @@ pub mod pallet {
 
 				// Checks ✅
 				ensure!(Some(who) == contract.rentee, Error::<T>::NotTheContractRentee);
-				ensure!(contract.terms_changed, Error::<T>::ContractTermsAlreadyAccepted);
+				ensure!(
+					contract.duration.terms_changed(),
+					Error::<T>::ContractTermsAlreadyAccepted
+				);
 
 				// Storage Activity 📦
 				// 1. Set Contract Terms Changed field to false
-				contract.terms_changed = false;
+				contract.duration.set_terms_changed(false);
 
 				Ok(())
 			})?;
@@ -835,7 +862,7 @@ impl<T: Config> Pallet<T> {
 		let rentee = contract.rentee.as_ref()?;
 		let rent_fee = contract.rent_fee.get_balance()?;
 
-		let mut cancel_subscription = contract.terms_changed || contract.has_ended(now);
+		let mut cancel_subscription = contract.duration.terms_changed() || contract.has_ended(now);
 		if !cancel_subscription {
 			cancel_subscription =
 				T::Currency::transfer(rentee, &contract.renter, rent_fee, KeepAlive).is_err();
@@ -845,7 +872,7 @@ impl<T: Config> Pallet<T> {
 			return None
 		}
 
-		let sub_duration = contract.duration.get_sub_period().expect("This cannot happen. qed");
+		let sub_duration = contract.duration.get_duration_or_period();
 		/* 		let mut block = contract.start_block.clone()?;
 		while block < *now {
 
@@ -854,7 +881,7 @@ impl<T: Config> Pallet<T> {
 		// TODO This is not correct.
 		// It can happen that this rent contract is processed later than it should so we need to
 		// adjust for that.
-		Some(*now + sub_duration)
+		Some(*now + *sub_duration)
 	}
 
 	pub fn handle_finished_or_unused_contract(nft_id: NFTId) -> DispatchResult {
@@ -973,7 +1000,7 @@ impl<T: Config> Pallet<T> {
 		let text = "I like to drink milk, eat sugar and dance the orange dance".as_bytes().to_vec();
 		let offchain_data = BoundedVec::try_from(text).unwrap();
 		let royalty = Permill::from_percent(0);
-		let duration = Duration::Fixed(100u32.into());
+		let duration = DurationInput::Fixed(100u32.into());
 		let acceptance_type = AcceptanceType::AutoAcceptance(None);
 		let rent_fee = RentFee::Tokens(200u32.into());
 

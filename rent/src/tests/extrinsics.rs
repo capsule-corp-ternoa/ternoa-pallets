@@ -1855,7 +1855,7 @@ mod remove_expired_contract {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 
-			run_to_block((ContractExpirationDuration::get() + 1).into());
+			run_to_block((MaximumContractAvailabilityLimit::get() + 1).into());
 
 			// State check.
 			assert!(Rent::contracts(FIXED_AUTO_NOREV_NFT_NONE_NONE).is_none());

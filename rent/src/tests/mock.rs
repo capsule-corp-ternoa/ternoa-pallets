@@ -126,7 +126,7 @@ parameter_types! {
 	pub const RentAccountSizeLimit: u32 = 3;
 	pub const SimultaneousContractLimit: u32 = 10;
 	pub const ActionsInBlockLimit: u32 = 10;
-	pub const ContractExpirationDuration: u32 = 2000;
+	pub const MaximumContractAvailabilityLimit: u32 = 2000;
 }
 
 impl ternoa_nft::Config for Test {
@@ -149,7 +149,7 @@ impl Config for Test {
 	type AccountSizeLimit = RentAccountSizeLimit;
 	type SimultaneousContractLimit = SimultaneousContractLimit;
 	type ActionsInBlockLimit = ActionsInBlockLimit;
-	type ContractExpirationDuration = ContractExpirationDuration;
+	type MaximumContractAvailabilityLimit = MaximumContractAvailabilityLimit;
 }
 
 pub struct MockFeeCollector;

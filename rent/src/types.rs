@@ -26,17 +26,52 @@ use sp_std::fmt::Debug;
 
 pub type AccountList<AccountId, AccountSizeLimit> = BoundedVec<AccountId, AccountSizeLimit>;
 
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo, MaxEncodedLen)]
+pub struct SubscriptionInput<BlockNumber: Clone> {
+	pub period_length: BlockNumber,
+	pub max_duration: Option<BlockNumber>,
+	pub is_changeable: bool,
+}
+
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo, MaxEncodedLen)]
+pub enum DurationInput<BlockNumber: Clone> {
+	Fixed(BlockNumber),
+	Subscription(SubscriptionInput<BlockNumber>),
+}
+
+impl<BlockNumber: Clone> DurationInput<BlockNumber> {
+	pub fn to_duration(self, max_duration: BlockNumber) -> Duration<BlockNumber> {
+		match self {
+			DurationInput::Fixed(x) => Duration::Fixed(x),
+			DurationInput::Subscription(x) => Duration::Subscription(Subscription {
+				period_length: x.period_length,
+				max_duration: x.max_duration.unwrap_or_else(|| max_duration),
+				is_changeable: x.is_changeable,
+				new_terms: false,
+			}),
+		}
+	}
+}
+
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo, MaxEncodedLen)]
+pub struct Subscription<BlockNumber: Clone> {
+	pub period_length: BlockNumber,
+	pub max_duration: BlockNumber,
+	pub is_changeable: bool,
+	pub new_terms: bool,
+}
+
 /// Enumeration of contract duration.
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 pub enum Duration<BlockNumber: Clone> {
 	Fixed(BlockNumber),
-	Subscription(BlockNumber, Option<BlockNumber>, bool),
+	Subscription(Subscription<BlockNumber>),
 }
 
 impl<Blocknumber: Clone> Duration<Blocknumber> {
 	pub fn allows_rent_fee<Balance: Clone>(&self, rent_fee: &RentFee<Balance>) -> Option<()> {
 		match self {
-			Self::Subscription(_, _, _) => rent_fee.get_nft().is_none(),
+			Self::Subscription(_) => rent_fee.get_nft().is_none(),
 			_ => true,
 		}
 		.then(|| ())
@@ -53,38 +88,45 @@ impl<Blocknumber: Clone> Duration<Blocknumber> {
 		.then(|| ())
 	}
 
-	pub fn get_sub_period(&self) -> Option<Blocknumber> {
+	pub fn as_subscription(&self) -> Option<&Subscription<Blocknumber>> {
 		match self {
-			Self::Subscription(x, _, _) => Some(x.clone()),
+			Self::Subscription(x) => Some(&x),
 			_ => None,
 		}
 	}
 
-	pub fn as_subscription(&self) -> Option<(&Blocknumber, &Option<Blocknumber>, &bool)> {
+	pub fn get_full_duration(&self) -> &Blocknumber {
 		match self {
-			Self::Subscription(x, y, z) => Some((x, y, z)),
-			_ => None,
-		}
-	}
-
-	pub fn get_full_duration(&self) -> Blocknumber {
-		match self {
-			Duration::Fixed(x) => x.clone(),
-			Duration::Subscription(x, y, _) => y.clone().unwrap_or_else(|| x.clone()),
+			Duration::Fixed(x) => &x,
+			Duration::Subscription(x) => &x.max_duration,
 		}
 	}
 
 	pub fn get_duration_or_period(&self) -> &Blocknumber {
 		match self {
 			Duration::Fixed(x) => &x,
-			Duration::Subscription(x, _, _) => &x,
+			Duration::Subscription(x) => &x.period_length,
 		}
 	}
 
 	pub fn queue_kind(&self) -> QueueKind {
 		match self {
 			Duration::Fixed(_) => QueueKind::Fixed,
-			Duration::Subscription(_, _, _) => QueueKind::Subscription,
+			Duration::Subscription(_) => QueueKind::Subscription,
+		}
+	}
+
+	pub fn terms_changed(&self) -> bool {
+		match self {
+			Duration::Subscription(x) => x.new_terms,
+			_ => false,
+		}
+	}
+
+	pub fn set_terms_changed(&mut self, value: bool) {
+		match self {
+			Duration::Subscription(x) => x.new_terms = value,
+			_ => (),
 		}
 	}
 }
@@ -198,8 +240,6 @@ where
 	pub renter_can_revoke: bool,
 	/// Rent fee paid by rentee.
 	pub rent_fee: RentFee<Balance>,
-	/// Flag indicating if terms were changed.
-	pub terms_changed: bool,
 	/// Optional cancellation fee for renter.
 	pub renter_cancellation_fee: CancellationFee<Balance>,
 	/// Optional cancellation fee for rentee.
@@ -222,7 +262,6 @@ where
 		acceptance_type: AcceptanceType<AccountList<AccountId, AccountSizeLimit>>,
 		renter_can_revoke: bool,
 		rent_fee: RentFee<Balance>,
-		terms_changed: bool,
 		renter_cancellation_fee: CancellationFee<Balance>,
 		rentee_cancellation_fee: CancellationFee<Balance>,
 	) -> RentContractData<AccountId, BlockNumber, Balance, AccountSizeLimit> {
@@ -234,7 +273,6 @@ where
 			acceptance_type,
 			renter_can_revoke,
 			rent_fee,
-			terms_changed,
 			renter_cancellation_fee,
 			rentee_cancellation_fee,
 		}
@@ -246,25 +284,18 @@ where
 			None => return false,
 		};
 
-		let end = match self.duration {
-			Duration::Fixed(x) => Some(x),
-			Duration::Subscription(_, x, _) => x,
-		};
-
-		let end = match end {
-			Some(x) => x,
-			None => return false,
-		};
+		let end = self.duration.get_full_duration();
 
 		if start > *now {
 			return false
 		}
 
-		(*now - start) > end
+		(*now - start) > *end
 	}
 
 	pub fn can_adjust_subscription(&self) -> bool {
-		self.duration.as_subscription().and_then(|x| Some(*x.2)).unwrap_or(false)
+		let is_changeable = self.duration.as_subscription().and_then(|x| Some(x.is_changeable));
+		is_changeable.unwrap_or(false)
 	}
 
 	pub fn is_manual_acceptance(&self) -> bool {
@@ -277,7 +308,7 @@ where
 	// TODO need better name
 	pub fn completion(&self, now: &BlockNumber) -> Permill {
 		let now: u32 = (*now).saturated_into();
-		let full_duration: u32 = self.duration.get_full_duration().saturated_into();
+		let full_duration: u32 = self.duration.get_full_duration().clone().saturated_into();
 		let start: u32 = self.start_block.expect("qed").saturated_into();
 		let remaining_duration: u32 = start + full_duration - now;
 		let percent = (remaining_duration as u32)
