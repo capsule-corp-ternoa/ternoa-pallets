@@ -417,7 +417,7 @@ pub mod pallet {
 			);
 			Contracts::<T>::insert(nft_id, contract);
 
-			nft.state.is_rented = true;
+			_ = nft.set_state(Rented, true);
 			T::NFTExt::set_nft(nft_id, nft)?;
 
 			// Event 🎁
@@ -550,15 +550,17 @@ pub mod pallet {
 				// 4. Set Contract Start Block and Rentee
 				Self::take_rent_and_cancellation_fee(&who, &pallet, &contract)?;
 
-				Queues::<T>::mutate(|queues| {
+				Queues::<T>::mutate(|queues| -> DispatchResult {
 					queues.remove(nft_id, QueueKind::Available);
 
 					let target_block = now + *contract.duration.get_duration_or_period();
 					let queue_kind = contract.duration.queue_kind();
 					queues
 						.insert(nft_id, target_block, queue_kind)
-						.ok_or(Error::<T>::MaxSimultaneousContractReached)?; // This should never happen.
-				});
+						.map_err(|_| Error::<T>::MaxSimultaneousContractReached)?; // This should never happen.
+
+					Ok(())
+				})?;
 				Offers::<T>::remove(nft_id);
 
 				contract.rentee = Some(who.clone());
@@ -662,14 +664,16 @@ pub mod pallet {
 				// 4. Set Contract Start Block and Rentee
 				Self::take_rent_and_cancellation_fee(&rentee, &pallet, &contract)?;
 
-				Queues::<T>::mutate(|queues| {
+				Queues::<T>::mutate(|queues| -> DispatchResult {
 					queues.remove(nft_id, QueueKind::Available);
 					let target_block = now + *contract.duration.get_duration_or_period();
 					let queue_kind = contract.duration.queue_kind();
 					queues
 						.insert(nft_id, target_block, queue_kind)
-						.ok_or(Error::<T>::MaxSimultaneousContractReached)?; // This should never happen.
-				});
+						.map_err(|_| Error::<T>::MaxSimultaneousContractReached)?; // This should never happen.
+
+					Ok(())
+				})?;
 				Offers::<T>::remove(nft_id);
 
 				contract.rentee = Some(rentee.clone());
@@ -867,14 +871,12 @@ impl<T: Config> Pallet<T> {
 			let rentee_cancellation = &contract.rentee_cancellation_fee;
 
 			// Let's first do the transactions
-			if let Some(amount) = renter_cancellation.get_balance() {
-				T::Currency::transfer(src, renter, amount, AllowDeath)?;
-			}
+			let amount = renter_cancellation.get_balance().unwrap_or(Zero::zero());
+			T::Currency::transfer(src, renter, amount, AllowDeath)?;
 
 			if let Some(rentee) = &contract.rentee {
-				if let Some(amount) = rentee_cancellation.get_balance() {
-					T::Currency::transfer(src, rentee, amount, AllowDeath)?;
-				}
+				let amount = rentee_cancellation.get_balance().unwrap_or(Zero::zero());
+				T::Currency::transfer(src, rentee, amount, AllowDeath)?;
 			}
 
 			// Now lets get the NFTs
@@ -917,15 +919,13 @@ impl<T: Config> Pallet<T> {
 
 		// Let's take rentee's token. In case an error happens those balance transactions
 		// will be reverted. ✅ 📦
-		if let Some(amount) = contract.rent_fee.get_balance() {
-			T::Currency::transfer(rentee, renter, amount, KeepAlive)
-				.map_err(|_| Error::<T>::NotEnoughFundsForRentFee)?;
-		}
+		let amount = contract.rent_fee.get_balance().unwrap_or(Zero::zero());
+		T::Currency::transfer(rentee, renter, amount, KeepAlive)
+			.map_err(|_| Error::<T>::NotEnoughFundsForRentFee)?;
 
-		if let Some(amount) = cancellation_fee.get_balance() {
-			T::Currency::transfer(rentee, pallet, amount, KeepAlive)
-				.map_err(|_| Error::<T>::NotEnoughFundsForCancellationFee)?;
-		}
+		let amount = cancellation_fee.get_balance().unwrap_or(Zero::zero());
+		T::Currency::transfer(rentee, pallet, amount, KeepAlive)
+			.map_err(|_| Error::<T>::NotEnoughFundsForCancellationFee)?;
 
 		// Let's take source's NFTs.
 		let maybe_rent_nft = contract.rent_fee.get_nft();
