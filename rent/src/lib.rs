@@ -728,15 +728,16 @@ pub mod pallet {
 			nft_id: NFTId,
 			rent_fee: BalanceOf<T>,
 			period: T::BlockNumber,
-			max_duration: T::BlockNumber,
+			max_duration: Option<T::BlockNumber>,
 			is_changeable: bool,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
+			let duration_limit: T::BlockNumber = T::MaximumContractDurationLimit::get().into();
+			let max_duration = max_duration.unwrap_or_else(|| duration_limit.clone());
 
 			Contracts::<T>::try_mutate(nft_id, |x| -> DispatchResult {
 				let contract = x.as_mut().ok_or(Error::<T>::ContractNotFound)?;
 				let contract_active = contract.rentee.is_some();
-				let duration_limit: T::BlockNumber = T::MaximumContractDurationLimit::get().into();
 
 				// Checks ✅
 				ensure!(who == contract.renter, Error::<T>::NotTheContractOwner);
@@ -744,7 +745,7 @@ pub mod pallet {
 					contract.can_adjust_subscription(),
 					Error::<T>::CannotAdjustSubscriptionTerms
 				);
-				ensure!(max_duration < duration_limit, Error::<T>::DurationExceedsMaximumLimit);
+				ensure!(max_duration <= duration_limit, Error::<T>::DurationExceedsMaximumLimit);
 				if !contract_active {
 					Offers::<T>::remove(nft_id);
 				}
