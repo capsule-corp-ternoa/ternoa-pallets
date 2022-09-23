@@ -285,10 +285,7 @@ pub mod pallet {
 			// Subscription queue management
 			while let Some(nft_id) = queues.subscription_queue.pop_next(now) {
 				if let Some(block_number) = Self::handle_subscription_contract(nft_id, &now) {
-					queues
-						.subscription_queue
-						.insert(nft_id, block_number)
-						.expect("This cannot happen. qed");
+					_ = queues.subscription_queue.insert(nft_id, block_number);
 					let event = Event::ContractSubscriptionPeriodStarted { nft_id };
 					Self::deposit_event(event);
 				} else {

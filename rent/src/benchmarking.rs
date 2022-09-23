@@ -65,12 +65,16 @@ pub fn prepare_benchmarks<T: Config>() -> () {
 	let ok = Rent::<T>::create_contract(
 		origin::<T>("ALICE").into(),
 		NFT_ID_0,
-		Duration::Subscription(1000u32.into(), Some(10000u32.into()), true),
+		DurationInput::Subscription(SubscriptionInput {
+			period_length: 2u32.into(),
+			max_duration: Some(10u32.into()),
+			is_changeable: true,
+		}),
 		AcceptanceType::AutoAcceptance(None),
 		true,
 		RentFee::Tokens(rent_fee),
-		Some(CancellationFee::FixedTokens(cancellation_fee)),
-		Some(CancellationFee::FixedTokens(cancellation_fee)),
+		CancellationFee::FixedTokens(cancellation_fee),
+		CancellationFee::FixedTokens(cancellation_fee),
 	);
 	assert_ok!(ok);
 }
@@ -89,7 +93,13 @@ benchmarks! {
 		let org = origin::<T>("ALICE");
 		Rent::<T>::prep_benchmark_0(&alice.clone(), org.clone(),  new_contracts_amount).unwrap();
 
-	}: _(org, NFT_ID_1, Duration::Subscription(1000u32.into(), Some(10000u32.into()), false), AcceptanceType::AutoAcceptance(None), true, RentFee::Tokens(1000u32.into()), Some(CancellationFee::FixedTokens(100u32.into())),Some(CancellationFee::FixedTokens(100u32.into())))
+		let sub = SubscriptionInput {
+			period_length: 2u32.into(),
+			max_duration: Some(10u32.into()),
+			is_changeable: false,
+		} ;
+
+	}: _(org, NFT_ID_1, DurationInput::Subscription(sub), AcceptanceType::AutoAcceptance(None), true, RentFee::Tokens(1000u32.into()), CancellationFee::FixedTokens(100u32.into()),CancellationFee::FixedTokens(100u32.into()))
 	verify {
 		// Get The contract.
 		let contract = Rent::<T>::contracts(NFT_ID_1).unwrap();
@@ -147,6 +157,7 @@ benchmarks! {
 		};
 
 		let alice: T::AccountId = get_account::<T>("ALICE");
+		let bob: T::AccountId = get_account::<T>("BOB");
 		let org = origin::<T>("ALICE");
 
 		Rent::<T>::prep_benchmark_0(&alice.clone(), org.clone(), new_contracts_amount).unwrap();
@@ -154,7 +165,7 @@ benchmarks! {
 	verify {
 		// Get The contract.
 		let contract = Rent::<T>::contracts(NFT_ID_0).unwrap();
-		assert_eq!(contract.rentee, Some(get_account::<T>("BOB")))
+		assert_eq!(contract.rentee, Some(bob))
 	}
 
 
@@ -174,12 +185,12 @@ benchmarks! {
 		let ok = Rent::<T>::create_contract(
 			origin::<T>("ALICE").into(),
 			NFT_ID_1,
-			Duration::Fixed(100u32.into()),
+			DurationInput::Fixed(10u32.into()),
 			AcceptanceType::ManualAcceptance(None),
 			true,
 			RentFee::Tokens(100u32.into()),
-			None,
-			None,
+			CancellationFee::None,
+			CancellationFee::None,
 		);
 		assert_ok!(ok);
 
@@ -207,12 +218,12 @@ benchmarks! {
 		let ok = Rent::<T>::create_contract(
 			origin::<T>("ALICE").into(),
 			NFT_ID_1,
-			Duration::Fixed(100u32.into()),
+			DurationInput::Fixed(10u32.into()),
 			AcceptanceType::ManualAcceptance(None),
 			true,
 			RentFee::Tokens(100u32.into()),
-			None,
-			None,
+			CancellationFee::None,
+			CancellationFee::None,
 		);
 		assert_ok!(ok);
 
@@ -220,8 +231,9 @@ benchmarks! {
 		Rent::<T>::make_rent_offer(origin::<T>("BOB").into(), NFT_ID_1);
 	}: _(origin::<T>("ALICE"), NFT_ID_1, bob.clone())
 	verify {
-		// Get The offer.
-		assert!(Rent::<T>::offers(NFT_ID_1).is_none());
+		let contract = Rent::<T>::contracts(NFT_ID_1).unwrap();
+		assert_eq!(contract.rentee, Some(bob));
+
 	}
 
 	retract_rent_offer {
@@ -240,12 +252,12 @@ benchmarks! {
 		let ok = Rent::<T>::create_contract(
 			origin::<T>("ALICE").into(),
 			NFT_ID_1,
-			Duration::Fixed(100u32.into()),
+			DurationInput::Fixed(10u32.into()),
 			AcceptanceType::ManualAcceptance(None),
 			true,
 			RentFee::Tokens(100u32.into()),
-			None,
-			None,
+			CancellationFee::None,
+			CancellationFee::None,
 		);
 		assert_ok!(ok);
 
@@ -272,11 +284,11 @@ benchmarks! {
 		let org = origin::<T>("ALICE");
 
 		Rent::<T>::prep_benchmark_0(&alice.clone(), org.clone(), new_contracts_amount).unwrap();
-	}: _(origin::<T>("ALICE"), NFT_ID_0, 500u32.into(), Some(5000u32.into()), 150u32.into(), true)
+	}: _(origin::<T>("ALICE"), NFT_ID_0, 500u32.into(), 2u32.into(), Some(10u32.into()), false)
 	verify {
-		// Get The contract.
 		let contract = Rent::<T>::contracts(NFT_ID_0).unwrap();
-		// TODO!
+		let sub = contract.duration.as_subscription().unwrap();
+		assert_eq!(sub.new_terms, true);
 	}
 
 	 accept_subscription_terms {
@@ -293,12 +305,12 @@ benchmarks! {
 
 		Rent::<T>::prep_benchmark_0(&alice.clone(), org.clone(), new_contracts_amount).unwrap();
 		Rent::<T>::rent(origin::<T>("BOB").into(), NFT_ID_0).unwrap();
-		Rent::<T>::change_subscription_terms(origin::<T>("ALICE").into(), NFT_ID_0, 500u32.into(), Some(5000u32.into()), 150u32.into(), true).unwrap();
+		Rent::<T>::change_subscription_terms(origin::<T>("ALICE").into(), NFT_ID_0, 2u32.into(), 10u32.into(), None, true).unwrap();
 	}: _(origin::<T>("BOB"), NFT_ID_0)
 	verify {
-		// Get The contract.
 		let contract = Rent::<T>::contracts(NFT_ID_0).unwrap();
-		// TODO!
+		let sub = contract.duration.as_subscription().unwrap();
+		assert_eq!(sub.new_terms, false);
 	}
 }
 
