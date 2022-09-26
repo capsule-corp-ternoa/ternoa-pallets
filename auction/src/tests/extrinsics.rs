@@ -366,7 +366,7 @@ pub mod create_auction {
 	}
 
 	#[test]
-	fn collection_not_allowed_banned() {
+	fn collection_not_allowed_blacklist() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
@@ -389,7 +389,7 @@ pub mod create_auction {
 	}
 
 	#[test]
-	fn collection_not_allowed_not_authorized() {
+	fn collection_not_allowed_whitelist() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
