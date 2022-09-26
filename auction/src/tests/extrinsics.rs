@@ -324,7 +324,7 @@ pub mod create_auction {
 	}
 
 	#[test]
-	fn account_not_allowed_to_list_banned() {
+	fn not_allowed_to_list_public_account_banned() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
@@ -342,31 +342,12 @@ pub mod create_auction {
 			.unwrap();
 
 			let ok = AuctionBuilder::new().execute();
-			assert_noop!(ok, Error::<Test>::AccountNotAllowedToList);
+			assert_noop!(ok, Error::<Test>::NotAllowedToList);
 		})
 	}
 
 	#[test]
-	fn account_not_allowed_to_list_not_authorized() {
-		ExtBuilder::new_build(None).execute_with(|| {
-			prepare_tests();
-			let alice: mock::Origin = origin(ALICE);
-
-			// Set marketplace private (without alice's account in account list / allow list).
-			Marketplace::set_marketplace_kind(
-				alice.clone(),
-				ALICE_MARKETPLACE_ID,
-				MarketplaceType::Private,
-			)
-			.unwrap();
-
-			let ok = AuctionBuilder::new().execute();
-			assert_noop!(ok, Error::<Test>::AccountNotAllowedToList);
-		})
-	}
-
-	#[test]
-	fn collection_not_allowed_blacklist() {
+	fn not_allowed_to_list_public_collection_banned() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
@@ -384,23 +365,15 @@ pub mod create_auction {
 			.unwrap();
 
 			let err = AuctionBuilder::new().execute();
-			assert_noop!(err, Error::<Test>::CollectionNotAllowed);
+			assert_noop!(err, Error::<Test>::NotAllowedToList);
 		})
 	}
 
 	#[test]
-	fn collection_not_allowed_whitelist() {
+	fn not_allowed_to_list_public_account_and_collection_banned() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
-
-			// Set marketplace private (without bob's collection in collection list (allow list)).
-			Marketplace::set_marketplace_kind(
-				alice.clone(),
-				ALICE_MARKETPLACE_ID,
-				MarketplaceType::Private,
-			)
-			.unwrap();
 
 			// Set public marketplace collection list (ban list) with bob's collection.
 			Marketplace::set_marketplace_configuration(
@@ -410,12 +383,31 @@ pub mod create_auction {
 				ConfigOp::Noop,
 				ConfigOp::Set(BoundedVec::try_from(vec![ALICE]).unwrap()),
 				ConfigOp::Noop,
-				ConfigOp::Noop,
+				ConfigOp::Set(BoundedVec::try_from(vec![ALICE_COLLECTION_ID_0]).unwrap()),
 			)
 			.unwrap();
 
 			let err = AuctionBuilder::new().execute();
-			assert_noop!(err, Error::<Test>::CollectionNotAllowed);
+			assert_noop!(err, Error::<Test>::NotAllowedToList);
+		})
+	}
+
+	#[test]
+	fn not_allowed_to_list_private_not_whitelist() {
+		ExtBuilder::new_build(None).execute_with(|| {
+			prepare_tests();
+			let alice: mock::Origin = origin(ALICE);
+
+			// Set marketplace private (without alice's account in account list / allow list).
+			Marketplace::set_marketplace_kind(
+				alice.clone(),
+				ALICE_MARKETPLACE_ID,
+				MarketplaceType::Private,
+			)
+			.unwrap();
+
+			let ok = AuctionBuilder::new().execute();
+			assert_noop!(ok, Error::<Test>::NotAllowedToList);
 		})
 	}
 

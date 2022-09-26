@@ -593,6 +593,156 @@ mod list_nft {
 	}
 
 	#[test]
+	fn list_nft_private_account_whitelisted() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
+			|| {
+				prepare_tests();
+				let alice: mock::Origin = origin(ALICE);
+				let marketplace = Marketplace::marketplaces(ALICE_MARKETPLACE_ID).unwrap();
+
+				// Set marketplace private
+				Marketplace::set_marketplace_kind(
+					alice.clone(),
+					ALICE_MARKETPLACE_ID,
+					MarketplaceType::Private,
+				)
+				.unwrap();
+
+				// Set public marketplace account list (ban list) with alice's account.
+				Marketplace::set_marketplace_configuration(
+					alice.clone(),
+					ALICE_MARKETPLACE_ID,
+					ConfigOp::Noop,
+					ConfigOp::Noop,
+					ConfigOp::Set(BoundedVec::try_from(vec![ALICE]).unwrap()),
+					ConfigOp::Noop,
+					ConfigOp::Noop,
+				)
+				.unwrap();
+
+				// List NFT.
+				let data = Sale::new(ALICE, ALICE_MARKETPLACE_ID, 10, marketplace.commission_fee);
+				Marketplace::list_nft(alice, ALICE_NFT_ID, data.marketplace_id, data.price)
+					.unwrap();
+
+				// Final state checks.
+				let sale = Marketplace::listed_nfts(ALICE_NFT_ID).unwrap();
+				assert_eq!(sale, data);
+
+				// Events checks.
+				let event = MarketplaceEvent::NFTListed {
+					marketplace_id: data.marketplace_id,
+					nft_id: ALICE_NFT_ID,
+					commission_fee: data.commission_fee,
+					price: data.price,
+				};
+				let event = Event::Marketplace(event);
+				System::assert_last_event(event);
+			},
+		)
+	}
+
+	#[test]
+	fn list_nft_private_collection_whitelisted() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
+			|| {
+				prepare_tests();
+				let alice: mock::Origin = origin(ALICE);
+				let marketplace = Marketplace::marketplaces(ALICE_MARKETPLACE_ID).unwrap();
+
+				// Set marketplace private
+				Marketplace::set_marketplace_kind(
+					alice.clone(),
+					ALICE_MARKETPLACE_ID,
+					MarketplaceType::Private,
+				)
+				.unwrap();
+
+				// Set public marketplace account list (ban list) with alice's account.
+				Marketplace::set_marketplace_configuration(
+					alice.clone(),
+					ALICE_MARKETPLACE_ID,
+					ConfigOp::Noop,
+					ConfigOp::Noop,
+					ConfigOp::Noop,
+					ConfigOp::Noop,
+					ConfigOp::Set(BoundedVec::try_from(vec![ALICE_COLLECTION_ID]).unwrap()),
+				)
+				.unwrap();
+
+				// List NFT.
+				let data = Sale::new(ALICE, ALICE_MARKETPLACE_ID, 10, marketplace.commission_fee);
+				Marketplace::list_nft(alice, ALICE_NFT_ID, data.marketplace_id, data.price)
+					.unwrap();
+
+				// Final state checks.
+				let sale = Marketplace::listed_nfts(ALICE_NFT_ID).unwrap();
+				assert_eq!(sale, data);
+
+				// Events checks.
+				let event = MarketplaceEvent::NFTListed {
+					marketplace_id: data.marketplace_id,
+					nft_id: ALICE_NFT_ID,
+					commission_fee: data.commission_fee,
+					price: data.price,
+				};
+				let event = Event::Marketplace(event);
+				System::assert_last_event(event);
+			},
+		)
+	}
+
+	#[test]
+	fn list_nft_private_account_and_collection_whitelisted() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
+			|| {
+				prepare_tests();
+				let alice: mock::Origin = origin(ALICE);
+				let marketplace = Marketplace::marketplaces(ALICE_MARKETPLACE_ID).unwrap();
+
+				// Set marketplace private
+				Marketplace::set_marketplace_kind(
+					alice.clone(),
+					ALICE_MARKETPLACE_ID,
+					MarketplaceType::Private,
+				)
+				.unwrap();
+
+				// Set public marketplace account list (ban list) with alice's account.
+				Marketplace::set_marketplace_configuration(
+					alice.clone(),
+					ALICE_MARKETPLACE_ID,
+					ConfigOp::Noop,
+					ConfigOp::Noop,
+					ConfigOp::Set(BoundedVec::try_from(vec![ALICE]).unwrap()),
+					ConfigOp::Noop,
+					ConfigOp::Set(BoundedVec::try_from(vec![ALICE_COLLECTION_ID]).unwrap()),
+				)
+				.unwrap();
+
+				// List NFT.
+				let data = Sale::new(ALICE, ALICE_MARKETPLACE_ID, 10, marketplace.commission_fee);
+				Marketplace::list_nft(alice, ALICE_NFT_ID, data.marketplace_id, data.price)
+					.unwrap();
+
+				// Final state checks.
+				let sale = Marketplace::listed_nfts(ALICE_NFT_ID).unwrap();
+				assert_eq!(sale, data);
+
+				// Events checks.
+				let event = MarketplaceEvent::NFTListed {
+					marketplace_id: data.marketplace_id,
+					nft_id: ALICE_NFT_ID,
+					commission_fee: data.commission_fee,
+					price: data.price,
+				};
+				let event = Event::Marketplace(event);
+				System::assert_last_event(event);
+			},
+		)
+	}
+
+	#[test]
 	fn keep_alive() {
 		let new_listing_fee = 10;
 		ExtBuilder::new_build(vec![
@@ -736,7 +886,7 @@ mod list_nft {
 	}
 
 	#[test]
-	fn account_not_allowed_to_list_banned() {
+	fn not_allowed_to_list_public_account_banned() {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
 			|| {
 				prepare_tests();
@@ -755,13 +905,63 @@ mod list_nft {
 				.unwrap();
 
 				let err = Marketplace::list_nft(alice, ALICE_NFT_ID, ALICE_MARKETPLACE_ID, 10);
-				assert_noop!(err, Error::<Test>::AccountNotAllowedToList);
+				assert_noop!(err, Error::<Test>::NotAllowedToList);
 			},
 		)
 	}
 
 	#[test]
-	fn account_not_allowed_to_list_not_authorized() {
+	fn not_allowed_to_list_public_collection_banned() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
+			|| {
+				prepare_tests();
+				let alice: mock::Origin = origin(ALICE);
+
+				// Set public marketplace account list (ban list) with alice's account.
+				Marketplace::set_marketplace_configuration(
+					alice.clone(),
+					ALICE_MARKETPLACE_ID,
+					ConfigOp::Noop,
+					ConfigOp::Noop,
+					ConfigOp::Noop,
+					ConfigOp::Noop,
+					ConfigOp::Set(BoundedVec::try_from(vec![ALICE_COLLECTION_ID]).unwrap()),
+				)
+				.unwrap();
+
+				let err = Marketplace::list_nft(alice, ALICE_NFT_ID, ALICE_MARKETPLACE_ID, 10);
+				assert_noop!(err, Error::<Test>::NotAllowedToList);
+			},
+		)
+	}
+
+	#[test]
+	fn not_allowed_to_list_public_account_and_collection_banned() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
+			|| {
+				prepare_tests();
+				let alice: mock::Origin = origin(ALICE);
+
+				// Set public marketplace account list (ban list) with alice's account.
+				Marketplace::set_marketplace_configuration(
+					alice.clone(),
+					ALICE_MARKETPLACE_ID,
+					ConfigOp::Noop,
+					ConfigOp::Noop,
+					ConfigOp::Set(BoundedVec::try_from(vec![ALICE]).unwrap()),
+					ConfigOp::Noop,
+					ConfigOp::Set(BoundedVec::try_from(vec![ALICE_COLLECTION_ID]).unwrap()),
+				)
+				.unwrap();
+
+				let err = Marketplace::list_nft(alice, ALICE_NFT_ID, ALICE_MARKETPLACE_ID, 10);
+				assert_noop!(err, Error::<Test>::NotAllowedToList);
+			},
+		)
+	}
+
+	#[test]
+	fn not_allowed_to_list_private_not_whitelist() {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
 			|| {
 				prepare_tests();
@@ -776,67 +976,7 @@ mod list_nft {
 				.unwrap();
 
 				let err = Marketplace::list_nft(alice, ALICE_NFT_ID, ALICE_MARKETPLACE_ID, 10);
-				assert_noop!(err, Error::<Test>::AccountNotAllowedToList);
-			},
-		)
-	}
-
-	#[test]
-	fn collection_not_allowed_banned() {
-		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
-			|| {
-				prepare_tests();
-				let alice: mock::Origin = origin(ALICE);
-				let bob: mock::Origin = origin(BOB);
-
-				// Set public marketplace collection list (ban list) with bob's collection.
-				Marketplace::set_marketplace_configuration(
-					alice.clone(),
-					ALICE_MARKETPLACE_ID,
-					ConfigOp::Noop,
-					ConfigOp::Noop,
-					ConfigOp::Set(BoundedVec::try_from(vec![ALICE]).unwrap()),
-					ConfigOp::Noop,
-					ConfigOp::Set(BoundedVec::try_from(vec![BOB_COLLECTION_ID]).unwrap()),
-				)
-				.unwrap();
-
-				let err = Marketplace::list_nft(bob, BOB_NFT_ID, ALICE_MARKETPLACE_ID, 10);
-				assert_noop!(err, Error::<Test>::CollectionNotAllowed);
-			},
-		)
-	}
-
-	#[test]
-	fn collection_not_allowed_not_authorized() {
-		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
-			|| {
-				prepare_tests();
-				let alice: mock::Origin = origin(ALICE);
-				let bob: mock::Origin = origin(BOB);
-
-				// Set marketplace private (without bob's collection in collection list (allow
-				// list)).
-				Marketplace::set_marketplace_kind(
-					alice.clone(),
-					ALICE_MARKETPLACE_ID,
-					MarketplaceType::Private,
-				)
-				.unwrap();
-				// Set private marketplace account list (allow list) with bob's account.
-				Marketplace::set_marketplace_configuration(
-					alice.clone(),
-					ALICE_MARKETPLACE_ID,
-					ConfigOp::Noop,
-					ConfigOp::Noop,
-					ConfigOp::Set(BoundedVec::try_from(vec![BOB]).unwrap()),
-					ConfigOp::Noop,
-					ConfigOp::Noop,
-				)
-				.unwrap();
-
-				let err = Marketplace::list_nft(bob, BOB_NFT_ID, ALICE_MARKETPLACE_ID, 10);
-				assert_noop!(err, Error::<Test>::CollectionNotAllowed);
+				assert_noop!(err, Error::<Test>::NotAllowedToList);
 			},
 		)
 	}

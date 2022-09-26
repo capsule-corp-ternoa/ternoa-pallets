@@ -217,8 +217,8 @@ pub mod pallet {
 
 	#[pallet::error]
 	pub enum Error<T> {
-		/// Account not allowed to list NFTs on that marketplace.
-		AccountNotAllowedToList,
+		/// Not Allowed To List On MP
+		NotAllowedToList,
 		/// Cannot list delegated NFTs.
 		CannotListDelegatedNFTs,
 		/// Cannot list capsule NFTs.
@@ -412,13 +412,10 @@ pub mod pallet {
 			);
 			let marketplace =
 				Marketplaces::<T>::get(marketplace_id).ok_or(Error::<T>::MarketplaceNotFound)?;
-			marketplace.allowed_to_list(&who).ok_or(Error::<T>::AccountNotAllowedToList)?;
 
-			if let Some(collection_id) = nft.collection_id {
-				marketplace
-					.collection_allowed(&collection_id)
-					.ok_or(Error::<T>::CollectionNotAllowed)?;
-			}
+			marketplace
+				.allowed_to_list(&who, nft.collection_id)
+				.ok_or(Error::<T>::NotAllowedToList)?;
 
 			// Check if the selected price can cover the marketplace commission_fee if it exists.
 			if let Some(commission_fee) = &marketplace.commission_fee {
