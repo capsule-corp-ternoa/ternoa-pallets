@@ -90,58 +90,28 @@ where
 		}
 	}
 
-	// pub fn allowed_to_list(&self, who: &AccountId) -> Option<()> {
-	// 	let mut is_in_account_list = false;
-	// 	if let Some(account_list) = &self.account_list {
-	// 		is_in_account_list = account_list.contains(&who);
-	// 	}
-
-	// 	match self.kind {
-	// 		MarketplaceType::Public => !is_in_account_list,
-	// 		MarketplaceType::Private => is_in_account_list,
-	// 	}
-	// 	.then_some(())
-	// }
-
 	pub fn allowed_to_list(
 		&self,
 		who: &AccountId,
 		collection_id: Option<CollectionId>,
 	) -> Option<()> {
 		let mut is_in_account_list = false;
+		let mut is_in_collection_list = false;
+
 		if let Some(account_list) = &self.account_list {
 			is_in_account_list = account_list.contains(&who);
 		}
 
 		if let Some(collection_id) = collection_id {
-			let mut is_in_collection_list = false;
 			if let Some(collection_list) = &self.collection_list {
 				is_in_collection_list = collection_list.contains(&collection_id);
 			}
-			let is_allowed = match self.kind {
-				MarketplaceType::Public => !is_in_account_list && !is_in_collection_list,
-				MarketplaceType::Private => is_in_account_list || is_in_collection_list,
-			};
-			is_allowed.then_some(())
-		} else {
-			let is_allowed = match self.kind {
-				MarketplaceType::Public => !is_in_account_list,
-				MarketplaceType::Private => is_in_account_list,
-			};
-			is_allowed.then_some(())
 		}
+
+		let is_allowed = match self.kind {
+			MarketplaceType::Public => !is_in_account_list && !is_in_collection_list,
+			MarketplaceType::Private => is_in_account_list || is_in_collection_list,
+		};
+		is_allowed.then_some(())
 	}
-
-	// pub fn collection_allowed(&self, collection_id: &CollectionId) -> Option<()> {
-	// 	let mut is_in_collection_list = false;
-	// 	if let Some(collection_list) = &self.collection_list {
-	// 		is_in_collection_list = collection_list.contains(collection_id);
-	// 	}
-
-	// 	match self.kind {
-	// 		MarketplaceType::Public => !is_in_collection_list,
-	// 		MarketplaceType::Private => is_in_collection_list,
-	// 	}
-	// 	.then_some(())
-	// }
 }
