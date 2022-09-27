@@ -886,7 +886,7 @@ mod list_nft {
 	}
 
 	#[test]
-	fn not_allowed_to_list_public_account_banned() {
+	fn not_allowed_to_list_public_account_blacklist() {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
 			|| {
 				prepare_tests();
@@ -911,7 +911,7 @@ mod list_nft {
 	}
 
 	#[test]
-	fn not_allowed_to_list_public_collection_banned() {
+	fn not_allowed_to_list_public_collection_blacklist() {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
 			|| {
 				prepare_tests();
@@ -936,7 +936,7 @@ mod list_nft {
 	}
 
 	#[test]
-	fn not_allowed_to_list_public_account_and_collection_banned() {
+	fn not_allowed_to_list_public_account_and_collection_blacklist() {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
 			|| {
 				prepare_tests();

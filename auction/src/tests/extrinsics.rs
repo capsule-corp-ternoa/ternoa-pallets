@@ -324,7 +324,7 @@ pub mod create_auction {
 	}
 
 	#[test]
-	fn not_allowed_to_list_public_account_banned() {
+	fn not_allowed_to_list_public_account_blacklist() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
@@ -347,7 +347,7 @@ pub mod create_auction {
 	}
 
 	#[test]
-	fn not_allowed_to_list_public_collection_banned() {
+	fn not_allowed_to_list_public_collection_blacklist() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
@@ -370,7 +370,7 @@ pub mod create_auction {
 	}
 
 	#[test]
-	fn not_allowed_to_list_public_account_and_collection_banned() {
+	fn not_allowed_to_list_public_account_and_collection_blacklist() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
