@@ -39,11 +39,11 @@ use frame_support::{
 };
 use frame_system::pallet_prelude::*;
 use primitives::{
-	nfts::{Collection, CollectionId, EnclaveId, NFTData, NFTId, NFTState},
+	nfts::{Collection, CollectionId, NFTData, NFTId, NFTState},
 	U8BoundedVec,
 };
 use sp_arithmetic::per_things::Permill;
-use sp_runtime::traits::StaticLookup;
+use sp_runtime::traits::{CheckedSub, StaticLookup};
 use sp_std::prelude::*;
 use ternoa_common::traits;
 
@@ -164,11 +164,16 @@ pub mod pallet {
 	pub type SecretNFTsOffchainData<T: Config> =
 		StorageMap<_, Blake2_128Concat, NFTId, U8BoundedVec<T::NFTOffchainDataLimit>, OptionQuery>;
 
-	/// Host a map of secret NFTs and a vector of enclave_id that sent a shard.
+	/// Host a map of secret NFTs and a vector of enclave addresses that sent a shard.
 	#[pallet::storage]
 	#[pallet::getter(fn secret_nfts_shards_count)]
-	pub type SecretNFTsShardsCount<T: Config> =
-		StorageMap<_, Blake2_128Concat, NFTId, BoundedVec<EnclaveId, T::ShardsNumber>, OptionQuery>;
+	pub type SecretNFTsShardsCount<T: Config> = StorageMap<
+		_,
+		Blake2_128Concat,
+		NFTId,
+		BoundedVec<T::AccountId, T::ShardsNumber>,
+		OptionQuery,
+	>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -213,20 +218,8 @@ pub mod pallet {
 			nft_id: NFTId,
 			secret_offchain_data: U8BoundedVec<T::NFTOffchainDataLimit>,
 		},
-
-		/// A new secret NFT was created.
-		SecretNFTCreated {
-			nft_id: NFTId,
-			owner: T::AccountId,
-			offchain_data: U8BoundedVec<T::NFTOffchainDataLimit>,
-			secret_offchain_data: U8BoundedVec<T::NFTOffchainDataLimit>,
-			royalty: Permill,
-			collection_id: Option<CollectionId>,
-			is_soulbound: bool,
-			mint_fee: BalanceOf<T>,
-		},
 		/// A shard was added for a secret NFT.
-		ShardAdded { nft_id: NFTId, enclave_id: EnclaveId },
+		ShardAdded { nft_id: NFTId, enclave: T::AccountId },
 		/// A secret NFT has finished syncing shards.
 		SecretNFTSynced { nft_id: NFTId },
 		/// Secret NFT mint fee changed.
@@ -308,6 +301,8 @@ pub mod pallet {
 		NFTHasReceivedAllShards,
 		/// Operation is not permitted because Enclave has already added its shard.
 		EnclaveAlreadyAddedShard,
+		/// Insufficient balance
+		InsufficientBalance,
 	}
 
 	// TODO Write Tests for Runtime upgrade
@@ -479,9 +474,9 @@ pub mod pallet {
 			// Check for secret nft to remove secret offchain data and shards count.
 			if nft.state.is_secret {
 				SecretNFTsOffchainData::<T>::remove(nft_id);
-			}
-			if nft.state.is_secret && !nft.state.is_secret_synced {
-				SecretNFTsShardsCount::<T>::remove(nft_id);
+				if !nft.state.is_secret_synced {
+					SecretNFTsShardsCount::<T>::remove(nft_id);
+				}
 			}
 
 			// Execute
@@ -849,63 +844,20 @@ pub mod pallet {
 			collection_id: Option<CollectionId>,
 			is_soulbound: bool,
 		) -> DispatchResultWithPostInfo {
-			let who = ensure_signed(origin)?;
-			let mut next_nft_id = None;
+			let who = ensure_signed(origin.clone())?;
 
-			// Checks
-			// The Caller needs to pay the NFT mint fee and the secret NFT mint fee.
-			let mint_fee = NftMintFee::<T>::get();
-			let secret_nft_mint_fee = SecretNftMintFee::<T>::get();
-			let reason = WithdrawReasons::FEE;
-			let imbalance =
-				T::Currency::withdraw(&who, mint_fee + secret_nft_mint_fee, reason, KeepAlive)?;
-			T::FeesCollector::on_unbalanced(imbalance);
-
-			// Throws an error if specified collection does not exist, signer is not owner,
-			// collection is close, collection has reached limit.
-			if let Some(collection_id) = &collection_id {
-				Collections::<T>::try_mutate(collection_id, |x| -> DispatchResult {
-					let collection = x.as_mut().ok_or(Error::<T>::CollectionNotFound)?;
-					let limit =
-						collection.limit.unwrap_or_else(|| T::CollectionSizeLimit::get()) as usize;
-					ensure!(collection.owner == who, Error::<T>::NotTheCollectionOwner);
-					ensure!(!collection.is_closed, Error::<T>::CollectionIsClosed);
-					ensure!(collection.nfts.len() < limit, Error::<T>::CollectionHasReachedLimit);
-
-					let tmp_nft_id = Self::get_next_nft_id();
-					collection
-						.nfts
-						.try_push(tmp_nft_id)
-						.map_err(|_| Error::<T>::CannotAddMoreNFTsToCollection)?;
-					next_nft_id = Some(tmp_nft_id);
-					Ok(().into())
-				})?;
-			}
-
-			let nft_id = next_nft_id.unwrap_or_else(|| Self::get_next_nft_id());
-			let mut nft = NFTData::new_default(
-				who.clone(),
-				offchain_data.clone(),
-				royalty,
-				collection_id.clone(),
-				is_soulbound,
+			// Check balance
+			ensure!(
+				Self::balance_check(&who, NftMintFee::<T>::get() + SecretNftMintFee::<T>::get()),
+				Error::<T>::InsufficientBalance
 			);
-			nft.state.is_secret = true;
 
-			// Execute
-			Nfts::<T>::insert(nft_id, nft);
-			SecretNFTsOffchainData::<T>::insert(nft_id, secret_offchain_data.clone());
-			let event = Event::SecretNFTCreated {
-				nft_id,
-				owner: who,
-				offchain_data,
-				secret_offchain_data,
-				royalty,
-				collection_id,
-				is_soulbound,
-				mint_fee,
-			};
-			Self::deposit_event(event);
+			// Create NFT
+			Self::create_nft(origin.clone(), offchain_data, royalty, collection_id, is_soulbound)?;
+			let nft_id = NextNFTId::<T>::get() - 1;
+
+			// Convert NFT to secret
+			Self::convert_to_secret(origin.clone(), nft_id, secret_offchain_data)?;
 
 			Ok(().into())
 		}
@@ -913,13 +865,12 @@ pub mod pallet {
 		/// Extrinsic called by TEE enclaves to indicate that a shard was received.
 		/// Must be called by registered enclaves.
 		#[pallet::weight(T::WeightInfo::delegate_nft())]
-		pub fn add_secret_shard(
-			_origin: OriginFor<T>,
-			nft_id: NFTId,
-			enclave_id: EnclaveId,
-		) -> DispatchResultWithPostInfo {
-			// let who = ensure_signed(origin)?;
-			ensure!(/* TODO is_registered(who) */ true, Error::<T>::NotARegisteredEnclave);
+		pub fn add_secret_shard(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
+			let who = ensure_signed(origin)?;
+			ensure!(
+				/* TODO is_registered_enclave(who) */ true,
+				Error::<T>::NotARegisteredEnclave
+			);
 			let mut has_finished_sync = false;
 
 			Nfts::<T>::try_mutate(nft_id, |maybe_nft| -> DispatchResult {
@@ -935,22 +886,19 @@ pub mod pallet {
 							shards.len() < T::ShardsNumber::get() as usize,
 							Error::<T>::NFTHasReceivedAllShards
 						);
-						ensure!(
-							!shards.contains(&enclave_id),
-							Error::<T>::EnclaveAlreadyAddedShard
-						);
+						ensure!(!shards.contains(&who), Error::<T>::EnclaveAlreadyAddedShard);
 						shards
-							.try_push(enclave_id)
+							.try_push(who.clone())
 							.map_err(|_| Error::<T>::NFTHasReceivedAllShards)?;
 						if shards.len() == T::ShardsNumber::get() as usize {
 							has_finished_sync = true;
 							*maybe_shards = None;
 						}
 					} else {
-						let mut shards: BoundedVec<EnclaveId, T::ShardsNumber> =
+						let mut shards: BoundedVec<T::AccountId, T::ShardsNumber> =
 							BoundedVec::default();
 						shards
-							.try_push(enclave_id)
+							.try_push(who.clone())
 							.map_err(|_| Error::<T>::NFTHasReceivedAllShards)?;
 						if shards.len() == T::ShardsNumber::get() as usize {
 							has_finished_sync = true;
@@ -969,7 +917,7 @@ pub mod pallet {
 				Ok(().into())
 			})?;
 
-			let event = Event::ShardAdded { nft_id, enclave_id };
+			let event = Event::ShardAdded { nft_id, enclave: who };
 			Self::deposit_event(event);
 
 			if has_finished_sync {
@@ -1001,6 +949,7 @@ impl<T: Config> traits::NFTExt for Pallet<T> {
 	type NFTOffchainDataLimit = T::NFTOffchainDataLimit;
 	type CollectionOffchainDataLimit = T::CollectionOffchainDataLimit;
 	type CollectionSizeLimit = T::CollectionSizeLimit;
+	type ShardsNumber = T::ShardsNumber;
 
 	fn set_nft_state(nft_id: NFTId, nft_state: NFTState) -> DispatchResult {
 		Nfts::<T>::try_mutate(nft_id, |data| -> DispatchResult {
@@ -1060,6 +1009,18 @@ impl<T: Config> traits::NFTExt for Pallet<T> {
 		Ok(())
 	}
 
+	fn create_filled_shards_vector(
+		who: Self::AccountId,
+		nft_id: NFTId,
+		nb_shards: u32,
+	) -> DispatchResult {
+		let shards: BoundedVec<Self::AccountId, Self::ShardsNumber> =
+			BoundedVec::try_from(vec![who.clone(); nb_shards as usize]).expect("It will never happen.");
+		SecretNFTsShardsCount::<T>::insert(nft_id, shards);
+
+		Ok(())
+	}
+
 	fn get_nft(id: NFTId) -> Option<NFTData<Self::AccountId, Self::NFTOffchainDataLimit>> {
 		Nfts::<T>::get(id)
 	}
@@ -1115,5 +1076,16 @@ impl<T: Config> Pallet<T> {
 		NextCollectionId::<T>::put(next_id);
 
 		collection_id
+	}
+
+	pub fn balance_check(account: &T::AccountId, amount: BalanceOf<T>) -> bool {
+		let current_balance = T::Currency::free_balance(account);
+		let new_balance = current_balance.checked_sub(&amount);
+		if let Some(new_balance) = new_balance {
+			T::Currency::ensure_can_withdraw(&account, amount, WithdrawReasons::FEE, new_balance)
+				.is_ok()
+		} else {
+			false
+		}
 	}
 }

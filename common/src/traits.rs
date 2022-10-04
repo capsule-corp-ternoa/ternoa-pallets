@@ -29,6 +29,7 @@ pub trait NFTExt {
 	type NFTOffchainDataLimit: Get<u32>;
 	type CollectionSizeLimit: Get<u32>;
 	type CollectionOffchainDataLimit: Get<u32>;
+	type ShardsNumber: Get<u32>;
 
 	/// Change the state data of an NFT.
 	fn set_nft_state(id: NFTId, nft_state: NFTState) -> DispatchResult;
@@ -39,6 +40,13 @@ pub trait NFTExt {
 		collection_id: CollectionId,
 		start_nft_id: NFTId,
 		amount_in_collection: u32,
+	) -> DispatchResult;
+
+	/// Create a filled shard vector for an NFT.
+	fn create_filled_shards_vector(
+		who: Self::AccountId,
+		nft_id: NFTId,
+		nb_shards: u32
 	) -> DispatchResult;
 
 	/// Returns an NFT corresponding to its id.

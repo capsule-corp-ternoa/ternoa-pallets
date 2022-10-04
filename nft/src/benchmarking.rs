@@ -239,10 +239,8 @@ benchmarks! {
 		let alice = origin::<T>("ALICE");
 		let secret_offchain_data: BoundedVec<u8, T::NFTOffchainDataLimit> = BoundedVec::try_from(vec![1; T::NFTOffchainDataLimit::get() as usize]).unwrap();
 		NFT::<T>::convert_to_secret(alice.clone().into(), benchmark_data.nft_id, secret_offchain_data).unwrap();
-		for i in 0..s {
-			NFT::<T>::add_secret_shard(alice.clone().into(), benchmark_data.nft_id, i).unwrap();
-		}
-	}: _(origin::<T>("ALICE"), benchmark_data.nft_id, 100)
+		NFT::<T>::create_filled_shards_vector(get_account::<T>("BOB"), benchmark_data.nft_id, s).unwrap();
+	}: _(origin::<T>("ALICE"), benchmark_data.nft_id)
 	verify {
 		// Get The NFT.
 		let nft = NFT::<T>::nfts(benchmark_data.nft_id).unwrap();
@@ -250,7 +248,8 @@ benchmarks! {
 		assert_eq!(nft.state.is_secret, true);
 		if let Some(shards) = shards {
 			assert_eq!(nft.state.is_secret_synced, false);
-			assert!(shards.contains(&100));
+			let alice: T::AccountId = get_account::<T>("ALICE");
+			assert!(shards.contains(&alice));
 		} else {
 			assert_eq!(nft.state.is_secret_synced, true);
 		}
