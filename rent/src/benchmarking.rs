@@ -228,7 +228,7 @@ benchmarks! {
 		assert_ok!(ok);
 
 		Rent::<T>::prep_benchmark_0(&alice.clone(), org.clone(), new_contracts_amount).unwrap();
-		Rent::<T>::make_rent_offer(origin::<T>("BOB").into(), NFT_ID_1);
+		Rent::<T>::make_rent_offer(origin::<T>("BOB").into(), NFT_ID_1).unwrap();
 	}: _(origin::<T>("ALICE"), NFT_ID_1, bob.clone())
 	verify {
 		let contract = Rent::<T>::contracts(NFT_ID_1).unwrap();
@@ -262,7 +262,7 @@ benchmarks! {
 		assert_ok!(ok);
 
 		Rent::<T>::prep_benchmark_1(new_offer_amount, NFT_ID_1, alice.clone()).unwrap();
-		Rent::<T>::make_rent_offer(origin::<T>("BOB").into(), NFT_ID_1);
+		Rent::<T>::make_rent_offer(origin::<T>("BOB").into(), NFT_ID_1).unwrap();
 
 	}: _(origin::<T>("BOB"), NFT_ID_1)
 	verify {

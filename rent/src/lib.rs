@@ -953,10 +953,10 @@ impl<T: Config> Pallet<T> {
 		let maybe_rent_nft = contract.rent_fee.get_nft();
 		let maybe_cancel_nft = cancellation_fee.get_nft();
 
-		// Rent and Renter Cancellation NFT Check ✅
+		// Rent and Rentee Cancellation NFT Check ✅
 		if let Some(nft_id) = &maybe_rent_nft {
 			let nft = T::NFTExt::get_nft(*nft_id).ok_or(Error::<T>::RentNFTNotFound)?;
-			ensure!(nft.owner == *renter, Error::<T>::RenteeDoesNotOwnTheRentNFT);
+			ensure!(nft.owner == *rentee, Error::<T>::RenteeDoesNotOwnTheRentNFT);
 			ensure!(
 				nft.not_in_state(&Self::invalid_state()).is_ok(),
 				Error::<T>::RentNFTNotInValidState
@@ -964,7 +964,7 @@ impl<T: Config> Pallet<T> {
 		}
 		if let Some(nft_id) = &maybe_cancel_nft {
 			let nft = T::NFTExt::get_nft(*nft_id).ok_or(Error::<T>::CancellationNFTNotFound)?;
-			ensure!(nft.owner == *renter, Error::<T>::RenteeDoesNotOwnTheCancellationNFT);
+			ensure!(nft.owner == *rentee, Error::<T>::RenteeDoesNotOwnTheCancellationNFT);
 			ensure!(
 				nft.not_in_state(&Self::invalid_state()).is_ok(),
 				Error::<T>::CancellationNFTNotInValidState
