@@ -97,7 +97,7 @@ impl<T: frame_system::Config> WeightInfo for TernoaWeight<T> {
 	// Storage: NFT NextNFTId (r:1 w:1)
 	// Storage: NFT SecretNftsOffchainData (r:0 w:1)
 	// Storage: NFT Nfts (r:0 w:1)
-	fn create_secret_nft(_s: u32, ) -> Weight {
+	fn create_secret_nft(_s: u32) -> Weight {
 		Weight::from_ref_time(10_000_000 as RefTimeWeight)
 	}
 	// Storage: NFT Nfts (r:1 w:1)
