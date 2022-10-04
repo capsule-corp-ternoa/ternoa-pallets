@@ -131,7 +131,7 @@ pub mod create_auction {
 			};
 
 			let _ = deadlines.insert(ALICE_NFT_ID_0, auction.end_block);
-			let state = NFTState::new(false, true, false, false, false);
+			let state = NFTState::new(false, true, false, false, false, false);
 
 			// Execution
 			let ok = Auction::create_auction(
@@ -279,6 +279,21 @@ pub mod create_auction {
 
 			let ok = AuctionBuilder::new().nft_id(ALICE_NFT_ID_0).execute();
 			assert_noop!(ok, Error::<Test>::CannotListCapsulesNFTs);
+		})
+	}
+
+	#[test]
+	fn cannot_list_not_synced_secret_nfts() {
+		ExtBuilder::new_build(None).execute_with(|| {
+			prepare_tests();
+
+			// Set secret.
+			let mut nft = NFT::get_nft(ALICE_NFT_ID_0).unwrap();
+			nft.state.is_secret = true;
+			NFT::set_nft(ALICE_NFT_ID_0, nft).unwrap();
+
+			let ok = AuctionBuilder::new().nft_id(ALICE_NFT_ID_0).execute();
+			assert_noop!(ok, Error::<Test>::CannotListNotSyncedSecretNFTs);
 		})
 	}
 

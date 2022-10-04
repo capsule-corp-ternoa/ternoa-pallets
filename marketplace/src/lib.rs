@@ -249,6 +249,8 @@ pub mod pallet {
 		InternalMathError,
 		/// Not enough balance for the operation
 		NotEnoughBalanceToBuy,
+		/// Cannot list because the NFT secret is not synced.
+		CannotListNotSyncedSecretNFTs,
 	}
 
 	#[pallet::call]
@@ -408,6 +410,10 @@ pub mod pallet {
 				!(nft.state.is_soulbound && nft.creator != nft.owner),
 				Error::<T>::CannotListNotCreatedSoulboundNFTs
 			);
+			if nft.state.is_secret {
+				ensure!(nft.state.is_secret_synced, Error::<T>::CannotListNotSyncedSecretNFTs);
+			}
+
 			let marketplace =
 				Marketplaces::<T>::get(marketplace_id).ok_or(Error::<T>::MarketplaceNotFound)?;
 
