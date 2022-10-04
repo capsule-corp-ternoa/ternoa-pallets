@@ -792,7 +792,7 @@ pub mod pallet {
 
 		/// Add a secret to a basic NFT.
 		/// Must be called by NFT owner.
-		#[pallet::weight(T::WeightInfo::delegate_nft())]
+		#[pallet::weight(T::WeightInfo::add_secret())]
 		pub fn add_secret(
 			origin: OriginFor<T>,
 			nft_id: NFTId,
@@ -832,7 +832,22 @@ pub mod pallet {
 		/// Create a new secret NFT with the provided details. An ID will be auto
 		/// generated and logged as an event, The caller of this function
 		/// will become the owner of the new NFT.
-		#[pallet::weight(T::WeightInfo::delegate_nft())]
+		#[pallet::weight((
+            {
+				if let Some(collection_id) = &collection_id {
+					let collection = Collections::<T>::get(collection_id).ok_or(Error::<T>::CollectionNotFound);
+					if let Ok(collection) = collection {
+						let s = collection.nfts.len();
+						T::WeightInfo::create_secret_nft(s as u32)
+					} else {
+						T::WeightInfo::create_secret_nft(1)
+					}
+				} else {
+					T::WeightInfo::create_secret_nft(1)
+				}
+            },
+			DispatchClass::Normal
+        ))]
 		pub fn create_secret_nft(
 			origin: OriginFor<T>,
 			offchain_data: U8BoundedVec<T::NFTOffchainDataLimit>,
@@ -861,7 +876,7 @@ pub mod pallet {
 
 		/// Extrinsic called by TEE enclaves to indicate that a shard was received.
 		/// Must be called by registered enclaves.
-		#[pallet::weight(T::WeightInfo::delegate_nft())]
+		#[pallet::weight(T::WeightInfo::add_secret_shard())]
 		pub fn add_secret_shard(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 			ensure!(
@@ -926,7 +941,7 @@ pub mod pallet {
 		}
 
 		/// Set the fee for minting a secret NFT if the caller is root.
-		#[pallet::weight(T::WeightInfo::delegate_nft())]
+		#[pallet::weight(T::WeightInfo::set_secret_nft_mint_fee())]
 		pub fn set_secret_nft_mint_fee(
 			origin: OriginFor<T>,
 			fee: BalanceOf<T>,

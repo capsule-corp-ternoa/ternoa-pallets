@@ -29,6 +29,10 @@ pub trait WeightInfo {
 	fn close_collection() -> Weight;
 	fn limit_collection() -> Weight;
 	fn add_nft_to_collection(s: u32) -> Weight;
+	fn create_secret_nft(s: u32) -> Weight;
+	fn add_secret() -> Weight;
+	fn add_secret_shard() -> Weight;
+	fn set_secret_nft_mint_fee() -> Weight;
 }
 
 /// Weight functions for `ternoa_nft`.
@@ -84,6 +88,32 @@ impl<T: frame_system::Config> WeightInfo for TernoaWeight<T> {
 	// Storage: NFT Collections (r:1 w:1)
 	// Storage: NFT Nfts (r:1 w:1)
 	fn add_nft_to_collection(_s: u32) -> Weight {
+		Weight::from_ref_time(10_000_000 as RefTimeWeight)
+	}
+	// Storage: NFT NftMintFee (r:1 w:0)
+	// Storage: NFT SecretNftMintFee (r:1 w:0)
+	// Storage: System Account (r:1 w:1)
+	// Storage: NFT Collections (r:1 w:1)
+	// Storage: NFT NextNFTId (r:1 w:1)
+	// Storage: NFT SecretNftsOffchainData (r:0 w:1)
+	// Storage: NFT Nfts (r:0 w:1)
+	fn create_secret_nft(_s: u32, ) -> Weight {
+		Weight::from_ref_time(10_000_000 as RefTimeWeight)
+	}
+	// Storage: NFT Nfts (r:1 w:1)
+	// Storage: NFT SecretNftMintFee (r:1 w:0)
+	// Storage: System Account (r:1 w:1)
+	// Storage: NFT SecretNftsOffchainData (r:0 w:1)
+	fn add_secret() -> Weight {
+		Weight::from_ref_time(10_000_000 as RefTimeWeight)
+	}
+	// Storage: NFT Nfts (r:1 w:1)
+	// Storage: NFT SecretNftsShardsCount (r:1 w:1)
+	fn add_secret_shard() -> Weight {
+		Weight::from_ref_time(10_000_000 as RefTimeWeight)
+	}
+	// Storage: NFT SecretNftMintFee (r:0 w:1)
+	fn set_secret_nft_mint_fee() -> Weight {
 		Weight::from_ref_time(10_000_000 as RefTimeWeight)
 	}
 }
