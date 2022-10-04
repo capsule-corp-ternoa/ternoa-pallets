@@ -280,6 +280,8 @@ pub mod pallet {
 		CannotListListedNFTs,
 		/// Cannot auction capsules.
 		CannotListCapsulesNFTs,
+		/// Cannot list because the NFT secret is not synced.
+		CannotListNotSyncedSecretNFTs,
 		/// Cannot auction NFTs that are not owned by the caller.
 		CannotListNotOwnedNFTs,
 		/// Cannot auction delegated NFTs.
@@ -352,6 +354,10 @@ pub mod pallet {
 			ensure!(
 				!(nft.state.is_soulbound && nft.creator != nft.owner),
 				Error::<T>::CannotListNotCreatedSoulboundNFTs
+			);
+			ensure!(
+				!(nft.state.is_secret && !nft.state.is_secret_synced),
+				Error::<T>::CannotListNotSyncedSecretNFTs
 			);
 
 			let marketplace = T::MarketplaceExt::get_marketplace(marketplace_id)

@@ -195,6 +195,8 @@ pub mod pallet {
 		CannotSetRoyaltyForListedNFTs,
 		/// Operation is not allowed because the NFT is delegated.
 		CannotTransferDelegatedNFTs,
+		/// Operation is not allowed because the NFT secret is not synced.
+		CannotTransferNotSyncedSecretNFTs,
 		/// Operation is not allowed because the NFT is delegated.
 		CannotBurnDelegatedNFTs,
 		/// Operation is not allowed because the NFT is delegated.
@@ -437,6 +439,10 @@ pub mod pallet {
 				ensure!(
 					!(nft.state.is_soulbound && nft.creator != nft.owner),
 					Error::<T>::CannotTransferNotCreatedSoulboundNFTs
+				);
+				ensure!(
+					!(nft.state.is_secret && !nft.state.is_secret_synced),
+					Error::<T>::CannotTransferNotSyncedSecretNFTs
 				);
 
 				// Execute
@@ -803,7 +809,7 @@ impl<T: Config> traits::NFTExt for Pallet<T> {
 		collection_id: Option<CollectionId>,
 		is_soulbound: bool,
 	) -> Result<NFTId, DispatchResult> {
-		let nft_state = NFTState::new(false, false, false, false, is_soulbound);
+		let nft_state = NFTState::new(false, false, false, false, is_soulbound, false);
 		let nft = NFTData::new(
 			owner.clone(),
 			owner.clone(),

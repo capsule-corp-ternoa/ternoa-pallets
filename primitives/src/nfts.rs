@@ -45,6 +45,8 @@ pub struct NFTState {
 	pub is_delegated: bool,
 	/// Is NFT soulbound
 	pub is_soulbound: bool,
+	/// Is NFT Secret synced
+	pub is_secret_synced: bool,
 }
 
 impl NFTState {
@@ -54,12 +56,13 @@ impl NFTState {
 		is_secret: bool,
 		is_delegated: bool,
 		is_soulbound: bool,
+		is_secret_synced: bool,
 	) -> Self {
-		Self { is_capsule, is_listed, is_secret, is_delegated, is_soulbound }
+		Self { is_capsule, is_listed, is_secret, is_delegated, is_soulbound, is_secret_synced }
 	}
 
 	pub fn new_default(is_soulbound: bool) -> Self {
-		Self::new(false, false, false, false, is_soulbound)
+		Self::new(false, false, false, false, is_soulbound, false)
 	}
 }
 

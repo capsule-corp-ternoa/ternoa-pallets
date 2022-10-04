@@ -225,6 +225,8 @@ pub mod pallet {
 		CannotListCapsuleNFTs,
 		/// Cannot list soulbound NFTs that was not created from owner.
 		CannotListNotCreatedSoulboundNFTs,
+		/// Cannot list because the NFT secret is not synced.
+		CannotListNotSyncedSecretNFTs,
 		/// Cannot buy owned NFT
 		CannotBuyOwnedNFT,
 		/// Sender is already the marketplace owner
@@ -407,6 +409,10 @@ pub mod pallet {
 			ensure!(
 				!(nft.state.is_soulbound && nft.creator != nft.owner),
 				Error::<T>::CannotListNotCreatedSoulboundNFTs
+			);
+			ensure!(
+				!(nft.state.is_secret && !nft.state.is_secret_synced),
+				Error::<T>::CannotListNotSyncedSecretNFTs
 			);
 			let marketplace =
 				Marketplaces::<T>::get(marketplace_id).ok_or(Error::<T>::MarketplaceNotFound)?;

@@ -826,11 +826,28 @@ mod list_nft {
 				let alice: mock::Origin = origin(ALICE);
 
 				// Set capsule to true for Alice's NFT.
-				let nft_state = NFTState::new(true, false, false, false, false);
+				let nft_state = NFTState::new(true, false, false, false, false, false);
 				NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
 
 				let err = Marketplace::list_nft(alice, ALICE_NFT_ID, ALICE_MARKETPLACE_ID, 10);
 				assert_noop!(err, Error::<Test>::CannotListCapsuleNFTs);
+			},
+		)
+	}
+
+	#[test]
+	fn cannot_list_not_synced_secret_nfts() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
+			|| {
+				prepare_tests();
+				let alice: mock::Origin = origin(ALICE);
+
+				// Set secret to true for Alice's NFT.
+				let nft_state = NFTState::new(false, false, true, false, false, false);
+				NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
+
+				let err = Marketplace::list_nft(alice, ALICE_NFT_ID, ALICE_MARKETPLACE_ID, 10);
+				assert_noop!(err, Error::<Test>::CannotListNotSyncedSecretNFTs);
 			},
 		)
 	}
@@ -843,7 +860,7 @@ mod list_nft {
 				let alice: mock::Origin = origin(ALICE);
 
 				// Set delegated to true for Alice's NFT.
-				let nft_state = NFTState::new(false, false, false, true, false);
+				let nft_state = NFTState::new(false, false, false, true, false, false);
 				NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
 
 				let err = Marketplace::list_nft(alice, ALICE_NFT_ID, ALICE_MARKETPLACE_ID, 10);
