@@ -59,6 +59,17 @@ pub trait NFTExt {
 		collection_id: Option<CollectionId>,
 		is_soulbound: bool,
 	) -> Result<NFTId, DispatchResult>;
+
+	fn mutate_nft<
+		R,
+		E,
+		F: FnOnce(&mut Option<NFTData<Self::AccountId, Self::NFTOffchainDataLimit>>) -> Result<R, E>,
+	>(
+		id: NFTId,
+		f: F,
+	) -> Result<R, E>;
+
+	fn exists(id: NFTId) -> bool;
 }
 
 pub trait MarketplaceExt {

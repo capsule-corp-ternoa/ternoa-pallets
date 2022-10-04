@@ -358,6 +358,7 @@ pub mod pallet {
 			if nft.state.is_secret {
 				ensure!(nft.state.is_secret_synced, Error::<T>::CannotListNotSyncedSecretNFTs);
 			}
+			ensure!(!nft.state.is_rented, Error::<T>::CannotListRentedNFTs);
 
 			let marketplace = T::MarketplaceExt::get_marketplace(marketplace_id)
 				.ok_or(Error::<T>::MarketplaceNotFound)?;

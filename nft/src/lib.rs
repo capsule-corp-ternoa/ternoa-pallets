@@ -253,6 +253,14 @@ pub mod pallet {
 		CannotSetRoyaltyForCapsuleNFTs,
 		/// Operation is not allowed because the NFT is owned by the caller.
 		CannotTransferNFTsToYourself,
+		/// Operation is not allowed because the NFT is rented
+		CannotTransferRentedNFTs,
+		/// Operation is not allowed because the NFT is rented
+		CannotBurnRentedNFTs,
+		/// Operation is not allowed because the NFT is rented
+		CannotSetRoyaltyForRentedNFTs,
+		/// Operation is not allowed because the NFT is rented
+		CannotDelegateRentedNFTs,
 		/// Operation is not allowed because the collection limit is too low.
 		CollectionLimitExceededMaximumAllowed,
 		/// No NFT was found with that NFT id.
@@ -452,6 +460,7 @@ pub mod pallet {
 			ensure!(!nft.state.is_listed, Error::<T>::CannotBurnListedNFTs);
 			ensure!(!nft.state.is_capsule, Error::<T>::CannotBurnCapsuleNFTs);
 			ensure!(!nft.state.is_delegated, Error::<T>::CannotBurnDelegatedNFTs);
+			ensure!(!nft.state.is_rented, Error::<T>::CannotBurnRentedNFTs);
 
 			// Check for collection to remove nft.
 			if let Some(collection_id) = &nft.collection_id {
@@ -511,6 +520,7 @@ pub mod pallet {
 					!(nft.state.is_secret && !nft.state.is_secret_synced),
 					Error::<T>::CannotTransferNotSyncedSecretNFTs
 				);
+				ensure!(!nft.state.is_rented, Error::<T>::CannotTransferRentedNFTs);
 
 				// Execute
 				nft.owner = recipient.clone();
@@ -547,6 +557,7 @@ pub mod pallet {
 				ensure!(nft.owner == who, Error::<T>::NotTheNFTOwner);
 				ensure!(!nft.state.is_listed, Error::<T>::CannotDelegateListedNFTs);
 				ensure!(!nft.state.is_capsule, Error::<T>::CannotDelegateCapsuleNFTs);
+				ensure!(!nft.state.is_rented, Error::<T>::CannotDelegateRentedNFTs);
 
 				// Execute
 				nft.state.is_delegated = is_delegated;
@@ -586,6 +597,7 @@ pub mod pallet {
 				ensure!(!nft.state.is_listed, Error::<T>::CannotSetRoyaltyForListedNFTs);
 				ensure!(!nft.state.is_capsule, Error::<T>::CannotSetRoyaltyForCapsuleNFTs);
 				ensure!(!nft.state.is_delegated, Error::<T>::CannotSetRoyaltyForDelegatedNFTs);
+				ensure!(!nft.state.is_rented, Error::<T>::CannotSetRoyaltyForRentedNFTs);
 
 				// Execute
 				nft.royalty = royalty;
@@ -1041,7 +1053,7 @@ impl<T: Config> traits::NFTExt for Pallet<T> {
 		collection_id: Option<CollectionId>,
 		is_soulbound: bool,
 	) -> Result<NFTId, DispatchResult> {
-		let nft_state = NFTState::new(false, false, false, false, is_soulbound, false);
+		let nft_state = NFTState::new(false, false, false, false, is_soulbound, false, false);
 		let nft = NFTData::new(
 			owner.clone(),
 			owner.clone(),
@@ -1054,6 +1066,21 @@ impl<T: Config> traits::NFTExt for Pallet<T> {
 		Nfts::<T>::insert(nft_id, nft);
 
 		Ok(nft_id)
+	}
+
+	fn mutate_nft<
+		R,
+		E,
+		F: FnOnce(&mut Option<NFTData<Self::AccountId, Self::NFTOffchainDataLimit>>) -> Result<R, E>,
+	>(
+		id: NFTId,
+		f: F,
+	) -> Result<R, E> {
+		Nfts::<T>::try_mutate(id, f)
+	}
+
+	fn exists(id: NFTId) -> bool {
+		Nfts::<T>::contains_key(id)
 	}
 }
 
