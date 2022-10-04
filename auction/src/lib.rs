@@ -280,8 +280,6 @@ pub mod pallet {
 		CannotListListedNFTs,
 		/// Cannot auction capsules.
 		CannotListCapsulesNFTs,
-		/// Cannot list because the NFT secret is not synced.
-		CannotListNotSyncedSecretNFTs,
 		/// Cannot auction NFTs that are not owned by the caller.
 		CannotListNotOwnedNFTs,
 		/// Cannot auction delegated NFTs.
@@ -308,6 +306,8 @@ pub mod pallet {
 		NotAllowedToList,
 		/// Cannot end auction without bids
 		CannotEndAuctionWithoutBids,
+		/// Cannot list because the NFT secret is not synced.
+		CannotListNotSyncedSecretNFTs,
 	}
 
 	#[pallet::call]

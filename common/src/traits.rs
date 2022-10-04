@@ -42,13 +42,6 @@ pub trait NFTExt {
 		amount_in_collection: u32,
 	) -> DispatchResult;
 
-	/// Create a filled shard vector for an NFT.
-	fn create_filled_shards_vector(
-		who: Self::AccountId,
-		nft_id: NFTId,
-		nb_shards: u32,
-	) -> DispatchResult;
-
 	/// Returns an NFT corresponding to its id.
 	fn get_nft(id: NFTId) -> Option<NFTData<Self::AccountId, Self::NFTOffchainDataLimit>>;
 

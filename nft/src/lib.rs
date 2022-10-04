@@ -161,13 +161,13 @@ pub mod pallet {
 	/// Host a map of secret NFTs and their secret_offchain_data.
 	#[pallet::storage]
 	#[pallet::getter(fn secret_nfts_offchain_data)]
-	pub type SecretNFTsOffchainData<T: Config> =
+	pub type SecretNftsOffchainData<T: Config> =
 		StorageMap<_, Blake2_128Concat, NFTId, U8BoundedVec<T::NFTOffchainDataLimit>, OptionQuery>;
 
 	/// Host a map of secret NFTs and a vector of enclave addresses that sent a shard.
 	#[pallet::storage]
 	#[pallet::getter(fn secret_nfts_shards_count)]
-	pub type SecretNFTsShardsCount<T: Config> = StorageMap<
+	pub type SecretNftsShardsCount<T: Config> = StorageMap<
 		_,
 		Blake2_128Concat,
 		NFTId,
@@ -213,11 +213,8 @@ pub mod pallet {
 		CollectionLimited { collection_id: CollectionId, limit: u32 },
 		/// An NFT has been added to a collection.
 		NFTAddedToCollection { nft_id: NFTId, collection_id: CollectionId },
-		/// A basic NFT was converted to secret.
-		NFTConvertedToSecret {
-			nft_id: NFTId,
-			secret_offchain_data: U8BoundedVec<T::NFTOffchainDataLimit>,
-		},
+		/// A secret was added to a basic NFT.
+		SecretAddedToNFT { nft_id: NFTId, offchain_data: U8BoundedVec<T::NFTOffchainDataLimit> },
 		/// A shard was added for a secret NFT.
 		ShardAdded { nft_id: NFTId, enclave: T::AccountId },
 		/// A secret NFT has finished syncing shards.
@@ -285,12 +282,6 @@ pub mod pallet {
 		CollectionHasTooManyNFTs,
 		/// Operation is not permitted because collection nfts is full.
 		CannotAddMoreNFTsToCollection,
-		/// Operation is not permitted because the NFT is listed.
-		CannotConvertListedNFTs,
-		/// Operation is not permitted because the NFT is a capsule.
-		CannotConvertCapsuleNFTs,
-		/// Operation is not permitted because the NFT is already a secret.
-		CannotConvertSecretNFTs,
 		/// Operation is not permitted because caller is not a registered TEE enclave.
 		NotARegisteredEnclave,
 		/// Operation is not permitted because NFT is not a secret.
@@ -303,6 +294,12 @@ pub mod pallet {
 		EnclaveAlreadyAddedShard,
 		/// Insufficient balance
 		InsufficientBalance,
+		/// Operation is not permitted because the NFT is listed.
+		CannotAddSecretToListedNFTs,
+		/// Operation is not permitted because the NFT is a capsule.
+		CannotAddSecretToCapsuleNFTs,
+		/// Operation is not permitted because the NFT is already a secret.
+		CannotAddSecretToSecretNFTs,
 	}
 
 	// TODO Write Tests for Runtime upgrade
@@ -473,9 +470,9 @@ pub mod pallet {
 
 			// Check for secret nft to remove secret offchain data and shards count.
 			if nft.state.is_secret {
-				SecretNFTsOffchainData::<T>::remove(nft_id);
+				SecretNftsOffchainData::<T>::remove(nft_id);
 				if !nft.state.is_secret_synced {
-					SecretNFTsShardsCount::<T>::remove(nft_id);
+					SecretNftsShardsCount::<T>::remove(nft_id);
 				}
 			}
 
@@ -793,13 +790,13 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		/// Convert a basic NFT to a secret NFT.
+		/// Add a secret to a basic NFT.
 		/// Must be called by NFT owner.
 		#[pallet::weight(T::WeightInfo::delegate_nft())]
-		pub fn convert_to_secret(
+		pub fn add_secret(
 			origin: OriginFor<T>,
 			nft_id: NFTId,
-			secret_offchain_data: U8BoundedVec<T::NFTOffchainDataLimit>,
+			offchain_data: U8BoundedVec<T::NFTOffchainDataLimit>,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
@@ -808,9 +805,9 @@ pub mod pallet {
 
 				// Checks
 				ensure!(nft.owner == who, Error::<T>::NotTheNFTOwner);
-				ensure!(!nft.state.is_listed, Error::<T>::CannotConvertListedNFTs);
-				ensure!(!nft.state.is_capsule, Error::<T>::CannotConvertCapsuleNFTs);
-				ensure!(!nft.state.is_secret, Error::<T>::CannotConvertSecretNFTs);
+				ensure!(!nft.state.is_listed, Error::<T>::CannotAddSecretToListedNFTs);
+				ensure!(!nft.state.is_capsule, Error::<T>::CannotAddSecretToCapsuleNFTs);
+				ensure!(!nft.state.is_secret, Error::<T>::CannotAddSecretToSecretNFTs);
 
 				// The Caller needs to pay the Secret NFT Mint fee.
 				let secret_nft_mint_fee = SecretNftMintFee::<T>::get();
@@ -822,12 +819,12 @@ pub mod pallet {
 				// Execute
 				nft.state.is_secret = true;
 
-				SecretNFTsOffchainData::<T>::insert(nft_id, secret_offchain_data.clone());
+				SecretNftsOffchainData::<T>::insert(nft_id, offchain_data.clone());
 
 				Ok(().into())
 			})?;
 
-			let event = Event::NFTConvertedToSecret { nft_id, secret_offchain_data };
+			let event = Event::SecretAddedToNFT { nft_id, offchain_data };
 			Self::deposit_event(event);
 			Ok(().into())
 		}
@@ -856,8 +853,8 @@ pub mod pallet {
 			Self::create_nft(origin.clone(), offchain_data, royalty, collection_id, is_soulbound)?;
 			let nft_id = NextNFTId::<T>::get() - 1;
 
-			// Convert NFT to secret
-			Self::convert_to_secret(origin.clone(), nft_id, secret_offchain_data)?;
+			// Add a secret to the NFT
+			Self::add_secret(origin.clone(), nft_id, secret_offchain_data)?;
 
 			Ok(().into())
 		}
@@ -880,7 +877,7 @@ pub mod pallet {
 				ensure!(nft.state.is_secret, Error::<T>::NFTIsNotSecret);
 				ensure!(!nft.state.is_secret_synced, Error::<T>::NFTAlreadySynced);
 
-				SecretNFTsShardsCount::<T>::try_mutate(nft_id, |maybe_shards| -> DispatchResult {
+				SecretNftsShardsCount::<T>::try_mutate(nft_id, |maybe_shards| -> DispatchResult {
 					if let Some(shards) = maybe_shards {
 						ensure!(
 							shards.len() < T::ShardsNumber::get() as usize,
@@ -1005,19 +1002,6 @@ impl<T: Config> traits::NFTExt for Pallet<T> {
 		for i in start_nft_id..amount_in_collection + start_nft_id {
 			Nfts::<T>::insert(i, nft.clone());
 		}
-
-		Ok(())
-	}
-
-	fn create_filled_shards_vector(
-		who: Self::AccountId,
-		nft_id: NFTId,
-		nb_shards: u32,
-	) -> DispatchResult {
-		let shards: BoundedVec<Self::AccountId, Self::ShardsNumber> =
-			BoundedVec::try_from(vec![who.clone(); nb_shards as usize])
-				.expect("It will never happen.");
-		SecretNFTsShardsCount::<T>::insert(nft_id, shards);
 
 		Ok(())
 	}

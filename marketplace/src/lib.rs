@@ -225,8 +225,6 @@ pub mod pallet {
 		CannotListCapsuleNFTs,
 		/// Cannot list soulbound NFTs that was not created from owner.
 		CannotListNotCreatedSoulboundNFTs,
-		/// Cannot list because the NFT secret is not synced.
-		CannotListNotSyncedSecretNFTs,
 		/// Cannot buy owned NFT
 		CannotBuyOwnedNFT,
 		/// Sender is already the marketplace owner
@@ -251,6 +249,8 @@ pub mod pallet {
 		InternalMathError,
 		/// Not enough balance for the operation
 		NotEnoughBalanceToBuy,
+		/// Cannot list because the NFT secret is not synced.
+		CannotListNotSyncedSecretNFTs,
 	}
 
 	#[pallet::call]
