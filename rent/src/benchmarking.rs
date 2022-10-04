@@ -39,10 +39,6 @@ pub fn origin<T: Config>(name: &'static str) -> RawOrigin<T::AccountId> {
 	RawOrigin::Signed(get_account::<T>(name))
 }
 
-pub fn root<T: Config>() -> RawOrigin<T::AccountId> {
-	RawOrigin::Root.into()
-}
-
 pub fn prepare_benchmarks<T: Config>() -> () {
 	let alice: T::AccountId = get_account::<T>("ALICE");
 	let bob: T::AccountId = get_account::<T>("BOB");
@@ -228,12 +224,11 @@ benchmarks! {
 		assert_ok!(ok);
 
 		Rent::<T>::prep_benchmark_0(&alice.clone(), org.clone(), new_contracts_amount).unwrap();
-		Rent::<T>::make_rent_offer(origin::<T>("BOB").into(), NFT_ID_1);
+		Rent::<T>::make_rent_offer(origin::<T>("BOB").into(), NFT_ID_1).unwrap();
 	}: _(origin::<T>("ALICE"), NFT_ID_1, bob.clone())
 	verify {
 		let contract = Rent::<T>::contracts(NFT_ID_1).unwrap();
 		assert_eq!(contract.rentee, Some(bob));
-
 	}
 
 	retract_rent_offer {
@@ -262,7 +257,7 @@ benchmarks! {
 		assert_ok!(ok);
 
 		Rent::<T>::prep_benchmark_1(new_offer_amount, NFT_ID_1, alice.clone()).unwrap();
-		Rent::<T>::make_rent_offer(origin::<T>("BOB").into(), NFT_ID_1);
+		Rent::<T>::make_rent_offer(origin::<T>("BOB").into(), NFT_ID_1).unwrap();
 
 	}: _(origin::<T>("BOB"), NFT_ID_1)
 	verify {

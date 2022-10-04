@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Ternoa.  If not, see <http://www.gnu.org/licenses/>.
 
-use super::mock::*;
+/* use super::mock::*;
 use frame_support::{assert_noop, error::BadOrigin, BoundedVec};
 use frame_system::RawOrigin;
 use primitives::nfts::{NFTId, NFTState};
@@ -31,6 +31,7 @@ fn origin(account: u64) -> mock::Origin {
 }
 
 const PERCENT_0: Permill = Permill::from_parts(0);
+ */
 
 /* #[test]
 fn revoke_contract_before_start() {
