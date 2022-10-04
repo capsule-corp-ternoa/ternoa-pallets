@@ -46,6 +46,7 @@ pub const MAX_AUCTION_DELAY: u64 = 50;
 pub const AUCTION_GRACE_PERIOD: u64 = 5;
 pub const AUCTION_ENDING_PERIOD: u64 = 10;
 pub const NFT_MINT_FEE: Balance = 10;
+pub const SECRET_NFT_MINT_FEE: Balance = 75;
 pub const MARKETPLACE_MINT_FEE: Balance = 100;
 
 frame_support::construct_runtime!(
@@ -132,10 +133,14 @@ parameter_types! {
 	pub const NFTOffchainDataLimit: u32 = 10;
 	pub const CollectionOffchainDataLimit: u32 = 10;
 	pub const CollectionSizeLimit: u32 = 10;
+	pub const InitialSecretMintFee: Balance = SECRET_NFT_MINT_FEE;
+	pub const ShardsNumber: u32 = 5;
 	// Marketplace parameter types
 	pub const MarketplaceInitialMintFee: Balance = MARKETPLACE_MINT_FEE;
 	pub const OffchainDataLimit: u32 = 150;
 	pub const AccountSizeLimit: u32 = 100;
+	pub const CollectionListSizeLimit: u32 = 100;
+
 }
 
 impl ternoa_nft::Config for Test {
@@ -147,6 +152,8 @@ impl ternoa_nft::Config for Test {
 	type NFTOffchainDataLimit = NFTOffchainDataLimit;
 	type CollectionOffchainDataLimit = CollectionOffchainDataLimit;
 	type CollectionSizeLimit = CollectionSizeLimit;
+	type InitialSecretMintFee = InitialSecretMintFee;
+	type ShardsNumber = ShardsNumber;
 }
 
 impl ternoa_marketplace::Config for Test {
@@ -158,6 +165,7 @@ impl ternoa_marketplace::Config for Test {
 	type InitialMintFee = MarketplaceInitialMintFee;
 	type OffchainDataLimit = OffchainDataLimit;
 	type AccountSizeLimit = AccountSizeLimit;
+	type CollectionSizeLimit = CollectionListSizeLimit;
 }
 
 parameter_types! {

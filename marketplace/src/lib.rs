@@ -17,6 +17,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
+mod migrations;
 #[cfg(test)]
 mod tests;
 mod types;
@@ -30,8 +31,8 @@ use frame_support::{
 	ensure,
 	pallet_prelude::DispatchResultWithPostInfo,
 	traits::{
-		Currency, ExistenceRequirement::KeepAlive, Get, OnUnbalanced, StorageVersion,
-		WithdrawReasons,
+		Currency, ExistenceRequirement::KeepAlive, Get, OnRuntimeUpgrade, OnUnbalanced,
+		StorageVersion, WithdrawReasons,
 	},
 	BoundedVec,
 };
@@ -41,7 +42,7 @@ use sp_std::prelude::*;
 
 use primitives::{
 	marketplace::{MarketplaceData, MarketplaceId, MarketplaceType},
-	nfts::NFTId,
+	nfts::{CollectionId, NFTId},
 	CompoundFee, ConfigOp, U8BoundedVec,
 };
 use ternoa_common::{
@@ -56,7 +57,7 @@ pub type NegativeImbalanceOf<T> = <<T as Config>::Currency as Currency<
 	<T as frame_system::Config>::AccountId,
 >>::NegativeImbalance;
 
-const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
+const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -97,10 +98,44 @@ pub mod pallet {
 		/// Maximum offchain data length.
 		#[pallet::constant]
 		type OffchainDataLimit: Get<u32>;
+
+		/// The maximum number of collection ids that can be stored inside the collection list.
+		#[pallet::constant]
+		type CollectionSizeLimit: Get<u32>;
 	}
 
+	// TODO Write Tests for Runtime upgrade
 	#[pallet::hooks]
-	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+		#[cfg(feature = "try-runtime")]
+		fn pre_upgrade() -> Result<(), &'static str> {
+			<migrations::v2::MigrationV2<T> as OnRuntimeUpgrade>::pre_upgrade()
+		}
+
+		// This function is called when a runtime upgrade is called. We need to make sure that
+		// what ever we do here won't brick the chain or leave the data in a invalid state.
+		fn on_runtime_upgrade() -> frame_support::weights::Weight {
+			let mut weight = Weight::zero();
+
+			let version = StorageVersion::get::<Pallet<T>>();
+			if version == StorageVersion::new(1) {
+				weight = <migrations::v2::MigrationV2<T> as OnRuntimeUpgrade>::on_runtime_upgrade();
+
+				// Update the storage version.
+				StorageVersion::put::<Pallet<T>>(&StorageVersion::new(2));
+			}
+
+			weight
+		}
+
+		// This function is called after a runtime upgrade is executed. Here we can
+		// test if the new state of blockchain data is valid. It's important to say that
+		// post_upgrade won't be called when a real runtime upgrade is executed.
+		#[cfg(feature = "try-runtime")]
+		fn post_upgrade() -> Result<(), &'static str> {
+			<migrations::v2::MigrationV2<T> as OnRuntimeUpgrade>::post_upgrade()
+		}
+	}
 
 	/// How much does it cost to create a marketplace.
 	#[pallet::storage]
@@ -120,7 +155,13 @@ pub mod pallet {
 		_,
 		Blake2_128Concat,
 		MarketplaceId,
-		MarketplaceData<T::AccountId, BalanceOf<T>, T::AccountSizeLimit, T::OffchainDataLimit>,
+		MarketplaceData<
+			T::AccountId,
+			BalanceOf<T>,
+			T::AccountSizeLimit,
+			T::OffchainDataLimit,
+			T::CollectionSizeLimit,
+		>,
 		OptionQuery,
 	>;
 
@@ -150,6 +191,7 @@ pub mod pallet {
 			listing_fee: ConfigOp<CompoundFee<BalanceOf<T>>>,
 			account_list: ConfigOp<BoundedVec<T::AccountId, T::AccountSizeLimit>>,
 			offchain_data: ConfigOp<U8BoundedVec<T::OffchainDataLimit>>,
+			collection_list: ConfigOp<BoundedVec<CollectionId, T::CollectionSizeLimit>>,
 		},
 		/// Marketplace mint fee set
 		MarketplaceMintFeeSet { fee: BalanceOf<T> },
@@ -175,8 +217,8 @@ pub mod pallet {
 
 	#[pallet::error]
 	pub enum Error<T> {
-		/// Account not allowed to list NFTs on that marketplace.
-		AccountNotAllowedToList,
+		/// Not Allowed To List On MP
+		NotAllowedToList,
 		/// Cannot list delegated NFTs.
 		CannotListDelegatedNFTs,
 		/// Cannot list capsule NFTs.
@@ -207,6 +249,10 @@ pub mod pallet {
 		InternalMathError,
 		/// Not enough balance for the operation
 		NotEnoughBalanceToBuy,
+		/// Cannot list because the NFT secret is not synced.
+		CannotListNotSyncedSecretNFTs,
+		/// Cannot list rented NFTs.
+		CannotListRentedNFTs,
 	}
 
 	#[pallet::call]
@@ -226,7 +272,7 @@ pub mod pallet {
 			Self::pay_mint_fee(&who)?;
 
 			let marketplace_id = Self::get_next_marketplace_id();
-			let marketplace = MarketplaceData::new(who.clone(), kind, None, None, None, None);
+			let marketplace = MarketplaceData::new(who.clone(), kind, None, None, None, None, None);
 
 			// Execute.
 			Marketplaces::<T>::insert(marketplace_id, marketplace);
@@ -301,6 +347,7 @@ pub mod pallet {
 			listing_fee: ConfigOp<CompoundFee<BalanceOf<T>>>,
 			account_list: ConfigOp<BoundedVec<T::AccountId, T::AccountSizeLimit>>,
 			offchain_data: ConfigOp<BoundedVec<u8, T::OffchainDataLimit>>,
+			collection_list: ConfigOp<BoundedVec<CollectionId, T::CollectionSizeLimit>>,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
@@ -315,6 +362,7 @@ pub mod pallet {
 				config_op_field_exp!(marketplace.listing_fee, listing_fee);
 				config_op_field_exp!(marketplace.account_list, account_list.clone());
 				config_op_field_exp!(marketplace.offchain_data, offchain_data.clone());
+				config_op_field_exp!(marketplace.collection_list, collection_list.clone());
 				Ok(())
 			})?;
 
@@ -324,6 +372,7 @@ pub mod pallet {
 				listing_fee,
 				account_list,
 				offchain_data,
+				collection_list,
 			};
 			Self::deposit_event(event);
 
@@ -363,9 +412,18 @@ pub mod pallet {
 				!(nft.state.is_soulbound && nft.creator != nft.owner),
 				Error::<T>::CannotListNotCreatedSoulboundNFTs
 			);
+			if nft.state.is_secret {
+				ensure!(nft.state.is_secret_synced, Error::<T>::CannotListNotSyncedSecretNFTs);
+			}
+
+			ensure!(!nft.state.is_rented, Error::<T>::CannotListRentedNFTs);
+
 			let marketplace =
 				Marketplaces::<T>::get(marketplace_id).ok_or(Error::<T>::MarketplaceNotFound)?;
-			marketplace.allowed_to_list(&who).ok_or(Error::<T>::AccountNotAllowedToList)?;
+
+			marketplace
+				.allowed_to_list(&who, nft.collection_id)
+				.ok_or(Error::<T>::NotAllowedToList)?;
 
 			// Check if the selected price can cover the marketplace commission_fee if it exists.
 			if let Some(commission_fee) = &marketplace.commission_fee {
@@ -485,6 +543,7 @@ impl<T: Config> Pallet<T> {
 			BalanceOf<T>,
 			T::AccountSizeLimit,
 			T::OffchainDataLimit,
+			T::CollectionSizeLimit,
 		>,
 		price: BalanceOf<T>,
 	) -> Result<(), DispatchError> {
@@ -505,6 +564,7 @@ impl<T: Config> Pallet<T> {
 			BalanceOf<T>,
 			T::AccountSizeLimit,
 			T::OffchainDataLimit,
+			T::CollectionSizeLimit,
 		>,
 		sale: &Sale<T::AccountId, BalanceOf<T>>,
 		price: BalanceOf<T>,
@@ -526,6 +586,7 @@ impl<T: Config> MarketplaceExt for Pallet<T> {
 	type Balance = BalanceOf<T>;
 	type OffchainDataLimit = T::OffchainDataLimit;
 	type AccountSizeLimit = T::AccountSizeLimit;
+	type CollectionSizeLimit = T::CollectionSizeLimit;
 
 	fn get_marketplace(
 		id: MarketplaceId,
@@ -535,6 +596,7 @@ impl<T: Config> MarketplaceExt for Pallet<T> {
 			Self::Balance,
 			Self::AccountSizeLimit,
 			Self::OffchainDataLimit,
+			Self::CollectionSizeLimit,
 		>,
 	> {
 		Marketplaces::<T>::get(id)
@@ -547,6 +609,7 @@ impl<T: Config> MarketplaceExt for Pallet<T> {
 			BalanceOf<T>,
 			T::AccountSizeLimit,
 			T::OffchainDataLimit,
+			T::CollectionSizeLimit,
 		>,
 	) -> Result<(), DispatchError> {
 		Marketplaces::<T>::insert(id, marketplace_data);

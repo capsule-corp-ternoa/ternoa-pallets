@@ -29,6 +29,7 @@ pub trait NFTExt {
 	type NFTOffchainDataLimit: Get<u32>;
 	type CollectionSizeLimit: Get<u32>;
 	type CollectionOffchainDataLimit: Get<u32>;
+	type ShardsNumber: Get<u32>;
 
 	/// Change the state data of an NFT.
 	fn set_nft_state(id: NFTId, nft_state: NFTState) -> DispatchResult;
@@ -58,6 +59,17 @@ pub trait NFTExt {
 		collection_id: Option<CollectionId>,
 		is_soulbound: bool,
 	) -> Result<NFTId, DispatchResult>;
+
+	fn mutate_nft<
+		R,
+		E,
+		F: FnOnce(&mut Option<NFTData<Self::AccountId, Self::NFTOffchainDataLimit>>) -> Result<R, E>,
+	>(
+		id: NFTId,
+		f: F,
+	) -> Result<R, E>;
+
+	fn exists(id: NFTId) -> bool;
 }
 
 pub trait MarketplaceExt {
@@ -65,6 +77,7 @@ pub trait MarketplaceExt {
 	type Balance: Clone + PartialEq + Debug + sp_std::cmp::PartialOrd;
 	type OffchainDataLimit: Get<u32>;
 	type AccountSizeLimit: Get<u32>;
+	type CollectionSizeLimit: Get<u32>;
 
 	/// Returns a marketplace corresponding to its id.
 	fn get_marketplace(
@@ -75,6 +88,7 @@ pub trait MarketplaceExt {
 			Self::Balance,
 			Self::AccountSizeLimit,
 			Self::OffchainDataLimit,
+			Self::CollectionSizeLimit,
 		>,
 	>;
 
@@ -86,6 +100,7 @@ pub trait MarketplaceExt {
 			Self::Balance,
 			Self::AccountSizeLimit,
 			Self::OffchainDataLimit,
+			Self::CollectionSizeLimit,
 		>,
 	) -> DispatchResult;
 }
