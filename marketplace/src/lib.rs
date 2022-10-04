@@ -231,8 +231,6 @@ pub mod pallet {
 		CannotTransferMarketplaceToYourself,
 		/// NFT already listed
 		CannotListAlreadytListedNFTs,
-		/// Collection is not allowed on MP
-		CollectionNotAllowed,
 		/// The selected price is too low for commission fee
 		PriceCannotCoverMarketplaceFee,
 		/// Marketplace not found
