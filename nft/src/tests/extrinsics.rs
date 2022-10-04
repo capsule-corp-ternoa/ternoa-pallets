@@ -513,7 +513,7 @@ mod transfer_nft {
 			let mut nft = NFT::get_nft(nft_id).unwrap();
 			nft.creator = BOB;
 			NFT::set_nft(nft_id, nft).unwrap();
-			
+
 			// Try to transfer.
 			let err = NFT::transfer_nft(alice, nft_id, BOB);
 			// Should fail because NFT is soulbound.

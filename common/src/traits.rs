@@ -65,6 +65,7 @@ pub trait MarketplaceExt {
 	type Balance: Clone + PartialEq + Debug + sp_std::cmp::PartialOrd;
 	type OffchainDataLimit: Get<u32>;
 	type AccountSizeLimit: Get<u32>;
+	type CollectionSizeLimit: Get<u32>;
 
 	/// Returns a marketplace corresponding to its id.
 	fn get_marketplace(
@@ -75,6 +76,7 @@ pub trait MarketplaceExt {
 			Self::Balance,
 			Self::AccountSizeLimit,
 			Self::OffchainDataLimit,
+			Self::CollectionSizeLimit,
 		>,
 	>;
 
@@ -86,6 +88,7 @@ pub trait MarketplaceExt {
 			Self::Balance,
 			Self::AccountSizeLimit,
 			Self::OffchainDataLimit,
+			Self::CollectionSizeLimit,
 		>,
 	) -> DispatchResult;
 }

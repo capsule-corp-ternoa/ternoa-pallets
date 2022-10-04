@@ -57,20 +57,28 @@ fn prepare_tests() {
 	let bob: mock::Origin = origin(BOB);
 	let charlie: mock::Origin = origin(CHARLIE);
 
-	//Create alice NFT.
-	NFT::create_nft(alice.clone(), BoundedVec::default(), PERCENT_0, None, false).unwrap();
-
 	// Create alice collection.
 	NFT::create_collection(alice.clone(), BoundedVec::default(), None).unwrap();
+
+	//Create alice NFT.
+	NFT::create_nft(
+		alice.clone(),
+		BoundedVec::default(),
+		PERCENT_0,
+		Some(ALICE_COLLECTION_ID),
+		false,
+	)
+	.unwrap();
 
 	// Create alice marketplace.
 	Marketplace::create_marketplace(alice, MarketplaceType::Public).unwrap();
 
-	//Create bob NFT.
-	NFT::create_nft(bob.clone(), BoundedVec::default(), PERCENT_0, None, false).unwrap();
-
 	// Create bob collection.
 	NFT::create_collection(bob.clone(), BoundedVec::default(), None).unwrap();
+
+	//Create bob NFT.
+	NFT::create_nft(bob.clone(), BoundedVec::default(), PERCENT_0, Some(BOB_COLLECTION_ID), false)
+		.unwrap();
 
 	// Create bob marketplace.
 	Marketplace::create_marketplace(bob, MarketplaceType::Public).unwrap();
@@ -97,7 +105,8 @@ mod create_marketplace {
 		ExtBuilder::new_build(vec![(ALICE, 1000)]).execute_with(|| {
 			let alice: mock::Origin = origin(ALICE);
 			let alice_balance = Balances::free_balance(ALICE);
-			let data = MarketplaceData::new(ALICE, MarketplaceType::Public, None, None, None, None);
+			let data =
+				MarketplaceData::new(ALICE, MarketplaceType::Public, None, None, None, None, None);
 
 			// Create a marketplace.
 			Marketplace::create_marketplace(alice, data.kind).unwrap();
@@ -304,9 +313,17 @@ mod set_marketplace_configuration {
 					Some(CompoundFee::Percentage(PERCENT_100)),
 					Some(BoundedVec::try_from(vec![ALICE, BOB]).unwrap()),
 					Some(BoundedVec::try_from(vec![1]).unwrap()),
+					Some(BoundedVec::try_from(vec![1]).unwrap()),
 				);
-				let data_none =
-					MarketplaceData::new(ALICE, MarketplaceType::Public, None, None, None, None);
+				let data_none = MarketplaceData::new(
+					ALICE,
+					MarketplaceType::Public,
+					None,
+					None,
+					None,
+					None,
+					None,
+				);
 
 				// set marketplace configuration, all set.
 				Marketplace::set_marketplace_configuration(
@@ -316,6 +333,7 @@ mod set_marketplace_configuration {
 					ConfigOp::Set(data.listing_fee.unwrap()),
 					ConfigOp::Set(data.account_list.clone().unwrap()),
 					ConfigOp::Set(data.offchain_data.clone().unwrap()),
+					ConfigOp::Set(data.collection_list.clone().unwrap()),
 				)
 				.unwrap();
 
@@ -327,6 +345,7 @@ mod set_marketplace_configuration {
 				Marketplace::set_marketplace_configuration(
 					alice.clone(),
 					ALICE_MARKETPLACE_ID,
+					ConfigOp::Noop,
 					ConfigOp::Noop,
 					ConfigOp::Noop,
 					ConfigOp::Noop,
@@ -346,6 +365,7 @@ mod set_marketplace_configuration {
 					ConfigOp::Remove,
 					ConfigOp::Remove,
 					ConfigOp::Remove,
+					ConfigOp::Remove,
 				)
 				.unwrap();
 
@@ -360,6 +380,7 @@ mod set_marketplace_configuration {
 					listing_fee: ConfigOp::Remove,
 					account_list: ConfigOp::Remove,
 					offchain_data: ConfigOp::Remove,
+					collection_list: ConfigOp::Remove,
 				};
 				let event = Event::Marketplace(event);
 				System::assert_last_event(event);
@@ -382,6 +403,7 @@ mod set_marketplace_configuration {
 					ConfigOp::Remove,
 					ConfigOp::Remove,
 					ConfigOp::Remove,
+					ConfigOp::Remove,
 				);
 
 				assert_noop!(err, Error::<Test>::MarketplaceNotFound);
@@ -400,6 +422,7 @@ mod set_marketplace_configuration {
 				let err = Marketplace::set_marketplace_configuration(
 					alice.clone(),
 					BOB_MARKETPLACE_ID,
+					ConfigOp::Remove,
 					ConfigOp::Remove,
 					ConfigOp::Remove,
 					ConfigOp::Remove,
@@ -490,6 +513,7 @@ mod list_nft {
 					ConfigOp::Set(CompoundFee::Flat(new_listing_fee)),
 					ConfigOp::Noop,
 					ConfigOp::Noop,
+					ConfigOp::Noop,
 				)
 				.unwrap();
 
@@ -536,6 +560,7 @@ mod list_nft {
 					ConfigOp::Set(CompoundFee::Percentage(new_listing_fee)),
 					ConfigOp::Noop,
 					ConfigOp::Noop,
+					ConfigOp::Noop,
 				)
 				.unwrap();
 
@@ -553,6 +578,156 @@ mod list_nft {
 					Balances::free_balance(ALICE),
 					alice_balance - (new_listing_fee * data.price)
 				);
+
+				// Events checks.
+				let event = MarketplaceEvent::NFTListed {
+					marketplace_id: data.marketplace_id,
+					nft_id: ALICE_NFT_ID,
+					commission_fee: data.commission_fee,
+					price: data.price,
+				};
+				let event = Event::Marketplace(event);
+				System::assert_last_event(event);
+			},
+		)
+	}
+
+	#[test]
+	fn list_nft_private_account_whitelisted() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
+			|| {
+				prepare_tests();
+				let alice: mock::Origin = origin(ALICE);
+				let marketplace = Marketplace::marketplaces(ALICE_MARKETPLACE_ID).unwrap();
+
+				// Set marketplace private
+				Marketplace::set_marketplace_kind(
+					alice.clone(),
+					ALICE_MARKETPLACE_ID,
+					MarketplaceType::Private,
+				)
+				.unwrap();
+
+				// Set public marketplace account list (ban list) with alice's account.
+				Marketplace::set_marketplace_configuration(
+					alice.clone(),
+					ALICE_MARKETPLACE_ID,
+					ConfigOp::Noop,
+					ConfigOp::Noop,
+					ConfigOp::Set(BoundedVec::try_from(vec![ALICE]).unwrap()),
+					ConfigOp::Noop,
+					ConfigOp::Noop,
+				)
+				.unwrap();
+
+				// List NFT.
+				let data = Sale::new(ALICE, ALICE_MARKETPLACE_ID, 10, marketplace.commission_fee);
+				Marketplace::list_nft(alice, ALICE_NFT_ID, data.marketplace_id, data.price)
+					.unwrap();
+
+				// Final state checks.
+				let sale = Marketplace::listed_nfts(ALICE_NFT_ID).unwrap();
+				assert_eq!(sale, data);
+
+				// Events checks.
+				let event = MarketplaceEvent::NFTListed {
+					marketplace_id: data.marketplace_id,
+					nft_id: ALICE_NFT_ID,
+					commission_fee: data.commission_fee,
+					price: data.price,
+				};
+				let event = Event::Marketplace(event);
+				System::assert_last_event(event);
+			},
+		)
+	}
+
+	#[test]
+	fn list_nft_private_collection_whitelisted() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
+			|| {
+				prepare_tests();
+				let alice: mock::Origin = origin(ALICE);
+				let marketplace = Marketplace::marketplaces(ALICE_MARKETPLACE_ID).unwrap();
+
+				// Set marketplace private
+				Marketplace::set_marketplace_kind(
+					alice.clone(),
+					ALICE_MARKETPLACE_ID,
+					MarketplaceType::Private,
+				)
+				.unwrap();
+
+				// Set public marketplace account list (ban list) with alice's account.
+				Marketplace::set_marketplace_configuration(
+					alice.clone(),
+					ALICE_MARKETPLACE_ID,
+					ConfigOp::Noop,
+					ConfigOp::Noop,
+					ConfigOp::Noop,
+					ConfigOp::Noop,
+					ConfigOp::Set(BoundedVec::try_from(vec![ALICE_COLLECTION_ID]).unwrap()),
+				)
+				.unwrap();
+
+				// List NFT.
+				let data = Sale::new(ALICE, ALICE_MARKETPLACE_ID, 10, marketplace.commission_fee);
+				Marketplace::list_nft(alice, ALICE_NFT_ID, data.marketplace_id, data.price)
+					.unwrap();
+
+				// Final state checks.
+				let sale = Marketplace::listed_nfts(ALICE_NFT_ID).unwrap();
+				assert_eq!(sale, data);
+
+				// Events checks.
+				let event = MarketplaceEvent::NFTListed {
+					marketplace_id: data.marketplace_id,
+					nft_id: ALICE_NFT_ID,
+					commission_fee: data.commission_fee,
+					price: data.price,
+				};
+				let event = Event::Marketplace(event);
+				System::assert_last_event(event);
+			},
+		)
+	}
+
+	#[test]
+	fn list_nft_private_account_and_collection_whitelisted() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
+			|| {
+				prepare_tests();
+				let alice: mock::Origin = origin(ALICE);
+				let marketplace = Marketplace::marketplaces(ALICE_MARKETPLACE_ID).unwrap();
+
+				// Set marketplace private
+				Marketplace::set_marketplace_kind(
+					alice.clone(),
+					ALICE_MARKETPLACE_ID,
+					MarketplaceType::Private,
+				)
+				.unwrap();
+
+				// Set public marketplace account list (ban list) with alice's account.
+				Marketplace::set_marketplace_configuration(
+					alice.clone(),
+					ALICE_MARKETPLACE_ID,
+					ConfigOp::Noop,
+					ConfigOp::Noop,
+					ConfigOp::Set(BoundedVec::try_from(vec![ALICE]).unwrap()),
+					ConfigOp::Noop,
+					ConfigOp::Set(BoundedVec::try_from(vec![ALICE_COLLECTION_ID]).unwrap()),
+				)
+				.unwrap();
+
+				// List NFT.
+				let data = Sale::new(ALICE, ALICE_MARKETPLACE_ID, 10, marketplace.commission_fee);
+				Marketplace::list_nft(alice, ALICE_NFT_ID, data.marketplace_id, data.price)
+					.unwrap();
+
+				// Final state checks.
+				let sale = Marketplace::listed_nfts(ALICE_NFT_ID).unwrap();
+				assert_eq!(sale, data);
 
 				// Events checks.
 				let event = MarketplaceEvent::NFTListed {
@@ -587,6 +762,7 @@ mod list_nft {
 				BOB_MARKETPLACE_ID,
 				ConfigOp::Noop,
 				ConfigOp::Set(CompoundFee::Flat(new_listing_fee)),
+				ConfigOp::Noop,
 				ConfigOp::Noop,
 				ConfigOp::Noop,
 			)
@@ -710,7 +886,7 @@ mod list_nft {
 	}
 
 	#[test]
-	fn account_not_allowed_to_list_banned() {
+	fn not_allowed_to_list_public_account_blacklist() {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
 			|| {
 				prepare_tests();
@@ -724,17 +900,68 @@ mod list_nft {
 					ConfigOp::Noop,
 					ConfigOp::Set(BoundedVec::try_from(vec![ALICE]).unwrap()),
 					ConfigOp::Noop,
+					ConfigOp::Noop,
 				)
 				.unwrap();
 
 				let err = Marketplace::list_nft(alice, ALICE_NFT_ID, ALICE_MARKETPLACE_ID, 10);
-				assert_noop!(err, Error::<Test>::AccountNotAllowedToList);
+				assert_noop!(err, Error::<Test>::NotAllowedToList);
 			},
 		)
 	}
 
 	#[test]
-	fn account_not_allowed_to_list_not_authorized() {
+	fn not_allowed_to_list_public_collection_blacklist() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
+			|| {
+				prepare_tests();
+				let alice: mock::Origin = origin(ALICE);
+
+				// Set public marketplace account list (ban list) with alice's account.
+				Marketplace::set_marketplace_configuration(
+					alice.clone(),
+					ALICE_MARKETPLACE_ID,
+					ConfigOp::Noop,
+					ConfigOp::Noop,
+					ConfigOp::Noop,
+					ConfigOp::Noop,
+					ConfigOp::Set(BoundedVec::try_from(vec![ALICE_COLLECTION_ID]).unwrap()),
+				)
+				.unwrap();
+
+				let err = Marketplace::list_nft(alice, ALICE_NFT_ID, ALICE_MARKETPLACE_ID, 10);
+				assert_noop!(err, Error::<Test>::NotAllowedToList);
+			},
+		)
+	}
+
+	#[test]
+	fn not_allowed_to_list_public_account_and_collection_blacklist() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
+			|| {
+				prepare_tests();
+				let alice: mock::Origin = origin(ALICE);
+
+				// Set public marketplace account list (ban list) with alice's account.
+				Marketplace::set_marketplace_configuration(
+					alice.clone(),
+					ALICE_MARKETPLACE_ID,
+					ConfigOp::Noop,
+					ConfigOp::Noop,
+					ConfigOp::Set(BoundedVec::try_from(vec![ALICE]).unwrap()),
+					ConfigOp::Noop,
+					ConfigOp::Set(BoundedVec::try_from(vec![ALICE_COLLECTION_ID]).unwrap()),
+				)
+				.unwrap();
+
+				let err = Marketplace::list_nft(alice, ALICE_NFT_ID, ALICE_MARKETPLACE_ID, 10);
+				assert_noop!(err, Error::<Test>::NotAllowedToList);
+			},
+		)
+	}
+
+	#[test]
+	fn not_allowed_to_list_private_not_whitelist() {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
 			|| {
 				prepare_tests();
@@ -749,7 +976,7 @@ mod list_nft {
 				.unwrap();
 
 				let err = Marketplace::list_nft(alice, ALICE_NFT_ID, ALICE_MARKETPLACE_ID, 10);
-				assert_noop!(err, Error::<Test>::AccountNotAllowedToList);
+				assert_noop!(err, Error::<Test>::NotAllowedToList);
 			},
 		)
 	}
@@ -766,6 +993,7 @@ mod list_nft {
 					alice.clone(),
 					ALICE_MARKETPLACE_ID,
 					ConfigOp::Set(CompoundFee::Flat(10_000)),
+					ConfigOp::Noop,
 					ConfigOp::Noop,
 					ConfigOp::Noop,
 					ConfigOp::Noop,
@@ -918,6 +1146,7 @@ mod buy_nft {
 					ConfigOp::Noop,
 					ConfigOp::Noop,
 					ConfigOp::Noop,
+					ConfigOp::Noop,
 				)
 				.unwrap();
 
@@ -971,6 +1200,7 @@ mod buy_nft {
 					charlie,
 					CHARLIE_MARKETPLACE_ID,
 					ConfigOp::Set(CompoundFee::Percentage(PERCENT_80)),
+					ConfigOp::Noop,
 					ConfigOp::Noop,
 					ConfigOp::Noop,
 					ConfigOp::Noop,
@@ -1083,6 +1313,7 @@ mod buy_nft {
 					ConfigOp::Noop,
 					ConfigOp::Noop,
 					ConfigOp::Noop,
+					ConfigOp::Noop,
 				)
 				.unwrap();
 
@@ -1146,6 +1377,7 @@ mod buy_nft {
 					charlie,
 					CHARLIE_MARKETPLACE_ID,
 					ConfigOp::Set(CompoundFee::Percentage(PERCENT_50)),
+					ConfigOp::Noop,
 					ConfigOp::Noop,
 					ConfigOp::Noop,
 					ConfigOp::Noop,

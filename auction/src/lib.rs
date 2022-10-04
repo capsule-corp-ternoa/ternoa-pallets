@@ -303,7 +303,7 @@ pub mod pallet {
 		/// Operation is not permitted because price cannot cover marketplace fee.
 		PriceCannotCoverMarketplaceFee,
 		/// Not Allowed To List On MP
-		AccountNotAllowedToList,
+		NotAllowedToList,
 		/// Cannot end auction without bids
 		CannotEndAuctionWithoutBids,
 	}
@@ -357,7 +357,9 @@ pub mod pallet {
 			let marketplace = T::MarketplaceExt::get_marketplace(marketplace_id)
 				.ok_or(Error::<T>::MarketplaceNotFound)?;
 
-			marketplace.allowed_to_list(&who).ok_or(Error::<T>::AccountNotAllowedToList)?;
+			marketplace
+				.allowed_to_list(&who, nft.collection_id)
+				.ok_or(Error::<T>::NotAllowedToList)?;
 
 			// Check if the start price can cover the marketplace commission_fee if it exists.
 			if let Some(commission_fee) = &marketplace.commission_fee {
