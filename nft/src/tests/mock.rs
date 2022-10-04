@@ -35,6 +35,7 @@ pub const ALICE: u64 = 1;
 pub const BOB: u64 = 2;
 pub const COLLECTOR: u64 = 99;
 pub const NFT_MINT_FEE: Balance = 10;
+pub const SECRET_NFT_MINT_FEE: Balance = 75;
 
 frame_support::construct_runtime!(
 	pub enum Test where
@@ -119,6 +120,8 @@ parameter_types! {
 	pub const NFTOffchainDataLimit: u32 = 10;
 	pub const CollectionOffchainDataLimit: u32 = 10;
 	pub const CollectionSizeLimit: u32 = 10;
+	pub const InitialSecretMintFee: Balance = SECRET_NFT_MINT_FEE;
+	pub const ShardsNumber: u32 = 5;
 }
 
 impl Config for Test {
@@ -130,6 +133,8 @@ impl Config for Test {
 	type NFTOffchainDataLimit = NFTOffchainDataLimit;
 	type CollectionOffchainDataLimit = CollectionOffchainDataLimit;
 	type CollectionSizeLimit = CollectionSizeLimit;
+	type InitialSecretMintFee = InitialSecretMintFee;
+	type ShardsNumber = ShardsNumber;
 }
 
 pub struct MockFeeCollector;

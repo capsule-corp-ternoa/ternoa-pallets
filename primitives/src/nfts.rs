@@ -32,6 +32,9 @@ pub type NFTId = u32;
 /// How collection IDs are encoded.
 pub type CollectionId = u32;
 
+/// How enclave IDs are encoded.
+pub type EnclaveId = u32;
+
 /// Data related to an NFT state, such as if it is listed for sale.
 #[derive(Encode, Decode, Eq, Default, TypeInfo, Clone, PartialEq, RuntimeDebug, MaxEncodedLen)]
 pub struct NFTState {

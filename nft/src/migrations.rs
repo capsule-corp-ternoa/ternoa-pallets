@@ -73,7 +73,7 @@ pub mod v2 {
 					old.state.is_secret,
 					old.state.is_delegated,
 					old.state.is_soulbound,
-					false
+					false,
 				);
 
 				let new_nft_data = NFTData::new(
