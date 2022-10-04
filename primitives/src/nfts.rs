@@ -39,7 +39,8 @@ pub enum NFTStateModifiers {
 	Secret = 0x03,
 	Delegated = 0x04,
 	Soulbound = 0x05,
-	Rented = 0x06,
+	//SecretSyncing = 0x06,
+	Rented = 0x07,
 }
 
 /// Data related to an NFT state, such as if it is listed for sale.
@@ -55,6 +56,8 @@ pub struct NFTState {
 	pub is_delegated: bool,
 	/// Is NFT soulbound.
 	pub is_soulbound: bool,
+	/// Is NFT Secret synced
+	pub is_secret_synced: bool,
 	/// Is NFT Rented or available for rent.
 	pub is_rented: bool,
 }
@@ -66,13 +69,22 @@ impl NFTState {
 		is_secret: bool,
 		is_delegated: bool,
 		is_soulbound: bool,
+		is_secret_synced: bool,
 		is_rented: bool,
 	) -> Self {
-		Self { is_capsule, is_listed, is_secret, is_delegated, is_soulbound, is_rented }
+		Self {
+			is_capsule,
+			is_listed,
+			is_secret,
+			is_delegated,
+			is_soulbound,
+			is_secret_synced,
+			is_rented,
+		}
 	}
 
 	pub fn new_default(is_soulbound: bool) -> Self {
-		Self::new(false, false, false, false, is_soulbound, false)
+		Self::new(false, false, false, false, is_soulbound, false, false)
 	}
 }
 

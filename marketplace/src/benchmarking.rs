@@ -97,13 +97,16 @@ benchmarks! {
 			BoundedVec::try_from(vec![1; T::OffchainDataLimit::get() as usize]).unwrap();
 		let marketplace_account_list: BoundedVec<T::AccountId, T::AccountSizeLimit> =
 			BoundedVec::try_from(vec![alice.clone(); (T::AccountSizeLimit::get() / 100) as usize]).unwrap();
-	}: _(origin::<T>("ALICE"), benchmark_data.marketplace_id, ConfigOp::Set(CompoundFee::Percentage(PERCENT_50)), ConfigOp::Set(CompoundFee::Percentage(PERCENT_50)), ConfigOp::Set(marketplace_account_list.clone()), ConfigOp::Set(marketplace_offchain_data.clone()))
+		let marketplace_collection_list: BoundedVec<CollectionId, T::CollectionSizeLimit> =
+			BoundedVec::try_from(vec![1; (T::AccountSizeLimit::get() / 100) as usize]).unwrap();
+	}: _(origin::<T>("ALICE"), benchmark_data.marketplace_id, ConfigOp::Set(CompoundFee::Percentage(PERCENT_50)), ConfigOp::Set(CompoundFee::Percentage(PERCENT_50)), ConfigOp::Set(marketplace_account_list.clone()), ConfigOp::Set(marketplace_offchain_data.clone()), ConfigOp::Set(marketplace_collection_list.clone()))
 	verify {
 		let marketplace = Marketplaces::<T>::get(benchmark_data.marketplace_id).unwrap();
 		assert_eq!(marketplace.commission_fee, Some(CompoundFee::Percentage(PERCENT_50)));
 		assert_eq!(marketplace.listing_fee, Some(CompoundFee::Percentage(PERCENT_50)));
 		assert_eq!(marketplace.account_list, Some(marketplace_account_list));
 		assert_eq!(marketplace.offchain_data, Some(marketplace_offchain_data));
+		assert_eq!(marketplace.collection_list, Some(marketplace_collection_list));
 	}
 
 	set_marketplace_mint_fee {
@@ -122,6 +125,7 @@ benchmarks! {
 			origin::<T>("ALICE").into(),
 			benchmark_data.marketplace_id,
 			ConfigOp::Set(CompoundFee::Percentage(PERCENT_50)),
+			ConfigOp::Noop,
 			ConfigOp::Noop,
 			ConfigOp::Noop,
 			ConfigOp::Noop,
@@ -151,6 +155,7 @@ benchmarks! {
 			origin::<T>("ALICE").into(),
 			benchmark_data.marketplace_id,
 			ConfigOp::Set(CompoundFee::Percentage(PERCENT_50)),
+			ConfigOp::Noop,
 			ConfigOp::Noop,
 			ConfigOp::Noop,
 			ConfigOp::Noop,

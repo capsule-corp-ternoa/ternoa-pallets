@@ -72,6 +72,7 @@ pub fn prepare_benchmarks<T: Config>(state: Option<AuctionState>) -> BenchmarkDa
 		None,
 		None,
 		None,
+		None,
 	);
 	T::MarketplaceExt::set_marketplace(marketplace_id, marketplace_data).unwrap();
 
