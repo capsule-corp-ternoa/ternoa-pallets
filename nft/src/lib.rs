@@ -1015,7 +1015,8 @@ impl<T: Config> traits::NFTExt for Pallet<T> {
 		nb_shards: u32,
 	) -> DispatchResult {
 		let shards: BoundedVec<Self::AccountId, Self::ShardsNumber> =
-			BoundedVec::try_from(vec![who.clone(); nb_shards as usize]).expect("It will never happen.");
+			BoundedVec::try_from(vec![who.clone(); nb_shards as usize])
+				.expect("It will never happen.");
 		SecretNFTsShardsCount::<T>::insert(nft_id, shards);
 
 		Ok(())

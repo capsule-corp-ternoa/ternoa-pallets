@@ -1435,7 +1435,8 @@ mod create_secret_nft {
 				mint_fee: NFT::nft_mint_fee(),
 			});
 			System::assert_has_event(event);
-			let event = Event::NFT(NFTsEvent::NFTConvertedToSecret { nft_id: nft_id, secret_offchain_data: secret_offchain_data });
+			let event =
+				Event::NFT(NFTsEvent::NFTConvertedToSecret { nft_id, secret_offchain_data });
 			System::assert_last_event(event);
 		})
 	}
@@ -1524,11 +1525,10 @@ mod add_secret_shard {
 			let ok = NFT::convert_to_secret(alice.clone(), ALICE_NFT_ID, offchain_data.clone());
 			assert_ok!(ok);
 
-			for i in 10..ShardsNumber::get()+10 - 1 {
+			for i in 10..ShardsNumber::get() + 10 - 1 {
 				let i_account: mock::Origin = origin(i.into());
 				NFT::add_secret_shard(i_account, ALICE_NFT_ID).unwrap();
 			}
-			
 
 			//TODO change when sgx function is ready.
 			NFT::add_secret_shard(alice, ALICE_NFT_ID).unwrap();

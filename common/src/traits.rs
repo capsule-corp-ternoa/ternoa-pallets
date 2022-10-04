@@ -46,7 +46,7 @@ pub trait NFTExt {
 	fn create_filled_shards_vector(
 		who: Self::AccountId,
 		nft_id: NFTId,
-		nb_shards: u32
+		nb_shards: u32,
 	) -> DispatchResult;
 
 	/// Returns an NFT corresponding to its id.
