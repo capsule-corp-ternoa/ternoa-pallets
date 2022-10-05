@@ -877,12 +877,8 @@ impl<T: Config> Pallet<T> {
 		}
 
 		let sub_duration = contract.duration.get_duration_or_period();
-		/* 		let mut block = contract.start_block.clone()?;
-		while block < *now {
 
-		} */
-
-		// TODO This is not correct.
+		// TODO This is not fully correct.
 		// It can happen that this rent contract is processed later than it should so we need to
 		// adjust for that.
 		Some(*now + *sub_duration)

@@ -236,7 +236,7 @@ where
 	pub duration: Duration<BlockNumber>,
 	/// Acceptance type of the renting contract.
 	pub acceptance_type: AcceptanceType<AccountList<AccountId, AccountSizeLimit>>,
-	/// Renter can cancel. TODO
+	/// Renter can cancel.
 	pub renter_can_revoke: bool,
 	/// Rent fee paid by rentee.
 	pub rent_fee: RentFee<Balance>,
@@ -307,10 +307,10 @@ where
 
 	pub fn percentage_of_completion(&self, now: &BlockNumber) -> Permill {
 		let now: u32 = (*now).saturated_into();
-		let full_duration: u32 = self.duration.get_full_duration().clone().saturated_into();
 		let start: u32 = self.start_block.expect("qed").saturated_into();
-		let remaining_duration: u32 = start + full_duration - now;
-		let percent = (remaining_duration as u32)
+		let full_duration: u32 = self.duration.get_full_duration().clone().saturated_into();
+		let ellapsed_duration: u32 = now - start;
+		let percent = (ellapsed_duration as u32)
 			.saturating_mul(100)
 			.saturating_div(full_duration as u32);
 		Permill::from_percent(percent)
