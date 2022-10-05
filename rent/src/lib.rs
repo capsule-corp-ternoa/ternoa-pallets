@@ -219,6 +219,8 @@ pub mod pallet {
 		NotEnoughFundsForRentFee,
 		/// Not Enough funds for cancellation fee.
 		NotEnoughFundsForCancellationFee,
+		/// Not enough funds for cancellation fee + rent fee.
+		NotEnoughFundsForFees,
 		/// The caller is not the contract owner.
 		NotTheContractOwner,
 		/// The caller is not the contract rentee.
@@ -502,7 +504,7 @@ pub mod pallet {
 
 			Self::return_cancellation_fee(deposited_fee.0, deposited_fee.1)?;
 			if let Some(full_amount) = price_to_pay.0.as_flexible() {
-				let percent = contract.completion(&now);
+				let percent = contract.percentage_of_completion(&now);
 				Self::return_flexible_fee(&who, price_to_pay.1, percent, full_amount)?;
 			} else {
 				Self::return_cancellation_fee(price_to_pay.0, price_to_pay.1)?;
@@ -599,6 +601,10 @@ pub mod pallet {
 			ensure!(
 				Self::balance_check(&who, cancel_balance),
 				Error::<T>::NotEnoughFundsForCancellationFee
+			);
+			ensure!(
+				Self::balance_check(&who, rent_balance + cancel_balance),
+				Error::<T>::NotEnoughFundsForFees
 			);
 
 			let maybe_rent_nft = rent_fee.get_nft();
@@ -953,10 +959,10 @@ impl<T: Config> Pallet<T> {
 		let maybe_rent_nft = contract.rent_fee.get_nft();
 		let maybe_cancel_nft = cancellation_fee.get_nft();
 
-		// Rent and Renter Cancellation NFT Check ✅
+		// Rent and Rentee Cancellation NFT Check ✅
 		if let Some(nft_id) = &maybe_rent_nft {
 			let nft = T::NFTExt::get_nft(*nft_id).ok_or(Error::<T>::RentNFTNotFound)?;
-			ensure!(nft.owner == *renter, Error::<T>::RenteeDoesNotOwnTheRentNFT);
+			ensure!(nft.owner == *rentee, Error::<T>::RenteeDoesNotOwnTheRentNFT);
 			ensure!(
 				nft.not_in_state(&Self::invalid_state()).is_ok(),
 				Error::<T>::RentNFTNotInValidState
@@ -964,14 +970,14 @@ impl<T: Config> Pallet<T> {
 		}
 		if let Some(nft_id) = &maybe_cancel_nft {
 			let nft = T::NFTExt::get_nft(*nft_id).ok_or(Error::<T>::CancellationNFTNotFound)?;
-			ensure!(nft.owner == *renter, Error::<T>::RenteeDoesNotOwnTheCancellationNFT);
+			ensure!(nft.owner == *rentee, Error::<T>::RenteeDoesNotOwnTheCancellationNFT);
 			ensure!(
 				nft.not_in_state(&Self::invalid_state()).is_ok(),
 				Error::<T>::CancellationNFTNotInValidState
 			);
 		}
 
-		// Rent and Renter Cancellation NFT Taken 📦
+		// Rent and Rentee Cancellation NFT Taken 📦
 		if let Some(nft_id) = &maybe_rent_nft {
 			Self::change_nft_ownership(*nft_id, &renter)
 				.map_err(|_| Error::<T>::RentNFTNotFound)?;

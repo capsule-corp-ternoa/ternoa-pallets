@@ -290,7 +290,7 @@ where
 			return false
 		}
 
-		(*now - start) > *end
+		(*now - start) >= *end
 	}
 
 	pub fn can_adjust_subscription(&self) -> bool {
@@ -305,8 +305,7 @@ where
 		}
 	}
 
-	// TODO need better name
-	pub fn completion(&self, now: &BlockNumber) -> Permill {
+	pub fn percentage_of_completion(&self, now: &BlockNumber) -> Permill {
 		let now: u32 = (*now).saturated_into();
 		let full_duration: u32 = self.duration.get_full_duration().clone().saturated_into();
 		let start: u32 = self.start_block.expect("qed").saturated_into();
