@@ -39,7 +39,7 @@ pub enum NFTStateModifiers {
 	Secret = 0x03,
 	Delegated = 0x04,
 	Soulbound = 0x05,
-	//SecretSyncing = 0x06,
+	SecretSyncing = 0x06,
 	Rented = 0x07,
 }
 
@@ -56,8 +56,8 @@ pub struct NFTState {
 	pub is_delegated: bool,
 	/// Is NFT soulbound.
 	pub is_soulbound: bool,
-	/// Is NFT Secret synced
-	pub is_secret_synced: bool,
+	/// Is NFT Secret syncing
+	pub is_syncing: bool,
 	/// Is NFT Rented or available for rent.
 	pub is_rented: bool,
 }
@@ -69,18 +69,10 @@ impl NFTState {
 		is_secret: bool,
 		is_delegated: bool,
 		is_soulbound: bool,
-		is_secret_synced: bool,
+		is_syncing: bool,
 		is_rented: bool,
 	) -> Self {
-		Self {
-			is_capsule,
-			is_listed,
-			is_secret,
-			is_delegated,
-			is_soulbound,
-			is_secret_synced,
-			is_rented,
-		}
+		Self { is_capsule, is_listed, is_secret, is_delegated, is_soulbound, is_syncing, is_rented }
 	}
 
 	pub fn new_default(is_soulbound: bool) -> Self {
@@ -162,6 +154,7 @@ where
 				NFTStateModifiers::Secret => self.state.is_secret == true,
 				NFTStateModifiers::Delegated => self.state.is_delegated == true,
 				NFTStateModifiers::Soulbound => self.state.is_soulbound == true,
+				NFTStateModifiers::SecretSyncing => self.state.is_syncing == true,
 				NFTStateModifiers::Rented => self.state.is_rented == true,
 			};
 			if in_state {
@@ -179,6 +172,7 @@ where
 			NFTStateModifiers::Secret => self.state.is_secret == active,
 			NFTStateModifiers::Delegated => self.state.is_delegated == active,
 			NFTStateModifiers::Soulbound => self.state.is_soulbound == active,
+			NFTStateModifiers::SecretSyncing => self.state.is_syncing == active,
 			NFTStateModifiers::Rented => self.state.is_rented == active,
 		};
 		if is_already_in_state {
@@ -191,6 +185,7 @@ where
 			NFTStateModifiers::Secret => self.state.is_secret = active,
 			NFTStateModifiers::Delegated => self.state.is_delegated = active,
 			NFTStateModifiers::Soulbound => self.state.is_soulbound = active,
+			NFTStateModifiers::SecretSyncing => self.state.is_syncing = active,
 			NFTStateModifiers::Rented => self.state.is_rented = active,
 		};
 

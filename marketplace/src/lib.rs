@@ -412,10 +412,7 @@ pub mod pallet {
 				!(nft.state.is_soulbound && nft.creator != nft.owner),
 				Error::<T>::CannotListNotCreatedSoulboundNFTs
 			);
-			if nft.state.is_secret {
-				ensure!(nft.state.is_secret_synced, Error::<T>::CannotListNotSyncedSecretNFTs);
-			}
-
+			ensure!(!nft.state.is_syncing, Error::<T>::CannotListNotSyncedSecretNFTs);
 			ensure!(!nft.state.is_rented, Error::<T>::CannotListRentedNFTs);
 
 			let marketplace =

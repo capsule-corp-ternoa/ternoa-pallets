@@ -987,7 +987,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	pub fn invalid_state() -> Vec<NFTStateModifiers> {
-		vec![Capsule, IsListed, Delegated, Soulbound, Rented]
+		vec![Capsule, IsListed, Delegated, Soulbound, SecretSyncing, Rented]
 	}
 }
 
