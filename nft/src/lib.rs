@@ -480,7 +480,7 @@ pub mod pallet {
 			// Check for secret nft to remove secret offchain data and shards count.
 			if nft.state.is_secret {
 				SecretNftsOffchainData::<T>::remove(nft_id);
-				if !nft.state.is_secret_synced {
+				if nft.state.is_syncing {
 					SecretNftsShardsCount::<T>::remove(nft_id);
 				}
 			}
@@ -516,10 +516,7 @@ pub mod pallet {
 					!(nft.state.is_soulbound && nft.creator != nft.owner),
 					Error::<T>::CannotTransferNotCreatedSoulboundNFTs
 				);
-				ensure!(
-					!(nft.state.is_secret && !nft.state.is_secret_synced),
-					Error::<T>::CannotTransferNotSyncedSecretNFTs
-				);
+				ensure!(!nft.state.is_syncing, Error::<T>::CannotTransferNotSyncedSecretNFTs);
 				ensure!(!nft.state.is_rented, Error::<T>::CannotTransferRentedNFTs);
 
 				// Execute
@@ -830,6 +827,7 @@ pub mod pallet {
 
 				// Execute
 				nft.state.is_secret = true;
+				nft.state.is_syncing = true;
 
 				SecretNftsOffchainData::<T>::insert(nft_id, offchain_data.clone());
 
@@ -902,7 +900,7 @@ pub mod pallet {
 
 				// Checks
 				ensure!(nft.state.is_secret, Error::<T>::NFTIsNotSecret);
-				ensure!(!nft.state.is_secret_synced, Error::<T>::NFTAlreadySynced);
+				ensure!(nft.state.is_syncing, Error::<T>::NFTAlreadySynced);
 
 				SecretNftsShardsCount::<T>::try_mutate(nft_id, |maybe_shards| -> DispatchResult {
 					if let Some(shards) = maybe_shards {
@@ -935,7 +933,7 @@ pub mod pallet {
 				})?;
 
 				if has_finished_sync {
-					nft.state.is_secret_synced = true;
+					nft.state.is_syncing = false;
 				}
 
 				Ok(().into())

@@ -843,7 +843,7 @@ mod list_nft {
 				let alice: mock::Origin = origin(ALICE);
 
 				// Set secret to true for Alice's NFT.
-				let nft_state = NFTState::new(false, false, true, false, false, false, false);
+				let nft_state = NFTState::new(false, false, true, false, false, true, false);
 				NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
 
 				let err = Marketplace::list_nft(alice, ALICE_NFT_ID, ALICE_MARKETPLACE_ID, 10);
