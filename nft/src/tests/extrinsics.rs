@@ -601,7 +601,7 @@ mod transfer_nft {
 			prepare_tests();
 			let alice: mock::Origin = origin(ALICE);
 			// Set NFT to unsynced secret.
-			let nft_state = NFTState::new(false, false, true, false, false, false, false);
+			let nft_state = NFTState::new(false, false, true, false, false, true, false);
 			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
 			// Try to transfer.
 			let err = NFT::transfer_nft(alice, ALICE_NFT_ID, BOB);
@@ -1345,7 +1345,7 @@ mod add_secret {
 			let nft = NFT::nfts(ALICE_NFT_ID).unwrap();
 			let secret_offchain_data = NFT::secret_nfts_offchain_data(ALICE_NFT_ID).unwrap();
 			assert_eq!(nft.state.is_secret, true);
-			assert_eq!(nft.state.is_secret_synced, false);
+			assert_eq!(nft.state.is_syncing, true);
 			assert_eq!(secret_offchain_data, offchain_data.clone());
 
 			// Events checks.
@@ -1455,6 +1455,7 @@ mod create_secret_nft {
 			let mut data =
 				NFTData::new_default(ALICE, BoundedVec::default(), PERCENT_100, None, false);
 			data.state.is_secret = true;
+			data.state.is_syncing = true;
 
 			// Create NFT without a collection.
 			NFT::create_secret_nft(
@@ -1557,7 +1558,7 @@ mod add_secret_shard {
 			let nft = NFT::nfts(ALICE_NFT_ID).unwrap();
 			let shards = NFT::secret_nfts_shards_count(ALICE_NFT_ID).unwrap();
 			assert_eq!(nft.state.is_secret, true);
-			assert_eq!(nft.state.is_secret_synced, false);
+			assert_eq!(nft.state.is_syncing, true);
 			assert_eq!(shards.len(), 1);
 			assert!(shards.contains(&ALICE));
 
@@ -1590,7 +1591,7 @@ mod add_secret_shard {
 			let nft = NFT::nfts(ALICE_NFT_ID).unwrap();
 			let shards = NFT::secret_nfts_shards_count(ALICE_NFT_ID);
 			assert_eq!(nft.state.is_secret, true);
-			assert_eq!(nft.state.is_secret_synced, true);
+			assert_eq!(nft.state.is_syncing, false);
 			assert_eq!(shards, None);
 
 			// Events checks.
@@ -1632,7 +1633,7 @@ mod add_secret_shard {
 			let alice: mock::Origin = origin(ALICE);
 
 			// Set Alice's NFT secret and secret_synced to true.
-			let nft_state = NFTState::new(false, false, true, false, false, true, false);
+			let nft_state = NFTState::new(false, false, true, false, false, false, false);
 			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
 
 			//TODO change when sgx function is ready.

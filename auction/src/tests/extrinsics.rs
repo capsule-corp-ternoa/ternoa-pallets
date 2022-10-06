@@ -290,6 +290,7 @@ pub mod create_auction {
 			// Set secret.
 			let mut nft = NFT::get_nft(ALICE_NFT_ID_0).unwrap();
 			nft.state.is_secret = true;
+			nft.state.is_syncing = true;
 			NFT::set_nft(ALICE_NFT_ID_0, nft).unwrap();
 
 			let ok = AuctionBuilder::new().nft_id(ALICE_NFT_ID_0).execute();
