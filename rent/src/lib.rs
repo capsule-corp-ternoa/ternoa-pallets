@@ -27,7 +27,6 @@ pub use types::*;
 pub use weights::WeightInfo;
 
 use core::convert::TryFrom;
-use frame_benchmarking::Zero;
 use frame_support::{
 	dispatch::{DispatchError, DispatchResult},
 	ensure,
@@ -384,7 +383,7 @@ pub mod pallet {
 			// 2. Add Contract to the Queue
 			// 3. Add Contract to Storage
 			// 4. Set NFT to Rented State
-			let amount = renter_cancellation_fee.get_balance().unwrap_or(Zero::zero());
+			let amount = renter_cancellation_fee.get_balance().unwrap_or(0u32.into());
 			T::Currency::transfer(&who, &pallet, amount, KeepAlive)
 				.map_err(|_| Error::<T>::NotEnoughFundsForCancellationFee)?;
 
@@ -595,8 +594,8 @@ pub mod pallet {
 				ensure!(list.contains(&who), Error::<T>::NotWhitelisted);
 			}
 
-			let rent_balance = rent_fee.get_balance().unwrap_or(Zero::zero());
-			let cancel_balance = cancellation_fee.get_balance().unwrap_or(Zero::zero());
+			let rent_balance = rent_fee.get_balance().unwrap_or(0u32.into());
+			let cancel_balance = cancellation_fee.get_balance().unwrap_or(0u32.into());
 			ensure!(Self::balance_check(&who, rent_balance), Error::<T>::NotEnoughFundsForRentFee);
 			ensure!(
 				Self::balance_check(&who, cancel_balance),
@@ -848,7 +847,7 @@ impl<T: Config> Pallet<T> {
 		fee: &CancellationFee<BalanceOf<T>>,
 		dst: &T::AccountId,
 	) -> DispatchResult {
-		let amount = fee.get_balance().unwrap_or(Zero::zero());
+		let amount = fee.get_balance().unwrap_or(0u32.into());
 		T::Currency::transfer(&Self::account_id(), dst, amount, AllowDeath)?;
 
 		if let Some(nft_id) = fee.get_nft() {
@@ -895,11 +894,11 @@ impl<T: Config> Pallet<T> {
 			let rentee_cancellation = &contract.rentee_cancellation_fee;
 
 			// Let's first do the transactions
-			let amount = renter_cancellation.get_balance().unwrap_or(Zero::zero());
+			let amount = renter_cancellation.get_balance().unwrap_or(0u32.into());
 			T::Currency::transfer(src, renter, amount, AllowDeath)?;
 
 			if let Some(rentee) = &contract.rentee {
-				let amount = rentee_cancellation.get_balance().unwrap_or(Zero::zero());
+				let amount = rentee_cancellation.get_balance().unwrap_or(0u32.into());
 				T::Currency::transfer(src, rentee, amount, AllowDeath)?;
 			}
 
@@ -943,11 +942,11 @@ impl<T: Config> Pallet<T> {
 
 		// Let's take rentee's token. In case an error happens those balance transactions
 		// will be reverted. ✅ 📦
-		let amount = contract.rent_fee.get_balance().unwrap_or(Zero::zero());
+		let amount = contract.rent_fee.get_balance().unwrap_or(0u32.into());
 		T::Currency::transfer(rentee, renter, amount, KeepAlive)
 			.map_err(|_| Error::<T>::NotEnoughFundsForRentFee)?;
 
-		let amount = cancellation_fee.get_balance().unwrap_or(Zero::zero());
+		let amount = cancellation_fee.get_balance().unwrap_or(0u32.into());
 		T::Currency::transfer(rentee, pallet, amount, KeepAlive)
 			.map_err(|_| Error::<T>::NotEnoughFundsForCancellationFee)?;
 
