@@ -52,13 +52,13 @@ frame_support::construct_runtime!(
 );
 
 pub struct TestBaseCallFilter;
-impl Contains<Call> for TestBaseCallFilter {
-	fn contains(c: &Call) -> bool {
+impl Contains<RuntimeCall> for TestBaseCallFilter {
+	fn contains(c: &RuntimeCall) -> bool {
 		match *c {
 			// Transfer works. Use `transfer_keep_alive` for a call that doesn't pass the filter.
-			Call::Balances(pallet_balances::Call::transfer { .. }) => true,
+			RuntimeCall::Balances(pallet_balances::Call::transfer { .. }) => true,
 			// For benchmarking, this acts as a noop call
-			Call::System(frame_system::Call::remark { .. }) => true,
+			RuntimeCall::System(frame_system::Call::remark { .. }) => true,
 			// For tests
 			_ => false,
 		}
@@ -77,16 +77,16 @@ impl frame_system::Config for Test {
 	type BlockWeights = ();
 	type BlockLength = ();
 	type DbWeight = ();
-	type Origin = Origin;
+	type RuntimeOrigin = RuntimeOrigin;
 	type Index = u64;
 	type BlockNumber = u64;
-	type Call = Call;
+	type RuntimeCall = RuntimeCall;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
 	type AccountId = u64;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type BlockHashCount = BlockHashCount;
 	type Version = ();
 	type PalletInfo = PalletInfo;
@@ -110,7 +110,7 @@ impl pallet_balances::Config for Test {
 	type MaxReserves = MaxReserves;
 	type ReserveIdentifier = [u8; 8];
 	type DustRemoval = ();
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type ExistentialDeposit = ExistentialDeposit;
 	type AccountStore = System;
 	type WeightInfo = ();
@@ -134,7 +134,7 @@ parameter_types! {
 }
 
 impl ternoa_nft::Config for Test {
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = ternoa_nft::weights::TernoaWeight<Test>;
 	type Currency = Balances;
 	type FeesCollector = ();
@@ -147,7 +147,7 @@ impl ternoa_nft::Config for Test {
 }
 
 impl Config for Test {
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type NFTExt = NFT;
 	type WeightInfo = ();

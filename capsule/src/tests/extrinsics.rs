@@ -26,7 +26,7 @@ use crate::{tests::mock, CapsuleData, CapsuleIPFSReference, Error};
 fn create_happy() {
 	ExtBuilder::default().caps(vec![(ALICE, 10000)]).build().execute_with(|| {
 		// Initial state
-		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
+		let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
 		let ipfs_reference: CapsuleIPFSReference<Test> = bounded_vec![60];
 		let nft_id = 0;
 		let data = CapsuleData::new(ALICE, ipfs_reference.clone());
@@ -45,7 +45,7 @@ fn create_happy() {
 #[test]
 fn create_unhappy() {
 	ExtBuilder::default().caps(vec![(BOB, 101)]).build().execute_with(|| {
-		let bob: mock::Origin = RawOrigin::Signed(BOB).into();
+		let bob: mock::RuntimeOrigin = RawOrigin::Signed(BOB).into();
 
 		// Unhappy not enough caps to reserve a capsule
 		let ok = Capsule::create(bob.clone(), bounded_vec![], bounded_vec![1], None);
@@ -56,7 +56,7 @@ fn create_unhappy() {
 #[test]
 fn create_caps_transfer() {
 	ExtBuilder::default().caps(vec![(ALICE, 10001)]).build().execute_with(|| {
-		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
+		let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
 		let capsule_fee = Capsule::capsule_mint_fee();
 		let nft_fee = NFT::nft_mint_fee();
 		let balance = Balances::free_balance(ALICE);
@@ -79,7 +79,7 @@ fn create_transactional() {
 		.caps(vec![(ALICE, 10002), (BOB, 10002)])
 		.build()
 		.execute_with(|| {
-			let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
+			let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
 			let balance = Balances::free_balance(ALICE);
 			let capsule_fee = Capsule::capsule_mint_fee();
 			let nft_fee = NFT::nft_mint_fee();
@@ -106,7 +106,7 @@ fn create_transactional() {
 fn create_from_nft_happy() {
 	ExtBuilder::default().caps(vec![(ALICE, 10000)]).build().execute_with(|| {
 		// Initial state
-		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
+		let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
 		let nft_id = help::create_nft_fast(alice.clone());
 		let ipfs_reference: BoundedVec<u8, IPFSLengthLimit> = bounded_vec![60];
 		assert_eq!(Capsule::capsules(&nft_id), None);
@@ -129,8 +129,8 @@ fn create_from_nft_unhappy() {
 		.caps(vec![(ALICE, 10000), (BOB, 101)])
 		.build()
 		.execute_with(|| {
-			let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
-			let bob: mock::Origin = RawOrigin::Signed(BOB).into();
+			let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
+			let bob: mock::RuntimeOrigin = RawOrigin::Signed(BOB).into();
 
 			// Unhappy not nft owner
 			let nft_id = help::create_nft_fast(bob.clone());
@@ -166,7 +166,7 @@ fn create_from_nft_unhappy() {
 #[test]
 fn create_from_nft_caps_transfer() {
 	ExtBuilder::default().caps(vec![(ALICE, 10001)]).build().execute_with(|| {
-		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
+		let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
 		let capsule_fee = Capsule::capsule_mint_fee();
 		let pallet_id = Capsule::account_id();
 		assert_ne!(capsule_fee, 0);
@@ -186,7 +186,7 @@ fn create_from_nft_caps_transfer() {
 fn remove_happy() {
 	ExtBuilder::default().caps(vec![(ALICE, 10000)]).build().execute_with(|| {
 		// Initial state
-		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
+		let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
 		let nft_id_1 = help::create_capsule_fast(alice.clone());
 		let nft_id_2 = help::create_capsule_fast(alice.clone());
 		let ledger = bounded_vec![(nft_id_2, Capsule::capsule_mint_fee())];
@@ -210,8 +210,8 @@ fn remove_unhappy() {
 		.build()
 		.execute_with(|| {
 			// Initial state
-			let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
-			let bob: mock::Origin = RawOrigin::Signed(BOB).into();
+			let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
+			let bob: mock::RuntimeOrigin = RawOrigin::Signed(BOB).into();
 			let pallet_id = Capsule::account_id();
 			let bob_nft_id = help::create_capsule_fast(bob.clone());
 			let alice_nft_id = help::create_capsule_fast(alice.clone());
@@ -232,7 +232,7 @@ fn remove_unhappy() {
 #[test]
 fn remove_caps_transfer() {
 	ExtBuilder::default().caps(vec![(ALICE, 10001)]).build().execute_with(|| {
-		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
+		let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
 
 		let nft_id = help::create_capsule_fast(alice.clone());
 		let fee = Capsule::ledgers(ALICE).unwrap()[0].1;
@@ -252,7 +252,7 @@ fn remove_caps_transfer() {
 fn add_funds_happy() {
 	ExtBuilder::default().caps(vec![(ALICE, 10000)]).build().execute_with(|| {
 		// Initial state
-		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
+		let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
 		let nft_id = help::create_capsule_fast(alice.clone());
 		let fee = Capsule::capsule_mint_fee();
 		let ledger = bounded_vec![(nft_id, fee)];
@@ -273,8 +273,8 @@ fn add_funds_unhappy() {
 		.build()
 		.execute_with(|| {
 			// Initial state
-			let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
-			let bob: mock::Origin = RawOrigin::Signed(BOB).into();
+			let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
+			let bob: mock::RuntimeOrigin = RawOrigin::Signed(BOB).into();
 			let bob_nft_id = help::create_capsule_fast(bob.clone());
 			let alice_nft_id = help::create_capsule_fast(alice.clone());
 			let add = 10000000;
@@ -292,7 +292,7 @@ fn add_funds_unhappy() {
 #[test]
 fn add_funds_caps_transfer() {
 	ExtBuilder::default().caps(vec![(ALICE, 10001)]).build().execute_with(|| {
-		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
+		let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
 
 		let nft_id = help::create_capsule_fast(alice.clone());
 		let pallet_id = Capsule::account_id();
@@ -312,7 +312,7 @@ fn add_funds_caps_transfer() {
 fn set_ipfs_reference_happy() {
 	ExtBuilder::default().caps(vec![(ALICE, 10000)]).build().execute_with(|| {
 		// Initial state
-		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
+		let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
 		let nft_id = help::create_capsule_fast(alice.clone());
 		let data = Capsule::capsules(nft_id).unwrap();
 		let old_reference = data.ipfs_reference.clone();
@@ -333,8 +333,8 @@ fn set_ipfs_reference_unhappy() {
 		.build()
 		.execute_with(|| {
 			// Initial state
-			let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
-			let bob: mock::Origin = RawOrigin::Signed(BOB).into();
+			let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
+			let bob: mock::RuntimeOrigin = RawOrigin::Signed(BOB).into();
 			let _ = help::create_capsule_fast(alice.clone());
 
 			// Unhappy not nft owner
@@ -352,7 +352,7 @@ fn set_capsule_mint_fee_happy() {
 		let new_mint_fee = 654u128;
 		assert_eq!(Capsule::capsule_mint_fee(), old_mint_fee);
 
-		let ok = Capsule::set_capsule_mint_fee(mock::Origin::root(), new_mint_fee);
+		let ok = Capsule::set_capsule_mint_fee(mock::RuntimeOrigin::root(), new_mint_fee);
 		assert_ok!(ok);
 		assert_eq!(Capsule::capsule_mint_fee(), new_mint_fee);
 	})
@@ -361,7 +361,7 @@ fn set_capsule_mint_fee_happy() {
 #[test]
 fn set_capsule_mint_fee_unhappy() {
 	ExtBuilder::default().caps(vec![(ALICE, 10000)]).build().execute_with(|| {
-		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
+		let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
 
 		// Unhappy non root user tries to modify the mint fee
 		let ok = Capsule::set_capsule_mint_fee(alice.clone(), 654);

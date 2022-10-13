@@ -20,11 +20,11 @@ use frame_system::RawOrigin;
 
 use crate::{tests::mock, Event as StakingRewardsEvent};
 
-fn origin(account: u64) -> mock::Origin {
+fn origin(account: u64) -> mock::RuntimeOrigin {
 	RawOrigin::Signed(account).into()
 }
 
-fn root() -> mock::Origin {
+fn root() -> mock::RuntimeOrigin {
 	RawOrigin::Root.into()
 }
 
@@ -50,7 +50,7 @@ mod set_session_extra_reward_payout {
 
 			// Events checks
 			let event = StakingRewardsEvent::SessionExtraRewardPayoutChanged { value };
-			let event = Event::StakingRewards(event);
+			let event = RuntimeEvent::StakingRewards(event);
 			assert_eq!(System::events().last().unwrap().event, event);
 		})
 	}

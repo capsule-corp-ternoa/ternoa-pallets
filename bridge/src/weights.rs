@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Ternoa.  If not, see <http://www.gnu.org/licenses/>.
 
-use frame_support::weights::{RefTimeWeight, Weight};
+use frame_support::weights::Weight;
 use sp_std::marker::PhantomData;
 
 pub trait WeightInfo {
@@ -30,30 +30,30 @@ pub trait WeightInfo {
 pub struct TernoaWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for TernoaWeight<T> {
 	fn set_threshold() -> Weight {
-		Weight::from_ref_time(10_000_000 as RefTimeWeight)
+		Weight::from_ref_time(10_000_000 as u64)
 	}
 
 	fn add_chain() -> Weight {
-		Weight::from_ref_time(10_000_000 as RefTimeWeight)
+		Weight::from_ref_time(10_000_000 as u64)
 	}
 
 	fn set_relayers() -> Weight {
-		Weight::from_ref_time(10_000_000 as RefTimeWeight)
+		Weight::from_ref_time(10_000_000 as u64)
 	}
 
 	fn vote_for_proposal() -> Weight {
-		Weight::from_ref_time(10_000_000 as RefTimeWeight)
+		Weight::from_ref_time(10_000_000 as u64)
 	}
 
 	fn deposit() -> Weight {
-		Weight::from_ref_time(10_000_000 as RefTimeWeight)
+		Weight::from_ref_time(10_000_000 as u64)
 	}
 
 	fn set_bridge_fee() -> Weight {
-		Weight::from_ref_time(10_000_000 as RefTimeWeight)
+		Weight::from_ref_time(10_000_000 as u64)
 	}
 
 	fn set_deposit_nonce() -> Weight {
-		Weight::from_ref_time(10_000_000 as RefTimeWeight)
+		Weight::from_ref_time(10_000_000 as u64)
 	}
 }

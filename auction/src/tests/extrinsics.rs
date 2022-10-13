@@ -47,13 +47,13 @@ const DEFAULT_STARTBLOCK: BlockNumber = 10;
 const DEFAULT_ENDBLOCK: BlockNumber = 1_000;
 const DEFAULT_PRICE: u128 = 100;
 
-fn origin(account: u64) -> mock::Origin {
+fn origin(account: u64) -> mock::RuntimeOrigin {
 	RawOrigin::Signed(account).into()
 }
 
 pub fn prepare_tests() {
-	let alice: mock::Origin = origin(ALICE);
-	let bob: mock::Origin = origin(BOB);
+	let alice: mock::RuntimeOrigin = origin(ALICE);
+	let bob: mock::RuntimeOrigin = origin(BOB);
 
 	//Create Collection
 	NFT::create_collection(alice.clone(), BoundedVec::default(), None).unwrap();
@@ -163,7 +163,7 @@ pub mod create_auction {
 				start_block: auction.start_block,
 				end_block: auction.end_block,
 			};
-			let event = Event::Auction(event);
+			let event = RuntimeEvent::Auction(event);
 			System::assert_last_event(event);
 		})
 	}
@@ -358,7 +358,7 @@ pub mod create_auction {
 	fn not_allowed_to_list_public_account_blacklist() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let alice: mock::Origin = origin(ALICE);
+			let alice: mock::RuntimeOrigin = origin(ALICE);
 
 			// Add Alice to disallow list.
 			Marketplace::set_marketplace_configuration(
@@ -381,7 +381,7 @@ pub mod create_auction {
 	fn not_allowed_to_list_public_collection_blacklist() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let alice: mock::Origin = origin(ALICE);
+			let alice: mock::RuntimeOrigin = origin(ALICE);
 
 			// Set public marketplace collection list (ban list) with bob's collection.
 			Marketplace::set_marketplace_configuration(
@@ -404,7 +404,7 @@ pub mod create_auction {
 	fn not_allowed_to_list_public_account_and_collection_blacklist() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let alice: mock::Origin = origin(ALICE);
+			let alice: mock::RuntimeOrigin = origin(ALICE);
 
 			// Set public marketplace collection list (ban list) with bob's collection.
 			Marketplace::set_marketplace_configuration(
@@ -427,7 +427,7 @@ pub mod create_auction {
 	fn not_allowed_to_list_private_not_whitelist() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let alice: mock::Origin = origin(ALICE);
+			let alice: mock::RuntimeOrigin = origin(ALICE);
 
 			// Set marketplace private (without alice's account in account list / allow list).
 			Marketplace::set_marketplace_kind(
@@ -523,7 +523,7 @@ pub mod cancel_auction {
 
 			// Check Events.
 			let event = AuctionEvent::AuctionCancelled { nft_id: ALICE_NFT_ID_1 };
-			let event = Event::Auction(event);
+			let event = RuntimeEvent::Auction(event);
 			System::assert_last_event(event);
 		})
 	}
@@ -565,7 +565,7 @@ pub mod cancel_auction {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 
-			let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
+			let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
 			let auction = Auctions::<Test>::get(ALICE_NFT_ID_1).unwrap();
 
 			run_to_block(auction.start_block);
@@ -583,7 +583,7 @@ pub mod end_auction {
 	fn end_auction() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let eve: mock::Origin = RawOrigin::Signed(EVE).into();
+			let eve: mock::RuntimeOrigin = RawOrigin::Signed(EVE).into();
 
 			// Bob creates the NFT
 			NFT::create_nft(origin(BOB), BoundedVec::default(), PERCENT_20, None, false).unwrap();
@@ -673,7 +673,7 @@ pub mod end_auction {
 				royalty_cut: Some(royalty_cut),
 				auctioneer_cut: Some(auctioneer_cut),
 			};
-			let event = Event::Auction(event);
+			let event = RuntimeEvent::Auction(event);
 			System::assert_last_event(event);
 		})
 	}
@@ -715,7 +715,7 @@ pub mod end_auction {
 	fn cannot_end_auction_that_was_not_extended() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
+			let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
 
 			let ok = Auction::end_auction(alice, ALICE_NFT_ID_1);
 			assert_noop!(ok, Error::<Test>::CannotEndAuctionThatWasNotExtended);
@@ -753,7 +753,7 @@ pub mod add_bid {
 
 			// Check Events.
 			let event = AuctionEvent::BidAdded { nft_id: ALICE_NFT_ID_1, bidder: BOB, amount: bid };
-			let event = Event::Auction(event);
+			let event = RuntimeEvent::Auction(event);
 			System::assert_last_event(event);
 		})
 	}
@@ -812,12 +812,12 @@ pub mod add_bid {
 				bidder: BOB,
 				amount: bidder1_bid,
 			};
-			let event = Event::Auction(event);
+			let event = RuntimeEvent::Auction(event);
 			System::assert_has_event(event);
 
 			let event =
 				AuctionEvent::BidAdded { nft_id: ALICE_NFT_ID_1, bidder: EVE, amount: final_bid };
-			let event = Event::Auction(event);
+			let event = RuntimeEvent::Auction(event);
 			System::assert_last_event(event);
 		})
 	}
@@ -855,7 +855,7 @@ pub mod add_bid {
 
 			// Check Events.
 			let event = AuctionEvent::BidAdded { nft_id: ALICE_NFT_ID_1, bidder: BOB, amount: bid };
-			let event = Event::Auction(event);
+			let event = RuntimeEvent::Auction(event);
 			System::assert_last_event(event);
 		})
 	}
@@ -886,7 +886,7 @@ pub mod add_bid {
 			// Check Events.
 			let event =
 				AuctionEvent::BidAdded { nft_id: ALICE_NFT_ID_1, bidder: BOB, amount: new_bid };
-			let event = Event::Auction(event);
+			let event = RuntimeEvent::Auction(event);
 			System::assert_last_event(event);
 		})
 	}
@@ -993,7 +993,7 @@ pub mod remove_bid {
 	fn remove_bid() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let bob: mock::Origin = RawOrigin::Signed(BOB).into();
+			let bob: mock::RuntimeOrigin = RawOrigin::Signed(BOB).into();
 			let bob_balance = Balances::free_balance(BOB);
 			let mut auction = Auctions::<Test>::get(ALICE_NFT_ID_1).unwrap();
 			run_to_block(DEFAULT_STARTBLOCK);
@@ -1017,7 +1017,7 @@ pub mod remove_bid {
 			// Check Events.
 			let event =
 				AuctionEvent::BidRemoved { nft_id: ALICE_NFT_ID_1, bidder: BOB, amount: bid };
-			let event = Event::Auction(event);
+			let event = RuntimeEvent::Auction(event);
 			System::assert_last_event(event);
 		})
 	}
@@ -1072,8 +1072,8 @@ pub mod buy_it_now {
 			prepare_tests();
 
 			let claims_count = Claims::<Test>::iter().count();
-			let eve: mock::Origin = origin(EVE);
-			let dave: mock::Origin = origin(DAVE);
+			let eve: mock::RuntimeOrigin = origin(EVE);
+			let dave: mock::RuntimeOrigin = origin(DAVE);
 
 			// Bob creates the NFT.
 			NFT::create_nft(origin(BOB), BoundedVec::default(), PERCENT_20, None, false).unwrap();
@@ -1155,7 +1155,7 @@ pub mod buy_it_now {
 				royalty_cut: Some(royalty_cut),
 				auctioneer_cut: Some(auctioneer_cut),
 			};
-			let event = Event::Auction(event);
+			let event = RuntimeEvent::Auction(event);
 			System::assert_last_event(event);
 		})
 	}
@@ -1276,7 +1276,7 @@ pub mod claim {
 
 			// Event.
 			let event = AuctionEvent::BalanceClaimed { account: BOB, amount: claim };
-			let event = Event::Auction(event);
+			let event = RuntimeEvent::Auction(event);
 			System::assert_last_event(event);
 		})
 	}
@@ -1293,7 +1293,7 @@ pub mod claim {
 }
 
 pub struct AuctionBuilder {
-	pub origin: mock::Origin,
+	pub origin: mock::RuntimeOrigin,
 	pub nft_id: NFTId,
 	pub mp_id: MarketplaceId,
 	pub start: BlockNumber,
@@ -1315,7 +1315,7 @@ impl AuctionBuilder {
 		}
 	}
 
-	pub fn origin(mut self, o: mock::Origin) -> Self {
+	pub fn origin(mut self, o: mock::RuntimeOrigin) -> Self {
 		self.origin = o;
 		self
 	}
