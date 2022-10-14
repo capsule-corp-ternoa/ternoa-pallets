@@ -54,17 +54,17 @@ pub const SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK: NFTId = 3;
 pub const SUBSC_AUTO_NOREV_NOT_CHANGEABLE_TOK_NONE_FIXTOK: NFTId = 4;
 pub const FIXED_AUTO_REV_NFT_NFT_NFT: NFTId = 8;
 
-fn origin(account: u64) -> mock::Origin {
+fn origin(account: u64) -> mock::RuntimeOrigin {
 	RawOrigin::Signed(account).into()
 }
 
-fn root() -> mock::Origin {
+fn root() -> mock::RuntimeOrigin {
 	RawOrigin::Root.into()
 }
 
 pub fn prepare_tests() {
-	let alice: mock::Origin = origin(ALICE);
-	let bob: mock::Origin = origin(BOB);
+	let alice: mock::RuntimeOrigin = origin(ALICE);
+	let bob: mock::RuntimeOrigin = origin(BOB);
 
 	//Create NFTs.
 	NFT::create_nft(alice.clone(), BoundedVec::default(), PERCENT_0, None, false).unwrap();
@@ -189,7 +189,7 @@ mod create_contract {
 	fn create_contract() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let alice: mock::Origin = origin(ALICE);
+			let alice: mock::RuntimeOrigin = origin(ALICE);
 			assert!(true);
 
 			let data: RentContractData<u64, u64, Balance, RentAccountSizeLimit> =
@@ -235,7 +235,7 @@ mod create_contract {
 				renter_cancellation_fee: data.renter_cancellation_fee,
 				rentee_cancellation_fee: data.rentee_cancellation_fee,
 			};
-			let event = Event::Rent(event);
+			let event = RuntimeEvent::Rent(event);
 			System::assert_last_event(event);
 		})
 	}
@@ -244,7 +244,7 @@ mod create_contract {
 	fn max_simultaneous_contract_reached() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let alice: mock::Origin = origin(ALICE);
+			let alice: mock::RuntimeOrigin = origin(ALICE);
 
 			// Create contracts until Limit.
 			let max_contract = SimultaneousContractLimit::get();
@@ -286,7 +286,7 @@ mod create_contract {
 	fn nft_not_found() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let alice: mock::Origin = origin(ALICE);
+			let alice: mock::RuntimeOrigin = origin(ALICE);
 
 			// Try to create a contract with invalid NFT.
 			let err = Rent::create_contract(
@@ -308,7 +308,7 @@ mod create_contract {
 	fn not_the_nft_owner() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let alice: mock::Origin = origin(ALICE);
+			let alice: mock::RuntimeOrigin = origin(ALICE);
 
 			// Try to create a contract with unowned NFT.
 			let err = Rent::create_contract(
@@ -330,7 +330,7 @@ mod create_contract {
 	fn contract_nft_not_in_a_valid_state() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let alice: mock::Origin = origin(ALICE);
+			let alice: mock::RuntimeOrigin = origin(ALICE);
 
 			// Set to capsule.
 			let nft_state = NFTState::new(true, false, false, false, false, false, false);
@@ -418,7 +418,7 @@ mod create_contract {
 	fn duration_exceeds_maximum_limit() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let alice: mock::Origin = origin(ALICE);
+			let alice: mock::RuntimeOrigin = origin(ALICE);
 
 			// Try to create a contract duration above limit.
 			let err = Rent::create_contract(
@@ -440,7 +440,7 @@ mod create_contract {
 	fn duration_and_rent_fee_mismatch() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let alice: mock::Origin = origin(ALICE);
+			let alice: mock::RuntimeOrigin = origin(ALICE);
 
 			// Try to create a contract with incompatible duration and rent fee type.
 			let err = Rent::create_contract(
@@ -466,7 +466,7 @@ mod create_contract {
 	fn duration_and_cancellation_fee_mismatch_renter() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let alice: mock::Origin = origin(ALICE);
+			let alice: mock::RuntimeOrigin = origin(ALICE);
 
 			// Try to create a contract with incompatible duration and cancellation fee type.
 			let err = Rent::create_contract(
@@ -492,7 +492,7 @@ mod create_contract {
 	fn duration_and_cancellation_fee_mismatch_rentee() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let alice: mock::Origin = origin(ALICE);
+			let alice: mock::RuntimeOrigin = origin(ALICE);
 
 			// Try to create a contract with incompatible duration and cancellation fee type.
 			let err = Rent::create_contract(
@@ -518,7 +518,7 @@ mod create_contract {
 	fn rent_nft_not_found() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let alice: mock::Origin = origin(ALICE);
+			let alice: mock::RuntimeOrigin = origin(ALICE);
 
 			// Try to create a contract with invalid NFT.
 			let err = Rent::create_contract(
@@ -540,7 +540,7 @@ mod create_contract {
 	fn cancellation_nft_not_found_rentee() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let alice: mock::Origin = origin(ALICE);
+			let alice: mock::RuntimeOrigin = origin(ALICE);
 
 			// Try to create a contract with invalid cancellation fee nft.
 			let err = Rent::create_contract(
@@ -562,7 +562,7 @@ mod create_contract {
 	fn not_ennough_funds_for_cancellation_fee() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let alice: mock::Origin = origin(ALICE);
+			let alice: mock::RuntimeOrigin = origin(ALICE);
 
 			// Try to create a contract without enough funds to cover for the cancellation fee.
 			let err = Rent::create_contract(
@@ -584,7 +584,7 @@ mod create_contract {
 	fn cancellation_nft_not_found_renter() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let alice: mock::Origin = origin(ALICE);
+			let alice: mock::RuntimeOrigin = origin(ALICE);
 
 			// Try to create a contract with invalid cancellation fee NFT.
 			let err = Rent::create_contract(
@@ -606,7 +606,7 @@ mod create_contract {
 	fn caller_does_not_own_cancellation_nft() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let alice: mock::Origin = origin(ALICE);
+			let alice: mock::RuntimeOrigin = origin(ALICE);
 
 			// Try to create a contract with unowned cancellation fee NFT.
 			let err = Rent::create_contract(
@@ -628,7 +628,7 @@ mod create_contract {
 	fn cancellation_nft_not_in_valid_state() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let alice: mock::Origin = origin(ALICE);
+			let alice: mock::RuntimeOrigin = origin(ALICE);
 
 			// Set cancellation fee NFT to capsule.
 			let nft_state = NFTState::new(true, false, false, false, false, false, false);
@@ -658,7 +658,7 @@ mod cancel_contract {
 	fn cancel_contract() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let alice: mock::Origin = origin(ALICE);
+			let alice: mock::RuntimeOrigin = origin(ALICE);
 
 			// Cancel contract.
 			Rent::cancel_contract(alice, FIXED_AUTO_REV_TOK_FLEXTOK_FLEXTOK).unwrap();
@@ -672,7 +672,7 @@ mod cancel_contract {
 			assert!(!nft.state.is_rented);
 			// Event check.
 			let event = RentEvent::ContractCanceled { nft_id: FIXED_AUTO_REV_TOK_FLEXTOK_FLEXTOK };
-			let event = Event::Rent(event);
+			let event = RuntimeEvent::Rent(event);
 			System::assert_last_event(event);
 		})
 	}
@@ -681,7 +681,7 @@ mod cancel_contract {
 	fn contract_not_found() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let alice: mock::Origin = origin(ALICE);
+			let alice: mock::RuntimeOrigin = origin(ALICE);
 			// Try to cancel contract.
 			let err = Rent::cancel_contract(alice, INVALID_NFT);
 			assert_noop!(err, Error::<Test>::ContractNotFound);
@@ -692,7 +692,7 @@ mod cancel_contract {
 	fn not_the_contract_owner() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let bob: mock::Origin = origin(BOB);
+			let bob: mock::RuntimeOrigin = origin(BOB);
 			// Try to cancel contract.
 			let err = Rent::cancel_contract(bob, FIXED_AUTO_REV_TOK_FLEXTOK_FLEXTOK);
 			assert_noop!(err, Error::<Test>::NotTheContractOwner);
@@ -703,8 +703,8 @@ mod cancel_contract {
 	fn cannot_cancel_running_contract() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let alice: mock::Origin = origin(ALICE);
-			let bob: mock::Origin = origin(BOB);
+			let alice: mock::RuntimeOrigin = origin(ALICE);
+			let bob: mock::RuntimeOrigin = origin(BOB);
 
 			// Start the contract.
 			Rent::rent(bob, FIXED_AUTO_REV_TOK_FLEXTOK_FLEXTOK).unwrap();
@@ -723,8 +723,8 @@ mod revoke_contract {
 	fn revoke_contract_by_renter_fixed() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let alice: mock::Origin = origin(ALICE);
-			let bob: mock::Origin = origin(BOB);
+			let alice: mock::RuntimeOrigin = origin(ALICE);
+			let bob: mock::RuntimeOrigin = origin(BOB);
 
 			Rent::rent(bob, FIXED_AUTO_REV_NFT_TOKENS_TOKENS).unwrap();
 
@@ -746,7 +746,7 @@ mod revoke_contract {
 				nft_id: FIXED_AUTO_REV_NFT_TOKENS_TOKENS,
 				revoked_by: ALICE,
 			};
-			let event = Event::Rent(event);
+			let event = RuntimeEvent::Rent(event);
 			System::assert_last_event(event);
 		})
 	}
@@ -755,7 +755,7 @@ mod revoke_contract {
 	fn revoke_contract_by_rentee_fixed() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let bob: mock::Origin = origin(BOB);
+			let bob: mock::RuntimeOrigin = origin(BOB);
 
 			Rent::rent(bob.clone(), FIXED_AUTO_REV_NFT_TOKENS_TOKENS).unwrap();
 
@@ -777,7 +777,7 @@ mod revoke_contract {
 				nft_id: FIXED_AUTO_REV_NFT_TOKENS_TOKENS,
 				revoked_by: BOB,
 			};
-			let event = Event::Rent(event);
+			let event = RuntimeEvent::Rent(event);
 			System::assert_last_event(event);
 		})
 	}
@@ -786,8 +786,8 @@ mod revoke_contract {
 	fn revoke_contract_by_renter_nft() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let alice: mock::Origin = origin(ALICE);
-			let bob: mock::Origin = origin(BOB);
+			let alice: mock::RuntimeOrigin = origin(ALICE);
+			let bob: mock::RuntimeOrigin = origin(BOB);
 
 			Rent::make_rent_offer(bob, FIXED_MANU_REV_NFT_NFT_NFT).unwrap();
 			Rent::accept_rent_offer(alice.clone(), FIXED_MANU_REV_NFT_NFT_NFT, BOB).unwrap();
@@ -809,7 +809,7 @@ mod revoke_contract {
 				nft_id: FIXED_MANU_REV_NFT_NFT_NFT,
 				revoked_by: ALICE,
 			};
-			let event = Event::Rent(event);
+			let event = RuntimeEvent::Rent(event);
 			System::assert_last_event(event);
 		})
 	}
@@ -818,8 +818,8 @@ mod revoke_contract {
 	fn revoke_contract_by_rentee_nft() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let alice: mock::Origin = origin(ALICE);
-			let bob: mock::Origin = origin(BOB);
+			let alice: mock::RuntimeOrigin = origin(ALICE);
+			let bob: mock::RuntimeOrigin = origin(BOB);
 
 			Rent::make_rent_offer(bob.clone(), FIXED_MANU_REV_NFT_NFT_NFT).unwrap();
 			Rent::accept_rent_offer(alice, FIXED_MANU_REV_NFT_NFT_NFT, BOB).unwrap();
@@ -839,7 +839,7 @@ mod revoke_contract {
 			// Event check.
 			let event =
 				RentEvent::ContractRevoked { nft_id: FIXED_MANU_REV_NFT_NFT_NFT, revoked_by: BOB };
-			let event = Event::Rent(event);
+			let event = RuntimeEvent::Rent(event);
 			System::assert_last_event(event);
 		})
 	}
@@ -848,8 +848,8 @@ mod revoke_contract {
 	fn revoke_contract_by_renter_flexible() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let alice: mock::Origin = origin(ALICE);
-			let bob: mock::Origin = origin(BOB);
+			let alice: mock::RuntimeOrigin = origin(ALICE);
+			let bob: mock::RuntimeOrigin = origin(BOB);
 
 			Rent::rent(bob, FIXED_AUTO_REV_TOK_FLEXTOK_FLEXTOK).unwrap();
 
@@ -878,7 +878,7 @@ mod revoke_contract {
 				nft_id: FIXED_AUTO_REV_TOK_FLEXTOK_FLEXTOK,
 				revoked_by: ALICE,
 			};
-			let event = Event::Rent(event);
+			let event = RuntimeEvent::Rent(event);
 			System::assert_last_event(event);
 		})
 	}
@@ -887,7 +887,7 @@ mod revoke_contract {
 	fn revoke_contract_by_rentee_flexible() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let bob: mock::Origin = origin(BOB);
+			let bob: mock::RuntimeOrigin = origin(BOB);
 
 			Rent::rent(bob.clone(), FIXED_AUTO_REV_TOK_FLEXTOK_FLEXTOK).unwrap();
 
@@ -916,7 +916,7 @@ mod revoke_contract {
 				nft_id: FIXED_AUTO_REV_TOK_FLEXTOK_FLEXTOK,
 				revoked_by: BOB,
 			};
-			let event = Event::Rent(event);
+			let event = RuntimeEvent::Rent(event);
 			System::assert_last_event(event);
 		})
 	}
@@ -925,7 +925,7 @@ mod revoke_contract {
 	fn contract_not_found() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let alice: mock::Origin = origin(ALICE);
+			let alice: mock::RuntimeOrigin = origin(ALICE);
 
 			// Try to revoke with invalid contract.
 			let err = Rent::revoke_contract(alice, INVALID_NFT);
@@ -938,7 +938,7 @@ mod revoke_contract {
 	fn cannot_revoke_non_runing_contract() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let bob: mock::Origin = origin(BOB);
+			let bob: mock::RuntimeOrigin = origin(BOB);
 
 			// Try to revoke with unowned contract.
 			let err = Rent::revoke_contract(bob, FIXED_AUTO_REV_NFT_TOKENS_TOKENS);
@@ -951,8 +951,8 @@ mod revoke_contract {
 	fn not_a_contract_participant() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let bob: mock::Origin = origin(BOB);
-			let charlie: mock::Origin = origin(CHARLIE);
+			let bob: mock::RuntimeOrigin = origin(BOB);
+			let charlie: mock::RuntimeOrigin = origin(CHARLIE);
 
 			Rent::rent(bob, FIXED_AUTO_REV_NFT_TOKENS_TOKENS).unwrap();
 
@@ -967,8 +967,8 @@ mod revoke_contract {
 	fn contract_cannot_be_canceled_by_renter() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let alice: mock::Origin = origin(ALICE);
-			let bob: mock::Origin = origin(BOB);
+			let alice: mock::RuntimeOrigin = origin(ALICE);
+			let bob: mock::RuntimeOrigin = origin(BOB);
 
 			Rent::rent(bob.clone(), SUBSC_AUTO_NOREV_NOT_CHANGEABLE_TOK_NONE_FIXTOK).unwrap();
 
@@ -987,7 +987,7 @@ mod rent {
 	fn rent() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let bob: mock::Origin = origin(BOB);
+			let bob: mock::RuntimeOrigin = origin(BOB);
 
 			// Rent contract.
 			Rent::rent(bob, FIXED_AUTO_REV_NFT_TOKENS_TOKENS).unwrap();
@@ -1006,7 +1006,7 @@ mod rent {
 				nft_id: FIXED_AUTO_REV_NFT_TOKENS_TOKENS,
 				rentee: BOB,
 			};
-			let event = Event::Rent(event);
+			let event = RuntimeEvent::Rent(event);
 			System::assert_last_event(event);
 		})
 	}
@@ -1015,7 +1015,7 @@ mod rent {
 	fn contract_not_found() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let alice: mock::Origin = origin(ALICE);
+			let alice: mock::RuntimeOrigin = origin(ALICE);
 
 			// Try to rent invalid contract.
 			let err = Rent::rent(alice, INVALID_NFT);
@@ -1027,7 +1027,7 @@ mod rent {
 	fn cannot_rent_own_contract() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let alice: mock::Origin = origin(ALICE);
+			let alice: mock::RuntimeOrigin = origin(ALICE);
 
 			// Try to rent owned contract.
 			let err = Rent::rent(alice, FIXED_AUTO_REV_NFT_TOKENS_TOKENS);
@@ -1039,7 +1039,7 @@ mod rent {
 	fn contract_does_not_support_automatic_rent() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let bob: mock::Origin = origin(BOB);
+			let bob: mock::RuntimeOrigin = origin(BOB);
 
 			// Try to rent owned contract.
 			let err = Rent::rent(bob, FIXED_MANU_REV_NFT_NFT_NFT);
@@ -1051,7 +1051,7 @@ mod rent {
 	fn not_whitelisted() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let charlie: mock::Origin = origin(CHARLIE);
+			let charlie: mock::RuntimeOrigin = origin(CHARLIE);
 
 			// Try to rent without being authorized auto acceptance.
 			let err = Rent::rent(charlie, SUBSC_AUTO_NOREV_NOT_CHANGEABLE_TOK_NONE_FIXTOK);
@@ -1063,7 +1063,7 @@ mod rent {
 	fn not_enough_funds_for_rent_fee() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let bob: mock::Origin = origin(BOB);
+			let bob: mock::RuntimeOrigin = origin(BOB);
 
 			Balances::set_balance(root(), BOB, TOKENS - 1, 0).unwrap();
 
@@ -1077,7 +1077,7 @@ mod rent {
 	fn not_enough_funds_for_cancellation_fee() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let bob: mock::Origin = origin(BOB);
+			let bob: mock::RuntimeOrigin = origin(BOB);
 
 			Balances::set_balance(root(), BOB, TOKENS + LESS_TOKENS - 1, 0).unwrap();
 
@@ -1091,7 +1091,7 @@ mod rent {
 	fn rentee_does_not_own_the_rent_nft() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let bob: mock::Origin = origin(BOB);
+			let bob: mock::RuntimeOrigin = origin(BOB);
 
 			// Change ownership of rent fee NFT.
 			let mut nft = NFT::get_nft(BOB_NFT_ID_0).unwrap();
@@ -1108,7 +1108,7 @@ mod rent {
 	fn rentee_does_not_own_the_cancellation_nft() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let bob: mock::Origin = origin(BOB);
+			let bob: mock::RuntimeOrigin = origin(BOB);
 
 			// Change ownership of cancellation NFT.
 			let mut nft = NFT::get_nft(BOB_NFT_ID_0).unwrap();
@@ -1129,7 +1129,7 @@ mod make_rent_offer {
 	fn make_rent_offer() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let bob: mock::Origin = origin(BOB);
+			let bob: mock::RuntimeOrigin = origin(BOB);
 
 			Rent::make_rent_offer(bob, SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK).unwrap();
 
@@ -1147,7 +1147,7 @@ mod make_rent_offer {
 				nft_id: SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK,
 				rentee: BOB,
 			};
-			let event = Event::Rent(event);
+			let event = RuntimeEvent::Rent(event);
 			System::assert_last_event(event);
 		})
 	}
@@ -1156,7 +1156,7 @@ mod make_rent_offer {
 	fn contract_not_found() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let bob: mock::Origin = origin(BOB);
+			let bob: mock::RuntimeOrigin = origin(BOB);
 
 			let err = Rent::make_rent_offer(bob, INVALID_NFT);
 			assert_noop!(err, Error::<Test>::ContractNotFound);
@@ -1167,7 +1167,7 @@ mod make_rent_offer {
 	fn cannot_rent_own_contract() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let alice: mock::Origin = origin(ALICE);
+			let alice: mock::RuntimeOrigin = origin(ALICE);
 
 			let err = Rent::make_rent_offer(alice, FIXED_MANU_REV_NFT_NFT_NFT);
 			assert_noop!(err, Error::<Test>::CannotRentOwnContract);
@@ -1178,7 +1178,7 @@ mod make_rent_offer {
 	fn contract_does_not_support_offers() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let bob: mock::Origin = origin(BOB);
+			let bob: mock::RuntimeOrigin = origin(BOB);
 
 			let err = Rent::make_rent_offer(bob, FIXED_AUTO_REV_NFT_NFT_NFT);
 			assert_noop!(err, Error::<Test>::ContractDoesNotSupportOffers);
@@ -1189,7 +1189,7 @@ mod make_rent_offer {
 	fn not_whitelisted() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let charlie: mock::Origin = origin(CHARLIE);
+			let charlie: mock::RuntimeOrigin = origin(CHARLIE);
 
 			let err = Rent::make_rent_offer(charlie, FIXED_MANU_REV_NFT_NFT_NFT);
 			assert_noop!(err, Error::<Test>::NotWhitelisted);
@@ -1200,8 +1200,8 @@ mod make_rent_offer {
 	fn not_enough_funds_for_rent_fee() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let alice: mock::Origin = origin(ALICE);
-			let bob: mock::Origin = origin(BOB);
+			let alice: mock::RuntimeOrigin = origin(ALICE);
+			let bob: mock::RuntimeOrigin = origin(BOB);
 
 			NFT::create_nft(alice.clone(), BoundedVec::default(), PERCENT_0, None, false).unwrap();
 			let nft_id = NFT::next_nft_id() - 1;
@@ -1229,8 +1229,8 @@ mod make_rent_offer {
 	fn not_enough_funds_for_cancellation_fee() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let alice: mock::Origin = origin(ALICE);
-			let bob: mock::Origin = origin(BOB);
+			let alice: mock::RuntimeOrigin = origin(ALICE);
+			let bob: mock::RuntimeOrigin = origin(BOB);
 
 			NFT::create_nft(alice.clone(), BoundedVec::default(), PERCENT_0, None, false).unwrap();
 			let nft_id = NFT::next_nft_id() - 1;
@@ -1258,8 +1258,8 @@ mod make_rent_offer {
 	fn not_enough_funds_for_fees() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let alice: mock::Origin = origin(ALICE);
-			let bob: mock::Origin = origin(BOB);
+			let alice: mock::RuntimeOrigin = origin(ALICE);
+			let bob: mock::RuntimeOrigin = origin(BOB);
 
 			NFT::create_nft(alice.clone(), BoundedVec::default(), PERCENT_0, None, false).unwrap();
 			let nft_id = NFT::next_nft_id() - 1;
@@ -1287,7 +1287,7 @@ mod make_rent_offer {
 	fn caller_does_not_own_rent_nft() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let bob: mock::Origin = origin(BOB);
+			let bob: mock::RuntimeOrigin = origin(BOB);
 
 			let mut nft = NFT::get_nft(BOB_NFT_ID_1).unwrap();
 			nft.owner = ALICE;
@@ -1302,7 +1302,7 @@ mod make_rent_offer {
 	fn rent_nft_not_in_valid_state() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let bob: mock::Origin = origin(BOB);
+			let bob: mock::RuntimeOrigin = origin(BOB);
 
 			let mut nft = NFT::get_nft(BOB_NFT_ID_1).unwrap();
 			nft.state.is_listed = true;
@@ -1317,7 +1317,7 @@ mod make_rent_offer {
 	fn caller_does_not_own_cancellation_nft() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let bob: mock::Origin = origin(BOB);
+			let bob: mock::RuntimeOrigin = origin(BOB);
 
 			let mut nft = NFT::get_nft(BOB_NFT_ID_0).unwrap();
 			nft.owner = ALICE;
@@ -1332,7 +1332,7 @@ mod make_rent_offer {
 	fn cancellation_nft_not_in_valid_state() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let bob: mock::Origin = origin(BOB);
+			let bob: mock::RuntimeOrigin = origin(BOB);
 
 			let mut nft = NFT::get_nft(BOB_NFT_ID_0).unwrap();
 			nft.state.is_listed = true;
@@ -1351,8 +1351,8 @@ mod accept_rent_offer {
 	fn accept_rent_offer() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let alice: mock::Origin = origin(ALICE);
-			let bob: mock::Origin = origin(BOB);
+			let alice: mock::RuntimeOrigin = origin(ALICE);
+			let bob: mock::RuntimeOrigin = origin(BOB);
 
 			// Make rent offer.
 			Rent::make_rent_offer(bob, SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK).unwrap();
@@ -1385,7 +1385,7 @@ mod accept_rent_offer {
 				nft_id: SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK,
 				rentee: BOB,
 			};
-			let event = Event::Rent(event);
+			let event = RuntimeEvent::Rent(event);
 			System::assert_last_event(event);
 		})
 	}
@@ -1394,7 +1394,7 @@ mod accept_rent_offer {
 	fn contract_not_found() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let alice: mock::Origin = origin(ALICE);
+			let alice: mock::RuntimeOrigin = origin(ALICE);
 
 			// Try to accept rent offer for non existing contract.
 			let err = Rent::accept_rent_offer(alice, INVALID_NFT, BOB);
@@ -1406,7 +1406,7 @@ mod accept_rent_offer {
 	fn no_offers_for_this_contract() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let alice: mock::Origin = origin(ALICE);
+			let alice: mock::RuntimeOrigin = origin(ALICE);
 
 			// Try to accept rent offer for non existing contract.
 			let err = Rent::accept_rent_offer(alice, FIXED_MANU_REV_NFT_NFT_NFT, BOB);
@@ -1418,8 +1418,8 @@ mod accept_rent_offer {
 	fn not_enough_funds_for_rent_fee() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let alice: mock::Origin = origin(ALICE);
-			let bob: mock::Origin = origin(BOB);
+			let alice: mock::RuntimeOrigin = origin(ALICE);
+			let bob: mock::RuntimeOrigin = origin(BOB);
 
 			Rent::make_rent_offer(bob, SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK).unwrap();
 
@@ -1436,8 +1436,8 @@ mod accept_rent_offer {
 	fn not_enough_funds_for_cancellation_fee() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let alice: mock::Origin = origin(ALICE);
-			let bob: mock::Origin = origin(BOB);
+			let alice: mock::RuntimeOrigin = origin(ALICE);
+			let bob: mock::RuntimeOrigin = origin(BOB);
 
 			Rent::make_rent_offer(bob, SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK).unwrap();
 
@@ -1454,8 +1454,8 @@ mod accept_rent_offer {
 	fn rentee_does_not_own_the_rent_nft() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let alice: mock::Origin = origin(ALICE);
-			let bob: mock::Origin = origin(BOB);
+			let alice: mock::RuntimeOrigin = origin(ALICE);
+			let bob: mock::RuntimeOrigin = origin(BOB);
 
 			Rent::make_rent_offer(bob, FIXED_MANU_REV_NFT_NFT_NFT).unwrap();
 
@@ -1473,8 +1473,8 @@ mod accept_rent_offer {
 	fn rent_nft_not_in_valid_state() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let alice: mock::Origin = origin(ALICE);
-			let bob: mock::Origin = origin(BOB);
+			let alice: mock::RuntimeOrigin = origin(ALICE);
+			let bob: mock::RuntimeOrigin = origin(BOB);
 
 			Rent::make_rent_offer(bob, FIXED_MANU_REV_NFT_NFT_NFT).unwrap();
 
@@ -1492,8 +1492,8 @@ mod accept_rent_offer {
 	fn rentee_does_not_own_the_cancellation_nft() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let alice: mock::Origin = origin(ALICE);
-			let bob: mock::Origin = origin(BOB);
+			let alice: mock::RuntimeOrigin = origin(ALICE);
+			let bob: mock::RuntimeOrigin = origin(BOB);
 
 			Rent::make_rent_offer(bob, FIXED_MANU_REV_NFT_NFT_NFT).unwrap();
 
@@ -1511,8 +1511,8 @@ mod accept_rent_offer {
 	fn cancellation_nft_not_in_valid_state() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let alice: mock::Origin = origin(ALICE);
-			let bob: mock::Origin = origin(BOB);
+			let alice: mock::RuntimeOrigin = origin(ALICE);
+			let bob: mock::RuntimeOrigin = origin(BOB);
 
 			Rent::make_rent_offer(bob, FIXED_MANU_REV_NFT_NFT_NFT).unwrap();
 
@@ -1534,7 +1534,7 @@ mod retract_rent_offer {
 	fn retract_rent_offer() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let bob: mock::Origin = origin(BOB);
+			let bob: mock::RuntimeOrigin = origin(BOB);
 
 			Rent::make_rent_offer(bob.clone(), FIXED_MANU_REV_NFT_NFT_NFT).unwrap();
 			let offers = Rent::offers(FIXED_MANU_REV_NFT_NFT_NFT).unwrap();
@@ -1550,7 +1550,7 @@ mod retract_rent_offer {
 				nft_id: FIXED_MANU_REV_NFT_NFT_NFT,
 				rentee: BOB,
 			};
-			let event = Event::Rent(event);
+			let event = RuntimeEvent::Rent(event);
 			System::assert_last_event(event);
 		})
 	}
@@ -1559,7 +1559,7 @@ mod retract_rent_offer {
 	fn no_offers_for_this_contract() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let bob: mock::Origin = origin(BOB);
+			let bob: mock::RuntimeOrigin = origin(BOB);
 
 			// Retract offer.
 			let err = Rent::retract_rent_offer(bob, FIXED_MANU_REV_NFT_NFT_NFT);
@@ -1571,8 +1571,8 @@ mod retract_rent_offer {
 	fn no_offers_from_this_address() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let bob: mock::Origin = origin(BOB);
-			let charlie: mock::Origin = origin(CHARLIE);
+			let bob: mock::RuntimeOrigin = origin(BOB);
+			let charlie: mock::RuntimeOrigin = origin(CHARLIE);
 
 			Rent::make_rent_offer(bob, FIXED_MANU_REV_NFT_NFT_NFT).unwrap();
 			let offers = Rent::offers(FIXED_MANU_REV_NFT_NFT_NFT).unwrap();
@@ -1592,8 +1592,8 @@ mod change_subscription_terms {
 	fn change_subscription_terms() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let alice: mock::Origin = origin(ALICE);
-			let bob: mock::Origin = origin(BOB);
+			let alice: mock::RuntimeOrigin = origin(ALICE);
+			let bob: mock::RuntimeOrigin = origin(BOB);
 
 			Rent::make_rent_offer(bob, SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK).unwrap();
 			Rent::accept_rent_offer(
@@ -1627,7 +1627,7 @@ mod change_subscription_terms {
 				is_changeable: true,
 				rent_fee: TOKENS + 1,
 			};
-			let event = Event::Rent(event);
+			let event = RuntimeEvent::Rent(event);
 			System::assert_last_event(event);
 		})
 	}
@@ -1636,7 +1636,7 @@ mod change_subscription_terms {
 	fn contract_not_found() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let alice: mock::Origin = origin(ALICE);
+			let alice: mock::RuntimeOrigin = origin(ALICE);
 
 			// Change subscription terms for invalid contract.
 			let err = Rent::change_subscription_terms(
@@ -1655,7 +1655,7 @@ mod change_subscription_terms {
 	fn not_the_contract_owner() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let bob: mock::Origin = origin(BOB);
+			let bob: mock::RuntimeOrigin = origin(BOB);
 
 			// Change subscription terms for without being contract owner.
 			let err = Rent::change_subscription_terms(
@@ -1674,7 +1674,7 @@ mod change_subscription_terms {
 	fn cannot_adjust_subscription_terms() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let alice: mock::Origin = origin(ALICE);
+			let alice: mock::RuntimeOrigin = origin(ALICE);
 
 			// Change subscription terms for fixed contract.
 			let err = Rent::change_subscription_terms(
@@ -1693,7 +1693,7 @@ mod change_subscription_terms {
 	fn duration_exceeds_maximum_limit() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let alice: mock::Origin = origin(ALICE);
+			let alice: mock::RuntimeOrigin = origin(ALICE);
 
 			// Change subscription terms with invalid max duration.
 			let err = Rent::change_subscription_terms(
@@ -1716,8 +1716,8 @@ mod accept_subscription_terms {
 	fn accept_subscription_terms() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let alice: mock::Origin = origin(ALICE);
-			let bob: mock::Origin = origin(BOB);
+			let alice: mock::RuntimeOrigin = origin(ALICE);
+			let bob: mock::RuntimeOrigin = origin(BOB);
 
 			Rent::make_rent_offer(bob.clone(), SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK)
 				.unwrap();
@@ -1751,7 +1751,7 @@ mod accept_subscription_terms {
 			let event = RentEvent::ContractSubscriptionTermsAccepted {
 				nft_id: SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK,
 			};
-			let event = Event::Rent(event);
+			let event = RuntimeEvent::Rent(event);
 			System::assert_last_event(event);
 		})
 	}
@@ -1760,7 +1760,7 @@ mod accept_subscription_terms {
 	fn contract_not_found() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let bob: mock::Origin = origin(BOB);
+			let bob: mock::RuntimeOrigin = origin(BOB);
 
 			// Try to accept new subscription terms for invalid contract.
 			let err = Rent::accept_subscription_terms(bob, INVALID_NFT);
@@ -1772,9 +1772,9 @@ mod accept_subscription_terms {
 	fn not_the_contract_rentee() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let alice: mock::Origin = origin(ALICE);
-			let bob: mock::Origin = origin(BOB);
-			let charlie: mock::Origin = origin(CHARLIE);
+			let alice: mock::RuntimeOrigin = origin(ALICE);
+			let bob: mock::RuntimeOrigin = origin(BOB);
+			let charlie: mock::RuntimeOrigin = origin(CHARLIE);
 
 			Rent::make_rent_offer(bob.clone(), SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK)
 				.unwrap();
@@ -1809,8 +1809,8 @@ mod accept_subscription_terms {
 	fn contract_terms_already_accepted() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
-			let alice: mock::Origin = origin(ALICE);
-			let bob: mock::Origin = origin(BOB);
+			let alice: mock::RuntimeOrigin = origin(ALICE);
+			let bob: mock::RuntimeOrigin = origin(BOB);
 
 			Rent::make_rent_offer(bob.clone(), SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK)
 				.unwrap();

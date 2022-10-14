@@ -32,9 +32,9 @@ fn register_enclave() {
 		.tokens(vec![(ALICE, 100), (BOB, 0), (DAVE, 10)])
 		.build()
 		.execute_with(|| {
-			let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
-			let bob: mock::Origin = RawOrigin::Signed(BOB).into();
-			let dave: mock::Origin = RawOrigin::Signed(DAVE).into();
+			let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
+			let bob: mock::RuntimeOrigin = RawOrigin::Signed(BOB).into();
+			let dave: mock::RuntimeOrigin = RawOrigin::Signed(DAVE).into();
 
 			assert_eq!(EnclaveIndex::<Test>::iter().count(), 0);
 			assert_eq!(EnclaveRegistry::<Test>::iter().count(), 0);
@@ -77,9 +77,9 @@ fn assign_enclave() {
 		.tokens(vec![(ALICE, 10), (BOB, 10), (DAVE, 10)])
 		.build()
 		.execute_with(|| {
-			let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
-			let bob: mock::Origin = RawOrigin::Signed(BOB).into();
-			let dave: mock::Origin = RawOrigin::Signed(DAVE).into();
+			let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
+			let bob: mock::RuntimeOrigin = RawOrigin::Signed(BOB).into();
+			let dave: mock::RuntimeOrigin = RawOrigin::Signed(DAVE).into();
 
 			let cluster_id: ClusterId = 0;
 			let enclave_id: EnclaveId = 0;
@@ -115,8 +115,8 @@ fn unassign_enclave() {
 		.tokens(vec![(ALICE, 10), (BOB, 10)])
 		.build()
 		.execute_with(|| {
-			let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
-			let bob: mock::Origin = RawOrigin::Signed(BOB).into();
+			let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
+			let bob: mock::RuntimeOrigin = RawOrigin::Signed(BOB).into();
 
 			let cluster_id: ClusterId = 0;
 			let enclave_id: EnclaveId = 0;
@@ -151,8 +151,8 @@ fn update_enclave() {
 		.tokens(vec![(ALICE, 10), (BOB, 10)])
 		.build()
 		.execute_with(|| {
-			let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
-			let bob: mock::Origin = RawOrigin::Signed(BOB).into();
+			let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
+			let bob: mock::RuntimeOrigin = RawOrigin::Signed(BOB).into();
 
 			assert_ok!(Sgx::register_enclave(alice.clone(), vec![1]));
 			let enclave_id: EnclaveId = 0;
@@ -183,7 +183,7 @@ fn change_enclave_owner() {
 		.tokens(vec![(ALICE, 10), (BOB, 10)])
 		.build()
 		.execute_with(|| {
-			let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
+			let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
 
 			assert_ok!(Sgx::register_enclave(alice.clone(), vec![1]));
 			let enclave_id: EnclaveId = 0;
@@ -206,7 +206,7 @@ fn change_enclave_owner() {
 #[test]
 fn create_cluster() {
 	ExtBuilder::default().build().execute_with(|| {
-		let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
+		let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
 
 		assert_eq!(ClusterIndex::<Test>::iter().count(), 0);
 		assert_eq!(ClusterRegistry::<Test>::iter().count(), 0);
@@ -234,8 +234,8 @@ fn remove_cluster() {
 		.tokens(vec![(ALICE, 10), (BOB, 10)])
 		.build()
 		.execute_with(|| {
-			let alice: mock::Origin = RawOrigin::Signed(ALICE).into();
-			let bob: mock::Origin = RawOrigin::Signed(BOB).into();
+			let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
+			let bob: mock::RuntimeOrigin = RawOrigin::Signed(BOB).into();
 			let uri: TextFormat = vec![1];
 			let cluster_id: ClusterId = 0;
 			let cluster = Cluster::new(vec![0, 1]);

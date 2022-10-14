@@ -28,7 +28,7 @@ const PERCENT_0: Permill = Permill::from_parts(0);
 #[test]
 fn set_nft_state() {
 	ExtBuilder::new_build(vec![(ALICE, 1000)]).execute_with(|| {
-		let alice: Origin = RawOrigin::Signed(ALICE).into();
+		let alice: RuntimeOrigin = RawOrigin::Signed(ALICE).into();
 		NFT::create_nft(alice, BoundedVec::default(), PERCENT_0, None, false).unwrap();
 		let nft_id = mock::NFT::get_next_nft_id() - 1;
 		let nft_state = NFTState::new(true, true, true, true, true, true, false);
@@ -51,7 +51,7 @@ fn create_filled_collection() {
 #[test]
 fn get_nft() {
 	ExtBuilder::new_build(vec![(ALICE, 1000)]).execute_with(|| {
-		let alice: Origin = RawOrigin::Signed(ALICE).into();
+		let alice: RuntimeOrigin = RawOrigin::Signed(ALICE).into();
 		NFT::create_nft(alice, BoundedVec::default(), PERCENT_0, None, false).unwrap();
 		let nft_id = mock::NFT::get_next_nft_id() - 1;
 		let nft = NFT::get_nft(nft_id).unwrap();
@@ -65,7 +65,7 @@ fn get_nft() {
 #[test]
 fn set_nft() {
 	ExtBuilder::new_build(vec![(ALICE, 1000)]).execute_with(|| {
-		let alice: Origin = RawOrigin::Signed(ALICE).into();
+		let alice: RuntimeOrigin = RawOrigin::Signed(ALICE).into();
 		NFT::create_nft(alice, BoundedVec::default(), PERCENT_0, None, false).unwrap();
 		let nft_id = mock::NFT::get_next_nft_id() - 1;
 		let nft = NFT::get_nft(nft_id).unwrap();

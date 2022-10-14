@@ -31,15 +31,15 @@ const ALICE_NFT_ID_0: NFTId = 0;
 const ALICE_MARKETPLACE_ID: u32 = 0;
 const BOB_NFT_ID: NFTId = 1;
 
-fn origin(account: u64) -> mock::Origin {
+fn origin(account: u64) -> mock::RuntimeOrigin {
 	RawOrigin::Signed(account).into()
 }
 
 #[test]
 fn on_initialize() {
 	ExtBuilder::new_build(None).execute_with(|| {
-		let alice: mock::Origin = origin(ALICE);
-		let bob: mock::Origin = origin(BOB);
+		let alice: mock::RuntimeOrigin = origin(ALICE);
+		let bob: mock::RuntimeOrigin = origin(BOB);
 
 		NFT::create_nft(alice.clone(), BoundedVec::default(), PERCENT_0, None, false).unwrap();
 		NFT::create_nft(bob.clone(), BoundedVec::default(), PERCENT_0, None, false).unwrap();
@@ -128,7 +128,7 @@ fn on_initialize() {
 #[test]
 fn auctions_in_block() {
 	ExtBuilder::new_build(None).execute_with(|| {
-		let alice: mock::Origin = origin(ALICE);
+		let alice: mock::RuntimeOrigin = origin(ALICE);
 
 		let auctions_in_block = <Test as Config>::ActionsInBlockLimit::get();
 		let offset = 10;

@@ -25,11 +25,11 @@ use crate::{
 	ChainId, DepositNonce, Error, Event as BridgeEvent,
 };
 
-fn origin(account: u64) -> mock::Origin {
+fn origin(account: u64) -> mock::RuntimeOrigin {
 	RawOrigin::Signed(account).into()
 }
 
-fn root() -> mock::Origin {
+fn root() -> mock::RuntimeOrigin {
 	RawOrigin::Root.into()
 }
 
@@ -52,7 +52,7 @@ pub mod set_threshold {
 			assert_eq!(Bridge::relayer_vote_threshold(), new_threshold);
 
 			let event = BridgeEvent::RelayerThresholdUpdated { threshold: new_threshold };
-			let event = Event::Bridge(event);
+			let event = RuntimeEvent::Bridge(event);
 			assert_eq!(System::events().last().unwrap().event, event);
 		})
 	}
@@ -84,7 +84,7 @@ pub mod add_chain {
 			assert_eq!(Bridge::chain_nonces(CHAIN_ID), Some(0));
 
 			let event = BridgeEvent::ChainAllowed { chain_id: CHAIN_ID };
-			let event = Event::Bridge(event);
+			let event = RuntimeEvent::Bridge(event);
 			assert_eq!(System::events().last().unwrap().event, event);
 		})
 	}
@@ -132,7 +132,7 @@ pub mod set_relayers {
 			assert_eq!(Bridge::relayers().clone(), relayers.clone());
 
 			let event = BridgeEvent::RelayersUpdated { relayers };
-			let event = Event::Bridge(event);
+			let event = RuntimeEvent::Bridge(event);
 			assert_eq!(System::events().last().unwrap().event, event);
 		});
 	}
@@ -160,7 +160,7 @@ pub mod set_deposit_nonce {
 
 			// Check events
 			let event = BridgeEvent::DepositNonceUpdated { chain_id: CHAIN_ID, nonce: new_nonce };
-			let event = Event::Bridge(event);
+			let event = RuntimeEvent::Bridge(event);
 			assert_eq!(System::events().last().unwrap().event, event);
 		});
 	}
@@ -220,7 +220,7 @@ pub mod vote_for_proposal {
 
 			let event =
 				BridgeEvent::RelayerVoted { chain_id: CHAIN_ID, nonce: deposit_nonce, account };
-			let event = Event::Bridge(event);
+			let event = RuntimeEvent::Bridge(event);
 			assert_eq!(System::events().last().unwrap().event, event);
 		});
 	}
@@ -261,7 +261,7 @@ pub mod vote_for_proposal {
 
 			let event =
 				BridgeEvent::RelayerVoted { chain_id: CHAIN_ID, nonce: deposit_nonce, account };
-			let event = Event::Bridge(event);
+			let event = RuntimeEvent::Bridge(event);
 			assert_eq!(System::events().last().unwrap().event, event);
 		});
 	}
@@ -298,7 +298,7 @@ pub mod vote_for_proposal {
 			assert_eq!(Balances::total_issuance(), total_issuance + AMOUNT);
 
 			let event = BridgeEvent::ProposalApproved { chain_id: CHAIN_ID, nonce: deposit_nonce };
-			let event = Event::Bridge(event);
+			let event = RuntimeEvent::Bridge(event);
 			assert_eq!(System::events().last().unwrap().event, event);
 		});
 	}
@@ -404,7 +404,7 @@ pub mod deposit {
 				amount: AMOUNT.into(),
 				recipient,
 			};
-			let event = Event::Bridge(event);
+			let event = RuntimeEvent::Bridge(event);
 			assert_eq!(System::events().last().unwrap().event, event);
 		});
 	}
@@ -445,7 +445,7 @@ pub mod set_bridge_fee {
 			assert_eq!(Bridge::bridge_fee(), AMOUNT);
 
 			let event = BridgeEvent::BridgeFeeUpdated { fee: AMOUNT };
-			let event = Event::Bridge(event);
+			let event = RuntimeEvent::Bridge(event);
 			assert_eq!(System::events().last().unwrap().event, event);
 		});
 	}

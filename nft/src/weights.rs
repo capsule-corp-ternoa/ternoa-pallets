@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Ternoa.  If not, see <http://www.gnu.org/licenses/>.
 
-use frame_support::weights::{RefTimeWeight, Weight};
+use frame_support::weights::Weight;
 use sp_std::marker::PhantomData;
 
 pub trait WeightInfo {
@@ -44,51 +44,51 @@ impl<T: frame_system::Config> WeightInfo for TernoaWeight<T> {
 	// Storage: NFT NextNFTId (r:1 w:1)
 	// Storage: NFT Nfts (r:0 w:1)
 	fn create_nft(_s: u32) -> Weight {
-		Weight::from_ref_time(10_000_000 as RefTimeWeight)
+		Weight::from_ref_time(10_000_000 as u64)
 	}
 	// Storage: NFT Nfts (r:1 w:1)
 	// Storage: NFT Collections (r:1 w:1)
 	fn burn_nft(_s: u32) -> Weight {
-		Weight::from_ref_time(10_000_000 as RefTimeWeight)
+		Weight::from_ref_time(10_000_000 as u64)
 	}
 	// Storage: NFT Nfts (r:1 w:1)
 	fn transfer_nft() -> Weight {
-		Weight::from_ref_time(10_000_000 as RefTimeWeight)
+		Weight::from_ref_time(10_000_000 as u64)
 	}
 	// Storage: NFT Nfts (r:1 w:1)
 	// Storage: NFT DelegatedNFTs (r:0 w:1)
 	fn delegate_nft() -> Weight {
-		Weight::from_ref_time(10_000_000 as RefTimeWeight)
+		Weight::from_ref_time(10_000_000 as u64)
 	}
 	// Storage: NFT Nfts (r:1 w:1)
 	fn set_royalty() -> Weight {
-		Weight::from_ref_time(10_000_000 as RefTimeWeight)
+		Weight::from_ref_time(10_000_000 as u64)
 	}
 	// Storage: NFT NftMintFee (r:0 w:1)
 	fn set_nft_mint_fee() -> Weight {
-		Weight::from_ref_time(10_000_000 as RefTimeWeight)
+		Weight::from_ref_time(10_000_000 as u64)
 	}
 	// Storage: NFT NextCollectionId (r:1 w:1)
 	// Storage: NFT Collections (r:0 w:1)
 	fn create_collection() -> Weight {
-		Weight::from_ref_time(10_000_000 as RefTimeWeight)
+		Weight::from_ref_time(10_000_000 as u64)
 	}
 	// Storage: NFT Collections (r:1 w:1)
 	fn burn_collection() -> Weight {
-		Weight::from_ref_time(10_000_000 as RefTimeWeight)
+		Weight::from_ref_time(10_000_000 as u64)
 	}
 	// Storage: NFT Collections (r:1 w:1)
 	fn close_collection() -> Weight {
-		Weight::from_ref_time(10_000_000 as RefTimeWeight)
+		Weight::from_ref_time(10_000_000 as u64)
 	}
 	// Storage: NFT Collections (r:1 w:1)
 	fn limit_collection() -> Weight {
-		Weight::from_ref_time(10_000_000 as RefTimeWeight)
+		Weight::from_ref_time(10_000_000 as u64)
 	}
 	// Storage: NFT Collections (r:1 w:1)
 	// Storage: NFT Nfts (r:1 w:1)
 	fn add_nft_to_collection(_s: u32) -> Weight {
-		Weight::from_ref_time(10_000_000 as RefTimeWeight)
+		Weight::from_ref_time(10_000_000 as u64)
 	}
 	// Storage: NFT NftMintFee (r:1 w:0)
 	// Storage: NFT SecretNftMintFee (r:1 w:0)
@@ -98,22 +98,22 @@ impl<T: frame_system::Config> WeightInfo for TernoaWeight<T> {
 	// Storage: NFT SecretNftsOffchainData (r:0 w:1)
 	// Storage: NFT Nfts (r:0 w:1)
 	fn create_secret_nft(_s: u32) -> Weight {
-		Weight::from_ref_time(10_000_000 as RefTimeWeight)
+		Weight::from_ref_time(10_000_000 as u64)
 	}
 	// Storage: NFT Nfts (r:1 w:1)
 	// Storage: NFT SecretNftMintFee (r:1 w:0)
 	// Storage: System Account (r:1 w:1)
 	// Storage: NFT SecretNftsOffchainData (r:0 w:1)
 	fn add_secret() -> Weight {
-		Weight::from_ref_time(10_000_000 as RefTimeWeight)
+		Weight::from_ref_time(10_000_000 as u64)
 	}
 	// Storage: NFT Nfts (r:1 w:1)
 	// Storage: NFT SecretNftsShardsCount (r:1 w:1)
 	fn add_secret_shard() -> Weight {
-		Weight::from_ref_time(10_000_000 as RefTimeWeight)
+		Weight::from_ref_time(10_000_000 as u64)
 	}
 	// Storage: NFT SecretNftMintFee (r:0 w:1)
 	fn set_secret_nft_mint_fee() -> Weight {
-		Weight::from_ref_time(10_000_000 as RefTimeWeight)
+		Weight::from_ref_time(10_000_000 as u64)
 	}
 }

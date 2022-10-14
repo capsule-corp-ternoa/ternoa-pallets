@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Ternoa.  If not, see <http://www.gnu.org/licenses/>.
 
-use frame_support::weights::{RefTimeWeight, Weight};
+use frame_support::weights::Weight;
 use sp_std::marker::PhantomData;
 
 pub trait WeightInfo {
@@ -39,7 +39,7 @@ impl<T: frame_system::Config> WeightInfo for TernoaWeight<T> {
 	// Storage: Rent Contracts (r:0 w:1)
 	/// The range of component `s` is `[0, 8]`.
 	fn create_contract(_s: u32) -> Weight {
-		Weight::from_ref_time(10_000_000 as RefTimeWeight)
+		Weight::from_ref_time(10_000_000 as u64)
 	}
 	// Storage: Rent Contracts (r:1 w:1)
 	// Storage: NFT Nfts (r:1 w:1)
@@ -48,10 +48,10 @@ impl<T: frame_system::Config> WeightInfo for TernoaWeight<T> {
 	// Storage: Rent NumberOfCurrentContracts (r:1 w:1)
 	/// The range of component `s` is `[0, 9]`.
 	fn revoke_contract(_s: u32) -> Weight {
-		Weight::from_ref_time(10_000_000 as RefTimeWeight)
+		Weight::from_ref_time(10_000_000 as u64)
 	}
 	fn cancel_contract(_s: u32) -> Weight {
-		Weight::from_ref_time(10_000_000 as RefTimeWeight)
+		Weight::from_ref_time(10_000_000 as u64)
 	}
 	// Storage: Rent Contracts (r:1 w:1)
 	// Storage: System Account (r:3 w:3)
@@ -61,10 +61,10 @@ impl<T: frame_system::Config> WeightInfo for TernoaWeight<T> {
 	/// The range of component `s` is `[0, 8]`.
 	/// The range of component `t` is `[0, 9]`.
 	fn rent(_s: u32) -> Weight {
-		Weight::from_ref_time(10_000_000 as RefTimeWeight)
+		Weight::from_ref_time(10_000_000 as u64)
 	}
 	fn make_rent_offer(_s: u32) -> Weight {
-		Weight::from_ref_time(10_000_000 as RefTimeWeight)
+		Weight::from_ref_time(10_000_000 as u64)
 	}
 	// Storage: Rent Contracts (r:1 w:1)
 	// Storage: Rent Offers (r:1 w:1)
@@ -75,20 +75,20 @@ impl<T: frame_system::Config> WeightInfo for TernoaWeight<T> {
 	/// The range of component `t` is `[0, 9]`.
 	/// The range of component `u` is `[0, 2]`.
 	fn accept_rent_offer(_s: u32) -> Weight {
-		Weight::from_ref_time(10_000_000 as RefTimeWeight)
+		Weight::from_ref_time(10_000_000 as u64)
 	}
 	// Storage: Rent Contracts (r:1 w:0)
 	// Storage: Rent Offers (r:1 w:1)
 	/// The range of component `s` is `[0, 2]`.
 	fn retract_rent_offer(_s: u32) -> Weight {
-		Weight::from_ref_time(10_000_000 as RefTimeWeight)
+		Weight::from_ref_time(10_000_000 as u64)
 	}
 	// Storage: Rent Contracts (r:1 w:1)
 	fn change_subscription_terms(_s: u32) -> Weight {
-		Weight::from_ref_time(10_000_000 as RefTimeWeight)
+		Weight::from_ref_time(10_000_000 as u64)
 	}
 	// Storage: Rent Contracts (r:1 w:1)
 	fn accept_subscription_terms(_s: u32) -> Weight {
-		Weight::from_ref_time(10_000_000 as RefTimeWeight)
+		Weight::from_ref_time(10_000_000 as u64)
 	}
 }

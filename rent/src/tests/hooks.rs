@@ -23,11 +23,11 @@ use crate::{
 	Event as RentEvent,
 };
 
-fn origin(account: u64) -> mock::Origin {
+fn origin(account: u64) -> mock::RuntimeOrigin {
 	RawOrigin::Signed(account).into()
 }
 
-fn root() -> mock::Origin {
+fn root() -> mock::RuntimeOrigin {
 	RawOrigin::Root.into()
 }
 
@@ -35,7 +35,7 @@ fn root() -> mock::Origin {
 fn end_contract_fixed() {
 	ExtBuilder::new_build(None).execute_with(|| {
 		prepare_tests();
-		let bob: mock::Origin = origin(BOB);
+		let bob: mock::RuntimeOrigin = origin(BOB);
 
 		Rent::rent(bob, FIXED_AUTO_REV_NFT_TOKENS_TOKENS).unwrap();
 
@@ -50,7 +50,7 @@ fn end_contract_fixed() {
 		// Event check.
 		let event =
 			RentEvent::ContractEnded { nft_id: FIXED_AUTO_REV_NFT_TOKENS_TOKENS, revoked_by: None };
-		let event = Event::Rent(event);
+		let event = RuntimeEvent::Rent(event);
 		System::assert_last_event(event);
 	})
 }
@@ -59,8 +59,8 @@ fn end_contract_fixed() {
 fn end_contract_subscription() {
 	ExtBuilder::new_build(None).execute_with(|| {
 		prepare_tests();
-		let alice: mock::Origin = origin(ALICE);
-		let bob: mock::Origin = origin(BOB);
+		let alice: mock::RuntimeOrigin = origin(ALICE);
+		let bob: mock::RuntimeOrigin = origin(BOB);
 		let alice_balance = Balances::free_balance(ALICE);
 		let bob_balance = Balances::free_balance(BOB);
 
@@ -86,7 +86,7 @@ fn end_contract_subscription() {
 			nft_id: SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK,
 			revoked_by: None,
 		};
-		let event = Event::Rent(event);
+		let event = RuntimeEvent::Rent(event);
 		System::assert_last_event(event);
 	})
 }
@@ -95,8 +95,8 @@ fn end_contract_subscription() {
 fn end_contract_renter() {
 	ExtBuilder::new_build(None).execute_with(|| {
 		prepare_tests();
-		let alice: mock::Origin = origin(ALICE);
-		let bob: mock::Origin = origin(BOB);
+		let alice: mock::RuntimeOrigin = origin(ALICE);
+		let bob: mock::RuntimeOrigin = origin(BOB);
 		let alice_balance = Balances::free_balance(ALICE);
 		let bob_balance = Balances::free_balance(BOB);
 
@@ -126,7 +126,7 @@ fn end_contract_renter() {
 			nft_id: SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK,
 			revoked_by: None,
 		};
-		let event = Event::Rent(event);
+		let event = RuntimeEvent::Rent(event);
 		System::assert_last_event(event);
 	})
 }
@@ -135,8 +135,8 @@ fn end_contract_renter() {
 fn end_contract_rentee() {
 	ExtBuilder::new_build(None).execute_with(|| {
 		prepare_tests();
-		let alice: mock::Origin = origin(ALICE);
-		let bob: mock::Origin = origin(BOB);
+		let alice: mock::RuntimeOrigin = origin(ALICE);
+		let bob: mock::RuntimeOrigin = origin(BOB);
 		let alice_balance = Balances::free_balance(ALICE);
 
 		Rent::make_rent_offer(bob, SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK).unwrap();
@@ -156,7 +156,7 @@ fn end_contract_rentee() {
 			nft_id: SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK,
 			revoked_by: None,
 		};
-		let event = Event::Rent(event);
+		let event = RuntimeEvent::Rent(event);
 		System::assert_last_event(event);
 	})
 }
@@ -165,8 +165,8 @@ fn end_contract_rentee() {
 fn renew_contract() {
 	ExtBuilder::new_build(None).execute_with(|| {
 		prepare_tests();
-		let alice: mock::Origin = origin(ALICE);
-		let bob: mock::Origin = origin(BOB);
+		let alice: mock::RuntimeOrigin = origin(ALICE);
+		let bob: mock::RuntimeOrigin = origin(BOB);
 
 		Rent::make_rent_offer(bob, SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK).unwrap();
 		Rent::accept_rent_offer(alice, SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK, BOB).unwrap();
@@ -195,7 +195,7 @@ fn renew_contract() {
 		let event = RentEvent::ContractSubscriptionPeriodStarted {
 			nft_id: SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK,
 		};
-		let event = Event::Rent(event);
+		let event = RuntimeEvent::Rent(event);
 		System::assert_last_event(event);
 	})
 }
@@ -230,19 +230,19 @@ fn remove_expired_contract() {
 
 		// Event check.
 		let event_0 =
-			Event::Rent(RentEvent::ContractExpired { nft_id: FIXED_AUTO_REV_NFT_TOKENS_TOKENS });
+			RuntimeEvent::Rent(RentEvent::ContractExpired { nft_id: FIXED_AUTO_REV_NFT_TOKENS_TOKENS });
 		let event_1 =
-			Event::Rent(RentEvent::ContractExpired { nft_id: FIXED_AUTO_REV_TOK_FLEXTOK_FLEXTOK });
+			RuntimeEvent::Rent(RentEvent::ContractExpired { nft_id: FIXED_AUTO_REV_TOK_FLEXTOK_FLEXTOK });
 		let event_2 =
-			Event::Rent(RentEvent::ContractExpired { nft_id: FIXED_MANU_REV_NFT_NFT_NFT });
-		let event_3 = Event::Rent(RentEvent::ContractExpired {
+			RuntimeEvent::Rent(RentEvent::ContractExpired { nft_id: FIXED_MANU_REV_NFT_NFT_NFT });
+		let event_3 = RuntimeEvent::Rent(RentEvent::ContractExpired {
 			nft_id: SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK,
 		});
-		let event_4 = Event::Rent(RentEvent::ContractExpired {
+		let event_4 = RuntimeEvent::Rent(RentEvent::ContractExpired {
 			nft_id: SUBSC_AUTO_NOREV_NOT_CHANGEABLE_TOK_NONE_FIXTOK,
 		});
 		let event_5 =
-			Event::Rent(RentEvent::ContractExpired { nft_id: FIXED_AUTO_REV_NFT_NFT_NFT });
+			RuntimeEvent::Rent(RentEvent::ContractExpired { nft_id: FIXED_AUTO_REV_NFT_NFT_NFT });
 		System::assert_has_event(event_0);
 		System::assert_has_event(event_1);
 		System::assert_has_event(event_2);

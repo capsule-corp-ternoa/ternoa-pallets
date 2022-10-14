@@ -44,18 +44,18 @@ const PERCENT_80: Permill = Permill::from_parts(800000);
 const PERCENT_50: Permill = Permill::from_parts(500000);
 const PERCENT_0: Permill = Permill::from_parts(0);
 
-fn origin(account: u64) -> mock::Origin {
+fn origin(account: u64) -> mock::RuntimeOrigin {
 	RawOrigin::Signed(account).into()
 }
 
-fn root() -> mock::Origin {
+fn root() -> mock::RuntimeOrigin {
 	RawOrigin::Root.into()
 }
 
 fn prepare_tests() {
-	let alice: mock::Origin = origin(ALICE);
-	let bob: mock::Origin = origin(BOB);
-	let charlie: mock::Origin = origin(CHARLIE);
+	let alice: mock::RuntimeOrigin = origin(ALICE);
+	let bob: mock::RuntimeOrigin = origin(BOB);
+	let charlie: mock::RuntimeOrigin = origin(CHARLIE);
 
 	// Create alice collection.
 	NFT::create_collection(alice.clone(), BoundedVec::default(), None).unwrap();
@@ -103,7 +103,7 @@ mod create_marketplace {
 	#[test]
 	fn create_marketplace() {
 		ExtBuilder::new_build(vec![(ALICE, 1000)]).execute_with(|| {
-			let alice: mock::Origin = origin(ALICE);
+			let alice: mock::RuntimeOrigin = origin(ALICE);
 			let alice_balance = Balances::free_balance(ALICE);
 			let data =
 				MarketplaceData::new(ALICE, MarketplaceType::Public, None, None, None, None, None);
@@ -126,7 +126,7 @@ mod create_marketplace {
 				owner: data.owner,
 				kind: data.kind,
 			};
-			let event = Event::Marketplace(event);
+			let event = RuntimeEvent::Marketplace(event);
 			System::assert_last_event(event);
 		})
 	}
@@ -134,7 +134,7 @@ mod create_marketplace {
 	#[test]
 	fn insufficient_balance() {
 		ExtBuilder::new_build(vec![(ALICE, 1)]).execute_with(|| {
-			let alice: mock::Origin = origin(ALICE);
+			let alice: mock::RuntimeOrigin = origin(ALICE);
 			// Should fail and storage should remain empty.
 			let err = Marketplace::create_marketplace(alice, MarketplaceType::Public);
 			assert_noop!(err, BalanceError::<Test>::InsufficientBalance);
@@ -144,7 +144,7 @@ mod create_marketplace {
 	#[test]
 	fn keep_alive() {
 		ExtBuilder::new_build(vec![(ALICE, MARKETPLACE_MINT_FEE)]).execute_with(|| {
-			let alice: mock::Origin = origin(ALICE);
+			let alice: mock::RuntimeOrigin = origin(ALICE);
 			let alice_balance = Balances::free_balance(ALICE);
 			// Should fail and storage should remain empty.
 			let err = Marketplace::create_marketplace(alice, MarketplaceType::Public);
@@ -162,7 +162,7 @@ mod set_marketplace_owner {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
 			|| {
 				prepare_tests();
-				let alice: mock::Origin = origin(ALICE);
+				let alice: mock::RuntimeOrigin = origin(ALICE);
 
 				// transfer a marketplace.
 				Marketplace::set_marketplace_owner(alice, ALICE_MARKETPLACE_ID, BOB).unwrap();
@@ -176,7 +176,7 @@ mod set_marketplace_owner {
 					marketplace_id: ALICE_MARKETPLACE_ID,
 					owner: BOB,
 				};
-				let event = Event::Marketplace(event);
+				let event = RuntimeEvent::Marketplace(event);
 				System::assert_last_event(event);
 			},
 		)
@@ -187,7 +187,7 @@ mod set_marketplace_owner {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
 			|| {
 				prepare_tests();
-				let alice: mock::Origin = origin(ALICE);
+				let alice: mock::RuntimeOrigin = origin(ALICE);
 
 				// transfer a marketplace with invalid marketplace id.
 				let err = Marketplace::set_marketplace_owner(alice, INVALID_MARKETPLACE_ID, BOB);
@@ -201,7 +201,7 @@ mod set_marketplace_owner {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
 			|| {
 				prepare_tests();
-				let alice: mock::Origin = origin(ALICE);
+				let alice: mock::RuntimeOrigin = origin(ALICE);
 
 				// transfer a marketplace with not owned marketplace id.
 				let err = Marketplace::set_marketplace_owner(alice, BOB_MARKETPLACE_ID, BOB);
@@ -215,7 +215,7 @@ mod set_marketplace_owner {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
 			|| {
 				prepare_tests();
-				let alice: mock::Origin = origin(ALICE);
+				let alice: mock::RuntimeOrigin = origin(ALICE);
 
 				// transfer a marketplace with already owned marketplace id.
 				let err = Marketplace::set_marketplace_owner(alice, ALICE_MARKETPLACE_ID, ALICE);
@@ -233,7 +233,7 @@ mod set_marketplace_kind {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
 			|| {
 				prepare_tests();
-				let alice: mock::Origin = origin(ALICE);
+				let alice: mock::RuntimeOrigin = origin(ALICE);
 
 				// set marketplace kind.
 				Marketplace::set_marketplace_kind(
@@ -252,7 +252,7 @@ mod set_marketplace_kind {
 					marketplace_id: ALICE_MARKETPLACE_ID,
 					kind: MarketplaceType::Private,
 				};
-				let event = Event::Marketplace(event);
+				let event = RuntimeEvent::Marketplace(event);
 				System::assert_last_event(event);
 			},
 		)
@@ -263,7 +263,7 @@ mod set_marketplace_kind {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
 			|| {
 				prepare_tests();
-				let alice: mock::Origin = origin(ALICE);
+				let alice: mock::RuntimeOrigin = origin(ALICE);
 
 				// set marketplace kind for invalid marketplace.
 				let err = Marketplace::set_marketplace_kind(
@@ -282,7 +282,7 @@ mod set_marketplace_kind {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
 			|| {
 				prepare_tests();
-				let alice: mock::Origin = origin(ALICE);
+				let alice: mock::RuntimeOrigin = origin(ALICE);
 
 				// set marketplace kind for not owned marketplace.
 				let err = Marketplace::set_marketplace_kind(
@@ -305,7 +305,7 @@ mod set_marketplace_configuration {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
 			|| {
 				prepare_tests();
-				let alice: mock::Origin = origin(ALICE);
+				let alice: mock::RuntimeOrigin = origin(ALICE);
 				let data = MarketplaceData::new(
 					ALICE,
 					MarketplaceType::Public,
@@ -382,7 +382,7 @@ mod set_marketplace_configuration {
 					offchain_data: ConfigOp::Remove,
 					collection_list: ConfigOp::Remove,
 				};
-				let event = Event::Marketplace(event);
+				let event = RuntimeEvent::Marketplace(event);
 				System::assert_last_event(event);
 			},
 		)
@@ -393,7 +393,7 @@ mod set_marketplace_configuration {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
 			|| {
 				prepare_tests();
-				let alice: mock::Origin = origin(ALICE);
+				let alice: mock::RuntimeOrigin = origin(ALICE);
 
 				// set marketplace configuration, all remove.
 				let err = Marketplace::set_marketplace_configuration(
@@ -416,7 +416,7 @@ mod set_marketplace_configuration {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
 			|| {
 				prepare_tests();
-				let alice: mock::Origin = origin(ALICE);
+				let alice: mock::RuntimeOrigin = origin(ALICE);
 
 				// set marketplace configuration, all remove.
 				let err = Marketplace::set_marketplace_configuration(
@@ -454,7 +454,7 @@ mod set_marketplace_mint_fee {
 	#[test]
 	fn bad_origin() {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
-			let alice: mock::Origin = origin(ALICE);
+			let alice: mock::RuntimeOrigin = origin(ALICE);
 			let new_mint_fee = 123u64;
 			let err = Marketplace::set_marketplace_mint_fee(alice, new_mint_fee);
 			assert_noop!(err, BadOrigin);
@@ -470,7 +470,7 @@ mod list_nft {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
 			|| {
 				prepare_tests();
-				let alice: mock::Origin = origin(ALICE);
+				let alice: mock::RuntimeOrigin = origin(ALICE);
 				let marketplace = Marketplace::marketplaces(ALICE_MARKETPLACE_ID).unwrap();
 				let data = Sale::new(ALICE, ALICE_MARKETPLACE_ID, 10, marketplace.commission_fee);
 
@@ -489,7 +489,7 @@ mod list_nft {
 					commission_fee: data.commission_fee,
 					price: data.price,
 				};
-				let event = Event::Marketplace(event);
+				let event = RuntimeEvent::Marketplace(event);
 				System::assert_last_event(event);
 			},
 		)
@@ -500,8 +500,8 @@ mod list_nft {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
 			|| {
 				prepare_tests();
-				let alice: mock::Origin = origin(ALICE);
-				let bob: mock::Origin = origin(BOB);
+				let alice: mock::RuntimeOrigin = origin(ALICE);
+				let bob: mock::RuntimeOrigin = origin(BOB);
 				let alice_balance = Balances::free_balance(ALICE);
 				let new_listing_fee = 10;
 
@@ -536,7 +536,7 @@ mod list_nft {
 					commission_fee: data.commission_fee,
 					price: data.price,
 				};
-				let event = Event::Marketplace(event);
+				let event = RuntimeEvent::Marketplace(event);
 				System::assert_last_event(event);
 			},
 		)
@@ -547,8 +547,8 @@ mod list_nft {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
 			|| {
 				prepare_tests();
-				let alice: mock::Origin = origin(ALICE);
-				let bob: mock::Origin = origin(BOB);
+				let alice: mock::RuntimeOrigin = origin(ALICE);
+				let bob: mock::RuntimeOrigin = origin(BOB);
 				let alice_balance = Balances::free_balance(ALICE);
 				let new_listing_fee = PERCENT_80;
 
@@ -586,7 +586,7 @@ mod list_nft {
 					commission_fee: data.commission_fee,
 					price: data.price,
 				};
-				let event = Event::Marketplace(event);
+				let event = RuntimeEvent::Marketplace(event);
 				System::assert_last_event(event);
 			},
 		)
@@ -597,7 +597,7 @@ mod list_nft {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
 			|| {
 				prepare_tests();
-				let alice: mock::Origin = origin(ALICE);
+				let alice: mock::RuntimeOrigin = origin(ALICE);
 				let marketplace = Marketplace::marketplaces(ALICE_MARKETPLACE_ID).unwrap();
 
 				// Set marketplace private
@@ -636,7 +636,7 @@ mod list_nft {
 					commission_fee: data.commission_fee,
 					price: data.price,
 				};
-				let event = Event::Marketplace(event);
+				let event = RuntimeEvent::Marketplace(event);
 				System::assert_last_event(event);
 			},
 		)
@@ -647,7 +647,7 @@ mod list_nft {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
 			|| {
 				prepare_tests();
-				let alice: mock::Origin = origin(ALICE);
+				let alice: mock::RuntimeOrigin = origin(ALICE);
 				let marketplace = Marketplace::marketplaces(ALICE_MARKETPLACE_ID).unwrap();
 
 				// Set marketplace private
@@ -686,7 +686,7 @@ mod list_nft {
 					commission_fee: data.commission_fee,
 					price: data.price,
 				};
-				let event = Event::Marketplace(event);
+				let event = RuntimeEvent::Marketplace(event);
 				System::assert_last_event(event);
 			},
 		)
@@ -697,7 +697,7 @@ mod list_nft {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
 			|| {
 				prepare_tests();
-				let alice: mock::Origin = origin(ALICE);
+				let alice: mock::RuntimeOrigin = origin(ALICE);
 				let marketplace = Marketplace::marketplaces(ALICE_MARKETPLACE_ID).unwrap();
 
 				// Set marketplace private
@@ -736,7 +736,7 @@ mod list_nft {
 					commission_fee: data.commission_fee,
 					price: data.price,
 				};
-				let event = Event::Marketplace(event);
+				let event = RuntimeEvent::Marketplace(event);
 				System::assert_last_event(event);
 			},
 		)
@@ -752,8 +752,8 @@ mod list_nft {
 		])
 		.execute_with(|| {
 			prepare_tests();
-			let alice: mock::Origin = origin(ALICE);
-			let bob: mock::Origin = origin(BOB);
+			let alice: mock::RuntimeOrigin = origin(ALICE);
+			let bob: mock::RuntimeOrigin = origin(BOB);
 			let alice_balance = Balances::free_balance(ALICE);
 
 			// Set listing fee.
@@ -779,7 +779,7 @@ mod list_nft {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
 			|| {
 				prepare_tests();
-				let alice: mock::Origin = origin(ALICE);
+				let alice: mock::RuntimeOrigin = origin(ALICE);
 
 				// List invalid nft.
 				let err = Marketplace::list_nft(alice, INVALID_NFT_ID, ALICE_MARKETPLACE_ID, 10);
@@ -793,7 +793,7 @@ mod list_nft {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
 			|| {
 				prepare_tests();
-				let alice: mock::Origin = origin(ALICE);
+				let alice: mock::RuntimeOrigin = origin(ALICE);
 
 				// Try to list unowned nft.
 				let err = Marketplace::list_nft(alice, BOB_NFT_ID, ALICE_MARKETPLACE_ID, 10);
@@ -807,7 +807,7 @@ mod list_nft {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
 			|| {
 				prepare_tests();
-				let alice: mock::Origin = origin(ALICE);
+				let alice: mock::RuntimeOrigin = origin(ALICE);
 
 				// List twice the same nft.
 				Marketplace::list_nft(alice.clone(), ALICE_NFT_ID, ALICE_MARKETPLACE_ID, 10)
@@ -823,7 +823,7 @@ mod list_nft {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
 			|| {
 				prepare_tests();
-				let alice: mock::Origin = origin(ALICE);
+				let alice: mock::RuntimeOrigin = origin(ALICE);
 
 				// Set capsule to true for Alice's NFT.
 				let nft_state = NFTState::new(true, false, false, false, false, false, false);
@@ -840,7 +840,7 @@ mod list_nft {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
 			|| {
 				prepare_tests();
-				let alice: mock::Origin = origin(ALICE);
+				let alice: mock::RuntimeOrigin = origin(ALICE);
 
 				// Set secret to true for Alice's NFT.
 				let nft_state = NFTState::new(false, false, true, false, false, true, false);
@@ -857,7 +857,7 @@ mod list_nft {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
 			|| {
 				prepare_tests();
-				let alice: mock::Origin = origin(ALICE);
+				let alice: mock::RuntimeOrigin = origin(ALICE);
 
 				// Set delegated to true for Alice's NFT.
 				let nft_state = NFTState::new(false, false, false, true, false, false, false);
@@ -874,7 +874,7 @@ mod list_nft {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
 			|| {
 				prepare_tests();
-				let alice: mock::Origin = origin(ALICE);
+				let alice: mock::RuntimeOrigin = origin(ALICE);
 
 				// Set soulbound to true for Alice's NFT.
 				let mut nft = NFT::get_nft(ALICE_NFT_ID).unwrap();
@@ -893,7 +893,7 @@ mod list_nft {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
 			|| {
 				prepare_tests();
-				let alice: mock::Origin = origin(ALICE);
+				let alice: mock::RuntimeOrigin = origin(ALICE);
 
 				// Set capsule to true for Alice's NFT.
 				let nft_state = NFTState::new(false, false, false, false, false, false, true);
@@ -910,7 +910,7 @@ mod list_nft {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
 			|| {
 				prepare_tests();
-				let alice: mock::Origin = origin(ALICE);
+				let alice: mock::RuntimeOrigin = origin(ALICE);
 
 				// List on invalid marketplace.
 				let err = Marketplace::list_nft(alice, ALICE_NFT_ID, INVALID_MARKETPLACE_ID, 10);
@@ -924,7 +924,7 @@ mod list_nft {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
 			|| {
 				prepare_tests();
-				let alice: mock::Origin = origin(ALICE);
+				let alice: mock::RuntimeOrigin = origin(ALICE);
 
 				// Set public marketplace account list (ban list) with alice's account.
 				Marketplace::set_marketplace_configuration(
@@ -949,7 +949,7 @@ mod list_nft {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
 			|| {
 				prepare_tests();
-				let alice: mock::Origin = origin(ALICE);
+				let alice: mock::RuntimeOrigin = origin(ALICE);
 
 				// Set public marketplace account list (ban list) with alice's account.
 				Marketplace::set_marketplace_configuration(
@@ -974,7 +974,7 @@ mod list_nft {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
 			|| {
 				prepare_tests();
-				let alice: mock::Origin = origin(ALICE);
+				let alice: mock::RuntimeOrigin = origin(ALICE);
 
 				// Set public marketplace account list (ban list) with alice's account.
 				Marketplace::set_marketplace_configuration(
@@ -999,7 +999,7 @@ mod list_nft {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
 			|| {
 				prepare_tests();
-				let alice: mock::Origin = origin(ALICE);
+				let alice: mock::RuntimeOrigin = origin(ALICE);
 
 				// Set marketplace private (without alice's account in account list / allow list).
 				Marketplace::set_marketplace_kind(
@@ -1020,7 +1020,7 @@ mod list_nft {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
 			|| {
 				prepare_tests();
-				let alice: mock::Origin = origin(ALICE);
+				let alice: mock::RuntimeOrigin = origin(ALICE);
 
 				// Set high commission fee.
 				Marketplace::set_marketplace_configuration(
@@ -1049,7 +1049,7 @@ mod unlist_nft {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
 			|| {
 				prepare_tests();
-				let alice: mock::Origin = origin(ALICE);
+				let alice: mock::RuntimeOrigin = origin(ALICE);
 				let marketplace = Marketplace::marketplaces(ALICE_MARKETPLACE_ID).unwrap();
 				let data = Sale::new(ALICE, ALICE_MARKETPLACE_ID, 10, marketplace.commission_fee);
 
@@ -1066,7 +1066,7 @@ mod unlist_nft {
 
 				// Events checks.
 				let event = MarketplaceEvent::NFTUnlisted { nft_id: ALICE_NFT_ID };
-				let event = Event::Marketplace(event);
+				let event = RuntimeEvent::Marketplace(event);
 				System::assert_last_event(event);
 			},
 		)
@@ -1077,7 +1077,7 @@ mod unlist_nft {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
 			|| {
 				prepare_tests();
-				let alice: mock::Origin = origin(ALICE);
+				let alice: mock::RuntimeOrigin = origin(ALICE);
 
 				// Unlist invalid NFT.
 				let err = Marketplace::unlist_nft(alice, INVALID_NFT_ID);
@@ -1091,8 +1091,8 @@ mod unlist_nft {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
 			|| {
 				prepare_tests();
-				let alice: mock::Origin = origin(ALICE);
-				let bob: mock::Origin = origin(BOB);
+				let alice: mock::RuntimeOrigin = origin(ALICE);
+				let bob: mock::RuntimeOrigin = origin(BOB);
 
 				// List bob's nft.
 				Marketplace::list_nft(bob.clone(), BOB_NFT_ID, ALICE_MARKETPLACE_ID, 0).unwrap();
@@ -1108,7 +1108,7 @@ mod unlist_nft {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
 			|| {
 				prepare_tests();
-				let alice: mock::Origin = origin(ALICE);
+				let alice: mock::RuntimeOrigin = origin(ALICE);
 
 				// Unlist an NFT not for sale.
 				let err = Marketplace::unlist_nft(alice, ALICE_NFT_ID);
@@ -1126,9 +1126,9 @@ mod buy_nft {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
 			|| {
 				prepare_tests();
-				let alice: mock::Origin = origin(ALICE);
+				let alice: mock::RuntimeOrigin = origin(ALICE);
 				let alice_balance = Balances::free_balance(ALICE);
-				let bob: mock::Origin = origin(BOB);
+				let bob: mock::RuntimeOrigin = origin(BOB);
 				let bob_balance = Balances::free_balance(BOB);
 
 				// List NFT.
@@ -1154,7 +1154,7 @@ mod buy_nft {
 					marketplace_cut: 0,
 					royalty_cut: 0,
 				};
-				let event = Event::Marketplace(event);
+				let event = RuntimeEvent::Marketplace(event);
 				System::assert_last_event(event);
 			},
 		)
@@ -1165,11 +1165,11 @@ mod buy_nft {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
 			|| {
 				prepare_tests();
-				let alice: mock::Origin = origin(ALICE);
+				let alice: mock::RuntimeOrigin = origin(ALICE);
 				let alice_balance = Balances::free_balance(ALICE);
-				let bob: mock::Origin = origin(BOB);
+				let bob: mock::RuntimeOrigin = origin(BOB);
 				let bob_balance = Balances::free_balance(BOB);
-				let charlie: mock::Origin = origin(CHARLIE);
+				let charlie: mock::RuntimeOrigin = origin(CHARLIE);
 				let charlie_balance = Balances::free_balance(CHARLIE);
 
 				// Set marketplace commission fee.
@@ -1211,7 +1211,7 @@ mod buy_nft {
 					marketplace_cut: 5,
 					royalty_cut: 0,
 				};
-				let event = Event::Marketplace(event);
+				let event = RuntimeEvent::Marketplace(event);
 				System::assert_last_event(event);
 			},
 		)
@@ -1222,11 +1222,11 @@ mod buy_nft {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
 			|| {
 				prepare_tests();
-				let alice: mock::Origin = origin(ALICE);
+				let alice: mock::RuntimeOrigin = origin(ALICE);
 				let alice_balance = Balances::free_balance(ALICE);
-				let bob: mock::Origin = origin(BOB);
+				let bob: mock::RuntimeOrigin = origin(BOB);
 				let bob_balance = Balances::free_balance(BOB);
-				let charlie: mock::Origin = origin(CHARLIE);
+				let charlie: mock::RuntimeOrigin = origin(CHARLIE);
 				let charlie_balance = Balances::free_balance(CHARLIE);
 
 				// Set marketplace commission fee.
@@ -1268,7 +1268,7 @@ mod buy_nft {
 					marketplace_cut: 8,
 					royalty_cut: 0,
 				};
-				let event = Event::Marketplace(event);
+				let event = RuntimeEvent::Marketplace(event);
 				System::assert_last_event(event);
 			},
 		)
@@ -1279,11 +1279,11 @@ mod buy_nft {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
 			|| {
 				prepare_tests();
-				let alice: mock::Origin = origin(ALICE);
+				let alice: mock::RuntimeOrigin = origin(ALICE);
 				let alice_balance = Balances::free_balance(ALICE);
-				let bob: mock::Origin = origin(BOB);
+				let bob: mock::RuntimeOrigin = origin(BOB);
 				let bob_balance = Balances::free_balance(BOB);
-				let charlie: mock::Origin = origin(CHARLIE);
+				let charlie: mock::RuntimeOrigin = origin(CHARLIE);
 				let charlie_balance = Balances::free_balance(CHARLIE);
 
 				// Set the royalty of alice's NFT.
@@ -1319,7 +1319,7 @@ mod buy_nft {
 					marketplace_cut: 0,
 					royalty_cut: 8,
 				};
-				let event = Event::Marketplace(event);
+				let event = RuntimeEvent::Marketplace(event);
 				System::assert_last_event(event);
 			},
 		)
@@ -1330,13 +1330,13 @@ mod buy_nft {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
 			|| {
 				prepare_tests();
-				let alice: mock::Origin = origin(ALICE);
+				let alice: mock::RuntimeOrigin = origin(ALICE);
 				let alice_balance = Balances::free_balance(ALICE);
-				let bob: mock::Origin = origin(BOB);
+				let bob: mock::RuntimeOrigin = origin(BOB);
 				let bob_balance = Balances::free_balance(BOB);
-				let charlie: mock::Origin = origin(CHARLIE);
+				let charlie: mock::RuntimeOrigin = origin(CHARLIE);
 				let charlie_balance = Balances::free_balance(CHARLIE);
-				let dave: mock::Origin = origin(DAVE);
+				let dave: mock::RuntimeOrigin = origin(DAVE);
 				let dave_balance = Balances::free_balance(DAVE);
 
 				// Set marketplace commission fee.
@@ -1386,7 +1386,7 @@ mod buy_nft {
 					marketplace_cut: 40,
 					royalty_cut: 48,
 				};
-				let event = Event::Marketplace(event);
+				let event = RuntimeEvent::Marketplace(event);
 				System::assert_last_event(event);
 			},
 		)
@@ -1397,13 +1397,13 @@ mod buy_nft {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
 			|| {
 				prepare_tests();
-				let alice: mock::Origin = origin(ALICE);
+				let alice: mock::RuntimeOrigin = origin(ALICE);
 				let alice_balance = Balances::free_balance(ALICE);
-				let bob: mock::Origin = origin(BOB);
+				let bob: mock::RuntimeOrigin = origin(BOB);
 				let bob_balance = Balances::free_balance(BOB);
-				let charlie: mock::Origin = origin(CHARLIE);
+				let charlie: mock::RuntimeOrigin = origin(CHARLIE);
 				let charlie_balance = Balances::free_balance(CHARLIE);
-				let dave: mock::Origin = origin(DAVE);
+				let dave: mock::RuntimeOrigin = origin(DAVE);
 				let dave_balance = Balances::free_balance(DAVE);
 
 				// Set marketplace commission fee.
@@ -1453,7 +1453,7 @@ mod buy_nft {
 					marketplace_cut: 50,
 					royalty_cut: 40,
 				};
-				let event = Event::Marketplace(event);
+				let event = RuntimeEvent::Marketplace(event);
 				System::assert_last_event(event);
 			},
 		)
@@ -1464,8 +1464,8 @@ mod buy_nft {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
 			|| {
 				prepare_tests();
-				let alice: mock::Origin = origin(ALICE);
-				let bob: mock::Origin = origin(BOB);
+				let alice: mock::RuntimeOrigin = origin(ALICE);
+				let bob: mock::RuntimeOrigin = origin(BOB);
 				let bob_balance = Balances::free_balance(BOB);
 
 				// List NFT.
@@ -1491,7 +1491,7 @@ mod buy_nft {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
 			|| {
 				prepare_tests();
-				let alice: mock::Origin = origin(ALICE);
+				let alice: mock::RuntimeOrigin = origin(ALICE);
 
 				// Buy invalid NFT.
 				let err = Marketplace::buy_nft(alice, INVALID_NFT_ID);
@@ -1505,7 +1505,7 @@ mod buy_nft {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
 			|| {
 				prepare_tests();
-				let alice: mock::Origin = origin(ALICE);
+				let alice: mock::RuntimeOrigin = origin(ALICE);
 
 				// Buy non listed NFT.
 				let err = Marketplace::buy_nft(alice, BOB_NFT_ID);
@@ -1519,7 +1519,7 @@ mod buy_nft {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
 			|| {
 				prepare_tests();
-				let alice: mock::Origin = origin(ALICE);
+				let alice: mock::RuntimeOrigin = origin(ALICE);
 
 				// List NFT.
 				Marketplace::list_nft(alice.clone(), ALICE_NFT_ID, ALICE_MARKETPLACE_ID, 10)
@@ -1537,8 +1537,8 @@ mod buy_nft {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
 			|| {
 				prepare_tests();
-				let alice: mock::Origin = origin(ALICE);
-				let bob: mock::Origin = origin(BOB);
+				let alice: mock::RuntimeOrigin = origin(ALICE);
+				let bob: mock::RuntimeOrigin = origin(BOB);
 
 				// List NFT.
 				Marketplace::list_nft(alice, ALICE_NFT_ID, ALICE_MARKETPLACE_ID, 10_000).unwrap();
