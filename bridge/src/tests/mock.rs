@@ -68,8 +68,8 @@ parameter_types! {
 
 impl frame_system::Config for Test {
 	type BaseCallFilter = Everything;
-	type Origin = Origin;
-	type Call = Call;
+	type RuntimeOrigin = RuntimeOrigin;
+	type RuntimeCall = RuntimeCall;
 	type Index = u64;
 	type BlockNumber = u64;
 	type Hash = H256;
@@ -77,7 +77,7 @@ impl frame_system::Config for Test {
 	type AccountId = AccountId;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type BlockHashCount = BlockHashCount;
 	type DbWeight = ();
 	type Version = ();
@@ -100,7 +100,7 @@ parameter_types! {
 impl pallet_balances::Config for Test {
 	type Balance = Balance;
 	type DustRemoval = ();
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type ExistentialDeposit = ExistentialDeposit;
 	type AccountStore = System;
 	type MaxLocks = ();
@@ -126,7 +126,7 @@ impl frame_support::traits::OnUnbalanced<NegativeImbalanceOf<Test>> for MockFeeC
 }
 
 impl Config for Test {
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = ternoa_bridge::weights::TernoaWeight<Test>;
 	type Currency = Balances;
 	type FeesCollector = MockFeeCollector;
@@ -173,15 +173,15 @@ impl ExtBuilder {
 
 		externalities.execute_with(|| {
 			// Set and check threshold
-			assert_ok!(Bridge::set_threshold(Origin::root(), threshold));
+			assert_ok!(Bridge::set_threshold(RuntimeOrigin::root(), threshold));
 			assert_eq!(Bridge::relayer_vote_threshold(), threshold);
 			// Add relayers
 			assert_ok!(Bridge::set_relayers(
-				Origin::root(),
+				RuntimeOrigin::root(),
 				BoundedVec::try_from(vec![RELAYER_A, RELAYER_B, RELAYER_C]).unwrap()
 			));
 			// Whitelist chain
-			assert_ok!(Bridge::add_chain(Origin::root(), src_id));
+			assert_ok!(Bridge::add_chain(RuntimeOrigin::root(), src_id));
 		});
 
 		externalities

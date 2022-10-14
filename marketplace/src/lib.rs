@@ -72,7 +72,7 @@ pub mod pallet {
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		/// Because this pallet emits events, it depends on the runtime's definition of an event.
-		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		/// Weight information for pallet.
 		type WeightInfo: WeightInfo;
@@ -108,7 +108,7 @@ pub mod pallet {
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
 		#[cfg(feature = "try-runtime")]
-		fn pre_upgrade() -> Result<(), &'static str> {
+		fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
 			<migrations::v2::MigrationV2<T> as OnRuntimeUpgrade>::pre_upgrade()
 		}
 
@@ -133,8 +133,8 @@ pub mod pallet {
 		// test if the new state of blockchain data is valid. It's important to say that
 		// post_upgrade won't be called when a real runtime upgrade is executed.
 		#[cfg(feature = "try-runtime")]
-		fn post_upgrade() -> Result<(), &'static str> {
-			<migrations::v2::MigrationV2<T> as OnRuntimeUpgrade>::post_upgrade()
+		fn post_upgrade(v: Vec<u8>) -> Result<(), &'static str> {
+			<migrations::v2::MigrationV2<T> as OnRuntimeUpgrade>::post_upgrade(v)
 		}
 	}
 

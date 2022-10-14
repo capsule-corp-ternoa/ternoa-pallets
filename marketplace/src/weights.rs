@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Ternoa.  If not, see <http://www.gnu.org/licenses/>.
 
-use frame_support::weights::{RefTimeWeight, Weight};
+use frame_support::weights::Weight;
 
 pub trait WeightInfo {
 	fn create_marketplace() -> Weight;
@@ -33,40 +33,40 @@ impl WeightInfo for () {
 	// Storage: Marketplace NextMarketplaceId (r:1 w:1)
 	// Storage: Marketplace Marketplaces (r:0 w:1)
 	fn create_marketplace() -> Weight {
-		Weight::from_ref_time(10_000_000 as RefTimeWeight)
+		Weight::from_ref_time(10_000_000 as u64)
 	}
 	// Storage: Marketplace Marketplaces (r:1 w:1)
 	fn set_marketplace_owner() -> Weight {
-		Weight::from_ref_time(10_000_000 as RefTimeWeight)
+		Weight::from_ref_time(10_000_000 as u64)
 	}
 	// Storage: Marketplace Marketplaces (r:1 w:1)
 	fn set_marketplace_kind() -> Weight {
-		Weight::from_ref_time(10_000_000 as RefTimeWeight)
+		Weight::from_ref_time(10_000_000 as u64)
 	}
 	// Storage: Marketplace Marketplaces (r:1 w:1)
 	fn set_marketplace_configuration() -> Weight {
-		Weight::from_ref_time(10_000_000 as RefTimeWeight)
+		Weight::from_ref_time(10_000_000 as u64)
 	}
 	// Storage: Marketplace MarketplaceMintFee (r:0 w:1)
 	fn set_marketplace_mint_fee() -> Weight {
-		Weight::from_ref_time(10_000_000 as RefTimeWeight)
+		Weight::from_ref_time(10_000_000 as u64)
 	}
 	// Storage: NFT Nfts (r:1 w:1)
 	// Storage: Marketplace Marketplaces (r:1 w:0)
 	// Storage: Marketplace ListedNfts (r:0 w:1)
 	fn list_nft() -> Weight {
-		Weight::from_ref_time(10_000_000 as RefTimeWeight)
+		Weight::from_ref_time(10_000_000 as u64)
 	}
 	// Storage: NFT Nfts (r:1 w:1)
 	// Storage: Marketplace ListedNfts (r:1 w:1)
 	fn unlist_nft() -> Weight {
-		Weight::from_ref_time(10_000_000 as RefTimeWeight)
+		Weight::from_ref_time(10_000_000 as u64)
 	}
 	// Storage: NFT Nfts (r:1 w:1)
 	// Storage: Marketplace ListedNfts (r:1 w:1)
 	// Storage: Marketplace Marketplaces (r:1 w:0)
 	// Storage: System Account (r:2 w:2)
 	fn buy_nft() -> Weight {
-		Weight::from_ref_time(10_000_000 as RefTimeWeight)
+		Weight::from_ref_time(10_000_000 as u64)
 	}
 }
