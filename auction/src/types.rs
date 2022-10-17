@@ -248,6 +248,11 @@ where
 		self.0.try_insert(index, (nft_id, block_number))
 	}
 
+	pub fn bulk_inser(&mut self, nft_id: NFTId, block_number: BlockNumber, number: u32) -> Result<(), ()> {
+		let data = vec![(nft_id, block_number); number as usize];
+		self.0.try_extend(BoundedVec::try_from(data))
+	}
+
 	pub fn remove(&mut self, nft_id: NFTId) -> bool {
 		let index = self.0.iter().position(|x| x.0 == nft_id);
 		if let Some(index) = index {

@@ -1013,21 +1013,6 @@ impl<T: Config> traits::NFTExt for Pallet<T> {
 		collection.nfts = nft_ids;
 		Collections::<T>::insert(collection_id, collection);
 
-		// Create nfts
-		let nft_offchain_data: U8BoundedVec<Self::NFTOffchainDataLimit> =
-			U8BoundedVec::try_from(vec![1; Self::NFTOffchainDataLimit::get() as usize])
-				.expect("It will never happen.");
-		let nft = NFTData::new_default(
-			owner.clone(),
-			nft_offchain_data,
-			Permill::from_parts(0),
-			Some(collection_id),
-			false,
-		);
-		for i in start_nft_id..amount_in_collection + start_nft_id {
-			Nfts::<T>::insert(i, nft.clone());
-		}
-
 		Ok(())
 	}
 

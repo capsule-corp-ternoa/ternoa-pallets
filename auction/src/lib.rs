@@ -688,6 +688,8 @@ impl<T: Config> Pallet<T> {
 		block_number: T::BlockNumber,
 	) -> Result<(), DispatchError> {
 		Deadlines::<T>::try_mutate(|x| -> DispatchResult {
+			let data = vec![(nft_id, block_number); number as usize];
+			*x.0.extend(&data);
 			for _i in 0..number {
 				x.insert(nft_id, block_number)
 					.map_err(|_| Error::<T>::MaximumAuctionsLimitReached)?;
