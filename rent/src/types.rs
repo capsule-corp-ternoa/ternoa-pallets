@@ -23,6 +23,7 @@ use scale_info::TypeInfo;
 use sp_arithmetic::traits::AtLeast32BitUnsigned;
 use sp_runtime::{Permill, SaturatedConversion};
 use sp_std::fmt::Debug;
+use sp_std::prelude::*;
 
 pub type AccountList<AccountId, AccountSizeLimit> = BoundedVec<AccountId, AccountSizeLimit>;
 
@@ -447,6 +448,7 @@ where
 		(self.size() + len <= self.limit()).then(|| {})
 	}
 
+	/// Insert an item in its respective queue
 	pub fn insert(
 		&mut self,
 		nft_id: NFTId,
@@ -460,6 +462,7 @@ where
 		}
 	}
 
+	/// Remove an item from its respective queue
 	pub fn remove(&mut self, nft_id: NFTId, kind: QueueKind) {
 		match kind {
 			QueueKind::Fixed => self.fixed_queue.remove(nft_id),
@@ -467,6 +470,23 @@ where
 			QueueKind::Available => self.available_queue.remove(nft_id),
 		};
 	}
+
+	/// Benchmark bulk insert
+	pub fn benchmark_bulk_insert(
+		&mut self,
+		nft_id: NFTId,
+		block_number: BlockNumber,
+		kind: QueueKind,
+		number: u32,
+	) -> Result<(), ()> {
+		let data = vec![(nft_id, block_number); number as usize].into_iter();
+		match kind {
+			QueueKind::Fixed => self.fixed_queue.0.try_extend(data),
+			QueueKind::Subscription => self.subscription_queue.0.try_extend(data),
+			QueueKind::Available => self.available_queue.0.try_extend(data),
+		}
+	}
+	
 }
 impl<BlockNumber, Limit> Default for RentingQueues<BlockNumber, Limit>
 where

@@ -87,7 +87,7 @@ benchmarks! {
 
 		let alice: T::AccountId = get_account::<T>("ALICE");
 		let org = origin::<T>("ALICE");
-		Rent::<T>::prep_benchmark_0(&alice.clone(), org.clone(),  new_contracts_amount).unwrap();
+		Rent::<T>::benchmark_fill_available_queue(new_contracts_amount, 100u32.into()).unwrap();
 
 		let sub = SubscriptionInput {
 			period_length: 2u32.into(),
@@ -113,7 +113,7 @@ benchmarks! {
 
 		let alice: T::AccountId = get_account::<T>("ALICE");
 		let org = origin::<T>("ALICE");
-		Rent::<T>::prep_benchmark_0(&alice.clone(), org.clone(), new_contracts_amount).unwrap();
+		Rent::<T>::benchmark_fill_available_queue(new_contracts_amount, 100u32.into()).unwrap();
 
 		Rent::<T>::rent(origin::<T>("BOB").into(), NFT_ID_0).unwrap();
 	}: _(org, NFT_ID_0)
@@ -135,7 +135,7 @@ benchmarks! {
 		let alice: T::AccountId = get_account::<T>("ALICE");
 		let org = origin::<T>("ALICE");
 
-		Rent::<T>::prep_benchmark_0(&alice.clone(), org.clone(), new_contracts_amount).unwrap();
+		Rent::<T>::benchmark_fill_available_queue(new_contracts_amount, 100u32.into()).unwrap();
 	}: _(org, NFT_ID_0)
 	verify {
 		// Get The contract.
@@ -156,7 +156,7 @@ benchmarks! {
 		let bob: T::AccountId = get_account::<T>("BOB");
 		let org = origin::<T>("ALICE");
 
-		Rent::<T>::prep_benchmark_0(&alice.clone(), org.clone(), new_contracts_amount).unwrap();
+		Rent::<T>::benchmark_fill_available_queue(new_contracts_amount, 100u32.into()).unwrap();
 	}: _(origin::<T>("BOB"), NFT_ID_0)
 	verify {
 		// Get The contract.
@@ -190,7 +190,7 @@ benchmarks! {
 		);
 		assert_ok!(ok);
 
-		Rent::<T>::prep_benchmark_0(&alice.clone(), org.clone(), new_contracts_amount).unwrap();
+		Rent::<T>::benchmark_fill_available_queue(new_contracts_amount, 100u32.into()).unwrap();
 	}: _(origin::<T>("BOB"), NFT_ID_1)
 	verify {
 		// Get The offer.
@@ -223,7 +223,7 @@ benchmarks! {
 		);
 		assert_ok!(ok);
 
-		Rent::<T>::prep_benchmark_0(&alice.clone(), org.clone(), new_contracts_amount).unwrap();
+		Rent::<T>::benchmark_fill_available_queue(new_contracts_amount, 100u32.into()).unwrap();
 		Rent::<T>::make_rent_offer(origin::<T>("BOB").into(), NFT_ID_1).unwrap();
 	}: _(origin::<T>("ALICE"), NFT_ID_1, bob.clone())
 	verify {
@@ -256,7 +256,7 @@ benchmarks! {
 		);
 		assert_ok!(ok);
 
-		Rent::<T>::prep_benchmark_1(new_offer_amount, NFT_ID_1, alice.clone()).unwrap();
+		Rent::<T>::benchmark_fill_offers(new_offer_amount, NFT_ID_1, alice.clone()).unwrap();
 		Rent::<T>::make_rent_offer(origin::<T>("BOB").into(), NFT_ID_1).unwrap();
 
 	}: _(origin::<T>("BOB"), NFT_ID_1)
@@ -278,7 +278,7 @@ benchmarks! {
 		let alice: T::AccountId = get_account::<T>("ALICE");
 		let org = origin::<T>("ALICE");
 
-		Rent::<T>::prep_benchmark_0(&alice.clone(), org.clone(), new_contracts_amount).unwrap();
+		Rent::<T>::benchmark_fill_available_queue(new_contracts_amount, 100u32.into()).unwrap();
 	}: _(origin::<T>("ALICE"), NFT_ID_0, 500u32.into(), 2u32.into(), Some(10u32.into()), false)
 	verify {
 		let contract = Rent::<T>::contracts(NFT_ID_0).unwrap();
@@ -298,7 +298,7 @@ benchmarks! {
 		let alice: T::AccountId = get_account::<T>("ALICE");
 		let org = origin::<T>("ALICE");
 
-		Rent::<T>::prep_benchmark_0(&alice.clone(), org.clone(), new_contracts_amount).unwrap();
+		Rent::<T>::benchmark_fill_available_queue(new_contracts_amount, 100u32.into()).unwrap();
 		Rent::<T>::rent(origin::<T>("BOB").into(), NFT_ID_0).unwrap();
 		Rent::<T>::change_subscription_terms(origin::<T>("ALICE").into(), NFT_ID_0, 2u32.into(), 10u32.into(), None, true).unwrap();
 	}: _(origin::<T>("BOB"), NFT_ID_0)
