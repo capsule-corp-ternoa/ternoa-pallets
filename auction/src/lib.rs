@@ -688,12 +688,8 @@ impl<T: Config> Pallet<T> {
 		block_number: T::BlockNumber,
 	) -> Result<(), DispatchError> {
 		Deadlines::<T>::try_mutate(|x| -> DispatchResult {
-			let data = vec![(nft_id, block_number); number as usize];
-			*x.0.extend(&data);
-			for _i in 0..number {
-				x.insert(nft_id, block_number)
-					.map_err(|_| Error::<T>::MaximumAuctionsLimitReached)?;
-			}
+			x.benchmark_bulk_insert(nft_id, block_number, number)
+				.map_err(|_| Error::<T>::MaximumAuctionsLimitReached)?;
 			Ok(())
 		})?;
 		Ok(())
@@ -708,13 +704,10 @@ impl<T: Config> Pallet<T> {
 	) -> Result<(), DispatchError> {
 		Auctions::<T>::try_mutate(nft_id, |x| -> DispatchResult {
 			let auction = x.as_mut().ok_or(Error::<T>::AuctionDoesNotExist)?;
-			for _i in 0..number {
-				auction
-					.bidders
-					.list
-					.try_push((account.clone(), amount))
-					.map_err(|_| Error::<T>::MaximumBidLimitReached)?;
-			}
+			auction
+				.bidders
+				.benchmark_insert_bids(account, amount, number)
+				.map_err(|_| Error::<T>::MaximumBidLimitReached)?;
 			Ok(())
 		})?;
 		Ok(())

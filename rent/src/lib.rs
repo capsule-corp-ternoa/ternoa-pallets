@@ -991,51 +991,21 @@ impl<T: Config> Pallet<T> {
 }
 
 impl<T: Config> Pallet<T> {
-	pub fn prep_benchmark_0(
-		account: &T::AccountId,
-		origin: frame_system::Origin<T>,
-		contract_amount: u32,
+	/// Fill available queue. (benchmarks)
+	pub fn benchmark_fill_available_queue(
+		number: u32,
+		block_numer: T::BlockNumber
 	) -> Result<(), DispatchError> {
-		let text = "I like to drink milk, eat sugar and dance the orange dance".as_bytes().to_vec();
-		let offchain_data = BoundedVec::try_from(text).unwrap();
-		let royalty = Permill::from_percent(0);
-		let duration = DurationInput::Fixed(100u32.into());
-		let acceptance_type = AcceptanceType::AutoAcceptance(None);
-		let rent_fee = RentFee::Tokens(200u32.into());
-
-		for _i in 0..contract_amount {
-			let nft_id = T::NFTExt::create_nft(
-				account.clone(),
-				offchain_data.clone(),
-				royalty.clone(),
-				None,
-				false,
-			);
-			if let Err(res) = nft_id {
-				if let Err(err) = res {
-					return Err(err.into())
-				}
-			}
-			let nft_id = nft_id.unwrap();
-
-			Self::create_contract(
-				origin.clone().into(),
-				nft_id,
-				duration.clone(),
-				acceptance_type.clone(),
-				false,
-				rent_fee.clone(),
-				CancellationFee::None,
-				CancellationFee::None,
-			)
-			.map_err(|x| x.error)?;
-		}
-
+		Queues::<T>::try_mutate(|x| -> DispatchResult {
+			x.benchmark_bulk_insert(999, block_numer, QueueKind::Available, number)
+				.map_err(|_| Error::<T>::MaxSimultaneousContractReached)?;
+			Ok(())
+		})?;
 		Ok(())
 	}
 
-	/// Fill offers vector with any number of data.
-	pub fn prep_benchmark_1(
+	/// Fill offers vector with any number of data. (benchmarks)
+	pub fn benchmark_fill_offers(
 		number: u32,
 		nft_id: NFTId,
 		account: T::AccountId,
