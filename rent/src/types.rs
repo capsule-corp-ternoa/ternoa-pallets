@@ -23,6 +23,7 @@ use scale_info::TypeInfo;
 use sp_arithmetic::traits::AtLeast32BitUnsigned;
 use sp_runtime::{Permill, SaturatedConversion};
 use sp_std::fmt::Debug;
+use sp_std::prelude::*;
 
 pub type AccountList<AccountId, AccountSizeLimit> = BoundedVec<AccountId, AccountSizeLimit>;
 
