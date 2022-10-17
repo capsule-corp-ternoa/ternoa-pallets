@@ -19,6 +19,7 @@ use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use primitives::{marketplace::MarketplaceId, nfts::NFTId};
 use scale_info::TypeInfo;
 use sp_std::{fmt::Debug, vec::Vec};
+use sp_std::prelude::*;
 
 #[derive(
 	Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen,
