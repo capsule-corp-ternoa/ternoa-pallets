@@ -994,7 +994,7 @@ impl<T: Config> Pallet<T> {
 	/// Fill available queue. (benchmarks)
 	pub fn benchmark_fill_available_queue(
 		number: u32,
-		block_numer: T::BlockNumber
+		block_numer: T::BlockNumber,
 	) -> Result<(), DispatchError> {
 		Queues::<T>::try_mutate(|x| -> DispatchResult {
 			x.benchmark_bulk_insert(999, block_numer, QueueKind::Available, number)

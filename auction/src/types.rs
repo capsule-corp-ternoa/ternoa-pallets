@@ -18,8 +18,7 @@ use frame_support::{traits::Get, BoundedVec, CloneNoBound, PartialEqNoBound, Run
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use primitives::{marketplace::MarketplaceId, nfts::NFTId};
 use scale_info::TypeInfo;
-use sp_std::{fmt::Debug, vec::Vec};
-use sp_std::prelude::*;
+use sp_std::{fmt::Debug, prelude::*, vec::Vec};
 
 #[derive(
 	Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen,
@@ -304,10 +303,14 @@ where
 	}
 
 	// Benchmark only
-	pub fn benchmark_bulk_insert(&mut self, nft_id: NFTId, block_number: BlockNumber, number: u32) -> Result<(), ()> {
+	pub fn benchmark_bulk_insert(
+		&mut self,
+		nft_id: NFTId,
+		block_number: BlockNumber,
+		number: u32,
+	) -> Result<(), ()> {
 		self.0.try_extend(vec![(nft_id, block_number); number as usize].into_iter())
 	}
-
 }
 
 impl<BlockNumber, ParallelAuctionLimit> Default for DeadlineList<BlockNumber, ParallelAuctionLimit>

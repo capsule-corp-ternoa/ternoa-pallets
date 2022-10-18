@@ -22,8 +22,7 @@ use primitives::nfts::NFTId;
 use scale_info::TypeInfo;
 use sp_arithmetic::traits::AtLeast32BitUnsigned;
 use sp_runtime::{Permill, SaturatedConversion};
-use sp_std::fmt::Debug;
-use sp_std::prelude::*;
+use sp_std::{fmt::Debug, prelude::*};
 
 pub type AccountList<AccountId, AccountSizeLimit> = BoundedVec<AccountId, AccountSizeLimit>;
 
@@ -486,7 +485,6 @@ where
 			QueueKind::Available => self.available_queue.0.try_extend(data),
 		}
 	}
-	
 }
 impl<BlockNumber, Limit> Default for RentingQueues<BlockNumber, Limit>
 where

@@ -1595,8 +1595,10 @@ mod add_secret_shard {
 			assert_eq!(shards, None);
 
 			// Events checks.
-			let event = RuntimeEvent::NFT(NFTsEvent::ShardAdded { nft_id: ALICE_NFT_ID, enclave: ALICE });
-			let final_event = RuntimeEvent::NFT(NFTsEvent::SecretNFTSynced { nft_id: ALICE_NFT_ID });
+			let event =
+				RuntimeEvent::NFT(NFTsEvent::ShardAdded { nft_id: ALICE_NFT_ID, enclave: ALICE });
+			let final_event =
+				RuntimeEvent::NFT(NFTsEvent::SecretNFTSynced { nft_id: ALICE_NFT_ID });
 			System::assert_has_event(event);
 			System::assert_last_event(final_event);
 		})
