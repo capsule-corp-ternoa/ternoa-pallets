@@ -91,7 +91,7 @@ pub fn prepare_benchmarks<T: Config>(state: Option<AuctionState>) -> BenchmarkDa
 			AuctionState::Extended => (System::<T>::block_number(), true),
 		};
 
-		let end_block = start_block + T::MinAuctionDuration::get();
+		let end_block = start_block + T::MinAuctionDuration::get() + 1u32.into();
 		let start_price = BalanceOf::<T>::max_value() / 1000u32.into();
 		let buy_it_price = Some(start_price.saturating_mul(2u16.into()));
 

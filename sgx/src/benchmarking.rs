@@ -22,8 +22,8 @@ use sp_runtime::traits::{Bounded, StaticLookup};
 use sp_std::prelude::*;
 
 use crate::{
-	BalanceOf, Call, Cluster, ClusterId, ClusterIdGenerator, ClusterIndex, ClusterRegistry, Config,
-	Enclave, EnclaveId, EnclaveIdGenerator, EnclaveIndex, EnclaveRegistry, Pallet,
+	BalanceOf, Cluster, ClusterId, ClusterIdGenerator, ClusterIndex, ClusterRegistry, Config,
+	Enclave, EnclaveId, EnclaveIdGenerator, EnclaveIndex, EnclaveRegistry, Pallet, RuntimeCall,
 };
 
 use crate::Pallet as Sgx;
