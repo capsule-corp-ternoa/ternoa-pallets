@@ -323,9 +323,9 @@ pub mod pallet {
 		fn on_runtime_upgrade() -> frame_support::weights::Weight {
 			let mut weight = Weight::zero();
 
-			// Seems like we start with version 0 and not 1.
+			// Seems like we start with version 1 and not 0.
 			let version = StorageVersion::get::<Pallet<T>>();
-			if version == StorageVersion::new(0) {
+			if version == StorageVersion::new(1) {
 				weight = <migrations::v2::MigrationV2<T> as OnRuntimeUpgrade>::on_runtime_upgrade();
 
 				// Update the storage version.
