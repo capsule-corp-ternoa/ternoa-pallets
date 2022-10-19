@@ -229,10 +229,12 @@ fn remove_expired_contract() {
 		assert_eq!(Rent::queues().available_queue.get(FIXED_AUTO_REV_NFT_NFT_NFT), None);
 
 		// Event check.
-		let event_0 =
-			RuntimeEvent::Rent(RentEvent::ContractExpired { nft_id: FIXED_AUTO_REV_NFT_TOKENS_TOKENS });
-		let event_1 =
-			RuntimeEvent::Rent(RentEvent::ContractExpired { nft_id: FIXED_AUTO_REV_TOK_FLEXTOK_FLEXTOK });
+		let event_0 = RuntimeEvent::Rent(RentEvent::ContractExpired {
+			nft_id: FIXED_AUTO_REV_NFT_TOKENS_TOKENS,
+		});
+		let event_1 = RuntimeEvent::Rent(RentEvent::ContractExpired {
+			nft_id: FIXED_AUTO_REV_TOK_FLEXTOK_FLEXTOK,
+		});
 		let event_2 =
 			RuntimeEvent::Rent(RentEvent::ContractExpired { nft_id: FIXED_MANU_REV_NFT_NFT_NFT });
 		let event_3 = RuntimeEvent::Rent(RentEvent::ContractExpired {

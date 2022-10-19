@@ -39,7 +39,9 @@ pub mod pallet {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		/// A sudo-able call.
-		type RuntimeCall: Parameter + UnfilteredDispatchable<RuntimeOrigin = Self::RuntimeOrigin> + GetDispatchInfo;
+		type RuntimeCall: Parameter
+			+ UnfilteredDispatchable<RuntimeOrigin = Self::RuntimeOrigin>
+			+ GetDispatchInfo;
 
 		// Someone who can call the mandate extrinsic.
 		type ExternalOrigin: EnsureOrigin<Self::RuntimeOrigin>;
