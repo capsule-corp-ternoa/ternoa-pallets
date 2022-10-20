@@ -119,7 +119,7 @@ pub mod pallet {
 
 			// Seems like we start with version 1 and not 0.
 			let version = StorageVersion::get::<Pallet<T>>();
-			if version == StorageVersion::new(1) {
+			if version == StorageVersion::new(1) || version == StorageVersion::new(0) {
 				weight = <migrations::v2::MigrationV2<T> as OnRuntimeUpgrade>::on_runtime_upgrade();
 
 				// Update the storage version.
