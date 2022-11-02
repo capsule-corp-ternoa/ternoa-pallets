@@ -308,6 +308,8 @@ pub mod pallet {
 		CannotAddSecretToCapsuleNFTs,
 		/// Operation is not permitted because the NFT is already a secret.
 		CannotAddSecretToSecretNFTs,
+		/// Feature is not available yet
+		ComingSoon
 	}
 
 	// TODO Write Tests for Runtime upgrade
@@ -325,7 +327,7 @@ pub mod pallet {
 
 			// Seems like we start with version 1 and not 0.
 			let version = StorageVersion::get::<Pallet<T>>();
-			if version == StorageVersion::new(1) {
+			if version == StorageVersion::new(1) || version == StorageVersion::new(0) {
 				weight = <migrations::v2::MigrationV2<T> as OnRuntimeUpgrade>::on_runtime_upgrade();
 
 				// Update the storage version.
@@ -808,6 +810,7 @@ pub mod pallet {
 			nft_id: NFTId,
 			offchain_data: U8BoundedVec<T::NFTOffchainDataLimit>,
 		) -> DispatchResultWithPostInfo {
+			ensure!(false, Error::<T>::ComingSoon);
 			let who = ensure_signed(origin)?;
 
 			Nfts::<T>::try_mutate(nft_id, |maybe_nft| -> DispatchResult {
@@ -867,6 +870,7 @@ pub mod pallet {
 			collection_id: Option<CollectionId>,
 			is_soulbound: bool,
 		) -> DispatchResultWithPostInfo {
+			ensure!(false, Error::<T>::ComingSoon);
 			let who = ensure_signed(origin.clone())?;
 
 			// Check balance
@@ -889,6 +893,7 @@ pub mod pallet {
 		/// Must be called by registered enclaves.
 		#[pallet::weight(T::WeightInfo::add_secret_shard())]
 		pub fn add_secret_shard(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
+			ensure!(false, Error::<T>::ComingSoon);
 			let who = ensure_signed(origin)?;
 			ensure!(
 				/* TODO is_registered_enclave(who) */ true,
@@ -957,6 +962,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			fee: BalanceOf<T>,
 		) -> DispatchResultWithPostInfo {
+			ensure!(false, Error::<T>::ComingSoon);
 			ensure_root(origin)?;
 			SecretNftMintFee::<T>::put(fee);
 			let event = Event::SecretNFTMintFeeSet { fee };
