@@ -94,6 +94,15 @@ checksum = "a4c527152e37cf757a3f78aae5a06fbeefdb07ccc535c980a3208ee3060dd544"
 
 [[package]]
 name = "arrayvec"
+version = "0.4.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cd9fd44efafa8690358b7408d253adf110036b88f55672a933f01d616ad9b1b9"
+dependencies = [
+ "nodrop",
+]
+
+[[package]]
+name = "arrayvec"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "23b62fc65de8e4e7f52534fb52b0f3ed04746ae267519eef2a83941e8085068b"
@@ -113,6 +122,17 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "atty"
+version = "0.2.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d9b39be18770d11421cdb1b9947a45dd3f37e93092cbf377614828a319d5fee8"
+dependencies = [
+ "hermit-abi",
+ "libc",
+ "winapi",
 ]
 
 [[package]]
@@ -185,6 +205,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b9cf849ee05b2ee5fba5e36f97ff8ec2533916700fc0758d40d92136a42f3388"
 dependencies = [
  "digest 0.10.5",
+]
+
+[[package]]
+name = "blake2-rfc"
+version = "0.2.18"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5d6d530bdd2d52966a6d03b7a964add7ae1a288d25214066fd4b600f0f796400"
+dependencies = [
+ "arrayvec 0.4.12",
+ "constant_time_eq",
 ]
 
 [[package]]
@@ -304,6 +334,12 @@ name = "const-oid"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e4c78c047431fee22c1a7bb92e00ad095a02a983affe4d8a72e2a2c62c1b94f3"
+
+[[package]]
+name = "constant_time_eq"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "245097e9a4535ee1e3e3931fcfcd55a796a44c643e8596ff6566d68f09b87bbc"
 
 [[package]]
 name = "core-foundation-sys"
@@ -571,10 +607,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "env_logger"
+version = "0.9.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a12e6657c4c97ebab115a42dcee77225f7f482cdd841cf7088c657a42e9e00e7"
+dependencies = [
+ "atty",
+ "humantime",
+ "log",
+ "regex",
+ "termcolor",
+]
+
+[[package]]
 name = "environmental"
 version = "1.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "68b91989ae21441195d7d9b9993a2f9295c7e1a8c96255d8b729accddc124797"
+
+[[package]]
+name = "failure"
+version = "0.1.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d32e9bd16cc02eae7db7ef620b392808b89f6a5e16bb3497d159c6b92a0f4f86"
+dependencies = [
+ "backtrace",
+]
 
 [[package]]
 name = "fake-simd"
@@ -609,7 +667,7 @@ name = "frame-benchmarking"
 version = "4.0.0-dev"
 source = "git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01#952030cfa6f11be6aef938e5359064c4cf6b30a9"
 dependencies = [
- "frame-support",
+ "frame-support 4.0.0-dev (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
  "frame-system",
  "linregress",
  "log",
@@ -617,14 +675,14 @@ dependencies = [
  "paste",
  "scale-info",
  "serde",
- "sp-api",
- "sp-application-crypto",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-runtime-interface",
- "sp-std",
- "sp-storage",
+ "sp-api 4.0.0-dev (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-application-crypto 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-core 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-io 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-runtime 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-runtime-interface 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-std 4.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-storage 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
 ]
 
 [[package]]
@@ -644,14 +702,14 @@ version = "4.0.0-dev"
 source = "git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01#952030cfa6f11be6aef938e5359064c4cf6b30a9"
 dependencies = [
  "frame-election-provider-solution-type",
- "frame-support",
+ "frame-support 4.0.0-dev (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
  "frame-system",
  "parity-scale-codec",
  "scale-info",
- "sp-arithmetic",
+ "sp-arithmetic 5.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
  "sp-npos-elections",
- "sp-runtime",
- "sp-std",
+ "sp-runtime 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-std 4.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
 ]
 
 [[package]]
@@ -673,7 +731,7 @@ source = "git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substr
 dependencies = [
  "bitflags",
  "frame-metadata",
- "frame-support-procedural",
+ "frame-support-procedural 4.0.0-dev (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
  "impl-trait-for-tuples",
  "k256",
  "log",
@@ -683,18 +741,49 @@ dependencies = [
  "scale-info",
  "serde",
  "smallvec",
- "sp-api",
- "sp-arithmetic",
- "sp-core",
- "sp-core-hashing-proc-macro",
- "sp-inherents",
- "sp-io",
- "sp-runtime",
- "sp-staking",
- "sp-state-machine",
- "sp-std",
- "sp-tracing",
+ "sp-api 4.0.0-dev (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-arithmetic 5.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-core 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-core-hashing-proc-macro 5.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-inherents 4.0.0-dev (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-io 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-runtime 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-staking 4.0.0-dev (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-state-machine 0.12.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-std 4.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-tracing 5.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
  "sp-weights",
+ "tt-call",
+]
+
+[[package]]
+name = "frame-support"
+version = "4.0.0-dev"
+source = "git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29#cc370aa61e15c18d23a2f686b812fd576a630afe"
+dependencies = [
+ "bitflags",
+ "frame-metadata",
+ "frame-support-procedural 4.0.0-dev (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
+ "impl-trait-for-tuples",
+ "k256",
+ "log",
+ "once_cell",
+ "parity-scale-codec",
+ "paste",
+ "scale-info",
+ "serde",
+ "smallvec",
+ "sp-api 4.0.0-dev (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
+ "sp-arithmetic 5.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
+ "sp-core 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
+ "sp-core-hashing-proc-macro 5.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
+ "sp-inherents 4.0.0-dev (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
+ "sp-io 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
+ "sp-runtime 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
+ "sp-staking 4.0.0-dev (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
+ "sp-state-machine 0.12.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
+ "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
+ "sp-tracing 5.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
  "tt-call",
 ]
 
@@ -705,7 +794,21 @@ source = "git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substr
 dependencies = [
  "Inflector",
  "cfg-expr",
- "frame-support-procedural-tools",
+ "frame-support-procedural-tools 4.0.0-dev (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "itertools",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "frame-support-procedural"
+version = "4.0.0-dev"
+source = "git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29#cc370aa61e15c18d23a2f686b812fd576a630afe"
+dependencies = [
+ "Inflector",
+ "cfg-expr",
+ "frame-support-procedural-tools 4.0.0-dev (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
  "itertools",
  "proc-macro2",
  "quote",
@@ -717,7 +820,19 @@ name = "frame-support-procedural-tools"
 version = "4.0.0-dev"
 source = "git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01#952030cfa6f11be6aef938e5359064c4cf6b30a9"
 dependencies = [
- "frame-support-procedural-tools-derive",
+ "frame-support-procedural-tools-derive 3.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "proc-macro-crate",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "frame-support-procedural-tools"
+version = "4.0.0-dev"
+source = "git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29#cc370aa61e15c18d23a2f686b812fd576a630afe"
+dependencies = [
+ "frame-support-procedural-tools-derive 3.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
  "proc-macro-crate",
  "proc-macro2",
  "quote",
@@ -735,20 +850,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "frame-support-procedural-tools-derive"
+version = "3.0.0"
+source = "git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29#cc370aa61e15c18d23a2f686b812fd576a630afe"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "frame-system"
 version = "4.0.0-dev"
 source = "git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01#952030cfa6f11be6aef938e5359064c4cf6b30a9"
 dependencies = [
- "frame-support",
+ "frame-support 4.0.0-dev (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
  "log",
  "parity-scale-codec",
  "scale-info",
  "serde",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
- "sp-version",
+ "sp-core 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-io 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-runtime 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-std 4.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-version 5.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
  "sp-weights",
 ]
 
@@ -939,6 +1064,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "heck"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2540771e65fc8cb83cd6e8a237f70c319bd5c29f78ed1084ba5d50eeac86f7f9"
+
+[[package]]
 name = "hermit-abi"
 version = "0.1.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -952,6 +1083,12 @@ name = "hex"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
+
+[[package]]
+name = "hex-literal"
+version = "0.3.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7ebdb29d2ea9ed0083cd8cece49bbd968021bd99b0849edb4a9a7ee0fdf6a4e0"
 
 [[package]]
 name = "hmac"
@@ -985,6 +1122,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "humantime"
+version = "2.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9a3a5bfb195931eeb336b2a7b4d761daec841b97f947d34394601737a7bba5e4"
+
+[[package]]
 name = "iana-time-zone"
 version = "0.1.51"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1006,6 +1149,23 @@ checksum = "0703ae284fc167426161c2e3f1da3ea71d94b21bedbcc9494e92b28e334e3dca"
 dependencies = [
  "cxx",
  "cxx-build",
+]
+
+[[package]]
+name = "ias-verify"
+version = "0.1.4"
+dependencies = [
+ "base64",
+ "chrono",
+ "frame-support 4.0.0-dev (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
+ "hex-literal",
+ "parity-scale-codec",
+ "scale-info",
+ "serde_json",
+ "sp-core 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
+ "sp-io 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
+ "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
+ "webpki",
 ]
 
 [[package]]
@@ -1238,6 +1398,12 @@ dependencies = [
 
 [[package]]
 name = "memory_units"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "71d96e3f3c0b6325d8ccd83c33b28acb183edcb6c67938ba104ec546854b0882"
+
+[[package]]
+name = "memory_units"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8452105ba047068f40ff7093dd1d9da90898e63dd61736462e9cdda6a90ad3c3"
@@ -1273,7 +1439,7 @@ dependencies = [
  "matrixmultiply",
  "nalgebra-macros",
  "num-complex",
- "num-rational",
+ "num-rational 0.4.1",
  "num-traits",
  "rand 0.8.5",
  "rand_distr",
@@ -1293,10 +1459,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "nodrop"
+version = "0.1.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "72ef4a56884ca558e5ddb05a1d1e7e1bfd9a68d9ed024c21704cc98872dae1bb"
+
+[[package]]
 name = "nohash-hasher"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2bf50223579dc7cdcfb3bfcacf7069ff68243f8c363f62ffa99cf000a6b9c451"
+
+[[package]]
+name = "num-bigint"
+version = "0.2.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "090c7f9998ee0ff65aa5b723e4009f7b217707f1fb5ea551329cc4d6231fb304"
+dependencies = [
+ "autocfg",
+ "num-integer",
+ "num-traits",
+]
 
 [[package]]
 name = "num-bigint"
@@ -1340,12 +1523,24 @@ dependencies = [
 
 [[package]]
 name = "num-rational"
+version = "0.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5c000134b5dbf44adc5cb772486d335293351644b801551abe8f75c84cfa4aef"
+dependencies = [
+ "autocfg",
+ "num-bigint 0.2.6",
+ "num-integer",
+ "num-traits",
+]
+
+[[package]]
+name = "num-rational"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0638a1c9d0a3c0914158145bc76cff373a75a627e6ecbfb71cbe6f453a5a19b0"
 dependencies = [
  "autocfg",
- "num-bigint",
+ "num-bigint 0.4.3",
  "num-integer",
  "num-traits",
 ]
@@ -1402,14 +1597,14 @@ name = "pallet-authorship"
 version = "4.0.0-dev"
 source = "git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01#952030cfa6f11be6aef938e5359064c4cf6b30a9"
 dependencies = [
- "frame-support",
+ "frame-support 4.0.0-dev (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
  "frame-system",
  "impl-trait-for-tuples",
  "parity-scale-codec",
  "scale-info",
  "sp-authorship",
- "sp-runtime",
- "sp-std",
+ "sp-runtime 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-std 4.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
 ]
 
 [[package]]
@@ -1418,13 +1613,13 @@ version = "4.0.0-dev"
 source = "git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01#952030cfa6f11be6aef938e5359064c4cf6b30a9"
 dependencies = [
  "frame-benchmarking",
- "frame-support",
+ "frame-support 4.0.0-dev (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
  "frame-system",
  "log",
  "parity-scale-codec",
  "scale-info",
- "sp-runtime",
- "sp-std",
+ "sp-runtime 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-std 4.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
 ]
 
 [[package]]
@@ -1432,20 +1627,20 @@ name = "pallet-session"
 version = "4.0.0-dev"
 source = "git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01#952030cfa6f11be6aef938e5359064c4cf6b30a9"
 dependencies = [
- "frame-support",
+ "frame-support 4.0.0-dev (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
  "frame-system",
  "impl-trait-for-tuples",
  "log",
  "pallet-timestamp",
  "parity-scale-codec",
  "scale-info",
- "sp-core",
- "sp-io",
- "sp-runtime",
+ "sp-core 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-io 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-runtime 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
  "sp-session",
- "sp-staking",
- "sp-std",
- "sp-trie",
+ "sp-staking 4.0.0-dev (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-std 4.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-trie 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
 ]
 
 [[package]]
@@ -1455,7 +1650,7 @@ source = "git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substr
 dependencies = [
  "frame-benchmarking",
  "frame-election-provider-support",
- "frame-support",
+ "frame-support 4.0.0-dev (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
  "frame-system",
  "log",
  "pallet-authorship",
@@ -1463,11 +1658,37 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "serde",
- "sp-application-crypto",
- "sp-io",
- "sp-runtime",
- "sp-staking",
- "sp-std",
+ "sp-application-crypto 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-io 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-runtime 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-staking 4.0.0-dev (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-std 4.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+]
+
+[[package]]
+name = "pallet-teerex"
+version = "0.9.0"
+dependencies = [
+ "env_logger",
+ "frame-benchmarking",
+ "frame-support 4.0.0-dev (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "frame-system",
+ "hex-literal",
+ "ias-verify",
+ "log",
+ "pallet-balances",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-core 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-externalities 0.12.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-io 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-keyring",
+ "sp-runtime 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-std 4.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "teerex-primitives",
+ "test-utils",
 ]
 
 [[package]]
@@ -1476,15 +1697,15 @@ version = "4.0.0-dev"
 source = "git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01#952030cfa6f11be6aef938e5359064c4cf6b30a9"
 dependencies = [
  "frame-benchmarking",
- "frame-support",
+ "frame-support 4.0.0-dev (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
  "frame-system",
  "log",
  "parity-scale-codec",
  "scale-info",
- "sp-inherents",
- "sp-io",
- "sp-runtime",
- "sp-std",
+ "sp-inherents 4.0.0-dev (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-io 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-runtime 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-std 4.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
  "sp-timestamp",
 ]
 
@@ -1540,6 +1761,12 @@ dependencies = [
  "syn",
  "synstructure",
 ]
+
+[[package]]
+name = "parity-wasm"
+version = "0.42.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "be5e13c266502aadf83426d87d81a0f5d1ef45b8027f5a471c360abfe4bfae92"
 
 [[package]]
 name = "parity-wasm"
@@ -1835,6 +2062,34 @@ dependencies = [
 ]
 
 [[package]]
+name = "ring"
+version = "0.16.9"
+source = "git+https://github.com/scs/webpki-nostd.git#935d31c36fa9b6d55a3226572eaf2b3ded7cf437"
+dependencies = [
+ "cc",
+ "libc",
+ "spin",
+ "untrusted",
+ "which",
+ "winapi",
+]
+
+[[package]]
+name = "ring"
+version = "0.16.20"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3053cf52e236a3ed746dfc745aa9cacf1b791d846bdaf412f60a8d7d6e17c8fc"
+dependencies = [
+ "cc",
+ "libc",
+ "once_cell",
+ "spin",
+ "untrusted",
+ "web-sys",
+ "winapi",
+]
+
+[[package]]
 name = "rustc-demangle"
 version = "0.1.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1851,6 +2106,12 @@ name = "rustc-hex"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3e75f6a532d0fd9f7f13144f392b6ad56a32696bfcd9c78f797f16bbb6f072d6"
+
+[[package]]
+name = "rustversion"
+version = "1.0.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "97477e48b4cf8603ad5f7aaf897467cf42ab4218a38ef76fb14c2d6773a6d6a8"
 
 [[package]]
 name = "ryu"
@@ -2085,13 +2346,31 @@ dependencies = [
  "hash-db",
  "log",
  "parity-scale-codec",
- "sp-api-proc-macro",
- "sp-core",
- "sp-runtime",
- "sp-state-machine",
- "sp-std",
- "sp-trie",
- "sp-version",
+ "sp-api-proc-macro 4.0.0-dev (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-core 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-runtime 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-state-machine 0.12.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-std 4.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-trie 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-version 5.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "thiserror",
+]
+
+[[package]]
+name = "sp-api"
+version = "4.0.0-dev"
+source = "git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29#cc370aa61e15c18d23a2f686b812fd576a630afe"
+dependencies = [
+ "hash-db",
+ "log",
+ "parity-scale-codec",
+ "sp-api-proc-macro 4.0.0-dev (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
+ "sp-core 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
+ "sp-runtime 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
+ "sp-state-machine 0.12.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
+ "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
+ "sp-trie 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
+ "sp-version 5.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
  "thiserror",
 ]
 
@@ -2108,6 +2387,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "sp-api-proc-macro"
+version = "4.0.0-dev"
+source = "git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29#cc370aa61e15c18d23a2f686b812fd576a630afe"
+dependencies = [
+ "blake2",
+ "proc-macro-crate",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "sp-application-crypto"
 version = "6.0.0"
 source = "git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01#952030cfa6f11be6aef938e5359064c4cf6b30a9"
@@ -2115,9 +2406,22 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "serde",
- "sp-core",
- "sp-io",
- "sp-std",
+ "sp-core 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-io 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-std 4.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+]
+
+[[package]]
+name = "sp-application-crypto"
+version = "6.0.0"
+source = "git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29#cc370aa61e15c18d23a2f686b812fd576a630afe"
+dependencies = [
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-core 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
+ "sp-io 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
+ "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
 ]
 
 [[package]]
@@ -2130,8 +2434,23 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "serde",
- "sp-debug-derive",
- "sp-std",
+ "sp-debug-derive 4.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-std 4.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "static_assertions",
+]
+
+[[package]]
+name = "sp-arithmetic"
+version = "5.0.0"
+source = "git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29#cc370aa61e15c18d23a2f686b812fd576a630afe"
+dependencies = [
+ "integer-sqrt",
+ "num-traits",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-debug-derive 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
+ "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
  "static_assertions",
 ]
 
@@ -2142,9 +2461,9 @@ source = "git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substr
 dependencies = [
  "async-trait",
  "parity-scale-codec",
- "sp-inherents",
- "sp-runtime",
- "sp-std",
+ "sp-inherents 4.0.0-dev (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-runtime 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-std 4.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
 ]
 
 [[package]]
@@ -2179,17 +2498,63 @@ dependencies = [
  "secp256k1",
  "secrecy",
  "serde",
- "sp-core-hashing",
- "sp-debug-derive",
- "sp-externalities",
- "sp-runtime-interface",
- "sp-std",
- "sp-storage",
+ "sp-core-hashing 4.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-debug-derive 4.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-externalities 0.12.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-runtime-interface 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-std 4.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-storage 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
  "ss58-registry",
  "substrate-bip39",
  "thiserror",
  "tiny-bip39",
- "wasmi",
+ "wasmi 0.13.2",
+ "zeroize",
+]
+
+[[package]]
+name = "sp-core"
+version = "6.0.0"
+source = "git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29#cc370aa61e15c18d23a2f686b812fd576a630afe"
+dependencies = [
+ "base58",
+ "bitflags",
+ "blake2-rfc",
+ "byteorder",
+ "dyn-clonable",
+ "ed25519-zebra",
+ "futures",
+ "hash-db",
+ "hash256-std-hasher",
+ "hex",
+ "impl-serde",
+ "lazy_static",
+ "libsecp256k1",
+ "log",
+ "merlin",
+ "num-traits",
+ "parity-scale-codec",
+ "parity-util-mem",
+ "parking_lot",
+ "primitive-types",
+ "rand 0.7.3",
+ "regex",
+ "scale-info",
+ "schnorrkel",
+ "secp256k1",
+ "secrecy",
+ "serde",
+ "sp-core-hashing 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
+ "sp-debug-derive 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
+ "sp-externalities 0.12.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
+ "sp-runtime-interface 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
+ "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
+ "sp-storage 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
+ "ss58-registry",
+ "substrate-bip39",
+ "thiserror",
+ "tiny-bip39",
+ "wasmi 0.9.1",
  "zeroize",
 ]
 
@@ -2203,7 +2568,21 @@ dependencies = [
  "digest 0.10.5",
  "sha2 0.10.6",
  "sha3",
- "sp-std",
+ "sp-std 4.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "twox-hash",
+]
+
+[[package]]
+name = "sp-core-hashing"
+version = "4.0.0"
+source = "git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29#cc370aa61e15c18d23a2f686b812fd576a630afe"
+dependencies = [
+ "blake2",
+ "byteorder",
+ "digest 0.10.5",
+ "sha2 0.10.6",
+ "sha3",
+ "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
  "twox-hash",
 ]
 
@@ -2214,7 +2593,18 @@ source = "git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substr
 dependencies = [
  "proc-macro2",
  "quote",
- "sp-core-hashing",
+ "sp-core-hashing 4.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "syn",
+]
+
+[[package]]
+name = "sp-core-hashing-proc-macro"
+version = "5.0.0"
+source = "git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29#cc370aa61e15c18d23a2f686b812fd576a630afe"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "sp-core-hashing 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
  "syn",
 ]
 
@@ -2229,14 +2619,35 @@ dependencies = [
 ]
 
 [[package]]
+name = "sp-debug-derive"
+version = "4.0.0"
+source = "git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29#cc370aa61e15c18d23a2f686b812fd576a630afe"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "sp-externalities"
 version = "0.12.0"
 source = "git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01#952030cfa6f11be6aef938e5359064c4cf6b30a9"
 dependencies = [
  "environmental",
  "parity-scale-codec",
- "sp-std",
- "sp-storage",
+ "sp-std 4.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-storage 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+]
+
+[[package]]
+name = "sp-externalities"
+version = "0.12.0"
+source = "git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29#cc370aa61e15c18d23a2f686b812fd576a630afe"
+dependencies = [
+ "environmental",
+ "parity-scale-codec",
+ "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
+ "sp-storage 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
 ]
 
 [[package]]
@@ -2247,9 +2658,23 @@ dependencies = [
  "async-trait",
  "impl-trait-for-tuples",
  "parity-scale-codec",
- "sp-core",
- "sp-runtime",
- "sp-std",
+ "sp-core 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-runtime 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-std 4.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "thiserror",
+]
+
+[[package]]
+name = "sp-inherents"
+version = "4.0.0-dev"
+source = "git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29#cc370aa61e15c18d23a2f686b812fd576a630afe"
+dependencies = [
+ "async-trait",
+ "impl-trait-for-tuples",
+ "parity-scale-codec",
+ "sp-core 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
+ "sp-runtime 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
+ "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
  "thiserror",
 ]
 
@@ -2266,17 +2691,54 @@ dependencies = [
  "parity-scale-codec",
  "parking_lot",
  "secp256k1",
- "sp-core",
- "sp-externalities",
- "sp-keystore",
- "sp-runtime-interface",
- "sp-state-machine",
- "sp-std",
- "sp-tracing",
- "sp-trie",
- "sp-wasm-interface",
+ "sp-core 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-externalities 0.12.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-keystore 0.12.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-runtime-interface 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-state-machine 0.12.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-std 4.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-tracing 5.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-trie 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-wasm-interface 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
  "tracing",
  "tracing-core",
+]
+
+[[package]]
+name = "sp-io"
+version = "6.0.0"
+source = "git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29#cc370aa61e15c18d23a2f686b812fd576a630afe"
+dependencies = [
+ "bytes",
+ "futures",
+ "hash-db",
+ "libsecp256k1",
+ "log",
+ "parity-scale-codec",
+ "parking_lot",
+ "secp256k1",
+ "sp-core 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
+ "sp-externalities 0.12.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
+ "sp-keystore 0.12.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
+ "sp-runtime-interface 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
+ "sp-state-machine 0.12.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
+ "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
+ "sp-tracing 5.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
+ "sp-trie 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
+ "sp-wasm-interface 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
+ "tracing",
+ "tracing-core",
+]
+
+[[package]]
+name = "sp-keyring"
+version = "6.0.0"
+source = "git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01#952030cfa6f11be6aef938e5359064c4cf6b30a9"
+dependencies = [
+ "lazy_static",
+ "sp-core 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-runtime 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "strum",
 ]
 
 [[package]]
@@ -2290,8 +2752,24 @@ dependencies = [
  "parity-scale-codec",
  "parking_lot",
  "schnorrkel",
- "sp-core",
- "sp-externalities",
+ "sp-core 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-externalities 0.12.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "thiserror",
+]
+
+[[package]]
+name = "sp-keystore"
+version = "0.12.0"
+source = "git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29#cc370aa61e15c18d23a2f686b812fd576a630afe"
+dependencies = [
+ "async-trait",
+ "futures",
+ "merlin",
+ "parity-scale-codec",
+ "parking_lot",
+ "schnorrkel",
+ "sp-core 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
+ "sp-externalities 0.12.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
  "thiserror",
 ]
 
@@ -2303,16 +2781,26 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "serde",
- "sp-arithmetic",
- "sp-core",
- "sp-runtime",
- "sp-std",
+ "sp-arithmetic 5.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-core 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-runtime 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-std 4.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
 ]
 
 [[package]]
 name = "sp-panic-handler"
 version = "4.0.0"
 source = "git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01#952030cfa6f11be6aef938e5359064c4cf6b30a9"
+dependencies = [
+ "backtrace",
+ "lazy_static",
+ "regex",
+]
+
+[[package]]
+name = "sp-panic-handler"
+version = "4.0.0"
+source = "git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29#cc370aa61e15c18d23a2f686b812fd576a630afe"
 dependencies = [
  "backtrace",
  "lazy_static",
@@ -2334,12 +2822,34 @@ dependencies = [
  "rand 0.7.3",
  "scale-info",
  "serde",
- "sp-application-crypto",
- "sp-arithmetic",
- "sp-core",
- "sp-io",
- "sp-std",
+ "sp-application-crypto 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-arithmetic 5.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-core 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-io 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-std 4.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
  "sp-weights",
+]
+
+[[package]]
+name = "sp-runtime"
+version = "6.0.0"
+source = "git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29#cc370aa61e15c18d23a2f686b812fd576a630afe"
+dependencies = [
+ "either",
+ "hash256-std-hasher",
+ "impl-trait-for-tuples",
+ "log",
+ "parity-scale-codec",
+ "parity-util-mem",
+ "paste",
+ "rand 0.7.3",
+ "scale-info",
+ "serde",
+ "sp-application-crypto 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
+ "sp-arithmetic 5.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
+ "sp-core 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
+ "sp-io 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
+ "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
 ]
 
 [[package]]
@@ -2351,12 +2861,30 @@ dependencies = [
  "impl-trait-for-tuples",
  "parity-scale-codec",
  "primitive-types",
- "sp-externalities",
- "sp-runtime-interface-proc-macro",
- "sp-std",
- "sp-storage",
- "sp-tracing",
- "sp-wasm-interface",
+ "sp-externalities 0.12.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-runtime-interface-proc-macro 5.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-std 4.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-storage 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-tracing 5.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-wasm-interface 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "static_assertions",
+]
+
+[[package]]
+name = "sp-runtime-interface"
+version = "6.0.0"
+source = "git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29#cc370aa61e15c18d23a2f686b812fd576a630afe"
+dependencies = [
+ "bytes",
+ "impl-trait-for-tuples",
+ "parity-scale-codec",
+ "primitive-types",
+ "sp-externalities 0.12.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
+ "sp-runtime-interface-proc-macro 5.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
+ "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
+ "sp-storage 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
+ "sp-tracing 5.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
+ "sp-wasm-interface 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
  "static_assertions",
 ]
 
@@ -2373,17 +2901,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "sp-runtime-interface-proc-macro"
+version = "5.0.0"
+source = "git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29#cc370aa61e15c18d23a2f686b812fd576a630afe"
+dependencies = [
+ "Inflector",
+ "proc-macro-crate",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "sp-session"
 version = "4.0.0-dev"
 source = "git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01#952030cfa6f11be6aef938e5359064c4cf6b30a9"
 dependencies = [
  "parity-scale-codec",
  "scale-info",
- "sp-api",
- "sp-core",
- "sp-runtime",
- "sp-staking",
- "sp-std",
+ "sp-api 4.0.0-dev (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-core 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-runtime 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-staking 4.0.0-dev (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-std 4.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
 ]
 
 [[package]]
@@ -2393,8 +2933,19 @@ source = "git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substr
 dependencies = [
  "parity-scale-codec",
  "scale-info",
- "sp-runtime",
- "sp-std",
+ "sp-runtime 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-std 4.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+]
+
+[[package]]
+name = "sp-staking"
+version = "4.0.0-dev"
+source = "git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29#cc370aa61e15c18d23a2f686b812fd576a630afe"
+dependencies = [
+ "parity-scale-codec",
+ "scale-info",
+ "sp-runtime 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
+ "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
 ]
 
 [[package]]
@@ -2409,11 +2960,33 @@ dependencies = [
  "parking_lot",
  "rand 0.7.3",
  "smallvec",
- "sp-core",
- "sp-externalities",
- "sp-panic-handler",
- "sp-std",
- "sp-trie",
+ "sp-core 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-externalities 0.12.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-panic-handler 4.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-std 4.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-trie 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "thiserror",
+ "tracing",
+ "trie-root",
+]
+
+[[package]]
+name = "sp-state-machine"
+version = "0.12.0"
+source = "git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29#cc370aa61e15c18d23a2f686b812fd576a630afe"
+dependencies = [
+ "hash-db",
+ "log",
+ "num-traits",
+ "parity-scale-codec",
+ "parking_lot",
+ "rand 0.7.3",
+ "smallvec",
+ "sp-core 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
+ "sp-externalities 0.12.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
+ "sp-panic-handler 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
+ "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
+ "sp-trie 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
  "thiserror",
  "tracing",
  "trie-root",
@@ -2425,6 +2998,11 @@ version = "4.0.0"
 source = "git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01#952030cfa6f11be6aef938e5359064c4cf6b30a9"
 
 [[package]]
+name = "sp-std"
+version = "4.0.0"
+source = "git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29#cc370aa61e15c18d23a2f686b812fd576a630afe"
+
+[[package]]
 name = "sp-storage"
 version = "6.0.0"
 source = "git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01#952030cfa6f11be6aef938e5359064c4cf6b30a9"
@@ -2433,8 +3011,21 @@ dependencies = [
  "parity-scale-codec",
  "ref-cast",
  "serde",
- "sp-debug-derive",
- "sp-std",
+ "sp-debug-derive 4.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-std 4.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+]
+
+[[package]]
+name = "sp-storage"
+version = "6.0.0"
+source = "git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29#cc370aa61e15c18d23a2f686b812fd576a630afe"
+dependencies = [
+ "impl-serde",
+ "parity-scale-codec",
+ "ref-cast",
+ "serde",
+ "sp-debug-derive 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
+ "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
 ]
 
 [[package]]
@@ -2446,10 +3037,10 @@ dependencies = [
  "futures-timer",
  "log",
  "parity-scale-codec",
- "sp-api",
- "sp-inherents",
- "sp-runtime",
- "sp-std",
+ "sp-api 4.0.0-dev (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-inherents 4.0.0-dev (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-runtime 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-std 4.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
  "thiserror",
 ]
 
@@ -2459,7 +3050,19 @@ version = "5.0.0"
 source = "git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01#952030cfa6f11be6aef938e5359064c4cf6b30a9"
 dependencies = [
  "parity-scale-codec",
- "sp-std",
+ "sp-std 4.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "tracing",
+ "tracing-core",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "sp-tracing"
+version = "5.0.0"
+source = "git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29#cc370aa61e15c18d23a2f686b812fd576a630afe"
+dependencies = [
+ "parity-scale-codec",
+ "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
  "tracing",
  "tracing-core",
  "tracing-subscriber",
@@ -2480,8 +3083,31 @@ dependencies = [
  "parity-scale-codec",
  "parking_lot",
  "scale-info",
- "sp-core",
- "sp-std",
+ "sp-core 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-std 4.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "thiserror",
+ "tracing",
+ "trie-db",
+ "trie-root",
+]
+
+[[package]]
+name = "sp-trie"
+version = "6.0.0"
+source = "git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29#cc370aa61e15c18d23a2f686b812fd576a630afe"
+dependencies = [
+ "ahash",
+ "hash-db",
+ "hashbrown",
+ "lazy_static",
+ "lru",
+ "memory-db",
+ "nohash-hasher",
+ "parity-scale-codec",
+ "parking_lot",
+ "scale-info",
+ "sp-core 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
+ "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
  "thiserror",
  "tracing",
  "trie-db",
@@ -2495,13 +3121,30 @@ source = "git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substr
 dependencies = [
  "impl-serde",
  "parity-scale-codec",
- "parity-wasm",
+ "parity-wasm 0.45.0",
  "scale-info",
  "serde",
- "sp-core-hashing-proc-macro",
- "sp-runtime",
- "sp-std",
- "sp-version-proc-macro",
+ "sp-core-hashing-proc-macro 5.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-runtime 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-std 4.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-version-proc-macro 4.0.0-dev (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "thiserror",
+]
+
+[[package]]
+name = "sp-version"
+version = "5.0.0"
+source = "git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29#cc370aa61e15c18d23a2f686b812fd576a630afe"
+dependencies = [
+ "impl-serde",
+ "parity-scale-codec",
+ "parity-wasm 0.42.2",
+ "scale-info",
+ "serde",
+ "sp-core-hashing-proc-macro 5.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
+ "sp-runtime 6.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
+ "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
+ "sp-version-proc-macro 4.0.0-dev (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
  "thiserror",
 ]
 
@@ -2517,6 +3160,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "sp-version-proc-macro"
+version = "4.0.0-dev"
+source = "git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29#cc370aa61e15c18d23a2f686b812fd576a630afe"
+dependencies = [
+ "parity-scale-codec",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "sp-wasm-interface"
 version = "6.0.0"
 source = "git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01#952030cfa6f11be6aef938e5359064c4cf6b30a9"
@@ -2524,8 +3178,20 @@ dependencies = [
  "impl-trait-for-tuples",
  "log",
  "parity-scale-codec",
- "sp-std",
- "wasmi",
+ "sp-std 4.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "wasmi 0.13.2",
+]
+
+[[package]]
+name = "sp-wasm-interface"
+version = "6.0.0"
+source = "git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29#cc370aa61e15c18d23a2f686b812fd576a630afe"
+dependencies = [
+ "impl-trait-for-tuples",
+ "log",
+ "parity-scale-codec",
+ "sp-std 4.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.29)",
+ "wasmi 0.9.1",
 ]
 
 [[package]]
@@ -2538,11 +3204,17 @@ dependencies = [
  "scale-info",
  "serde",
  "smallvec",
- "sp-arithmetic",
- "sp-core",
- "sp-debug-derive",
- "sp-std",
+ "sp-arithmetic 5.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-core 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-debug-derive 4.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-std 4.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
 ]
+
+[[package]]
+name = "spin"
+version = "0.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6e63cff320ae2c57904679ba7cb63280a3dc4613885beafb148ee7bf9aa9042d"
 
 [[package]]
 name = "spki"
@@ -2586,6 +3258,28 @@ dependencies = [
  "nalgebra",
  "num-traits",
  "rand 0.8.5",
+]
+
+[[package]]
+name = "strum"
+version = "0.24.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "063e6045c0e62079840579a7e47a355ae92f60eb74daaf156fb1e84ba164e63f"
+dependencies = [
+ "strum_macros",
+]
+
+[[package]]
+name = "strum_macros"
+version = "0.24.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1e385be0d24f186b4ce2f9982191e7101bb737312ad61c1f2f984f34bcf85d59"
+dependencies = [
+ "heck",
+ "proc-macro2",
+ "quote",
+ "rustversion",
+ "syn",
 ]
 
 [[package]]
@@ -2637,6 +3331,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "55937e1799185b12863d447f42597ed69d9928686b8d88a1df17376a097d8369"
 
 [[package]]
+name = "teerex-primitives"
+version = "0.1.0"
+dependencies = [
+ "ias-verify",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-core 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-io 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-std 4.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+]
+
+[[package]]
 name = "termcolor"
 version = "1.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2650,17 +3357,17 @@ name = "ternoa-auction"
 version = "1.0.0"
 dependencies = [
  "frame-benchmarking",
- "frame-support",
+ "frame-support 4.0.0-dev (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
  "frame-system",
  "log",
  "pallet-balances",
  "parity-scale-codec",
  "scale-info",
- "sp-arithmetic",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
+ "sp-arithmetic 5.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-core 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-io 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-runtime 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-std 4.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
  "ternoa-common",
  "ternoa-marketplace",
  "ternoa-nft",
@@ -2672,26 +3379,26 @@ name = "ternoa-bridge"
 version = "1.0.0"
 dependencies = [
  "frame-benchmarking",
- "frame-support",
+ "frame-support 4.0.0-dev (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
  "frame-system",
  "pallet-balances",
  "parity-scale-codec",
  "scale-info",
  "serde",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
+ "sp-core 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-io 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-runtime 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-std 4.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
 ]
 
 [[package]]
 name = "ternoa-common"
 version = "1.0.2"
 dependencies = [
- "frame-support",
- "sp-arithmetic",
- "sp-runtime",
- "sp-std",
+ "frame-support 4.0.0-dev (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-arithmetic 5.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-runtime 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-std 4.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
  "ternoa-pallets-primitives",
 ]
 
@@ -2700,11 +3407,11 @@ name = "ternoa-mandate"
 version = "1.0.0"
 dependencies = [
  "frame-benchmarking",
- "frame-support",
+ "frame-support 4.0.0-dev (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
  "frame-system",
  "parity-scale-codec",
  "scale-info",
- "sp-std",
+ "sp-std 4.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
 ]
 
 [[package]]
@@ -2712,17 +3419,17 @@ name = "ternoa-marketplace"
 version = "1.0.2"
 dependencies = [
  "frame-benchmarking",
- "frame-support",
+ "frame-support 4.0.0-dev (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
  "frame-system",
  "log",
  "pallet-balances",
  "parity-scale-codec",
  "scale-info",
- "sp-arithmetic",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
+ "sp-arithmetic 5.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-core 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-io 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-runtime 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-std 4.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
  "ternoa-common",
  "ternoa-nft",
  "ternoa-pallets-primitives",
@@ -2733,17 +3440,17 @@ name = "ternoa-nft"
 version = "1.0.2"
 dependencies = [
  "frame-benchmarking",
- "frame-support",
+ "frame-support 4.0.0-dev (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
  "frame-system",
  "log",
  "pallet-balances",
  "parity-scale-codec",
  "scale-info",
- "sp-arithmetic",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
+ "sp-arithmetic 5.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-core 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-io 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-runtime 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-std 4.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
  "ternoa-common",
  "ternoa-pallets-primitives",
 ]
@@ -2752,12 +3459,12 @@ dependencies = [
 name = "ternoa-pallets-primitives"
 version = "1.0.2"
 dependencies = [
- "frame-support",
+ "frame-support 4.0.0-dev (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
  "parity-scale-codec",
  "scale-info",
- "sp-arithmetic",
- "sp-runtime",
- "sp-std",
+ "sp-arithmetic 5.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-runtime 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-std 4.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
 ]
 
 [[package]]
@@ -2765,17 +3472,17 @@ name = "ternoa-rent"
 version = "1.0.0"
 dependencies = [
  "frame-benchmarking",
- "frame-support",
+ "frame-support 4.0.0-dev (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
  "frame-system",
  "log",
  "pallet-balances",
  "parity-scale-codec",
  "scale-info",
- "sp-arithmetic",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
+ "sp-arithmetic 5.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-core 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-io 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-runtime 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-std 4.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
  "ternoa-common",
  "ternoa-nft",
  "ternoa-pallets-primitives",
@@ -2786,7 +3493,7 @@ name = "ternoa-staking-rewards"
 version = "1.0.0"
 dependencies = [
  "frame-benchmarking",
- "frame-support",
+ "frame-support 4.0.0-dev (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
  "frame-system",
  "log",
  "pallet-authorship",
@@ -2794,10 +3501,19 @@ dependencies = [
  "pallet-staking",
  "parity-scale-codec",
  "scale-info",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
+ "sp-core 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-io 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-runtime 6.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+ "sp-std 4.0.0 (git+https://github.com/capsule-corp-ternoa/substrate?tag=ternoa-substrate-2022-10-01)",
+]
+
+[[package]]
+name = "test-utils"
+version = "0.1.0"
+dependencies = [
+ "hex-literal",
+ "log",
+ "teerex-primitives",
 ]
 
 [[package]]
@@ -3034,6 +3750,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f962df74c8c05a667b5ee8bcf162993134c104e96440b663c8daa176dc772d8c"
 
 [[package]]
+name = "untrusted"
+version = "0.7.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a156c684c91ea7d62626509bce3cb4e1d9ed5c4d978f7b4352658f96a4c26b4a"
+
+[[package]]
 name = "valuable"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3113,13 +3835,37 @@ checksum = "1c38c045535d93ec4f0b4defec448e4291638ee608530863b1e2ba115d4fff7f"
 
 [[package]]
 name = "wasmi"
+version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ca00c5147c319a8ec91ec1a0edbec31e566ce2c9cc93b3f9bb86a9efd0eb795d"
+dependencies = [
+ "downcast-rs",
+ "libc",
+ "memory_units 0.3.0",
+ "num-rational 0.2.4",
+ "num-traits",
+ "parity-wasm 0.42.2",
+ "wasmi-validation 0.4.1",
+]
+
+[[package]]
+name = "wasmi"
 version = "0.13.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "06c326c93fbf86419608361a2c925a31754cf109da1b8b55737070b4d6669422"
 dependencies = [
- "parity-wasm",
- "wasmi-validation",
+ "parity-wasm 0.45.0",
+ "wasmi-validation 0.5.0",
  "wasmi_core",
+]
+
+[[package]]
+name = "wasmi-validation"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "165343ecd6c018fc09ebcae280752702c9a2ef3e6f8d02f1cfcbdb53ef6d7937"
+dependencies = [
+ "parity-wasm 0.42.2",
 ]
 
 [[package]]
@@ -3128,7 +3874,7 @@ version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "91ff416ad1ff0c42e5a926ed5d5fab74c0f098749aa0ad8b2a34b982ce0e867b"
 dependencies = [
- "parity-wasm",
+ "parity-wasm 0.45.0",
 ]
 
 [[package]]
@@ -3139,9 +3885,39 @@ checksum = "57d20cb3c59b788653d99541c646c561c9dd26506f25c0cebfe810659c54c6d7"
 dependencies = [
  "downcast-rs",
  "libm",
- "memory_units",
- "num-rational",
+ "memory_units 0.4.0",
+ "num-rational 0.4.1",
  "num-traits",
+]
+
+[[package]]
+name = "web-sys"
+version = "0.3.60"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bcda906d8be16e728fd5adc5b729afad4e444e106ab28cd1c7256e54fa61510f"
+dependencies = [
+ "js-sys",
+ "wasm-bindgen",
+]
+
+[[package]]
+name = "webpki"
+version = "0.21.0"
+source = "git+https://github.com/scs/webpki-nostd.git#935d31c36fa9b6d55a3226572eaf2b3ded7cf437"
+dependencies = [
+ "ring 0.16.20",
+ "ring 0.16.9",
+ "untrusted",
+]
+
+[[package]]
+name = "which"
+version = "3.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d011071ae14a2f6671d0b74080ae0cd8ebf3a6f8c9589a2cd45f23126fe29724"
+dependencies = [
+ "failure",
+ "libc",
 ]
 
 [[package]]
