@@ -30,7 +30,7 @@ pub use pallet::*;
 pub use types::*;
 
 use frame_support::traits::StorageVersion;
-use weights::WeightInfo;
+pub use weights::WeightInfo;
 
 /// The current storage version.
 const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
@@ -43,9 +43,8 @@ pub mod pallet {
 		traits::{Currency, ExistenceRequirement::KeepAlive, OnUnbalanced, WithdrawReasons},
 	};
 	use frame_system::pallet_prelude::*;
-	use primitives::TextFormat;
 	use sp_runtime::traits::StaticLookup;
-	use ternoa_common::helpers::check_bounds;
+	// use ternoa_common::helpers::check_bounds;
 
 	pub type BalanceOf<T> =
 		<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
@@ -96,21 +95,120 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+
+		// **************************************************************
+		// Registers an enclave provider
+		pub fn register_enclave_provider(origin: OriginFor<T>, enclave_provider: Vec<u8>) {
+			let account = ensure_signed(origin)?;
+			Ok(().into())
+		}
+
+
+		/// Given provider may have different processor architectures (enclave_class)
+		/// and for a given enclave class there can be different public keys
+		pub fn register_provider_keys(
+			origin: OriginFor<T>, 
+			enclave_provider: Vec<u8>, 
+			enclave_class: Vec<u8>, 
+			provider_public_key: Vec<u8>
+		) {
+			let account = ensure_signed(origin)?;
+			Ok(().into())
+		}
+
+		  /// Registers an account which responsible for creating / submitting an enclave report
+		pub fn  register_enclave_operator(
+			origin: OriginFor<T>, 
+			operator: <T::Lookup as StaticLookup>::Source
+		) {
+			let account = ensure_signed(origin)?;
+			Ok(().into())
+		}
+
+		/// Registers an account which responsible for creating / submitting an enclave report
+		pub fn register_enclave_operator(origin: OriginFor<T>, operator: <T::Lookup as StaticLookup>::Source) {
+			let account = ensure_signed(origin)?;
+			Ok(().into())
+		}
+
+		  /// Assigns a clusterId for an enclave
+		pub fn assign_enclave(
+			origin: OriginFor<T>,
+			cluster_id: ClusterId,
+			enclave_id: EnclaveId
+		{
+			let account = ensure_signed(origin)?;
+			Ok(().into())
+		}
+
+		/// UnAssign a clusterId from an enclave
+		pub fn unassign_enclave(
+			origin: OriginFor<T>, 
+			cluster_id: ClusterId, 
+			enclave_id: EnclaveId
+		) {
+			let account = ensure_signed(origin)?;
+			Ok(().into())
+		}
+
+		///  Updates metadata for an enclave
+		pub fn update_enclave(
+			origin: OriginFor<T>, 
+			api_uri: TextFormat, 
+			enclave_id: EnclaveId, 
+			cluster_id: ClusterId
+		) {
+			let account = ensure_signed(origin)?;
+			Ok(().into())
+		}
+
+		/// Change the ownership of an enclave
+		pub fn uchange_enclave_owner(
+			origin: OriginFor<T>, 
+			new_owner: <T::Lookup as StaticLookup>::Source, 
+			enclave_id: EnclaveId) {
+			let account = ensure_signed(origin)?;
+			Ok(().into())
+		}
+		/// Creates a cluster
+		/// Max  slots :- 5
+		pub fn uregister_cluster(origin: OriginFor<T>) {
+			let account = ensure_signed(origin)?;
+			Ok(().into())
+		}
+		/// Removes a cluster
+		pub fn uunregister_cluster(
+			origin: OriginFor<T>,
+			cluster_id: ClusterId
+		) {
+			let account = ensure_signed(origin)?;
+			Ok(().into())
+		}
+		/// Removes an enclave from the system
+		pub fn uremove_enclave(
+			origin: OriginFor<T>, 
+			cluster_id: ClusterId, 
+			enclave_id: EnclaveId
+		) {
+			let account = ensure_signed(origin)?;
+			Ok(().into())
+		}
+		// **************************************************************
 		//
 		// Enclave
 		//
 		#[pallet::weight(T::WeightInfo::register_enclave())]
 		pub fn register_enclave(
 			origin: OriginFor<T>,
-			api_uri: TextFormat,
+			api_uri: Vec<u8>,
 		) -> DispatchResultWithPostInfo {
 			let account = ensure_signed(origin)?;
 
-			check_bounds(
-				api_uri.len(),
-				(T::MinUriLen::get(), Error::<T>::UriTooShort),
-				(T::MaxUriLen::get(), Error::<T>::UriTooLong),
-			)?;
+			// check_bounds(
+			// 	api_uri.len(),
+			// 	(T::MinUriLen::get(), Error::<T>::UriTooShort),
+			// 	(T::MaxUriLen::get(), Error::<T>::UriTooLong),
+			// )?;
 
 			ensure!(
 				!EnclaveIndex::<T>::contains_key(&account),
@@ -197,16 +295,16 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::update_enclave())]
 		pub fn update_enclave(
 			origin: OriginFor<T>,
-			api_uri: TextFormat,
+			api_uri: Vec<u8>,
 		) -> DispatchResultWithPostInfo {
 			let account = ensure_signed(origin)?;
 			let enclave_id = EnclaveIndex::<T>::get(&account).ok_or(Error::<T>::NotEnclaveOwner)?;
 
-			check_bounds(
-				api_uri.len(),
-				(T::MinUriLen::get(), Error::<T>::UriTooShort),
-				(T::MaxUriLen::get(), Error::<T>::UriTooLong),
-			)?;
+			// check_bounds(
+			// 	api_uri.len(),
+			// 	(T::MinUriLen::get(), Error::<T>::UriTooShort),
+			// 	(T::MaxUriLen::get(), Error::<T>::UriTooLong),
+			// )?;
 
 			EnclaveRegistry::<T>::mutate(enclave_id, |enclave| -> DispatchResult {
 				let enclave = enclave.as_mut().ok_or(Error::<T>::UnknownEnclaveId)?;
@@ -292,10 +390,10 @@ pub mod pallet {
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		// Enclave
-		AddedEnclave { account: T::AccountId, api_uri: TextFormat, enclave_id: EnclaveId },
+		AddedEnclave { account: T::AccountId, api_uri: Vec<u8>, enclave_id: EnclaveId },
 		AssignedEnclave { enclave_id: EnclaveId, cluster_id: ClusterId },
 		UnAssignedEnclave { enclave_id: EnclaveId },
-		UpdatedEnclave { enclave_id: EnclaveId, api_uri: TextFormat },
+		UpdatedEnclave { enclave_id: EnclaveId, api_uri: Vec<u8> },
 		NewEnclaveOwner { enclave_id: EnclaveId, owner: T::AccountId },
 		// Cluster
 		AddedCluster { cluster_id: ClusterId },
@@ -355,7 +453,7 @@ pub mod pallet {
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
-		pub enclaves: Vec<(T::AccountId, EnclaveId, TextFormat)>,
+		pub enclaves: Vec<(T::AccountId, EnclaveId, Vec<u8>)>,
 		pub clusters: Vec<(ClusterId, Vec<EnclaveId>)>,
 	}
 
