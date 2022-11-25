@@ -437,6 +437,61 @@ mod create_contract {
 	}
 
 	#[test]
+	fn duration_invalid() {
+		ExtBuilder::new_build(None).execute_with(|| {
+			prepare_tests();
+			let alice: mock::RuntimeOrigin = origin(ALICE);
+
+			// Try to create a fixed contract with 0 duration.
+			let err = Rent::create_contract(
+				alice.clone(),
+				ALICE_NFT_ID_6,
+				DurationInput::Fixed(0),
+				AcceptanceType::AutoAcceptance(None),
+				false,
+				RentFee::Tokens(TOKENS),
+				CancellationFee::None,
+				CancellationFee::None,
+			);
+			assert_noop!(err, Error::<Test>::DurationInvalid);
+
+			// Try to create a subscription contract with 0 duration.
+			let err = Rent::create_contract(
+				alice.clone(),
+				ALICE_NFT_ID_6,
+				DurationInput::Subscription(SubscriptionInput {
+					period_length: 0,
+					max_duration: None,
+					is_changeable: false,
+				}),
+				AcceptanceType::AutoAcceptance(None),
+				false,
+				RentFee::Tokens(TOKENS),
+				CancellationFee::None,
+				CancellationFee::None,
+			);
+			assert_noop!(err, Error::<Test>::DurationInvalid);
+
+			// Try to create a subscription contract with 0 duration.
+			let err = Rent::create_contract(
+				alice,
+				ALICE_NFT_ID_6,
+				DurationInput::Subscription(SubscriptionInput {
+					period_length: BLOCK_DURATION,
+					max_duration: Some(0),
+					is_changeable: false,
+				}),
+				AcceptanceType::AutoAcceptance(None),
+				false,
+				RentFee::Tokens(TOKENS),
+				CancellationFee::None,
+				CancellationFee::None,
+			);
+			assert_noop!(err, Error::<Test>::DurationInvalid);
+		})
+	}
+
+	#[test]
 	fn duration_and_rent_fee_mismatch() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
@@ -1705,6 +1760,36 @@ mod change_subscription_terms {
 				true,
 			);
 			assert_noop!(err, Error::<Test>::DurationExceedsMaximumLimit);
+		})
+	}
+
+	#[test]
+	fn duration_invalid() {
+		ExtBuilder::new_build(None).execute_with(|| {
+			prepare_tests();
+			let alice: mock::RuntimeOrigin = origin(ALICE);
+
+			// Try to create a subscription contract with 0 duration.
+			let err = Rent::change_subscription_terms(
+				alice.clone(),
+				SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK,
+				TOKENS,
+				0,
+				None,
+				true,
+			);
+			assert_noop!(err, Error::<Test>::DurationInvalid);
+
+			// Try to create a subscription contract with 0 duration.
+			let err = Rent::change_subscription_terms(
+				alice.clone(),
+				SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK,
+				TOKENS,
+				BLOCK_DURATION,
+				Some(0),
+				true,
+			);
+			assert_noop!(err, Error::<Test>::DurationInvalid);
 		})
 	}
 }
