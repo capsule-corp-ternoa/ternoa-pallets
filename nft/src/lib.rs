@@ -309,7 +309,7 @@ pub mod pallet {
 		/// Operation is not permitted because the NFT is already a secret.
 		CannotAddSecretToSecretNFTs,
 		/// Feature is not available yet
-		ComingSoon
+		ComingSoon,
 	}
 
 	// TODO Write Tests for Runtime upgrade

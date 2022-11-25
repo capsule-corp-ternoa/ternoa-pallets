@@ -256,6 +256,8 @@ pub mod pallet {
 		ContractIsNotRunning,
 		/// Duration exceeds maximum limit
 		DurationExceedsMaximumLimit,
+		/// Duration invalid
+		DurationInvalid,
 	}
 
 	#[pallet::hooks]
@@ -357,10 +359,15 @@ pub mod pallet {
 
 			let duration_limit: T::BlockNumber = T::MaximumContractDurationLimit::get().into();
 			let duration = duration.to_duration(duration_limit.clone());
+			let full_duration = *duration.get_full_duration();
+			let block_duration_or_period = *duration.get_duration_or_period();
+			ensure!(full_duration <= duration_limit, Error::<T>::DurationExceedsMaximumLimit);
+			ensure!(full_duration > 0u32.into(), Error::<T>::DurationInvalid);
 			ensure!(
-				*duration.get_full_duration() <= duration_limit,
+				block_duration_or_period <= duration_limit,
 				Error::<T>::DurationExceedsMaximumLimit
 			);
+			ensure!(block_duration_or_period > 0u32.into(), Error::<T>::DurationInvalid);
 			duration
 				.allows_rent_fee(&rent_fee)
 				.ok_or(Error::<T>::DurationAndRentFeeMismatch)?;
@@ -748,6 +755,9 @@ pub mod pallet {
 					Error::<T>::CannotAdjustSubscriptionTerms
 				);
 				ensure!(max_duration <= duration_limit, Error::<T>::DurationExceedsMaximumLimit);
+				ensure!(period <= duration_limit, Error::<T>::DurationExceedsMaximumLimit);
+				ensure!(max_duration > 0u32.into(), Error::<T>::DurationInvalid);
+				ensure!(period > 0u32.into(), Error::<T>::DurationInvalid);
 				if !contract_active {
 					Offers::<T>::remove(nft_id);
 				}
