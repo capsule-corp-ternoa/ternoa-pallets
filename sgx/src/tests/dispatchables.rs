@@ -18,7 +18,7 @@ use super::{mock, mock::*};
 use frame_support::{assert_noop, assert_ok};
 use frame_system::RawOrigin;
 use pallet_balances::Error as BalanceError;
-use primitives::TextFormat;
+// use primitives::TextFormat;
 use sp_runtime::traits::BadOrigin;
 
 use crate::{
@@ -39,7 +39,7 @@ fn register_enclave() {
 			assert_eq!(EnclaveIndex::<Test>::iter().count(), 0);
 			assert_eq!(EnclaveRegistry::<Test>::iter().count(), 0);
 			assert_eq!(EnclaveIdGenerator::<Test>::get(), 0);
-			let uri: TextFormat = vec![1];
+			let uri: Vec<u8> = vec![1];
 
 			// Alice should be able to create an enclave if she has enough tokens.
 			assert_ok!(Sgx::register_enclave(alice.clone(), uri.clone()));
@@ -158,7 +158,7 @@ fn update_enclave() {
 			let enclave_id: EnclaveId = 0;
 
 			// Alice should be able to update her enclave.
-			let uri: TextFormat = vec![0, 1];
+			let uri: Vec<u8> = vec![0, 1];
 			let enclave = Enclave::new(uri.clone());
 			assert_ok!(Sgx::update_enclave(alice.clone(), uri.clone()));
 			assert_eq!(EnclaveRegistry::<Test>::get(enclave_id), Some(enclave));
@@ -236,7 +236,7 @@ fn remove_cluster() {
 		.execute_with(|| {
 			let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
 			let bob: mock::RuntimeOrigin = RawOrigin::Signed(BOB).into();
-			let uri: TextFormat = vec![1];
+			let uri: Vec<u8> = vec![1];
 			let cluster_id: ClusterId = 0;
 			let cluster = Cluster::new(vec![0, 1]);
 

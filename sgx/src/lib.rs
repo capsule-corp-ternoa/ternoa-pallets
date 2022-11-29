@@ -52,6 +52,10 @@ pub mod pallet {
 		<T as frame_system::Config>::AccountId,
 	>>::NegativeImbalance;
 
+	// Declaration Enclave Id
+
+	pub type EnclaveProvider = Vec<u8>;
+
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		/// Because this pallet emits events, it depends on the runtime's definition of an event.
@@ -96,103 +100,111 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 
+		// #[pallet::storage]
+		// #[pallet::getter(fn enclave_provider)]
+		// pub type EnclaveProvider<T: Config> =
+		// 	StorageMap<_, Blake2_128Concat, EnclaveId, EnclaveProvider>
+
 		// **************************************************************
 		// Registers an enclave provider
-		pub fn register_enclave_provider(origin: OriginFor<T>, enclave_provider: Vec<u8>) {
-			let account = ensure_signed(origin)?;
-			Ok(().into())
-		}
-
-
-		/// Given provider may have different processor architectures (enclave_class)
-		/// and for a given enclave class there can be different public keys
-		pub fn register_provider_keys(
-			origin: OriginFor<T>, 
-			enclave_provider: Vec<u8>, 
-			enclave_class: Vec<u8>, 
-			provider_public_key: Vec<u8>
-		) {
-			let account = ensure_signed(origin)?;
-			Ok(().into())
-		}
-
-		  /// Registers an account which responsible for creating / submitting an enclave report
-		pub fn  register_enclave_operator(
-			origin: OriginFor<T>, 
-			operator: <T::Lookup as StaticLookup>::Source
-		) {
-			let account = ensure_signed(origin)?;
-			Ok(().into())
-		}
+		// pub fn register_enclave_provider(
+		// 	origin: OriginFor<T>,
+		// 	enclave_provider: EnclaveProvider
+		// ) {
+		// 	let account = ensure_signed(origin)?;
+		// 	Ok(().into())
+		// }
+		//
+		//
+		// /// Given provider may have different processor architectures (enclave_class)
+		// /// and for a given enclave class there can be different public keys
+		// pub fn register_provider_keys(
+		// 	origin: OriginFor<T>,
+		// 	enclave_provider: Vec<u8>,
+		// 	enclave_class: Vec<u8>,
+		// 	provider_public_key: Vec<u8>
+		// ) {
+		// 	let account = ensure_signed(origin)?;
+		// 	Ok(().into())
+		// }
+		//
+		//   /// Registers an account which responsible for creating / submitting an enclave report
+		// pub fn  register_enclave_operator(
+		// 	origin: OriginFor<T>,
+		// 	operator: <T::Lookup as StaticLookup>::Source
+		// ) {
+		// 	let account = ensure_signed(origin)?;
+		// 	Ok(().into())
+		// }
 
 		/// Registers an account which responsible for creating / submitting an enclave report
-		pub fn register_enclave_operator(origin: OriginFor<T>, operator: <T::Lookup as StaticLookup>::Source) {
-			let account = ensure_signed(origin)?;
-			Ok(().into())
-		}
+		// pub fn register_enclave_operator(origin: OriginFor<T>, operator: <T::Lookup as StaticLookup>::Source) {
+		// 	let account = ensure_signed(origin)?;
+		// 	Ok(().into())
+		// }
 
 		  /// Assigns a clusterId for an enclave
-		pub fn assign_enclave(
-			origin: OriginFor<T>,
-			cluster_id: ClusterId,
-			enclave_id: EnclaveId
-		{
-			let account = ensure_signed(origin)?;
-			Ok(().into())
-		}
-
-		/// UnAssign a clusterId from an enclave
-		pub fn unassign_enclave(
-			origin: OriginFor<T>, 
-			cluster_id: ClusterId, 
-			enclave_id: EnclaveId
-		) {
-			let account = ensure_signed(origin)?;
-			Ok(().into())
-		}
-
-		///  Updates metadata for an enclave
-		pub fn update_enclave(
-			origin: OriginFor<T>, 
-			api_uri: TextFormat, 
-			enclave_id: EnclaveId, 
-			cluster_id: ClusterId
-		) {
-			let account = ensure_signed(origin)?;
-			Ok(().into())
-		}
-
-		/// Change the ownership of an enclave
-		pub fn uchange_enclave_owner(
-			origin: OriginFor<T>, 
-			new_owner: <T::Lookup as StaticLookup>::Source, 
-			enclave_id: EnclaveId) {
-			let account = ensure_signed(origin)?;
-			Ok(().into())
-		}
-		/// Creates a cluster
-		/// Max  slots :- 5
-		pub fn uregister_cluster(origin: OriginFor<T>) {
-			let account = ensure_signed(origin)?;
-			Ok(().into())
-		}
-		/// Removes a cluster
-		pub fn uunregister_cluster(
-			origin: OriginFor<T>,
-			cluster_id: ClusterId
-		) {
-			let account = ensure_signed(origin)?;
-			Ok(().into())
-		}
-		/// Removes an enclave from the system
-		pub fn uremove_enclave(
-			origin: OriginFor<T>, 
-			cluster_id: ClusterId, 
-			enclave_id: EnclaveId
-		) {
-			let account = ensure_signed(origin)?;
-			Ok(().into())
-		}
+		// pub fn assign_enclave(
+		// 	origin: OriginFor<T>,
+		// 	cluster_id: ClusterId,
+		// 	enclave_id: EnclaveId
+		// {
+		// 	let account = ensure_signed(origin)?;
+		// 	Ok(().into())
+		// }
+		//
+		// /// UnAssign a clusterId from an enclave
+		// pub fn unassign_enclave(
+		// 	origin: OriginFor<T>,
+		// 	cluster_id: ClusterId,
+		// 	enclave_id: EnclaveId
+		// ) {
+		// 	let account = ensure_signed(origin)?;
+		// 	Ok(().into())
+		// }
+		//
+		// ///  Updates metadata for an enclave
+		// pub fn update_enclave(
+		// 	origin: OriginFor<T>,
+		// 	api_uri: TextFormat,
+		// 	enclave_id: EnclaveId,
+		// 	cluster_id: ClusterId
+		// ) {
+		// 	let account = ensure_signed(origin)?;
+		// 	Ok(().into())
+		// }
+		//
+		// /// Change the ownership of an enclave
+		// pub fn uchange_enclave_owner(
+		// 	origin: OriginFor<T>,
+		// 	new_owner: <T::Lookup as StaticLookup>::Source,
+		// 	enclave_id: EnclaveId) {
+		// 	let account = ensure_signed(origin)?;
+		// 	Ok(().into())
+		// }
+		// /// Creates a cluster
+		// /// Max  slots :- 5
+		// pub fn uregister_cluster(origin: OriginFor<T>) {
+		// 	let account = ensure_signed(origin)?;
+		// 	Ok(().into())
+		// }
+		// /// Removes a cluster
+		// pub fn uunregister_cluster(
+		// 	origin: OriginFor<T>,
+		// 	cluster_id: ClusterId
+		// ) {
+		// 	let account = ensure_signed(origin)?;
+		// 	Ok(().into())
+		// }
+		// /// Removes an enclave from the system
+		// pub fn uremove_enclave(
+		// 	origin: OriginFor<T>,
+		// 	cluster_id: ClusterId,
+		// 	enclave_id: EnclaveId
+		// ) {
+		// 	let account = ensure_signed(origin)?;
+		// 	Ok(().into())
+		// }
 		// **************************************************************
 		//
 		// Enclave
@@ -342,9 +354,8 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		//
-		// Cluster
-		//
+		// Creates a Cluster
+		// A given cluster has list of enclaves
 		#[pallet::weight(T::WeightInfo::create_cluster())]
 		pub fn create_cluster(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
@@ -415,6 +426,7 @@ pub mod pallet {
 		EnclaveNotAssigned,
 		CannotAssignToSameCluster,
 		InternalLogicalError,
+		ProviderIdOverflow,
 	}
 
 	//
@@ -434,9 +446,9 @@ pub mod pallet {
 	pub type EnclaveIndex<T: Config> =
 		StorageMap<_, Blake2_128Concat, T::AccountId, EnclaveId, OptionQuery>;
 
-	//
-	// Cluster
-	//
+
+	// Cluster Registry
+	// Key: ClusterId: u32, Value: Cluster
 	#[pallet::storage]
 	#[pallet::getter(fn cluster_registry)]
 	pub type ClusterRegistry<T: Config> =
@@ -450,6 +462,11 @@ pub mod pallet {
 	#[pallet::getter(fn cluster_index)]
 	pub type ClusterIndex<T: Config> =
 		StorageMap<_, Blake2_128Concat, EnclaveId, ClusterId, OptionQuery>;
+
+	/// Creating a storage item called ProviderIdGenerator.
+	#[pallet::storage]
+	#[pallet::getter(fn provider_id_generator)]
+	pub type ProviderIdGenerator<T: Config> = StorageValue<_, ProviderId, ValueQuery>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
@@ -492,11 +509,39 @@ pub mod pallet {
 	}
 }
 
+// Helper Methods for Storage
 impl<T: Config> Pallet<T> {
+	/// `new_enclave_id` returns a tuple of the current enclave id and the next enclave id
+	///
+	/// Returns:
+	///
+	/// A tuple of the current enclave id and the next enclave id.
 	pub fn new_enclave_id() -> Result<(EnclaveId, EnclaveId), Error<T>> {
 		let id = EnclaveIdGenerator::<T>::get();
 		let new_id = id.checked_add(1).ok_or(Error::<T>::EnclaveIdOverflow)?;
 
 		Ok((id, new_id))
+	}
+
+	/// > This function returns a tuple of the current cluster id and the next cluster id
+	///
+	/// Returns:
+	///
+	/// A tuple of the current cluster id and the next cluster id.
+	pub fn new_cluster_id() -> Result<(ClusterId, ClusterId), Error<T>> {
+		let id : ClusterId = ClusterIdGenerator::<T>::get();
+		let new_id: u32 = id.checked_add(1).ok_or(Error::<T>::ClusterIdOverflow)?;
+		Ok((id, new_id))
+	}
+
+	/// It generates a new provider id.
+	///
+	/// Returns: New Provider
+	///
+	/// A new ProviderId
+	pub fn new_provider_id()-> Result<ProviderId, Error<T>> {
+		let id : ProviderId = ProviderIdGenerator::<T>::get();
+		let new_id: u32 = id.checked_add(1).ok_or(Error::<T>::ProviderIdOverflow)?;
+		Ok(new_id)
 	}
 }
