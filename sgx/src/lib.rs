@@ -246,6 +246,16 @@ pub mod pallet {
 			Ok(().into())
 		}
 
+		/// `assign_enclave` assigns an enclave to a cluster
+		///
+		/// Arguments:
+		///
+		/// * `origin`: OriginFor<T> - The origin of the call.
+		/// * `cluster_id`: The id of the cluster to assign the enclave to.
+		///
+		/// Returns:
+		///
+		/// DispatchResultWithPostInfo
 		#[pallet::weight(T::WeightInfo::assign_enclave())]
 		pub fn assign_enclave(
 			origin: OriginFor<T>,
@@ -278,6 +288,15 @@ pub mod pallet {
 			Ok(().into())
 		}
 
+		/// `unassign_enclave` removes the enclave from the cluster
+		///
+		/// Arguments:
+		///
+		/// * `origin`: OriginFor<T>
+		///
+		/// Returns:
+		///
+		/// DispatchResultWithPostInfo
 		#[pallet::weight(T::WeightInfo::unassign_enclave())]
 		pub fn unassign_enclave(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			let account = ensure_signed(origin)?;
@@ -304,6 +323,16 @@ pub mod pallet {
 			Ok(().into())
 		}
 
+		/// `update_enclave` updates the API URI of an enclave
+		///
+		/// Arguments:
+		///
+		/// * `origin`: OriginFor<T>
+		/// * `api_uri`: The URI of the enclave's API.
+		///
+		/// Returns:
+		///
+		/// DispatchResultWithPostInfo
 		#[pallet::weight(T::WeightInfo::update_enclave())]
 		pub fn update_enclave(
 			origin: OriginFor<T>,
@@ -329,6 +358,16 @@ pub mod pallet {
 			Ok(().into())
 		}
 
+		/// `change_enclave_owner` changes the owner of an enclave
+		///
+		/// Arguments:
+		///
+		/// * `origin`: OriginFor<T> - The origin of the call.
+		/// * `new_owner`: The new owner of the enclave.
+		///
+		/// Returns:
+		///
+		/// DispatchResultWithPostInfo
 		#[pallet::weight(T::WeightInfo::change_enclave_owner())]
 		pub fn change_enclave_owner(
 			origin: OriginFor<T>,
