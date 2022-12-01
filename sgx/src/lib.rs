@@ -147,8 +147,8 @@ pub mod pallet {
 			let _ = ensure_signed(origin)?;
 			let operator = T::Lookup::lookup(operator)?;
 
-			ensure!(!EnclaveOperator::<T>::contains_key(enclave_id),  Error::<T>::AccountAlreadyRegisteredForEnclave);
-			EnclaveOperator::<T>::insert(enclave_id, operator);
+			ensure!(!EnclaveOperator::<T>::contains_key(operator.clone()),  Error::<T>::AccountAlreadyRegisteredForEnclave);
+			EnclaveOperator::<T>::insert(operator, enclave_id,);
 
 			Self::deposit_event(Event::RegisterEnclaveOperator { enclave_id });
 
@@ -431,7 +431,7 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn enclave_operator)]
 	pub type EnclaveOperator<T: Config> =
-		StorageMap<_, Blake2_128Concat, EnclaveId, T::AccountId, OptionQuery>;
+		StorageMap<_, Blake2_128Concat, T::AccountId, EnclaveId, OptionQuery>;
 
 
 	// Cluster Registry
@@ -547,10 +547,28 @@ impl<T: Config> SGXExt for Pallet<T> {
 	type AccountId = T::AccountId;
 	type ClusterId = u32;
 	type EnclaveId = u32;
+
 	fn ensure_enclave(account: T::AccountId) -> Option<(Self::ClusterId, Self::EnclaveId)> {
-		// ClusterRegistry::<T>::get()
-		// ClusterIndex::<T>::get()
-		Option::from((0u32, 0u32))
+
+		let ea = EnclaveOperator::<T>::get(account);
+
+		let mut result: Option<(Self::ClusterId, Self::EnclaveId)> = None;
+
+		match ea {
+			Some(enclave_id) => {
+				let cluster_id = ClusterIndex::<T>::get(enclave_id).unwrap();
+				let cluster = ClusterRegistry::<T>::get(cluster_id).unwrap();
+				let cont =  cluster.enclaves.contains(&enclave_id);
+				result = if cluster.enclaves.contains(&enclave_id) {
+					Some((cluster_id, enclave_id))
+				} else {
+					None
+				}
+			}
+			None => ()
+		}
+
+		result
 	}
 }
 
