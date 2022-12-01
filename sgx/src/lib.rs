@@ -549,7 +549,7 @@ impl<T: Config> SGXExt for Pallet<T> {
 	type EnclaveId = u32;
 
 	fn ensure_enclave(account: T::AccountId) -> Option<(Self::ClusterId, Self::EnclaveId)> {
-
+		// TODO: Please improve this implementation and add tests!!
 		let ea = EnclaveOperator::<T>::get(account);
 
 		let mut result: Option<(Self::ClusterId, Self::EnclaveId)> = None;
