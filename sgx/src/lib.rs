@@ -548,6 +548,16 @@ impl<T: Config> SGXExt for Pallet<T> {
 	type ClusterId = u32;
 	type EnclaveId = u32;
 
+	/// > If the account has an enclave, and the enclave is in the cluster, return the cluster and enclave
+	/// id
+	///
+	/// Arguments:
+	///
+	/// * `account`: The account that is trying to access the enclave.
+	///
+	/// Returns:
+	///
+	/// A tuple of the cluster id and the enclave id.
 	fn ensure_enclave(account: T::AccountId) -> Option<(Self::ClusterId, Self::EnclaveId)> {
 		// TODO: Please improve this implementation and add tests!!
 		let ea = EnclaveOperator::<T>::get(account);
