@@ -32,6 +32,10 @@ fn register_enclave() {
 		.tokens(vec![(ALICE, 100), (BOB, 0), (DAVE, 10)])
 		.build()
 		.execute_with(|| {
+			let long_uri = "https://this".as_bytes().to_vec();
+			let short_uri = "http".as_bytes().to_vec();
+			let valid_uri = "https://va".as_bytes().to_vec();
+
 			let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
 			let bob: mock::RuntimeOrigin = RawOrigin::Signed(BOB).into();
 			let dave: mock::RuntimeOrigin = RawOrigin::Signed(DAVE).into();
@@ -39,34 +43,33 @@ fn register_enclave() {
 			assert_eq!(EnclaveIndex::<Test>::iter().count(), 0);
 			assert_eq!(EnclaveRegistry::<Test>::iter().count(), 0);
 			assert_eq!(EnclaveIdGenerator::<Test>::get(), 0);
-			let uri: Vec<u8> = vec![1];
 
 			// Alice should be able to create an enclave if she has enough tokens.
-			assert_ok!(Sgx::register_enclave(alice.clone(), uri.clone()));
+			assert_ok!(Sgx::register_enclave(alice.clone(), valid_uri.clone()));
 			assert_eq!(Balances::free_balance(ALICE), 95);
 
-			let enclave = Enclave::new(uri.clone());
+			let enclave = Enclave::new(valid_uri.clone());
 			let enclave_id: EnclaveId = 0;
 			assert!(EnclaveRegistry::<Test>::contains_key(enclave_id));
 			assert_eq!(EnclaveRegistry::<Test>::get(enclave_id), Some(enclave));
 			assert!(EnclaveIndex::<Test>::contains_key(ALICE));
 			assert_eq!(EnclaveIndex::<Test>::get(ALICE).unwrap(), enclave_id);
 			assert_eq!(EnclaveIdGenerator::<Test>::get(), 1);
-
+			//
 			// Alice should NOT be able to create an enclave if she already has one.
-			let ok = Sgx::register_enclave(alice, vec![1]);
+			let ok = Sgx::register_enclave(alice, valid_uri.clone());
 			assert_noop!(ok, Error::<Test>::PublicKeyAlreadyTiedToACluster);
 
 			// Bob should NOT be able to create an enclave if the doesn't have enough tokens.
-			let ok = Sgx::register_enclave(bob, vec![1]);
+			let ok = Sgx::register_enclave(bob, valid_uri.clone());
 			assert_noop!(ok, BalanceError::<Test>::InsufficientBalance);
 
 			// Dave should NOT be able to create an enclave if the uri is too short.
-			let ok = Sgx::register_enclave(dave.clone(), vec![]);
+			let ok = Sgx::register_enclave(dave.clone(), short_uri);
 			assert_noop!(ok, Error::<Test>::UriTooShort);
 
 			// Dave should NOT be able to create an enclave if the uri is too long.
-			let ok = Sgx::register_enclave(dave, vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+			let ok = Sgx::register_enclave(dave, long_uri);
 			assert_noop!(ok, Error::<Test>::UriTooLong);
 		})
 }
@@ -77,6 +80,8 @@ fn assign_enclave() {
 		.tokens(vec![(ALICE, 10), (BOB, 10), (DAVE, 10)])
 		.build()
 		.execute_with(|| {
+			let valid_uri = "https://va".as_bytes().to_vec();
+
 			let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
 			let bob: mock::RuntimeOrigin = RawOrigin::Signed(BOB).into();
 			let dave: mock::RuntimeOrigin = RawOrigin::Signed(DAVE).into();
@@ -84,7 +89,7 @@ fn assign_enclave() {
 			let cluster_id: ClusterId = 0;
 			let enclave_id: EnclaveId = 0;
 			assert_ok!(Sgx::create_cluster(RawOrigin::Root.into()));
-			assert_ok!(Sgx::register_enclave(alice.clone(), vec![1]));
+			assert_ok!(Sgx::register_enclave(alice.clone(), valid_uri.clone()));
 
 			// Alice should be able to assign her enclave to a cluster.
 			assert_ok!(Sgx::assign_enclave(alice.clone(), cluster_id));
@@ -97,13 +102,13 @@ fn assign_enclave() {
 			assert_noop!(ok, Error::<Test>::EnclaveAlreadyAssigned);
 
 			// Bob should NOT be able to assign his enclave to an non existing cluster.
-			assert_ok!(Sgx::register_enclave(bob.clone(), vec![1]));
+			assert_ok!(Sgx::register_enclave(bob.clone(), valid_uri.clone()));
 			let ok = Sgx::assign_enclave(bob.clone(), 1);
 			assert_noop!(ok, Error::<Test>::UnknownClusterId);
 
 			// Dave should NOT be able to register his enclave if the cluster is already full.
 			assert_ok!(Sgx::assign_enclave(bob, cluster_id));
-			assert_ok!(Sgx::register_enclave(dave.clone(), vec![1]));
+			assert_ok!(Sgx::register_enclave(dave.clone(), valid_uri));
 			let ok = Sgx::assign_enclave(dave, 0);
 			assert_noop!(ok, Error::<Test>::ClusterIsAlreadyFull);
 		})
@@ -115,13 +120,14 @@ fn unassign_enclave() {
 		.tokens(vec![(ALICE, 10), (BOB, 10)])
 		.build()
 		.execute_with(|| {
+			let valid_uri = "https://va".as_bytes().to_vec();
 			let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
 			let bob: mock::RuntimeOrigin = RawOrigin::Signed(BOB).into();
 
 			let cluster_id: ClusterId = 0;
 			let enclave_id: EnclaveId = 0;
 			assert_ok!(Sgx::create_cluster(RawOrigin::Root.into()));
-			assert_ok!(Sgx::register_enclave(alice.clone(), vec![1]));
+			assert_ok!(Sgx::register_enclave(alice.clone(), valid_uri));
 			assert_ok!(Sgx::assign_enclave(alice.clone(), cluster_id));
 			let cluster = ClusterRegistry::<Test>::get(cluster_id).unwrap();
 			assert_eq!(cluster.enclaves, vec![enclave_id]);
@@ -151,28 +157,31 @@ fn update_enclave() {
 		.tokens(vec![(ALICE, 10), (BOB, 10)])
 		.build()
 		.execute_with(|| {
+			let mut valid_uri = "https://va".as_bytes().to_vec();
+			let long_uri = "https://this".as_bytes().to_vec();
+			let short_uri = "http".as_bytes().to_vec();
 			let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
 			let bob: mock::RuntimeOrigin = RawOrigin::Signed(BOB).into();
 
-			assert_ok!(Sgx::register_enclave(alice.clone(), vec![1]));
+			assert_ok!(Sgx::register_enclave(alice.clone(), valid_uri.clone()));
 			let enclave_id: EnclaveId = 0;
 
 			// Alice should be able to update her enclave.
-			let uri: Vec<u8> = vec![0, 1];
-			let enclave = Enclave::new(uri.clone());
-			assert_ok!(Sgx::update_enclave(alice.clone(), uri.clone()));
+			valid_uri = "https://zza".as_bytes().to_vec();
+			let enclave = Enclave::new(valid_uri.clone());
+			assert_ok!(Sgx::update_enclave(alice.clone(), valid_uri.clone()));
 			assert_eq!(EnclaveRegistry::<Test>::get(enclave_id), Some(enclave));
 
 			// Dave should NOT be able to update an enclave if the uri is too short.
-			let ok = Sgx::update_enclave(alice.clone(), vec![]);
+			let ok = Sgx::update_enclave(alice.clone(), short_uri.clone());
 			assert_noop!(ok, Error::<Test>::UriTooShort);
 
 			// Dave should NOT be able to update an enclave if the uri is too long.
-			let ok = Sgx::update_enclave(alice.clone(), vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+			let ok = Sgx::update_enclave(alice.clone(), long_uri);
 			assert_noop!(ok, Error::<Test>::UriTooLong);
 
 			// Bob should NOT be able to update his enclave if he doesn't have one.
-			let ok = Sgx::update_enclave(bob.clone(), uri.clone());
+			let ok = Sgx::update_enclave(bob.clone(), valid_uri.clone());
 			assert_noop!(ok, Error::<Test>::NotEnclaveOwner);
 		})
 }
@@ -183,9 +192,10 @@ fn change_enclave_owner() {
 		.tokens(vec![(ALICE, 10), (BOB, 10)])
 		.build()
 		.execute_with(|| {
+			let valid_uri = "https://va".as_bytes().to_vec();
 			let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
 
-			assert_ok!(Sgx::register_enclave(alice.clone(), vec![1]));
+			assert_ok!(Sgx::register_enclave(alice.clone(), valid_uri.clone()));
 			let enclave_id: EnclaveId = 0;
 
 			// Alice should be able to change owner of his enclave.
@@ -197,7 +207,7 @@ fn change_enclave_owner() {
 			assert_noop!(ok, Error::<Test>::NotEnclaveOwner);
 
 			// Alice should NOT be able to change the owner if the new owner already has an enclave.
-			assert_ok!(Sgx::register_enclave(alice.clone(), vec![1]));
+			assert_ok!(Sgx::register_enclave(alice.clone(), valid_uri));
 			let ok = Sgx::change_enclave_owner(alice.clone(), BOB);
 			assert_noop!(ok, Error::<Test>::PublicKeyAlreadyTiedToACluster);
 		})
@@ -236,13 +246,13 @@ fn remove_cluster() {
 		.execute_with(|| {
 			let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
 			let bob: mock::RuntimeOrigin = RawOrigin::Signed(BOB).into();
-			let uri: Vec<u8> = vec![1];
+			let valid_uri = "https://va".as_bytes().to_vec();
 			let cluster_id: ClusterId = 0;
 			let cluster = Cluster::new(vec![0, 1]);
 
 			assert_ok!(Sgx::create_cluster(RawOrigin::Root.into()));
-			assert_ok!(Sgx::register_enclave(alice.clone(), uri.clone()));
-			assert_ok!(Sgx::register_enclave(bob.clone(), uri.clone()));
+			assert_ok!(Sgx::register_enclave(alice.clone(), valid_uri.clone()));
+			assert_ok!(Sgx::register_enclave(bob.clone(), valid_uri.clone()));
 			assert_ok!(Sgx::assign_enclave(alice.clone(), cluster_id));
 			assert_ok!(Sgx::assign_enclave(bob.clone(), cluster_id));
 

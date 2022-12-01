@@ -44,7 +44,6 @@ pub mod pallet {
 	};
 	use frame_system::pallet_prelude::*;
 	use sp_runtime::traits::StaticLookup;
-	// use ternoa_common::helpers::check_bounds;
 
 	pub type BalanceOf<T> =
 		<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
@@ -216,11 +215,8 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			let account = ensure_signed(origin)?;
 
-			// check_bounds(
-			// 	api_uri.len(),
-			// 	(T::MinUriLen::get(), Error::<T>::UriTooShort),
-			// 	(T::MaxUriLen::get(), Error::<T>::UriTooLong),
-			// )?;
+			ensure!(api_uri.len() < T::MaxUriLen::get().into(),Error::<T>::UriTooLong);
+			ensure!(api_uri.len() > T::MinUriLen::get().into(),Error::<T>::UriTooShort);
 
 			ensure!(
 				!EnclaveIndex::<T>::contains_key(&account),
@@ -341,11 +337,8 @@ pub mod pallet {
 			let account = ensure_signed(origin)?;
 			let enclave_id = EnclaveIndex::<T>::get(&account).ok_or(Error::<T>::NotEnclaveOwner)?;
 
-			// check_bounds(
-			// 	api_uri.len(),
-			// 	(T::MinUriLen::get(), Error::<T>::UriTooShort),
-			// 	(T::MaxUriLen::get(), Error::<T>::UriTooLong),
-			// )?;
+			ensure!(api_uri.len() < T::MaxUriLen::get().into(),Error::<T>::UriTooLong);
+			ensure!(api_uri.len() > T::MinUriLen::get().into(),Error::<T>::UriTooShort);
 
 			EnclaveRegistry::<T>::mutate(enclave_id, |enclave| -> DispatchResult {
 				let enclave = enclave.as_mut().ok_or(Error::<T>::UnknownEnclaveId)?;
@@ -583,4 +576,5 @@ impl<T: Config> Pallet<T> {
 		let new_id: u32 = id.checked_add(1).ok_or(Error::<T>::ProviderIdOverflow)?;
 		Ok(new_id)
 	}
+
 }
