@@ -53,7 +53,7 @@ pub mod pallet {
 
 	// Declaration Enclave Id
 
-	pub type EnclaveProvider = Vec<u8>;
+	pub type EnclaveProviderName = Vec<u8>;
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
@@ -98,116 +98,52 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+		/*
+		Registers enclave providers on chain :- ITL, AMD
+   		Different manufacturers can provide different enclaves
+		*/
+		#[pallet::weight(T::WeightInfo::register_enclave_provider())]
+		pub fn register_enclave_provider(
+			origin: OriginFor<T>,
+			enclave_provider_name: Vec<u8>,
+		) -> DispatchResultWithPostInfo {
+			ensure_root(origin)?;
+			let (id, new_id) = Self::new_provider_id()?;
 
-		// #[pallet::storage]
-		// #[pallet::getter(fn enclave_provider)]
-		// pub type EnclaveProvider<T: Config> =
-		// 	StorageMap<_, Blake2_128Concat, EnclaveId, EnclaveProvider>
+			let provider = EnclaveProvider::new(enclave_provider_name);
 
-		// **************************************************************
-		// Registers an enclave provider
-		// pub fn register_enclave_provider(
-		// 	origin: OriginFor<T>,
-		// 	enclave_provider: EnclaveProvider
-		// ) {
-		// 	let account = ensure_signed(origin)?;
-		// 	Ok(().into())
-		// }
-		//
-		//
-		// /// Given provider may have different processor architectures (enclave_class)
-		// /// and for a given enclave class there can be different public keys
+
+			// TODO: Check if the provider exists
+			EnclaveProviderRegistry::<T>::insert(id, provider);
+			ProviderIdGenerator::<T>::put(new_id);
+
+			Ok(().into())
+		}
+
+		/// Given provider may have different processor architectures (enclave_class)
+		/// and for a given enclave class there can be different public keys
+		// #[pallet::weight(T::WeightInfo::register_provider_keys())]
 		// pub fn register_provider_keys(
 		// 	origin: OriginFor<T>,
-		// 	enclave_provider: Vec<u8>,
-		// 	enclave_class: Vec<u8>,
+		// 	enclave_provider_name: Vec<u8>,
+		// 	enclave_class: Option<Vec<u8>>,
 		// 	provider_public_key: Vec<u8>
-		// ) {
-		// 	let account = ensure_signed(origin)?;
-		// 	Ok(().into())
-		// }
 		//
-		//   /// Registers an account which responsible for creating / submitting an enclave report
-		// pub fn  register_enclave_operator(
-		// 	origin: OriginFor<T>,
-		// 	operator: <T::Lookup as StaticLookup>::Source
-		// ) {
+		// ) -> DispatchResultWithPostInfo {
 		// 	let account = ensure_signed(origin)?;
+		//
+		//
+		// 	let (id, new_id) = Self::new_provider_id()?;
+		//
+		// 	let provider = EnclaveProvider::new(enclave_provider_name);
+		//
+		// 	// TODO: Check if the provider exists
+		// 	EnclaveProviderRegistry::<T>::insert(id, provider);
+		// 	ProviderIdGenerator::<T>::put(new_id);
+		//
 		// 	Ok(().into())
 		// }
 
-		/// Registers an account which responsible for creating / submitting an enclave report
-		// pub fn register_enclave_operator(origin: OriginFor<T>, operator: <T::Lookup as StaticLookup>::Source) {
-		// 	let account = ensure_signed(origin)?;
-		// 	Ok(().into())
-		// }
-
-		  /// Assigns a clusterId for an enclave
-		// pub fn assign_enclave(
-		// 	origin: OriginFor<T>,
-		// 	cluster_id: ClusterId,
-		// 	enclave_id: EnclaveId
-		// {
-		// 	let account = ensure_signed(origin)?;
-		// 	Ok(().into())
-		// }
-		//
-		// /// UnAssign a clusterId from an enclave
-		// pub fn unassign_enclave(
-		// 	origin: OriginFor<T>,
-		// 	cluster_id: ClusterId,
-		// 	enclave_id: EnclaveId
-		// ) {
-		// 	let account = ensure_signed(origin)?;
-		// 	Ok(().into())
-		// }
-		//
-		// ///  Updates metadata for an enclave
-		// pub fn update_enclave(
-		// 	origin: OriginFor<T>,
-		// 	api_uri: TextFormat,
-		// 	enclave_id: EnclaveId,
-		// 	cluster_id: ClusterId
-		// ) {
-		// 	let account = ensure_signed(origin)?;
-		// 	Ok(().into())
-		// }
-		//
-		// /// Change the ownership of an enclave
-		// pub fn uchange_enclave_owner(
-		// 	origin: OriginFor<T>,
-		// 	new_owner: <T::Lookup as StaticLookup>::Source,
-		// 	enclave_id: EnclaveId) {
-		// 	let account = ensure_signed(origin)?;
-		// 	Ok(().into())
-		// }
-		// /// Creates a cluster
-		// /// Max  slots :- 5
-		// pub fn uregister_cluster(origin: OriginFor<T>) {
-		// 	let account = ensure_signed(origin)?;
-		// 	Ok(().into())
-		// }
-		// /// Removes a cluster
-		// pub fn uunregister_cluster(
-		// 	origin: OriginFor<T>,
-		// 	cluster_id: ClusterId
-		// ) {
-		// 	let account = ensure_signed(origin)?;
-		// 	Ok(().into())
-		// }
-		// /// Removes an enclave from the system
-		// pub fn uremove_enclave(
-		// 	origin: OriginFor<T>,
-		// 	cluster_id: ClusterId,
-		// 	enclave_id: EnclaveId
-		// ) {
-		// 	let account = ensure_signed(origin)?;
-		// 	Ok(().into())
-		// }
-		// **************************************************************
-		//
-		// Enclave
-		//
 		#[pallet::weight(T::WeightInfo::register_enclave())]
 		pub fn register_enclave(
 			origin: OriginFor<T>,
@@ -500,6 +436,16 @@ pub mod pallet {
 	#[pallet::getter(fn provider_id_generator)]
 	pub type ProviderIdGenerator<T: Config> = StorageValue<_, ProviderId, ValueQuery>;
 
+	// #[pallet::storage]
+	// #[pallet::getter(fn enclave_provider)]
+	// pub type EnclaveProviderRegistry<T: Config> =
+	// 	StorageMap<_, Blake2_128Concat, ProviderId, EnclaveProvider<T::AccountId>, OptionQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn enclave_provider)]
+	pub type EnclaveProviderRegistry<T: Config> =
+		StorageMap<_, Blake2_128Concat, ProviderId, EnclaveProvider, OptionQuery>;
+
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
 		pub enclaves: Vec<(T::AccountId, EnclaveId, Vec<u8>)>,
@@ -571,10 +517,10 @@ impl<T: Config> Pallet<T> {
 	/// Returns: New Provider
 	///
 	/// A new ProviderId
-	pub fn new_provider_id()-> Result<ProviderId, Error<T>> {
+	pub fn new_provider_id()-> Result<(ProviderId, ProviderId), Error<T>>  {
 		let id : ProviderId = ProviderIdGenerator::<T>::get();
 		let new_id: u32 = id.checked_add(1).ok_or(Error::<T>::ProviderIdOverflow)?;
-		Ok(new_id)
+		Ok((id, new_id))
 	}
 
 }

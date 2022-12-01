@@ -24,6 +24,8 @@ pub trait WeightInfo {
 	fn change_enclave_owner() -> Weight;
 	fn create_cluster() -> Weight;
 	fn remove_cluster() -> Weight;
+	fn register_enclave_provider() -> Weight;
+	fn register_provider_keys() -> Weight;
 }
 
 impl WeightInfo for () {
@@ -63,6 +65,14 @@ impl WeightInfo for () {
 	}
 	// Storage: Sgx ClusterRegistry (r:1 w:1)
 	fn remove_cluster() -> Weight {
+		Weight::from_ref_time(10_000_000 as u64)
+	}
+
+	fn register_enclave_provider() -> Weight {
+		Weight::from_ref_time(10_000_000 as u64)
+	}
+
+	fn register_provider_keys() -> Weight {
 		Weight::from_ref_time(10_000_000 as u64)
 	}
 }
