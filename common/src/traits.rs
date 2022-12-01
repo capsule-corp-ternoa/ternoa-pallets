@@ -104,3 +104,13 @@ pub trait MarketplaceExt {
 		>,
 	) -> DispatchResult;
 }
+
+pub trait SGXExt {
+	type AccountId: Clone + PartialEq + Debug;
+	type ClusterId = u32;
+	type EnclaveId = u32;
+	/// Returns clusterId and EnclaveId for a given SGX Account
+	fn ensure_enclave(
+		account: Self::AccountId
+	) -> Option<(Self::ClusterId, Self::EnclaveId)>;
+}

@@ -30,6 +30,8 @@ pub use pallet::*;
 pub use types::*;
 
 use frame_support::traits::StorageVersion;
+use sp_runtime::traits::StaticLookup;
+use ternoa_common::traits::SGXExt;
 pub use weights::WeightInfo;
 
 /// The current storage version.
@@ -43,7 +45,7 @@ pub mod pallet {
 		traits::{Currency, ExistenceRequirement::KeepAlive, OnUnbalanced, WithdrawReasons},
 	};
 	use frame_system::pallet_prelude::*;
-	use sp_runtime::traits::StaticLookup;
+	// use sp_runtime::traits::StaticLookup;
 
 	pub type BalanceOf<T> =
 		<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
@@ -122,31 +124,24 @@ pub mod pallet {
 
 		/// Given provider may have different processor architectures (enclave_class)
 		/// and for a given enclave class there can be different public keys
-		// #[pallet::weight(T::WeightInfo::register_provider_keys())]
-		// pub fn register_provider_keys(
-		// 	origin: OriginFor<T>,
-		// 	enclave_provider_name: Vec<u8>,
-		// 	enclave_class: Option<Vec<u8>>,
-		// 	provider_public_key: Vec<u8>
-		//
-		// ) -> DispatchResultWithPostInfo {
-		// 	let account = ensure_signed(origin)?;
-		//
-		//
-		// 	let (id, new_id) = Self::new_provider_id()?;
-		//
-		// 	let provider = EnclaveProvider::new(enclave_provider_name);
-		//
-		// 	// TODO: Check if the provider exists
-		// 	EnclaveProviderRegistry::<T>::insert(id, provider);
-		// 	ProviderIdGenerator::<T>::put(new_id);
-		//
-		// 	Ok(().into())
-		// }
+		#[pallet::weight(T::WeightInfo::register_provider_keys())]
+		pub fn register_provider_keys(
+			origin: OriginFor<T>,
+			enclave_provider_name: Vec<u8>,
+			enclave_class: Option<Vec<u8>>,
+			provider_public_key: Vec<u8>
+		) -> DispatchResultWithPostInfo {
+			let account = ensure_signed(origin)?;
+
+			// EnclaveProviderRegistry::<T>::iter_values
+
+			Ok(().into())
+		}
 
 		#[pallet::weight(T::WeightInfo::register_enclave())]
 		pub fn register_enclave(
 			origin: OriginFor<T>,
+			ra_report: Vec<u8>,
 			api_uri: Vec<u8>,
 		) -> DispatchResultWithPostInfo {
 			let account = ensure_signed(origin)?;
@@ -522,5 +517,14 @@ impl<T: Config> Pallet<T> {
 		let new_id: u32 = id.checked_add(1).ok_or(Error::<T>::ProviderIdOverflow)?;
 		Ok((id, new_id))
 	}
-
 }
+
+impl<T: Config> SGXExt for Pallet<T> {
+	type AccountId = T::AccountId;
+	type ClusterId = u32;
+	type EnclaveId = u32;
+	fn ensure_enclave(account: T::AccountId) -> Option<(Self::ClusterId, Self::EnclaveId)> {
+		todo!()
+	}
+}
+
