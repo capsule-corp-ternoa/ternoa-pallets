@@ -26,6 +26,7 @@ pub trait WeightInfo {
 	fn remove_cluster() -> Weight;
 	fn register_enclave_provider() -> Weight;
 	fn register_provider_keys() -> Weight;
+	fn register_enclave_operator() -> Weight;
 }
 
 impl WeightInfo for () {
@@ -73,6 +74,10 @@ impl WeightInfo for () {
 	}
 
 	fn register_provider_keys() -> Weight {
+		Weight::from_ref_time(10_000_000 as u64)
+	}
+
+	fn register_enclave_operator() -> Weight {
 		Weight::from_ref_time(10_000_000 as u64)
 	}
 }

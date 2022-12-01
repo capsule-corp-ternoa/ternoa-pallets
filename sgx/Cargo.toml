@@ -1,5 +1,5 @@
 [package]
-name = "ternoa-sgx"
+name = "ternoa-tee"
 version = "1.0.0"
 authors = ["Ternoa"]
 edition = "2021"

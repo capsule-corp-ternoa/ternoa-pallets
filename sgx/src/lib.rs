@@ -138,6 +138,23 @@ pub mod pallet {
 			Ok(().into())
 		}
 
+		#[pallet::weight(T::WeightInfo::register_enclave_operator())]
+		pub fn register_enclave_operator(
+			origin: OriginFor<T>,
+			enclave_id: EnclaveId,
+			operator: <T::Lookup as StaticLookup>::Source
+		) -> DispatchResultWithPostInfo {
+			let _ = ensure_signed(origin)?;
+			let operator = T::Lookup::lookup(operator)?;
+
+			ensure!(!EnclaveOperator::<T>::contains_key(enclave_id),  Error::<T>::AccountAlreadyRegisteredForEnclave);
+			EnclaveOperator::<T>::insert(enclave_id, operator);
+
+			Self::deposit_event(Event::RegisterEnclaveOperator { enclave_id });
+
+			Ok(().into())
+		}
+
 		#[pallet::weight(T::WeightInfo::register_enclave())]
 		pub fn register_enclave(
 			origin: OriginFor<T>,
@@ -369,6 +386,7 @@ pub mod pallet {
 		UnAssignedEnclave { enclave_id: EnclaveId },
 		UpdatedEnclave { enclave_id: EnclaveId, api_uri: Vec<u8> },
 		NewEnclaveOwner { enclave_id: EnclaveId, owner: T::AccountId },
+		RegisterEnclaveOperator { enclave_id:EnclaveId },
 		// Cluster
 		AddedCluster { cluster_id: ClusterId },
 		RemovedCluster { cluster_id: ClusterId },
@@ -390,6 +408,7 @@ pub mod pallet {
 		CannotAssignToSameCluster,
 		InternalLogicalError,
 		ProviderIdOverflow,
+		AccountAlreadyRegisteredForEnclave,
 	}
 
 	//
@@ -408,6 +427,11 @@ pub mod pallet {
 	#[pallet::getter(fn enclave_index)]
 	pub type EnclaveIndex<T: Config> =
 		StorageMap<_, Blake2_128Concat, T::AccountId, EnclaveId, OptionQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn enclave_operator)]
+	pub type EnclaveOperator<T: Config> =
+		StorageMap<_, Blake2_128Concat, EnclaveId, T::AccountId, OptionQuery>;
 
 
 	// Cluster Registry
@@ -524,7 +548,9 @@ impl<T: Config> SGXExt for Pallet<T> {
 	type ClusterId = u32;
 	type EnclaveId = u32;
 	fn ensure_enclave(account: T::AccountId) -> Option<(Self::ClusterId, Self::EnclaveId)> {
-		todo!()
+		// ClusterRegistry::<T>::get()
+		// ClusterIndex::<T>::get()
+		Option::from((0u32, 0u32))
 	}
 }
 

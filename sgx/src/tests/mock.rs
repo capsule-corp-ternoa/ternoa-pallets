@@ -27,7 +27,7 @@ use sp_runtime::{
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
-use crate::{self as ternoa_sgx, Config};
+use crate::{self as tee, Config};
 
 frame_support::construct_runtime!(
 	pub enum Test where
@@ -37,7 +37,7 @@ frame_support::construct_runtime!(
 	{
 		System: frame_system,
 		Balances: pallet_balances,
-		Sgx: ternoa_sgx,
+		TEE: ternoa_tee,
 	}
 );
 
