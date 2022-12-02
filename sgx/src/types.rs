@@ -19,34 +19,9 @@ use scale_info::TypeInfo;
 use sp_runtime::RuntimeDebug;
 use sp_std::vec::Vec;
 
-
 pub type EnclaveId = u32;
 pub type ClusterId = u32;
 pub type ProviderId = u32;
-
-
-// #[derive(Encode, Decode, Clone, Eq, PartialEq, RuntimeDebug, TypeInfo, Default)]
-// pub struct EnclaveProvidera<AccountId> {
-// 	pub enclave_provider_name: Vec<u8>,
-// 	pub enclave_class: Option<Vec<u8>>,
-// 	pub operator: AccountId,
-// 	pub public_key: Vec<u8>,
-// }
-//
-// impl<AccountId> EnclaveProvidera<AccountId> {
-// 	pub fn new(
-// 		enclave_provider_name: Vec<u8>,
-// 		operator: AccountId,
-// 		public_key: Vec<u8>,
-// 	) -> Self {
-// 		Self {
-// 			enclave_provider_name,
-// 			enclave_class: default_val::default(),
-// 			operator,
-// 			public_key
-// 		}
-// 	}
-// }
 
 #[derive(Encode, Decode, Clone, Eq, PartialEq, RuntimeDebug, TypeInfo, Default)]
 pub struct EnclaveProvider {
@@ -57,6 +32,28 @@ impl  EnclaveProvider  {
 	pub fn new(enclave_provider_name: Vec<u8>, ) -> Self {
 		Self {
 			enclave_provider_name,
+		}
+	}
+}
+
+// account_id | enclave_id | enclave_class | public_key
+#[derive(Encode, Decode, Clone, Eq, PartialEq, RuntimeDebug, TypeInfo, Default)]
+pub struct EnclaveProviderKeys<AccountId> {
+	pub enclave_class: Option<Vec<u8>>,
+	pub account_id: AccountId,
+	pub public_key: Vec<u8>,
+}
+
+impl<AccountId> EnclaveProviderKeys<AccountId> {
+	pub fn new(
+		enclave_class: Option<Vec<u8>>,
+		account_id: AccountId,
+		public_key: Vec<u8>,
+	) -> Self {
+		Self {
+			enclave_class,
+			account_id,
+			public_key
 		}
 	}
 }

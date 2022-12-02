@@ -100,10 +100,9 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		/*
-		Registers enclave providers on chain :- ITL, AMD
-   		Different manufacturers can provide different enclaves
-		*/
+
+		/// Registers enclave providers on chain :- ITL, AMD
+   		/// Different manufacturers can provide different enclave
 		#[pallet::weight(T::WeightInfo::register_enclave_provider())]
 		pub fn register_enclave_provider(
 			origin: OriginFor<T>,
@@ -134,13 +133,40 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::register_provider_keys())]
 		pub fn register_provider_keys(
 			origin: OriginFor<T>,
-			enclave_provider_name: Vec<u8>,
+			provider_id: ProviderId,
 			enclave_class: Option<Vec<u8>>,
-			provider_public_key: Vec<u8>
+			public_key: Vec<u8>
 		) -> DispatchResultWithPostInfo {
-			let account = ensure_signed(origin)?;
+			let account_id = ensure_signed(origin)?;
 
-			// EnclaveProviderRegistry::<T>::iter_values
+			// EnclaveId does not present in Enclave Provider Registry
+			ensure!(EnclaveProviderRegistry::<T>::contains_key(provider_id),  Error::<T>::UnregisteredEnclaveProvider);
+
+			// Entry registered for the provider key
+			ensure!(!ProviderKeys::<T>::contains_key(provider_id),  Error::<T>::ProviderAlreadyRegistered);
+
+			// The provided public key already assigned to another enclave provider
+			let enclave_provider_exists = !ProviderKeys::<T>::iter_values()
+				.find(|x| x.public_key.eq(&public_key.clone())).is_some();
+
+			ensure!(enclave_provider_exists,  Error::<T>::PublicKeyRegisteredForDifferentEnclaveProvider);
+
+			let record = <EnclaveProviderKeys<T::AccountId>>::new(
+				enclave_class.clone(),
+				account_id.clone(),
+				public_key.clone()
+			);
+
+			ProviderKeys::<T>::insert(provider_id, record);
+
+			Self::deposit_event(
+				Event::RegisterEnclaveProviderKeys {
+					account_id,
+					provider_id,
+					enclave_class,
+					public_key
+				}
+			);
 
 			Ok(().into())
 		}
@@ -161,6 +187,8 @@ pub mod pallet {
 
 			Ok(().into())
 		}
+
+		// ********************************************************************************************************************
 
 		#[pallet::weight(T::WeightInfo::register_enclave())]
 		pub fn register_enclave(
@@ -398,7 +426,13 @@ pub mod pallet {
 		AddedCluster { cluster_id: ClusterId },
 		RemovedCluster { cluster_id: ClusterId },
 
-		RegisterEnclaveProvider {id: EnclaveId, enclave_provider_name: Vec<u8>}
+		RegisterEnclaveProvider {id: EnclaveId, enclave_provider_name: Vec<u8>},
+		RegisterEnclaveProviderKeys {
+			account_id: T::AccountId,
+			provider_id: ProviderId,
+			enclave_class: Option<Vec<u8>>,
+			public_key: Vec<u8>
+		}
 	}
 
 	#[pallet::error]
@@ -419,6 +453,9 @@ pub mod pallet {
 		ProviderIdOverflow,
 		AccountAlreadyRegisteredForEnclave,
 		EnclaveProviderAlreadyRegistered,
+		UnregisteredEnclaveProvider,
+		ProviderAlreadyRegistered,
+		PublicKeyRegisteredForDifferentEnclaveProvider,
 	}
 
 	//
@@ -469,6 +506,19 @@ pub mod pallet {
 	// #[pallet::getter(fn enclave_provider)]
 	// pub type EnclaveProviderRegistry<T: Config> =
 	// 	StorageMap<_, Blake2_128Concat, ProviderId, EnclaveProvider<T::AccountId>, OptionQuery>;
+
+	/*
+	pub struct EnclaveProviderKeys<AccountId>
+	{
+		pub enclave_class: Option<Vec<u8>>,
+		pub account_id: AccountId,
+		pub public_key: Vec<u8>,
+	}
+	*/
+	#[pallet::storage]
+	#[pallet::getter(fn enclave_provider_keys)]
+	pub type ProviderKeys<T: Config> =
+		StorageMap<_, Blake2_128Concat, ProviderId, EnclaveProviderKeys<T::AccountId>, OptionQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn enclave_provider)]

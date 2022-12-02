@@ -20,7 +20,7 @@ use frame_system::RawOrigin;
 use pallet_balances::Error as BalanceError;
 use sp_runtime::traits::BadOrigin;
 
-use crate::{Cluster, ClusterId, ClusterIdGenerator, ClusterIndex, ClusterRegistry, Enclave, EnclaveId, EnclaveIdGenerator, EnclaveIndex, EnclaveProviderRegistry, EnclaveRegistry, Error};
+use crate::{Cluster, ClusterId, ClusterIdGenerator, ClusterIndex, ClusterRegistry, Enclave, EnclaveId, EnclaveIdGenerator, EnclaveIndex, EnclaveProviderRegistry, EnclaveRegistry, Error, ProviderId, ProviderKeys};
 
 #[test]
 fn register_enclave() {
@@ -288,8 +288,6 @@ fn register_enclave_provider() {
 
 			let amd_provider = "AMD".as_bytes().to_vec();
 			let intel_provider = "INTEL".as_bytes().to_vec();
-			// Non  mandate
-			let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
 
 			assert_ok!(TEE::register_enclave_provider(RawOrigin::Root.into(), amd_provider.clone()));
 			let amd = EnclaveProviderRegistry::<Test>::get(0).unwrap();
@@ -302,8 +300,74 @@ fn register_enclave_provider() {
 
 			// Error if provider already exists
 			assert_noop!(
-				TEE::register_enclave_provider(RawOrigin::Root.into(),
-				intel_provider.clone()),Error::<Test>::EnclaveProviderAlreadyRegistered
+				TEE::register_enclave_provider(
+					RawOrigin::Root.into(),
+					intel_provider.clone()
+				),
+				Error::<Test>::EnclaveProviderAlreadyRegistered
+			);
+		})
+}
+
+#[test]
+fn register_provider_keys() {
+	ExtBuilder::default()
+		.tokens(vec![(ALICE, 10), (BOB, 10)])
+		.build()
+		.execute_with(|| {
+
+			let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
+			let public_key = "MIGeMA0GCSqGSIb3DQEBAQUAA4GMADCBiAKBgHgI3ZgcuSPUzt9bIs857s9198lM".as_bytes().to_vec();
+			let enclave_class = Some("X86_64".as_bytes().to_vec());
+			let provider_id: ProviderId = 0;
+			// Registers INTEL as a provider
+			let intel_provider = "INTEL".as_bytes().to_vec();
+			assert_ok!(TEE::register_enclave_provider(RawOrigin::Root.into(), intel_provider.clone()));
+
+			assert_ok!(TEE::register_provider_keys(
+				alice.clone(),
+				provider_id,
+				enclave_class.clone(),
+				public_key.clone(),
+			));
+
+			let intel = ProviderKeys::<Test>::get(0).unwrap();
+			assert_eq!(intel.public_key, public_key);
+
+			// Registering public key to already registered provider Id
+			assert_noop!(
+				TEE::register_provider_keys(
+					alice.clone(),
+					provider_id,
+					enclave_class.clone(),
+					public_key.clone(),
+				),
+				Error::<Test>::ProviderAlreadyRegistered
+			);
+
+			// Trying top register a key for not registered enclave provider
+			assert_noop!(
+				TEE::register_provider_keys(
+					alice.clone(),
+					1,
+					enclave_class.clone(),
+					public_key.clone(),
+				),
+				Error::<Test>::UnregisteredEnclaveProvider
+			);
+
+			// Register AMD as the provider but with intel public key
+			let amd_provider = "AMD".as_bytes().to_vec();
+			assert_ok!(TEE::register_enclave_provider(RawOrigin::Root.into(), amd_provider.clone()));
+
+			assert_noop!(
+				TEE::register_provider_keys(
+					alice.clone(),
+					1,
+					enclave_class,
+					public_key.clone(),
+				),
+				Error::<Test>::PublicKeyRegisteredForDifferentEnclaveProvider
 			);
 		})
 }
