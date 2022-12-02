@@ -112,12 +112,19 @@ pub mod pallet {
 			ensure_root(origin)?;
 			let (id, new_id) = Self::new_provider_id()?;
 
-			let provider = EnclaveProvider::new(enclave_provider_name);
+			let provider = EnclaveProvider::new(enclave_provider_name.clone());
 
+			let enclave_provider_exists = !EnclaveProviderRegistry::<T>::iter_values()
+				.find(|x| x.enclave_provider_name.eq(&enclave_provider_name)).is_some();
 
-			// TODO: Check if the provider exists
+			ensure!(enclave_provider_exists,Error::<T>::EnclaveProviderAlreadyRegistered);
+
 			EnclaveProviderRegistry::<T>::insert(id, provider);
+
 			ProviderIdGenerator::<T>::put(new_id);
+
+			// Subscriber should capture the corresponding `enclave_id` for the given provider
+			Self::deposit_event(Event::RegisterEnclaveProvider { id, enclave_provider_name });
 
 			Ok(().into())
 		}
@@ -390,6 +397,8 @@ pub mod pallet {
 		// Cluster
 		AddedCluster { cluster_id: ClusterId },
 		RemovedCluster { cluster_id: ClusterId },
+
+		RegisterEnclaveProvider {id: EnclaveId, enclave_provider_name: Vec<u8>}
 	}
 
 	#[pallet::error]
@@ -409,6 +418,7 @@ pub mod pallet {
 		InternalLogicalError,
 		ProviderIdOverflow,
 		AccountAlreadyRegisteredForEnclave,
+		EnclaveProviderAlreadyRegistered,
 	}
 
 	//

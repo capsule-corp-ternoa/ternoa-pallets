@@ -37,7 +37,7 @@ frame_support::construct_runtime!(
 	{
 		System: frame_system,
 		Balances: pallet_balances,
-		TEE: ternoa_tee,
+		TEE: tee,
 	}
 );
 
