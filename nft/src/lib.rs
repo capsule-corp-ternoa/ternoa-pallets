@@ -16,8 +16,6 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-mod migrations;
-
 #[cfg(test)]
 mod tests;
 
@@ -32,8 +30,8 @@ use frame_support::{
 	dispatch::DispatchResult,
 	ensure,
 	traits::{
-		Currency, ExistenceRequirement::KeepAlive, Get, OnRuntimeUpgrade, OnUnbalanced,
-		StorageVersion, WithdrawReasons,
+		Currency, ExistenceRequirement::KeepAlive, Get, OnUnbalanced, StorageVersion,
+		WithdrawReasons,
 	},
 	BoundedVec,
 };
@@ -309,41 +307,7 @@ pub mod pallet {
 		/// Operation is not permitted because the NFT is already a secret.
 		CannotAddSecretToSecretNFTs,
 		/// Feature is not available yet
-		ComingSoon
-	}
-
-	// TODO Write Tests for Runtime upgrade
-	#[pallet::hooks]
-	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-		#[cfg(feature = "try-runtime")]
-		fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
-			<migrations::v2::MigrationV2<T> as OnRuntimeUpgrade>::pre_upgrade()
-		}
-
-		// This function is called when a runtime upgrade is called. We need to make sure that
-		// what ever we do here won't brick the chain or leave the data in a invalid state.
-		fn on_runtime_upgrade() -> frame_support::weights::Weight {
-			let mut weight = Weight::zero();
-
-			// Seems like we start with version 1 and not 0.
-			let version = StorageVersion::get::<Pallet<T>>();
-			if version == StorageVersion::new(1) || version == StorageVersion::new(0) {
-				weight = <migrations::v2::MigrationV2<T> as OnRuntimeUpgrade>::on_runtime_upgrade();
-
-				// Update the storage version.
-				StorageVersion::put::<Pallet<T>>(&StorageVersion::new(2));
-			}
-
-			weight
-		}
-
-		// This function is called after a runtime upgrade is executed. Here we can
-		// test if the new state of blockchain data is valid. It's important to say that
-		// post_upgrade won't be called when a real runtime upgrade is executed.
-		#[cfg(feature = "try-runtime")]
-		fn post_upgrade(v: Vec<u8>) -> Result<(), &'static str> {
-			<migrations::v2::MigrationV2<T> as OnRuntimeUpgrade>::post_upgrade(v)
-		}
+		ComingSoon,
 	}
 
 	#[pallet::call]
