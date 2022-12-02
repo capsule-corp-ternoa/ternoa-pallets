@@ -188,8 +188,6 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		// ********************************************************************************************************************
-
 		#[pallet::weight(T::WeightInfo::register_enclave())]
 		pub fn register_enclave(
 			origin: OriginFor<T>,
