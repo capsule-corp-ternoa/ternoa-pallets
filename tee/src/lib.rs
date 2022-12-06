@@ -171,19 +171,34 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		#[pallet::weight(T::WeightInfo::register_enclave_operator())]
+		/// Allows to register an enclave operator account
+		/// - `enclave_id`: Valid Registered EnclaveId
+		/// - `operator`: Valid enclave operator account
+		/// Stores in
+		/// 	pub type EnclaveOperator<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, EnclaveId, OptionQuery>
+		/// Checks
+		/// 	enclave operator already registered -> AccountAlreadyRegisteredForEnclave
+		///		enclaveId registered -> AssigningOperatorForUnknownEnclaveId
+ 		#[pallet::weight(T::WeightInfo::register_enclave_operator())]
 		pub fn register_enclave_operator(
 			origin: OriginFor<T>,
-			enclave_id: EnclaveId,
 			operator: <T::Lookup as StaticLookup>::Source
 		) -> DispatchResultWithPostInfo {
-			let _ = ensure_signed(origin)?;
-			let operator = T::Lookup::lookup(operator)?;
+			ensure_signed(origin)?;
 
-			ensure!(!EnclaveOperator::<T>::contains_key(operator.clone()),  Error::<T>::AccountAlreadyRegisteredForEnclave);
-			EnclaveOperator::<T>::insert(operator, enclave_id,);
+			let (id, new_id) = Self::new_enclave_operator_id()?;
+			let operator_acc = T::Lookup::lookup(operator.clone())?;
 
-			Self::deposit_event(Event::RegisterEnclaveOperator { enclave_id });
+			// Redundant enclave operator registration check
+			let enclave_operator_exists = !EnclaveOperatorRegistry::<T>::iter_values()
+				.find(|x| x.eq(&operator_acc)).is_some();
+
+			ensure!(enclave_operator_exists,  Error::<T>::AccountAlreadyRegisteredForEnclave);
+
+			EnclaveOperatorRegistry::<T>::insert(id, operator_acc.clone());
+			EnclaveOperatorIdGenerator::<T>::put(new_id);
+
+			Self::deposit_event(Event::RegisterEnclaveOperator { operator: operator_acc, enclave_operator_id: id });
 
 			Ok(().into())
 		}
@@ -191,8 +206,8 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::register_enclave())]
 		pub fn register_enclave(
 			origin: OriginFor<T>,
-			ra_report: Vec<u8>,
-			api_uri: Vec<u8>,
+			ra_report: Vec<u8>, // JSON file
+			api_uri: Vec<u8>, // TLS v2
 		) -> DispatchResultWithPostInfo {
 			let account = ensure_signed(origin)?;
 
@@ -419,7 +434,6 @@ pub mod pallet {
 		UnAssignedEnclave { enclave_id: EnclaveId },
 		UpdatedEnclave { enclave_id: EnclaveId, api_uri: Vec<u8> },
 		NewEnclaveOwner { enclave_id: EnclaveId, owner: T::AccountId },
-		RegisterEnclaveOperator { enclave_id:EnclaveId },
 		// Cluster
 		AddedCluster { cluster_id: ClusterId },
 		RemovedCluster { cluster_id: ClusterId },
@@ -430,7 +444,8 @@ pub mod pallet {
 			provider_id: ProviderId,
 			enclave_class: Option<Vec<u8>>,
 			public_key: Vec<u8>
-		}
+		},
+		RegisterEnclaveOperator {operator: T::AccountId, enclave_operator_id: EnclaveOperatorId}
 	}
 
 	#[pallet::error]
@@ -454,6 +469,7 @@ pub mod pallet {
 		UnregisteredEnclaveProvider,
 		ProviderAlreadyRegistered,
 		PublicKeyRegisteredForDifferentEnclaveProvider,
+		AssigningOperatorForUnknownEnclaveId,
 	}
 
 	//
@@ -475,8 +491,14 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn enclave_operator)]
-	pub type EnclaveOperator<T: Config> =
-		StorageMap<_, Blake2_128Concat, T::AccountId, EnclaveId, OptionQuery>;
+	pub type EnclaveOperatorRegistry<T: Config> =
+		StorageMap<_, Blake2_128Concat, EnclaveOperatorId, T::AccountId, OptionQuery>;
+
+	// Given enclave
+	// #[pallet::storage]
+	// #[pallet::getter(fn enclave_operator)]
+	// pub type EnclaveOperatorEnclaveRegistry<T: Config> =
+	// StorageMap<_, Blake2_128Concat, T::AccountId, Vec<EnclaveId>, OptionQuery>;
 
 
 	// Cluster Registry
@@ -499,6 +521,11 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn provider_id_generator)]
 	pub type ProviderIdGenerator<T: Config> = StorageValue<_, ProviderId, ValueQuery>;
+
+	/// Creating a storage item called EnclaveOperatorIdGenerator.
+	#[pallet::storage]
+	#[pallet::getter(fn enclave_operator_id_generator)]
+	pub type EnclaveOperatorIdGenerator<T: Config> = StorageValue<_, EnclaveOperatorId, ValueQuery>;
 
 	// #[pallet::storage]
 	// #[pallet::getter(fn enclave_provider)]
@@ -599,6 +626,12 @@ impl<T: Config> Pallet<T> {
 		let new_id: u32 = id.checked_add(1).ok_or(Error::<T>::ProviderIdOverflow)?;
 		Ok((id, new_id))
 	}
+
+	pub fn new_enclave_operator_id() -> Result<(EnclaveOperatorId, EnclaveOperatorId), Error<T>> {
+		let id: EnclaveOperatorId = EnclaveOperatorIdGenerator::<T>::get();
+		let new_id: u32 = id.checked_add(1).ok_or(Error::<T>::ProviderIdOverflow)?;
+		Ok((id, new_id))
+	}
 }
 
 impl<T: Config> traits::SGXExt for Pallet<T> {
@@ -617,26 +650,37 @@ impl<T: Config> traits::SGXExt for Pallet<T> {
 	///
 	/// A tuple of the cluster id and the enclave id.
 	fn ensure_enclave(account: Self::AccountId) -> Option<(Self::ClusterId, Self::EnclaveId)> {
-		// TODO: Please improve this implementation and add tests!!
-		let ea = EnclaveOperator::<T>::get(account);
 
+		// *****************************************************************************************
 		let mut result: Option<(Self::ClusterId, Self::EnclaveId)> = None;
-
-		match ea {
-			Some(enclave_id) => {
-				let cluster_id = ClusterIndex::<T>::get(enclave_id).unwrap();
+		let enclave_id: Option<EnclaveId> = EnclaveIndex::<T>::get(account);
+		match enclave_id {
+			Some(enc_id) => {
+				let cluster_id = ClusterIndex::<T>::get(enc_id).unwrap();
 				let cluster = ClusterRegistry::<T>::get(cluster_id).unwrap();
-
-				result = if cluster.enclaves.contains(&enclave_id) {
-					Some((cluster_id, enclave_id))
+				result = if cluster.enclaves.contains(&enc_id) {
+					Some((cluster_id, enc_id))
 				} else {
 					None
 				}
 			}
 			None => ()
 		}
-
 		result
 	}
 }
 
+/*
+
+// Validate PRuntime
+	let pruntime_hash = ias_fields.extend_mrenclave();
+	if verify_pruntime_hash && !pruntime_allowlist.contains(&pruntime_hash) {
+		return Err(Error::PRuntimeRejected);
+	}
+
+	// Validate time
+	if (now as i64 - report_timestamp) >= 7200 {
+		return Err(Error::OutdatedIASReport);
+	}
+
+*/

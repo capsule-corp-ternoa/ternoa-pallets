@@ -310,49 +310,76 @@ fn register_enclave_provider() {
 		})
 }
 
-#[test]
-fn enclave_operator() {
-	ExtBuilder::default()
-		.tokens(vec![(ALICE, 10), (BOB, 10)])
-		.build()
-		.execute_with(|| {
-
-			let amd_provider = "AMD".as_bytes().to_vec();
-			let intel_provider = "INTEL".as_bytes().to_vec();
-
-			let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
-			let bob: mock::RuntimeOrigin = RawOrigin::Signed(BOB).into();
-
-			let valid_uri = "https://va".as_bytes().to_vec();
-			let cluster_id: ClusterId = 0;
-
-			let ra_report = "This is RA Report".as_bytes().to_vec();
-
-			// Creates a cluster
-			assert_ok!(TEE::create_cluster(RawOrigin::Root.into()));
-
-			// Register enclave provider
-			assert_ok!(TEE::register_enclave_provider(RawOrigin::Root.into(), amd_provider.clone()));
-			assert_ok!(TEE::register_enclave_provider(RawOrigin::Root.into(), intel_provider.clone()));
-
-
-
-			// Register Enclave
-			assert_ok!(TEE::register_enclave(alice.clone(), ra_report.clone(), valid_uri.clone()));
-			assert_ok!(TEE::register_enclave(bob.clone(), ra_report.clone(),  valid_uri.clone()));
-
-			// Assign enclave
-			assert_ok!(TEE::assign_enclave(alice.clone(), cluster_id));
-			assert_ok!(TEE::assign_enclave(bob.clone(), cluster_id));
-
-
-
-			// Register provider for enclaveId 0
-			// assert_ok!(TEE::register_enclave_operator(alice.clone(), ra_report.clone(), valid_uri.clone()));
-
-
-		})
-}
+// #[test]
+// fn enclave_operator() {
+// 	/*
+//
+// 	*/
+// 	ExtBuilder::default()
+// 		.tokens(vec![(ALICE, 10), (BOB, 10)])
+// 		.build()
+// 		.execute_with(|| {
+//
+// 			// Provider should be present
+// 			let amd_provider = "AMD".as_bytes().to_vec();
+// 			let intel_provider = "INTEL".as_bytes().to_vec();
+//
+// 			let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
+// 			let bob: mock::RuntimeOrigin = RawOrigin::Signed(BOB).into();
+//
+// 			// Enclave URI
+// 			let valid_uri = "https://va".as_bytes().to_vec();
+//
+// 			// ClusterId Required to register an enclave
+// 			// let cluster_id: ClusterId = 0;
+//
+// 			// This is a mocked entry only, does not reflect the actual report
+// 			let ra_report = "This is RA Report".as_bytes().to_vec();
+//
+// 			// First we need to create a cluster and this is a mandate call
+// 			// assert_ok!(TEE::create_cluster(RawOrigin::Root.into()));
+//
+// 			// Register enclave provider -> Registering AMD as the provider
+// 			assert_ok!(TEE::register_enclave_provider(RawOrigin::Root.into(), amd_provider.clone()));
+// 			// Register enclave provider -> Registering intel as the provider
+// 			assert_ok!(TEE::register_enclave_provider(RawOrigin::Root.into(), intel_provider.clone()));
+//
+// 			// Register Enclave, results creations of an enclaveId
+// 			assert_ok!(TEE::register_enclave(alice.clone(), ra_report.clone(), valid_uri.clone()));
+// 			assert_ok!(TEE::register_enclave(bob.clone(), ra_report.clone(),  valid_uri.clone()));
+//
+// 			// Since enclaveId 1 registered by Alice we are
+// 			assert_ok!(TEE::register_enclave_operator(alice.clone(), 1, alice.clone()));
+// 			/*
+// 			let intel = EnclaveProviderRegistry::<Test>::get(1).unwrap();
+// 			assert_eq!(intel.enclave_provider_name, intel_provider.clone());
+//
+// 			let res = TEE::ensure_enclave(INTEL_ACCOUNT);
+// 			assert_eq!(res, None);
+//
+// 			// Registering Intel
+// 			assert_ok!(TEE::register_enclave_operator(alice.clone(), 0, INTEL_ACCOUNT));
+//
+// 			// Trying to register the same account
+//
+// 			assert_noop!(
+// 				TEE::register_enclave_operator(alice.clone(), 0, INTEL_ACCOUNT),
+// 				Error::<Test>::AccountAlreadyRegisteredForEnclave
+// 			);
+//
+// 			*/
+//
+// 			// Registered enclave can ve assigned to a cluster
+// 			// EnclaveId retrieved by the enclave operator account (which is the origin used to register an enclave)
+// 			// assert_ok!(TEE::assign_enclave(alice.clone(), cluster_id));
+// 			// assert_ok!(TEE::assign_enclave(bob.clone(), cluster_id));
+//
+// 			// Register provider for enclaveId 0
+// 			// assert_ok!(TEE::register_enclave_operator(alice.clone(), ra_report.clone(), valid_uri.clone()));
+//
+//
+// 		})
+// }
 
 #[test]
 fn ensure_enclave() {
@@ -377,32 +404,12 @@ fn ensure_enclave() {
 			assert_ok!(TEE::register_enclave(bob.clone(), ra_report.clone(),  valid_uri.clone()));
 			assert_ok!(TEE::assign_enclave(alice.clone(), cluster_id));
 			assert_ok!(TEE::assign_enclave(bob.clone(), cluster_id));
-
 			assert_ok!(TEE::register_enclave_provider(RawOrigin::Root.into(), amd_provider.clone()));
-			let amd = EnclaveProviderRegistry::<Test>::get(0).unwrap();
-
-			assert_eq!(amd.enclave_provider_name, amd_provider.clone());
 			assert_ok!(TEE::register_enclave_provider(RawOrigin::Root.into(), intel_provider.clone()));
 
-			let intel = EnclaveProviderRegistry::<Test>::get(1).unwrap();
-			assert_eq!(intel.enclave_provider_name, intel_provider.clone());
-
-			let res = TEE::ensure_enclave(INTEL_ACCOUNT);
-			assert_eq!(res, None);
-
-			// Registering Intel
-			assert_ok!(TEE::register_enclave_operator(alice.clone(), 0, INTEL_ACCOUNT));
-
-			// Trying to register the same account
-
-			assert_noop!(
-				TEE::register_enclave_operator(alice.clone(), 0, INTEL_ACCOUNT),
-				Error::<Test>::AccountAlreadyRegisteredForEnclave
-			);
-
-			let res = TEE::ensure_enclave(INTEL_ACCOUNT);
+			let res = TEE::ensure_enclave(BOB);
 			// Returns the registered `clusterId` and `enclaveId` for the given Enclave Operator AccountId
-			assert_eq!(res, Some((0, 0)));
+			assert_eq!(res, Some((0, 1)));
 		})
 }
 

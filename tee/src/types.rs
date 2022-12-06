@@ -22,6 +22,7 @@ use sp_std::vec::Vec;
 pub type EnclaveId = u32;
 pub type ClusterId = u32;
 pub type ProviderId = u32;
+pub type EnclaveOperatorId = u32;
 
 #[derive(Encode, Decode, Clone, Eq, PartialEq, RuntimeDebug, TypeInfo, Default)]
 pub struct EnclaveProvider {
