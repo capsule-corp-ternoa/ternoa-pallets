@@ -189,13 +189,9 @@ pub mod pallet {
 			let (id, new_id) = Self::new_enclave_operator_id()?;
 			let operator_acc = T::Lookup::lookup(operator.clone())?;
 
-			// Redundant enclave operator registration check
-			let enclave_operator_exists = !EnclaveOperatorRegistry::<T>::iter_values()
-				.find(|x| x.eq(&operator_acc)).is_some();
+			ensure!(!EnclaveOperatorRegistry::<T>::contains_key(operator_acc.clone()),  Error::<T>::EnclaveOperatorExists);
 
-			ensure!(enclave_operator_exists,  Error::<T>::AccountAlreadyRegisteredForEnclave);
-
-			EnclaveOperatorRegistry::<T>::insert(id, operator_acc.clone());
+			EnclaveOperatorRegistry::<T>::insert(operator_acc.clone(), id);
 			EnclaveOperatorIdGenerator::<T>::put(new_id);
 
 			Self::deposit_event(Event::RegisterEnclaveOperator { operator: operator_acc, enclave_operator_id: id });
@@ -210,6 +206,10 @@ pub mod pallet {
 			api_uri: Vec<u8>, // TLS v2
 		) -> DispatchResultWithPostInfo {
 			let account = ensure_signed(origin)?;
+			// register_enclave
+			// let operator_acc = T::Lookup::lookup(account.clone().into())?;
+			ensure!(EnclaveOperatorRegistry::<T>::contains_key(account.clone()),  Error::<T>::UnknownEnclaveOperatorAccount);
+
 
 			ensure!(api_uri.len() < T::MaxUriLen::get().into(),Error::<T>::UriTooLong);
 			ensure!(api_uri.len() > T::MinUriLen::get().into(),Error::<T>::UriTooShort);
@@ -464,12 +464,13 @@ pub mod pallet {
 		CannotAssignToSameCluster,
 		InternalLogicalError,
 		ProviderIdOverflow,
-		AccountAlreadyRegisteredForEnclave,
 		EnclaveProviderAlreadyRegistered,
 		UnregisteredEnclaveProvider,
 		ProviderAlreadyRegistered,
 		PublicKeyRegisteredForDifferentEnclaveProvider,
 		AssigningOperatorForUnknownEnclaveId,
+		EnclaveOperatorExists,
+		UnknownEnclaveOperatorAccount,
 	}
 
 	//
@@ -492,7 +493,7 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn enclave_operator)]
 	pub type EnclaveOperatorRegistry<T: Config> =
-		StorageMap<_, Blake2_128Concat, EnclaveOperatorId, T::AccountId, OptionQuery>;
+		StorageMap<_, Blake2_128Concat, T::AccountId, EnclaveOperatorId, OptionQuery>;
 
 	// Given enclave
 	// #[pallet::storage]
