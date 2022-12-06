@@ -1602,7 +1602,7 @@ mod coming_soon {
 // 			let ok = NFT::add_secret(alice.clone(), ALICE_NFT_ID, offchain_data.clone());
 // 			assert_ok!(ok);
 
-// 			//TODO change when sgx function is ready.
+// 			//TODO change when tee function is ready.
 // 			NFT::add_secret_shard(alice, ALICE_NFT_ID).unwrap();
 
 // 			// Final state checks.
@@ -1635,7 +1635,7 @@ mod coming_soon {
 // 				NFT::add_secret_shard(i_account, ALICE_NFT_ID).unwrap();
 // 			}
 
-// 			//TODO change when sgx function is ready.
+// 			//TODO change when tee function is ready.
 // 			NFT::add_secret_shard(alice, ALICE_NFT_ID).unwrap();
 
 // 			// Final state checks.
@@ -1671,7 +1671,7 @@ mod coming_soon {
 // 			prepare_tests();
 // 			let alice: mock::RuntimeOrigin = origin(ALICE);
 
-// 			//TODO change when sgx function is ready.
+// 			//TODO change when tee function is ready.
 // 			let err = NFT::add_secret_shard(alice, ALICE_NFT_ID);
 
 // 			// Should fail because Alice's NFT is not a secret NFT.
@@ -1689,7 +1689,7 @@ mod coming_soon {
 // 			let nft_state = NFTState::new(false, false, true, false, false, false, false);
 // 			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
 
-// 			//TODO change when sgx function is ready.
+// 			//TODO change when tee function is ready.
 // 			let err = NFT::add_secret_shard(alice, ALICE_NFT_ID);
 
 // 			// Should fail because Alice's secret NFT is already synced.
@@ -1710,7 +1710,7 @@ mod coming_soon {
 
 // 			NFT::add_secret_shard(alice.clone(), ALICE_NFT_ID).unwrap();
 
-// 			//TODO change when sgx function is ready.
+// 			//TODO change when tee function is ready.
 // 			let err = NFT::add_secret_shard(alice, ALICE_NFT_ID);
 
 // 			// Should fail because enclave has already added shard.

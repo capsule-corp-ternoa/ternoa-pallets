@@ -232,7 +232,7 @@ benchmarks! {
 	// 	assert!(secret_offchain_data.is_some());
 	// }
 
-	// //TODO change when sgx
+	// //TODO change when tee
 	// add_secret_shard {
 	// 	let benchmark_data = prepare_benchmarks::<T>();
 	// 	let alice = origin::<T>("ALICE");
