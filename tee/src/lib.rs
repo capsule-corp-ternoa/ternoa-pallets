@@ -31,7 +31,7 @@ pub use types::*;
 
 use frame_support::traits::StorageVersion;
 use sp_runtime::traits::StaticLookup;
-use ternoa_common::traits::SGXExt;
+use ternoa_common::traits;
 pub use weights::WeightInfo;
 
 /// The current storage version.
@@ -601,7 +601,7 @@ impl<T: Config> Pallet<T> {
 	}
 }
 
-impl<T: Config> SGXExt for Pallet<T> {
+impl<T: Config> traits::SGXExt for Pallet<T> {
 	type AccountId = T::AccountId;
 	type ClusterId = u32;
 	type EnclaveId = u32;
@@ -616,7 +616,7 @@ impl<T: Config> SGXExt for Pallet<T> {
 	/// Returns:
 	///
 	/// A tuple of the cluster id and the enclave id.
-	fn ensure_enclave(account: T::AccountId) -> Option<(Self::ClusterId, Self::EnclaveId)> {
+	fn ensure_enclave(account: Self::AccountId) -> Option<(Self::ClusterId, Self::EnclaveId)> {
 		// TODO: Please improve this implementation and add tests!!
 		let ea = EnclaveOperator::<T>::get(account);
 
@@ -626,7 +626,7 @@ impl<T: Config> SGXExt for Pallet<T> {
 			Some(enclave_id) => {
 				let cluster_id = ClusterIndex::<T>::get(enclave_id).unwrap();
 				let cluster = ClusterRegistry::<T>::get(cluster_id).unwrap();
-				let cont =  cluster.enclaves.contains(&enclave_id);
+
 				result = if cluster.enclaves.contains(&enclave_id) {
 					Some((cluster_id, enclave_id))
 				} else {
