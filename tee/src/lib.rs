@@ -203,7 +203,8 @@ pub mod pallet {
 		pub fn register_enclave(
 			origin: OriginFor<T>,
 			ra_report: Vec<u8>, // JSON file
-			api_uri: Vec<u8>, // TLS v2
+			api_uri: Vec<u8>,
+			report_time_stamp: u64,// TLS v2
 		) -> DispatchResultWithPostInfo {
 			let account = ensure_signed(origin)?;
 			/*
@@ -222,7 +223,7 @@ pub mod pallet {
 			let raw_signing_cert =
 				hex::decode(attestation["rawSigningCert"].as_str().unwrap().as_bytes()).unwrap();
 
-			let _res = Self::validate_ias_report(report, &signature, &raw_signing_cert);
+			let _res = Self::validate_ias_report(report, &signature, &raw_signing_cert, report_time_stamp);
 
 			ensure!(EnclaveOperatorRegistry::<T>::contains_key(account.clone()),  Error::<T>::UnknownEnclaveOperatorAccount);
 
@@ -592,6 +593,7 @@ impl<T: Config> Pallet<T> {
 		report: &[u8],
 		signature: &[u8],
 		raw_signing_cert: &[u8],
+		report_timestamp: u64,
 	) -> Result<ConfidentialReport, ReportError> {
 		// Validate report
 		let sig_cert = webpki::EndEntityCert::try_from(raw_signing_cert);
@@ -600,12 +602,9 @@ impl<T: Config> Pallet<T> {
 			sig_cert.verify_signature(&webpki::RSA_PKCS1_2048_8192_SHA256, report, signature);
 		verify_result.or(Err(ReportError::InvalidIASSigningCert))?;
 
-		// ****************************************************************
-		let now = 1u64;
-		// *****************************************************************
 		// Validate certificate
 		let chain: Vec<&[u8]> = Vec::new();
-		let time_now = webpki::Time::from_seconds_since_unix_epoch(now);
+		let time_now = webpki::Time::from_seconds_since_unix_epoch(report_timestamp);
 		let tls_server_cert_valid = sig_cert.verify_is_valid_tls_server_cert(
 			SUPPORTED_SIG_ALGS,
 			&IAS_SERVER_ROOTS,
