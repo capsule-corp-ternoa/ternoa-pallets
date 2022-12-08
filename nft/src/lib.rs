@@ -834,7 +834,6 @@ pub mod pallet {
 			collection_id: Option<CollectionId>,
 			is_soulbound: bool,
 		) -> DispatchResultWithPostInfo {
-			ensure!(false, Error::<T>::ComingSoon);
 			let who = ensure_signed(origin.clone())?;
 
 			// Check balance
