@@ -105,7 +105,7 @@ pub trait MarketplaceExt {
 	) -> DispatchResult;
 }
 
-pub trait SGXExt {
+pub trait TEEExt {
 	type AccountId: Clone + PartialEq + Debug;
 	type ClusterId = u32;
 	type EnclaveId = u32;

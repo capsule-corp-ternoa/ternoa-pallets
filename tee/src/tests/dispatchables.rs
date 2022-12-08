@@ -19,7 +19,7 @@ use frame_support::{assert_noop, assert_ok};
 use frame_system::RawOrigin;
 use pallet_balances::Error as BalanceError;
 use sp_runtime::traits::BadOrigin;
-use ternoa_common::traits::SGXExt;
+use ternoa_common::traits::TEEExt;
 
 use crate::{
 	Cluster, ClusterId, ClusterIdGenerator, ClusterIndex, ClusterRegistry, Enclave, EnclaveId,
@@ -33,10 +33,11 @@ fn register_enclave() {
 		.tokens(vec![(ALICE, 100), (BOB, 0), (DAVE, 10)])
 		.build()
 		.execute_with(|| {
-			let long_uri = "https://this".as_bytes().to_vec();
+
 			let short_uri = "http".as_bytes().to_vec();
 			let valid_uri = "https://va".as_bytes().to_vec();
 			let att_rep: Vec<u8> = include_bytes!("./mock_attestation.json").to_vec();
+			let long_uri = "https://this".as_bytes().to_vec();
 
 			let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
 			let bob: mock::RuntimeOrigin = RawOrigin::Signed(BOB).into();
@@ -52,31 +53,31 @@ fn register_enclave() {
 
 			// Alice should be able to create an enclave if she has enough tokens.
 			assert_ok!(TEE::register_enclave(alice.clone(), att_rep.clone(), valid_uri.clone()));
-			// assert_eq!(Balances::free_balance(ALICE), 95);
+			assert_eq!(Balances::free_balance(ALICE), 95);
+
+			let enclave = Enclave::new(valid_uri.clone());
+			let enclave_id: EnclaveId = 0;
+			assert!(EnclaveRegistry::<Test>::contains_key(enclave_id));
+			assert_eq!(EnclaveRegistry::<Test>::get(enclave_id), Some(enclave));
+			assert!(EnclaveIndex::<Test>::contains_key(ALICE));
+			assert_eq!(EnclaveIndex::<Test>::get(ALICE).unwrap(), enclave_id);
+			assert_eq!(EnclaveIdGenerator::<Test>::get(), 1);
 			//
-			// let enclave = Enclave::new(valid_uri.clone());
-			// let enclave_id: EnclaveId = 0;
-			// assert!(EnclaveRegistry::<Test>::contains_key(enclave_id));
-			// assert_eq!(EnclaveRegistry::<Test>::get(enclave_id), Some(enclave));
-			// assert!(EnclaveIndex::<Test>::contains_key(ALICE));
-			// assert_eq!(EnclaveIndex::<Test>::get(ALICE).unwrap(), enclave_id);
-			// assert_eq!(EnclaveIdGenerator::<Test>::get(), 1);
-			// //
-			// // Alice should NOT be able to create an enclave if she already has one.
-			// let ok = TEE::register_enclave(alice, att_rep.clone(), valid_uri.clone());
-			// assert_noop!(ok, Error::<Test>::PublicKeyAlreadyTiedToACluster);
-			//
-			// // Bob should NOT be able to create an enclave if the doesn't have enough tokens.
-			// let ok = TEE::register_enclave(bob, att_rep.clone(), valid_uri.clone());
-			// assert_noop!(ok, BalanceError::<Test>::InsufficientBalance);
-			//
-			// // Dave should NOT be able to create an enclave if the uri is too short.
-			// let ok = TEE::register_enclave(dave.clone(), att_rep.clone(), short_uri);
-			// assert_noop!(ok, Error::<Test>::UriTooShort);
-			//
-			// // Dave should NOT be able to create an enclave if the uri is too long.
-			// let ok = TEE::register_enclave(dave, att_rep, long_uri);
-			// assert_noop!(ok, Error::<Test>::UriTooLong);
+			// Alice should NOT be able to create an enclave if she already has one.
+			let ok = TEE::register_enclave(alice, att_rep.clone(), valid_uri.clone());
+			assert_noop!(ok, Error::<Test>::PublicKeyAlreadyTiedToACluster);
+
+			// Bob should NOT be able to create an enclave if the doesn't have enough tokens.
+			let ok = TEE::register_enclave(bob, att_rep.clone(), valid_uri.clone());
+			assert_noop!(ok, BalanceError::<Test>::InsufficientBalance);
+
+			// Dave should NOT be able to create an enclave if the uri is too short.
+			let ok = TEE::register_enclave(dave.clone(), att_rep.clone(), short_uri);
+			assert_noop!(ok, Error::<Test>::UriTooShort);
+
+			// Dave should NOT be able to create an enclave if the uri is too long.
+			let ok = TEE::register_enclave(dave, att_rep, long_uri);
+			assert_noop!(ok, Error::<Test>::UriTooLong);
 		})
 }
 
