@@ -221,6 +221,7 @@ pub mod pallet {
 			api_uri: Vec<u8>,
 		) -> DispatchResultWithPostInfo {
 			let account = ensure_signed(origin)?;
+			let mut valid = true;
 
 			let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
@@ -231,7 +232,20 @@ pub mod pallet {
 			let raw_signing_cert =
 				hex::decode(attestation["rawSigningCert"].as_str().unwrap().as_bytes()).unwrap();
 
-			let res = Self::validate_ias_report(report, &signature, &raw_signing_cert, now);
+			// Do we need this confidential report?
+			let res = Self::validate_ias_report(
+				report,
+				&signature,
+				&raw_signing_cert,
+				now
+			);
+
+			match res {
+				Err(_) => {valid = false;}
+				_ => {}
+			}
+
+			ensure!(valid, Error::<T>::InvalidIASSigningCert);
 
 			ensure!(
 				EnclaveOperatorRegistry::<T>::contains_key(account.clone()),
@@ -523,6 +537,7 @@ pub mod pallet {
 		AssigningOperatorForUnknownEnclaveId,
 		EnclaveOperatorExists,
 		UnknownEnclaveOperatorAccount,
+		InvalidIASSigningCert,
 	}
 
 	//
@@ -738,18 +753,3 @@ impl<T: Config> traits::SGXExt for Pallet<T> {
 		result
 	}
 }
-
-/*
-
-// Validate PRuntime
-	let pruntime_hash = ias_fields.extend_mrenclave();
-	if verify_pruntime_hash && !pruntime_allowlist.contains(&pruntime_hash) {
-		return Err(Error::PRuntimeRejected);
-	}
-
-	// Validate time
-	if (now as i64 - report_timestamp) >= 7200 {
-		return Err(Error::OutdatedIASReport);
-	}
-
-*/
