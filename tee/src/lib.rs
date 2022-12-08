@@ -224,7 +224,6 @@ pub mod pallet {
 
 			let _res = Self::validate_ias_report(report, &signature, &raw_signing_cert);
 
-
 			ensure!(EnclaveOperatorRegistry::<T>::contains_key(account.clone()),  Error::<T>::UnknownEnclaveOperatorAccount);
 
 			ensure!(api_uri.len() < T::MaxUriLen::get().into(),Error::<T>::UriTooLong);
