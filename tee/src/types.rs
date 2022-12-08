@@ -27,17 +27,11 @@ pub type EnclaveOperatorId = u32;
 // ********************************************************************
 pub const IAS_QUOTE_STATUS_LEVEL_1: &[&str] = &["OK"];
 pub const IAS_QUOTE_STATUS_LEVEL_2: &[&str] = &["SW_HARDENING_NEEDED"];
-pub const IAS_QUOTE_STATUS_LEVEL_3: &[&str] = &[
-	"CONFIGURATION_NEEDED",
-	"CONFIGURATION_AND_SW_HARDENING_NEEDED",
-];
+pub const IAS_QUOTE_STATUS_LEVEL_3: &[&str] =
+	&["CONFIGURATION_NEEDED", "CONFIGURATION_AND_SW_HARDENING_NEEDED"];
 pub const IAS_QUOTE_STATUS_LEVEL_5: &[&str] = &["GROUP_OUT_OF_DATE"];
-pub const IAS_QUOTE_ADVISORY_ID_WHITELIST: &[&str] = &[
-	"INTEL-SA-00334",
-	"INTEL-SA-00219",
-	"INTEL-SA-00381",
-	"INTEL-SA-00389",
-];
+pub const IAS_QUOTE_ADVISORY_ID_WHITELIST: &[&str] =
+	&["INTEL-SA-00334", "INTEL-SA-00219", "INTEL-SA-00381", "INTEL-SA-00389"];
 pub type SignatureAlgorithms = &'static [&'static webpki::SignatureAlgorithm];
 pub static SUPPORTED_SIG_ALGS: SignatureAlgorithms = &[
 	// &webpki::ECDSA_P256_SHA256,
@@ -91,11 +85,7 @@ pub static IAS_SERVER_ROOTS: webpki::TlsServerTrustAnchors = webpki::TlsServerTr
 ]);
 #[derive(Encode, Decode, TypeInfo, Debug, Clone, PartialEq, Eq)]
 pub enum AttestationReport {
-	SgxIas {
-		ra_report: Vec<u8>,
-		signature: Vec<u8>,
-		raw_signing_cert: Vec<u8>,
-	},
+	SgxIas { ra_report: Vec<u8>, signature: Vec<u8>, raw_signing_cert: Vec<u8> },
 }
 #[cfg_attr(feature = "enable_serde", derive(Serialize, Deserialize))]
 #[derive(Encode, Decode, TypeInfo, Debug, Copy, Clone, PartialEq, Eq)]
@@ -144,7 +134,8 @@ impl IasFields {
 		let raw_quote_body = parsed_report["isvEnclaveQuoteBody"]
 			.as_str()
 			.ok_or(ReportError::UnknownQuoteBodyFormat)?;
-		let quote_body = base64::decode(raw_quote_body).or(Err(ReportError::UnknownQuoteBodyFormat))?;
+		let quote_body =
+			base64::decode(raw_quote_body).or(Err(ReportError::UnknownQuoteBodyFormat))?;
 		let mr_enclave = &quote_body[112..144];
 		let mr_signer = &quote_body[176..208];
 		let isv_prod_id = &quote_body[304..306];
@@ -152,18 +143,14 @@ impl IasFields {
 		let report_data = &quote_body[368..432];
 
 		// Extract report time
-		let raw_report_timestamp = parsed_report["timestamp"]
-			.as_str()
-			.unwrap_or("UNKNOWN")
-			.to_owned() + "Z";
+		let raw_report_timestamp =
+			parsed_report["timestamp"].as_str().unwrap_or("UNKNOWN").to_owned() + "Z";
 		let report_timestamp = chrono::DateTime::parse_from_rfc3339(&raw_report_timestamp)
 			.or(Err(ReportError::BadIASReport))?
 			.timestamp();
 
 		// Filter valid `isvEnclaveQuoteStatus`
-		let quote_status = &parsed_report["isvEnclaveQuoteStatus"]
-			.as_str()
-			.unwrap_or("UNKNOWN");
+		let quote_status = &parsed_report["isvEnclaveQuoteStatus"].as_str().unwrap_or("UNKNOWN");
 		let mut confidence_level: u8 = 128;
 		if IAS_QUOTE_STATUS_LEVEL_1.contains(quote_status) {
 			confidence_level = 1;
@@ -175,7 +162,7 @@ impl IasFields {
 			confidence_level = 5;
 		}
 		if confidence_level == 128 {
-			return Err(ReportError::InvalidQuoteStatus);
+			return Err(ReportError::InvalidQuoteStatus)
 		}
 		if confidence_level < 5 {
 			// Filter AdvisoryIDs. `advisoryIDs` is optional
@@ -219,11 +206,9 @@ pub struct EnclaveProvider {
 	pub enclave_provider_name: Vec<u8>,
 }
 
-impl  EnclaveProvider  {
-	pub fn new(enclave_provider_name: Vec<u8>, ) -> Self {
-		Self {
-			enclave_provider_name,
-		}
+impl EnclaveProvider {
+	pub fn new(enclave_provider_name: Vec<u8>) -> Self {
+		Self { enclave_provider_name }
 	}
 }
 
@@ -236,16 +221,8 @@ pub struct EnclaveProviderKeys<AccountId> {
 }
 
 impl<AccountId> EnclaveProviderKeys<AccountId> {
-	pub fn new(
-		enclave_class: Option<Vec<u8>>,
-		account_id: AccountId,
-		public_key: Vec<u8>,
-	) -> Self {
-		Self {
-			enclave_class,
-			account_id,
-			public_key
-		}
+	pub fn new(enclave_class: Option<Vec<u8>>, account_id: AccountId, public_key: Vec<u8>) -> Self {
+		Self { enclave_class, account_id, public_key }
 	}
 }
 

@@ -21,7 +21,11 @@ use pallet_balances::Error as BalanceError;
 use sp_runtime::traits::BadOrigin;
 use ternoa_common::traits::SGXExt;
 
-use crate::{Cluster, ClusterId, ClusterIdGenerator, ClusterIndex, ClusterRegistry, Enclave, EnclaveId, EnclaveIdGenerator, EnclaveIndex, EnclaveProviderRegistry, EnclaveRegistry, Error, ProviderId, ProviderKeys};
+use crate::{
+	Cluster, ClusterId, ClusterIdGenerator, ClusterIndex, ClusterRegistry, Enclave, EnclaveId,
+	EnclaveIdGenerator, EnclaveIndex, EnclaveProviderRegistry, EnclaveRegistry, Error, ProviderId,
+	ProviderKeys,
+};
 
 #[test]
 fn register_enclave() {
@@ -41,7 +45,6 @@ fn register_enclave() {
 			assert_ok!(TEE::register_enclave_operator(alice.clone(), ALICE));
 			assert_ok!(TEE::register_enclave_operator(alice.clone(), BOB));
 			assert_ok!(TEE::register_enclave_operator(alice.clone(), DAVE));
-
 
 			assert_eq!(EnclaveIndex::<Test>::iter().count(), 0);
 			assert_eq!(EnclaveRegistry::<Test>::iter().count(), 0);
@@ -83,7 +86,6 @@ fn assign_enclave() {
 		.tokens(vec![(ALICE, 10), (BOB, 10), (DAVE, 10)])
 		.build()
 		.execute_with(|| {
-
 			let att_rep: &[u8] = include_bytes!("./mock_attestation.json");
 			let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
 
@@ -189,7 +191,6 @@ fn update_enclave() {
 			assert_ok!(TEE::update_enclave(alice.clone(), valid_uri.clone()));
 			assert_eq!(EnclaveRegistry::<Test>::get(enclave_id), Some(enclave));
 
-
 			// Dave should NOT be able to update an enclave if the uri is too short.
 			let ok = TEE::update_enclave(alice.clone(), short_uri.clone());
 			assert_noop!(ok, Error::<Test>::UriTooShort);
@@ -277,7 +278,7 @@ fn remove_cluster() {
 
 			assert_ok!(TEE::create_cluster(RawOrigin::Root.into()));
 			assert_ok!(TEE::register_enclave(alice.clone(), att_rep.clone(), valid_uri.clone()));
-			assert_ok!(TEE::register_enclave(bob.clone(), att_rep.clone(),  valid_uri.clone()));
+			assert_ok!(TEE::register_enclave(bob.clone(), att_rep.clone(), valid_uri.clone()));
 			assert_ok!(TEE::assign_enclave(alice.clone(), cluster_id));
 			assert_ok!(TEE::assign_enclave(bob.clone(), cluster_id));
 
@@ -309,25 +310,27 @@ fn register_enclave_provider() {
 		.tokens(vec![(ALICE, 10), (BOB, 10)])
 		.build()
 		.execute_with(|| {
-
 			let amd_provider = "AMD".as_bytes().to_vec();
 			let intel_provider = "INTEL".as_bytes().to_vec();
 
-			assert_ok!(TEE::register_enclave_provider(RawOrigin::Root.into(), amd_provider.clone()));
+			assert_ok!(TEE::register_enclave_provider(
+				RawOrigin::Root.into(),
+				amd_provider.clone()
+			));
 			let amd = EnclaveProviderRegistry::<Test>::get(0).unwrap();
 
 			assert_eq!(amd.enclave_provider_name, amd_provider.clone());
-			assert_ok!(TEE::register_enclave_provider(RawOrigin::Root.into(), intel_provider.clone()));
+			assert_ok!(TEE::register_enclave_provider(
+				RawOrigin::Root.into(),
+				intel_provider.clone()
+			));
 
 			let intel = EnclaveProviderRegistry::<Test>::get(1).unwrap();
 			assert_eq!(intel.enclave_provider_name, intel_provider.clone());
 
 			// Error if provider already exists
 			assert_noop!(
-				TEE::register_enclave_provider(
-					RawOrigin::Root.into(),
-					intel_provider.clone()
-				),
+				TEE::register_enclave_provider(RawOrigin::Root.into(), intel_provider.clone()),
 				Error::<Test>::EnclaveProviderAlreadyRegistered
 			);
 		})
@@ -339,7 +342,6 @@ fn enclave_operator() {
 		.tokens(vec![(ALICE, 10), (BOB, 10)])
 		.build()
 		.execute_with(|| {
-
 			// Provider should be present
 			let amd_provider = "AMD".as_bytes().to_vec();
 			let intel_provider = "INTEL".as_bytes().to_vec();
@@ -354,19 +356,27 @@ fn enclave_operator() {
 			let att_rep: Vec<u8> = include_bytes!("./mock_attestation.json").to_vec();
 
 			// Register enclave provider -> Registering AMD as the provider
-			assert_ok!(TEE::register_enclave_provider(RawOrigin::Root.into(), amd_provider.clone()));
+			assert_ok!(TEE::register_enclave_provider(
+				RawOrigin::Root.into(),
+				amd_provider.clone()
+			));
 			// Register enclave provider -> Registering intel as the provider
-			assert_ok!(TEE::register_enclave_provider(RawOrigin::Root.into(), intel_provider.clone()));
-
+			assert_ok!(TEE::register_enclave_provider(
+				RawOrigin::Root.into(),
+				intel_provider.clone()
+			));
 
 			// Registering BOB as an enclave operator
 			assert_ok!(TEE::register_enclave_operator(alice.clone(), BOB));
 			// Try to register BOB again
 			// Registering BOB again should throw an error
-			assert_noop!(TEE::register_enclave_operator(alice.clone(), BOB), Error::<Test>::EnclaveOperatorExists);
+			assert_noop!(
+				TEE::register_enclave_operator(alice.clone(), BOB),
+				Error::<Test>::EnclaveOperatorExists
+			);
 
 			// Register enclave by BOB the operator should not throw an error
-			assert_ok!(TEE::register_enclave(bob.clone(), att_rep.clone(),  valid_uri.clone()));
+			assert_ok!(TEE::register_enclave(bob.clone(), att_rep.clone(), valid_uri.clone()));
 
 			// Alice havent been registered as an enclave operator, should throw an error
 			assert_noop!(
@@ -388,7 +398,6 @@ fn ensure_enclave() {
 		.tokens(vec![(ALICE, 10), (BOB, 10)])
 		.build()
 		.execute_with(|| {
-
 			let amd_provider = "AMD".as_bytes().to_vec();
 			let intel_provider = "INTEL".as_bytes().to_vec();
 
@@ -405,14 +414,21 @@ fn ensure_enclave() {
 
 			assert_ok!(TEE::create_cluster(RawOrigin::Root.into()));
 			assert_ok!(TEE::register_enclave(alice.clone(), att_rep.clone(), valid_uri.clone()));
-			assert_ok!(TEE::register_enclave(bob.clone(), att_rep.clone(),  valid_uri.clone()));
+			assert_ok!(TEE::register_enclave(bob.clone(), att_rep.clone(), valid_uri.clone()));
 			assert_ok!(TEE::assign_enclave(alice.clone(), cluster_id));
 			assert_ok!(TEE::assign_enclave(bob.clone(), cluster_id));
-			assert_ok!(TEE::register_enclave_provider(RawOrigin::Root.into(), amd_provider.clone()));
-			assert_ok!(TEE::register_enclave_provider(RawOrigin::Root.into(), intel_provider.clone()));
+			assert_ok!(TEE::register_enclave_provider(
+				RawOrigin::Root.into(),
+				amd_provider.clone()
+			));
+			assert_ok!(TEE::register_enclave_provider(
+				RawOrigin::Root.into(),
+				intel_provider.clone()
+			));
 
 			let res = TEE::ensure_enclave(BOB);
-			// Returns the registered `clusterId` and `enclaveId` for the given Enclave Operator AccountId
+			// Returns the registered `clusterId` and `enclaveId` for the given Enclave Operator
+			// AccountId
 			assert_eq!(res, Some((0, 1)));
 		})
 }
@@ -423,14 +439,18 @@ fn register_provider_keys() {
 		.tokens(vec![(ALICE, 10), (BOB, 10)])
 		.build()
 		.execute_with(|| {
-
 			let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
-			let public_key = "MIGeMA0GCSqGSIb3DQEBAQUAA4GMADCBiAKBgHgI3ZgcuSPUzt9bIs857s9198lM".as_bytes().to_vec();
+			let public_key = "MIGeMA0GCSqGSIb3DQEBAQUAA4GMADCBiAKBgHgI3ZgcuSPUzt9bIs857s9198lM"
+				.as_bytes()
+				.to_vec();
 			let enclave_class = Some("X86_64".as_bytes().to_vec());
 			let provider_id: ProviderId = 0;
 			// Registers INTEL as a provider
 			let intel_provider = "INTEL".as_bytes().to_vec();
-			assert_ok!(TEE::register_enclave_provider(RawOrigin::Root.into(), intel_provider.clone()));
+			assert_ok!(TEE::register_enclave_provider(
+				RawOrigin::Root.into(),
+				intel_provider.clone()
+			));
 
 			assert_ok!(TEE::register_provider_keys(
 				alice.clone(),
@@ -466,15 +486,13 @@ fn register_provider_keys() {
 
 			// Register AMD as the provider but with intel public key
 			let amd_provider = "AMD".as_bytes().to_vec();
-			assert_ok!(TEE::register_enclave_provider(RawOrigin::Root.into(), amd_provider.clone()));
+			assert_ok!(TEE::register_enclave_provider(
+				RawOrigin::Root.into(),
+				amd_provider.clone()
+			));
 
 			assert_noop!(
-				TEE::register_provider_keys(
-					alice.clone(),
-					1,
-					enclave_class,
-					public_key.clone(),
-				),
+				TEE::register_provider_keys(alice.clone(), 1, enclave_class, public_key.clone(),),
 				Error::<Test>::PublicKeyRegisteredForDifferentEnclaveProvider
 			);
 		})

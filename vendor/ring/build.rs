@@ -407,11 +407,11 @@ struct Target {
 
 fn build_c_code(target: &Target, pregenerated: PathBuf, out_dir: &Path) {
     #[cfg(not(feature = "wasm32_c"))]
-        {
-            if &target.arch == "wasm32" {
-                return;
-            }
+    {
+        if &target.arch == "wasm32" {
+            return;
         }
+    }
 
     let includes_modified = RING_INCLUDES
         .iter()
@@ -631,7 +631,7 @@ fn cc(
     if &target.env == "msvc" {
         if std::env::var("OPT_LEVEL").unwrap() == "0" {
             let _ = c.flag("/Od"); // Disable optimization for debug builds.
-            // run-time checking: (s)tack frame, (u)ninitialized variables
+                                   // run-time checking: (s)tack frame, (u)ninitialized variables
             let _ = c.flag("/RTCsu");
         } else {
             let _ = c.flag("/Ox"); // Enable full optimization.
@@ -701,8 +701,8 @@ fn nasm(file: &Path, arch: &str, out_file: &Path) -> Command {
 }
 
 fn run_command_with_args<S>(command_name: S, args: &[String])
-    where
-        S: AsRef<std::ffi::OsStr> + Copy,
+where
+    S: AsRef<std::ffi::OsStr> + Copy,
 {
     let mut cmd = Command::new(command_name);
     let _ = cmd.args(args);
@@ -856,8 +856,8 @@ fn is_tracked(file: &DirEntry) {
 }
 
 fn walk_dir<F>(dir: &Path, cb: &F)
-    where
-        F: Fn(&DirEntry),
+where
+    F: Fn(&DirEntry),
 {
     if dir.is_dir() {
         for entry in fs::read_dir(dir).unwrap() {
