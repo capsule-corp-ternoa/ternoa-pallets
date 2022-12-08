@@ -35,12 +35,6 @@ hex-literal = "0.3.4"
 ternoa-common = { default-features = false, path = "../common" }
 primitives = { package = "ternoa-pallets-primitives", default-features = false, path = "../primitives" }
 
-[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-webpki = { version = "0.22", default-features = false, features = ["alloc"] }
-
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-webpki_wasm = { package = "webpki", path = "../vendor/webpki", default-features = false, features = ["alloc"] }
-
 # We needs this dependencies to run our tests
 [dev-dependencies]
 ternoa-nft = { path = "../nft" }
