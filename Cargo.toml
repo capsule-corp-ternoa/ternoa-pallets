@@ -1,4 +1,8 @@
 [workspace]
+exclude = [
+    "vendor/webpki",
+    "vendor/ring",
+]
 members = [
     'common',
     'nft',

@@ -26,10 +26,20 @@ sp-std = { git = "https://github.com/capsule-corp-ternoa/substrate", tag = "tern
 parity-scale-codec = { default-features = false, features = ["derive", "max-encoded-len"], version = "3.1.5" }
 scale-info = { version = "2.1.2", default-features = false, features = ["derive"] }
 log = { default-features = false, version = "0.4.17" }
-
+base64 = { version = "0.13.0", default-features = false, features = ["alloc"] }
+serde_json = { version = "1.0.41", default-features = false, features = ["alloc"] }
+chrono = { version = "0.4.22", default-features = false }
+hex = { version = "0.4", default-features = false }
+hex-literal = "0.3.4"
 # Ternoa
 ternoa-common = { default-features = false, path = "../common" }
 primitives = { package = "ternoa-pallets-primitives", default-features = false, path = "../primitives" }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+webpki = { version = "0.22", default-features = false, features = ["alloc"] }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+webpki_wasm = { package = "webpki", path = "../vendor/webpki", default-features = false, features = ["alloc"] }
 
 # We needs this dependencies to run our tests
 [dev-dependencies]

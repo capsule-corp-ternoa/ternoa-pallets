@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Ternoa.  If not, see <http://www.gnu.org/licenses/>.
 
-use frame_support::weights::{constants::RocksDbWeight as DbWeight, Weight};
+use frame_support::weights::{Weight};
 
 pub trait WeightInfo {
 	fn register_enclave() -> Weight;
