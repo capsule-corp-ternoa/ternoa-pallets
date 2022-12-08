@@ -19,7 +19,7 @@ use frame_support::{assert_noop, assert_ok};
 use frame_system::RawOrigin;
 use pallet_balances::Error as BalanceError;
 use sp_runtime::traits::BadOrigin;
-use ternoa_common::traits::SGXExt;
+use ternoa_common::traits::TEEExt;
 
 use crate::{
 	Cluster, ClusterId, ClusterIdGenerator, ClusterIndex, ClusterRegistry, Enclave, EnclaveId,

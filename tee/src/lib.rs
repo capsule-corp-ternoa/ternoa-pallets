@@ -718,7 +718,7 @@ impl<T: Config> Pallet<T> {
 	}
 }
 
-impl<T: Config> traits::SGXExt for Pallet<T> {
+impl<T: Config> traits::TEEExt for Pallet<T> {
 	type AccountId = T::AccountId;
 	type ClusterId = u32;
 	type EnclaveId = u32;
@@ -735,7 +735,6 @@ impl<T: Config> traits::SGXExt for Pallet<T> {
 	///
 	/// A tuple of the cluster id and the enclave id.
 	fn ensure_enclave(account: Self::AccountId) -> Option<(Self::ClusterId, Self::EnclaveId)> {
-		// *****************************************************************************************
 		let mut result: Option<(Self::ClusterId, Self::EnclaveId)> = None;
 		let enclave_id: Option<EnclaveId> = EnclaveIndex::<T>::get(account);
 		match enclave_id {
