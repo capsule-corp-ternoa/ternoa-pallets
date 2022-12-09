@@ -13,30 +13,28 @@
 
 // You should have received a copy of the GNU General Public License
 // along with Ternoa.  If not, see <http://www.gnu.org/licenses/>.
+#![cfg(feature = "runtime-benchmarks")]
 
+use super::*;
+use crate::Pallet as Sgx;
 use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, whitelisted_caller};
-use frame_support::traits::Currency;
+use frame_support::{traits::Currency};
 use frame_system::RawOrigin;
-use primitives::TextFormat;
-use sp_runtime::traits::{Bounded, StaticLookup};
+
+use sp_runtime::traits::Bounded;
 use sp_std::prelude::*;
 
-use crate::{
-	BalanceOf, Cluster, ClusterId, ClusterIdGenerator, ClusterIndex, ClusterRegistry, Config,
-	Enclave, EnclaveId, EnclaveIdGenerator, EnclaveIndex, EnclaveRegistry, Pallet, RuntimeCall,
-};
-
-use crate::Pallet as Sgx;
 
 benchmarks! {
 	register_enclave {
 		let alice: T::AccountId = whitelisted_caller();
-		let uri: TextFormat = vec![1];
+		let ra_report: Vec<u8> = "SampleRep".as_bytes().to_vec();
+		let uri: Vec<u8> = "127.0.0.1".as_bytes().to_vec();
 		let enclave_id: EnclaveId = 0;
 		let enclave = Enclave::new(uri.clone());
 
 		T::Currency::make_free_balance_be(&alice, BalanceOf::<T>::max_value());
-	}: _(RawOrigin::Signed(alice.clone().into()), uri.clone())
+	}: _(RawOrigin::Signed(alice.clone().into()), ra_report, uri.clone())
 	verify {
 		assert!(EnclaveRegistry::<T>::contains_key(enclave_id));
 		assert_eq!(EnclaveRegistry::<T>::get(enclave_id), Some(enclave));
@@ -47,14 +45,14 @@ benchmarks! {
 
 	assign_enclave {
 		let alice: T::AccountId = whitelisted_caller();
-		let uri: TextFormat = vec![1];
 		let enclave_id: EnclaveId = 0;
 		let cluster_id: ClusterId = 0;
-
+		let ra_report: Vec<u8> = "SampleRep".as_bytes().to_vec();
+		let uri: Vec<u8> = "127.0.0.1".as_bytes().to_vec();
 		T::Currency::make_free_balance_be(&alice, BalanceOf::<T>::max_value());
 
 		drop(Sgx::<T>::create_cluster(RawOrigin::Root.into()));
-		drop(Sgx::<T>::register_enclave(RawOrigin::Signed(alice.clone()).into(), uri.clone()));
+		drop(Sgx::<T>::register_enclave(RawOrigin::Signed(alice.clone()).into(), ra_report, uri.clone()));
 	}: _(RawOrigin::Signed(alice.clone().into()), cluster_id)
 	verify {
 		assert_eq!(ClusterRegistry::<T>::get(cluster_id).unwrap().enclaves, vec![enclave_id]);
@@ -63,7 +61,8 @@ benchmarks! {
 
 	unassign_enclave {
 		let alice: T::AccountId = whitelisted_caller();
-		let uri: TextFormat = vec![1];
+		let ra_report: Vec<u8> = "SampleRep".as_bytes().to_vec();
+		let uri: Vec<u8> = "127.0.0.1".as_bytes().to_vec();
 		let enclave_id: EnclaveId = 0;
 		let cluster_id: ClusterId = 0;
 		let empty: Vec<EnclaveId> = vec![];
@@ -71,7 +70,7 @@ benchmarks! {
 		T::Currency::make_free_balance_be(&alice, BalanceOf::<T>::max_value());
 
 		drop(Sgx::<T>::create_cluster(RawOrigin::Root.into()));
-		drop(Sgx::<T>::register_enclave(RawOrigin::Signed(alice.clone()).into(), uri.clone()));
+		drop(Sgx::<T>::register_enclave(RawOrigin::Signed(alice.clone()).into(), ra_report, uri.clone()));
 		drop(Sgx::<T>::assign_enclave(RawOrigin::Signed(alice.clone()).into(), cluster_id));
 	}: _(RawOrigin::Signed(alice.clone().into()))
 	verify {
@@ -81,13 +80,14 @@ benchmarks! {
 
 	update_enclave {
 		let alice: T::AccountId = whitelisted_caller();
-		let uri: TextFormat = vec![1];
+		let ra_report: Vec<u8> = "SampleRep".as_bytes().to_vec();
+		let uri: Vec<u8> = "127.0.0.1".as_bytes().to_vec();
 		let enclave_id: EnclaveId = 0;
-		let new_uri: TextFormat = vec![0, 1, 2];
+		let new_uri: Vec<u8> = vec![0, 1, 2];
 
 		T::Currency::make_free_balance_be(&alice, BalanceOf::<T>::max_value());
 
-		drop(Sgx::<T>::register_enclave(RawOrigin::Signed(alice.clone()).into(), uri.clone()));
+		drop(Sgx::<T>::register_enclave(RawOrigin::Signed(alice.clone()).into(), ra_report, uri.clone()));
 	}: _(RawOrigin::Signed(alice.clone().into()), new_uri.clone())
 	verify {
 		assert_eq!(EnclaveRegistry::<T>::get(enclave_id).unwrap().api_uri, new_uri);
@@ -97,10 +97,11 @@ benchmarks! {
 		let alice: T::AccountId = whitelisted_caller();
 		let bob: T::AccountId = account("bob", 0, 0);
 		let bob_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(bob.clone());
-		let uri: TextFormat = vec![1];
+		let ra_report: Vec<u8> = "SampleRep".as_bytes().to_vec();
+		let uri: Vec<u8> = "127.0.0.1".as_bytes().to_vec();
 		T::Currency::make_free_balance_be(&alice, BalanceOf::<T>::max_value());
 
-		drop(Sgx::<T>::register_enclave(RawOrigin::Signed(alice.clone()).into(), uri.clone()));
+		drop(Sgx::<T>::register_enclave(RawOrigin::Signed(alice.clone()).into(), ra_report, uri.clone()));
 	}: _(RawOrigin::Signed(alice.clone().into()), bob_lookup)
 	verify {
 		assert!(EnclaveIndex::<T>::contains_key(bob.clone()));

@@ -30,41 +30,41 @@ pub trait WeightInfo {
 }
 
 impl WeightInfo for () {
-	// Storage: Sgx EnclaveIndex (r:1 w:1)
-	// Storage: Sgx EnclaveIdGenerator (r:1 w:1)
-	// Storage: Sgx EnclaveRegistry (r:0 w:1)
+	// Storage: Tee EnclaveIndex (r:1 w:1)
+	// Storage: Tee EnclaveIdGenerator (r:1 w:1)
+	// Storage: Tee EnclaveRegistry (r:0 w:1)
 	fn register_enclave() -> Weight {
 		Weight::from_ref_time(10_000_000 as u64)
 	}
-	// Storage: Sgx EnclaveIndex (r:1 w:0)
-	// Storage: Sgx ClusterIndex (r:1 w:1)
-	// Storage: Sgx ClusterRegistry (r:1 w:1)
+	// Storage: Tee EnclaveIndex (r:1 w:0)
+	// Storage: Tee ClusterIndex (r:1 w:1)
+	// Storage: Tee ClusterRegistry (r:1 w:1)
 	fn assign_enclave() -> Weight {
 		Weight::from_ref_time(10_000_000 as u64)
 	}
-	// Storage: Sgx EnclaveIndex (r:1 w:0)
-	// Storage: Sgx ClusterIndex (r:1 w:1)
-	// Storage: Sgx ClusterRegistry (r:1 w:1)
+	// Storage: Tee EnclaveIndex (r:1 w:0)
+	// Storage: Tee ClusterIndex (r:1 w:1)
+	// Storage: Tee ClusterRegistry (r:1 w:1)
 	fn unassign_enclave() -> Weight {
 		Weight::from_ref_time(10_000_000 as u64)
 	}
-	// Storage: Sgx EnclaveIndex (r:1 w:0)
-	// Storage: Sgx EnclaveRegistry (r:1 w:1)
+	// Storage: Tee EnclaveIndex (r:1 w:0)
+	// Storage: Tee EnclaveRegistry (r:1 w:1)
 	fn update_enclave() -> Weight {
 		Weight::from_ref_time(10_000_000 as u64)
 	}
-	// Storage: Sgx EnclaveIndex (r:2 w:2)
-	// Storage: Sgx EnclaveRegistry (r:1 w:0)
+	// Storage: Tee EnclaveIndex (r:2 w:2)
+	// Storage: Tee EnclaveRegistry (r:1 w:0)
 	fn change_enclave_owner() -> Weight {
 		Weight::from_ref_time(10_000_000 as u64)
 	}
-	// Storage: Sgx EnclaveIdGenerator (r:1 w:0)
-	// Storage: Sgx ClusterIdGenerator (r:0 w:1)
-	// Storage: Sgx ClusterRegistry (r:0 w:1)
+	// Storage: Tee EnclaveIdGenerator (r:1 w:0)
+	// Storage: Tee ClusterIdGenerator (r:0 w:1)
+	// Storage: Tee ClusterRegistry (r:0 w:1)
 	fn create_cluster() -> Weight {
 		Weight::from_ref_time(10_000_000 as u64)
 	}
-	// Storage: Sgx ClusterRegistry (r:1 w:1)
+	// Storage: Tee ClusterRegistry (r:1 w:1)
 	fn remove_cluster() -> Weight {
 		Weight::from_ref_time(10_000_000 as u64)
 	}

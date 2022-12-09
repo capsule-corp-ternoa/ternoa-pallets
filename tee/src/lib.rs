@@ -31,9 +31,9 @@ pub use types::*;
 
 use frame_support::traits::StorageVersion;
 use sp_runtime::traits::StaticLookup;
-use std::time::{SystemTime, UNIX_EPOCH};
 use ternoa_common::traits;
 pub use weights::WeightInfo;
+use sp_std::{vec, vec::Vec};
 
 /// The current storage version.
 const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
@@ -221,31 +221,31 @@ pub mod pallet {
 			api_uri: Vec<u8>,
 		) -> DispatchResultWithPostInfo {
 			let account = ensure_signed(origin)?;
-			let mut valid = true;
+			// let mut valid = true;
 
-			let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+			// let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
-			let attestation: serde_json::Value = serde_json::from_slice(&ra_report).unwrap();
-			let report = attestation["raReport"].as_str().unwrap().as_bytes();
-			let signature =
-				hex::decode(attestation["signature"].as_str().unwrap().as_bytes()).unwrap();
-			let raw_signing_cert =
-				hex::decode(attestation["rawSigningCert"].as_str().unwrap().as_bytes()).unwrap();
+			// let attestation: serde_json::Value = serde_json::from_slice(&ra_report).unwrap();
+			// let report = attestation["raReport"].as_str().unwrap().as_bytes();
+			// let signature =
+			// 	hex::decode(attestation["signature"].as_str().unwrap().as_bytes()).unwrap();
+			// let raw_signing_cert =
+			// 	hex::decode(attestation["rawSigningCert"].as_str().unwrap().as_bytes()).unwrap();
 
 			// Do we need this confidential report?
-			let res = Self::validate_ias_report(
-				report,
-				&signature,
-				&raw_signing_cert,
-				now
-			);
-
-			match res {
-				Err(_) => {valid = false;}
-				_ => {}
-			}
-
-			ensure!(valid, Error::<T>::InvalidIASSigningCert);
+			// let res = Self::validate_ias_report(
+			// 	report,
+			// 	&signature,
+			// 	&raw_signing_cert,
+			// 	now
+			// );
+			//
+			// match res {
+			// 	Err(_) => {valid = false;}
+			// 	_ => {}
+			// }
+			//
+			// ensure!(valid, Error::<T>::InvalidIASSigningCert);
 
 			ensure!(
 				EnclaveOperatorRegistry::<T>::contains_key(account.clone()),
@@ -596,84 +596,84 @@ pub mod pallet {
 	pub type EnclaveProviderRegistry<T: Config> =
 		StorageMap<_, Blake2_128Concat, ProviderId, EnclaveProvider, OptionQuery>;
 
-	#[pallet::genesis_config]
-	pub struct GenesisConfig<T: Config> {
-		pub enclaves: Vec<(T::AccountId, EnclaveId, Vec<u8>)>,
-		pub clusters: Vec<(ClusterId, Vec<EnclaveId>)>,
-	}
-
-	#[cfg(feature = "std")]
-	impl<T: Config> Default for GenesisConfig<T> {
-		fn default() -> Self {
-			Self { enclaves: Default::default(), clusters: Default::default() }
-		}
-	}
-
-	#[pallet::genesis_build]
-	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
-		fn build(&self) {
-			let enclaves = self.enclaves.clone();
-			if let Some(enclave) = enclaves.last() {
-				EnclaveIdGenerator::<T>::put(enclave.1 + 1);
-			}
-
-			for enclave in enclaves {
-				EnclaveIndex::<T>::insert(enclave.0, enclave.1);
-				EnclaveRegistry::<T>::insert(enclave.1, Enclave { api_uri: enclave.2 });
-			}
-
-			let clusters = self.clusters.clone();
-			if let Some(cluster) = clusters.last() {
-				ClusterIdGenerator::<T>::put(cluster.0 + 1);
-			}
-
-			for cluster in clusters {
-				for enclave_id in cluster.1.iter() {
-					ClusterIndex::<T>::insert(*enclave_id, cluster.0);
-				}
-				ClusterRegistry::<T>::insert(cluster.0, Cluster::new(cluster.1));
-			}
-		}
-	}
+	// #[pallet::genesis_config]
+	// pub struct GenesisConfig<T: Config> {
+	// 	pub enclaves: Vec<(T::AccountId, EnclaveId, Vec<u8>)>,
+	// 	pub clusters: Vec<(ClusterId, Vec<EnclaveId>)>,
+	// }
+	//
+	// #[cfg(feature = "std")]
+	// impl<T: Config> Default for GenesisConfig<T> {
+	// 	fn default() -> Self {
+	// 		Self { enclaves: Default::default(), clusters: Default::default() }
+	// 	}
+	// }
+	//
+	// #[pallet::genesis_build]
+	// impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+	// 	fn build(&self) {
+	// 		let enclaves = self.enclaves.clone();
+	// 		if let Some(enclave) = enclaves.last() {
+	// 			EnclaveIdGenerator::<T>::put(enclave.1 + 1);
+	// 		}
+	//
+	// 		for enclave in enclaves {
+	// 			EnclaveIndex::<T>::insert(enclave.0, enclave.1);
+	// 			EnclaveRegistry::<T>::insert(enclave.1, Enclave { api_uri: enclave.2 });
+	// 		}
+	//
+	// 		let clusters = self.clusters.clone();
+	// 		if let Some(cluster) = clusters.last() {
+	// 			ClusterIdGenerator::<T>::put(cluster.0 + 1);
+	// 		}
+	//
+	// 		for cluster in clusters {
+	// 			for enclave_id in cluster.1.iter() {
+	// 				ClusterIndex::<T>::insert(*enclave_id, cluster.0);
+	// 			}
+	// 			ClusterRegistry::<T>::insert(cluster.0, Cluster::new(cluster.1));
+	// 		}
+	// 	}
+	// }
 }
 
 // Helper Methods for Storage
 impl<T: Config> Pallet<T> {
-	pub fn validate_ias_report(
-		report: &[u8],
-		signature: &[u8],
-		raw_signing_cert: &[u8],
-		report_timestamp: u64,
-	) -> Result<ConfidentialReport, ReportError> {
-		// Validate report
-		let sig_cert = webpki::EndEntityCert::try_from(raw_signing_cert);
-		let sig_cert = sig_cert.or(Err(ReportError::InvalidIASSigningCert))?;
-		let verify_result =
-			sig_cert.verify_signature(&webpki::RSA_PKCS1_2048_8192_SHA256, report, signature);
-		verify_result.or(Err(ReportError::InvalidIASSigningCert))?;
-
-		// Validate certificate
-		let chain: Vec<&[u8]> = Vec::new();
-		let time_now = webpki::Time::from_seconds_since_unix_epoch(report_timestamp);
-		let tls_server_cert_valid = sig_cert.verify_is_valid_tls_server_cert(
-			SUPPORTED_SIG_ALGS,
-			&IAS_SERVER_ROOTS,
-			&chain,
-			time_now,
-		);
-		tls_server_cert_valid.or(Err(ReportError::InvalidIASSigningCert))?;
-
-		let (ias_fields, _) = IasFields::from_ias_report(report)?;
-
-		let pruntime_hash = ias_fields.extend_mrenclave();
-
-		// Check the following fields
-		Ok(ConfidentialReport {
-			provider: Some(AttestationProvider::Ias),
-			runtime_hash: pruntime_hash,
-			confidence_level: ias_fields.confidence_level,
-		})
-	}
+// 	pub fn validate_ias_report(
+// 		report: &[u8],
+// 		signature: &[u8],
+// 		raw_signing_cert: &[u8],
+// 		report_timestamp: u64,
+// 	) -> Result<ConfidentialReport, ReportError> {
+// 		// Validate report
+// 		let sig_cert = webpki::EndEntityCert::try_from(raw_signing_cert);
+// 		let sig_cert = sig_cert.or(Err(ReportError::InvalidIASSigningCert))?;
+// 		let verify_result =
+// 			sig_cert.verify_signature(&webpki::RSA_PKCS1_2048_8192_SHA256, report, signature);
+// 		verify_result.or(Err(ReportError::InvalidIASSigningCert))?;
+//
+// 		// Validate certificate
+// 		let chain: Vec<&[u8]> = Vec::new();
+// 		let time_now = webpki::Time::from_seconds_since_unix_epoch(report_timestamp);
+// 		let tls_server_cert_valid = sig_cert.verify_is_valid_tls_server_cert(
+// 			SUPPORTED_SIG_ALGS,
+// 			&IAS_SERVER_ROOTS,
+// 			&chain,
+// 			time_now,
+// 		);
+// 		tls_server_cert_valid.or(Err(ReportError::InvalidIASSigningCert))?;
+//
+// 		let (ias_fields, _) = IasFields::from_ias_report(report)?;
+//
+// 		let pruntime_hash = ias_fields.extend_mrenclave();
+//
+// 		// Check the following fields
+// 		Ok(ConfidentialReport {
+// 			provider: Some(AttestationProvider::Ias),
+// 			runtime_hash: pruntime_hash,
+// 			confidence_level: ias_fields.confidence_level,
+// 		})
+// 	}
 
 	// TODO: Replace these functions with a generic function or a Macro
 
