@@ -33,6 +33,7 @@ use frame_support::traits::StorageVersion;
 use sp_runtime::traits::StaticLookup;
 use ternoa_common::traits;
 pub use weights::WeightInfo;
+use sp_std::{vec, vec::Vec};
 
 /// The current storage version.
 const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
