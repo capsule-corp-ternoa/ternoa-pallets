@@ -2785,6 +2785,7 @@ dependencies = [
  "sp-std",
  "ternoa-common",
  "ternoa-pallets-primitives",
+ "ternoa-tee",
 ]
 
 [[package]]

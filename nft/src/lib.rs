@@ -44,6 +44,7 @@ use sp_arithmetic::per_things::Permill;
 use sp_runtime::traits::{CheckedSub, StaticLookup};
 use sp_std::prelude::*;
 use ternoa_common::traits;
+use ternoa_common::traits::{TEEExt};
 
 pub use weights::WeightInfo;
 
@@ -103,6 +104,9 @@ pub mod pallet {
 		/// The number of necessary shards to consider the Secret NFT valid.
 		#[pallet::constant]
 		type ShardsNumber: Get<u32>;
+
+		/// Link to the NFT pallet.
+		type TEEExt: TEEExt<AccountId = Self::AccountId>;
 	}
 
 	/// How much does it cost to mint a NFT (extra fee on top of the tx fees).
@@ -856,10 +860,9 @@ pub mod pallet {
 		/// Must be called by registered enclaves.
 		#[pallet::weight(T::WeightInfo::add_secret_shard())]
 		pub fn add_secret_shard(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
-			ensure!(false, Error::<T>::ComingSoon);
 			let who = ensure_signed(origin)?;
 			ensure!(
-				/* TODO is_registered_enclave(who) */ true,
+				Self::is_registered_enclave(&who),
 				Error::<T>::NotARegisteredEnclave
 			);
 			let mut has_finished_sync = false;
@@ -1066,6 +1069,14 @@ impl<T: Config> Pallet<T> {
 				.is_ok()
 		} else {
 			false
+		}
+	}
+
+	fn is_registered_enclave(account: &T::AccountId) -> bool {
+		let ensure_enclave = T::TEEExt::ensure_enclave(account.to_owned());
+		match ensure_enclave {
+			Some(_ensure_enclave) => true,
+			None => false
 		}
 	}
 }
