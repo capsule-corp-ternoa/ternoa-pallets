@@ -35,6 +35,10 @@ use ternoa_common::traits;
 pub use weights::WeightInfo;
 use sp_std::{vec, vec::Vec};
 
+use primitives::{
+	nfts::{ClusterId},
+};
+
 /// The current storage version.
 const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
 
@@ -720,7 +724,7 @@ impl<T: Config> Pallet<T> {
 
 impl<T: Config> traits::TEEExt for Pallet<T> {
 	type AccountId = T::AccountId;
-	type ClusterId = u32;
+	// type ClusterId = u32;
 	type EnclaveId = u32;
 
 	/// > If the account has an enclave, and the enclave is in the cluster, return the cluster and
