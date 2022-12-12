@@ -37,7 +37,8 @@ use frame_support::{
 };
 use frame_system::pallet_prelude::*;
 use primitives::{
-	nfts::{Collection, CollectionId, NFTData, NFTId, NFTState, ClusterId},
+	nfts::{Collection, CollectionId, NFTData, NFTId, NFTState},
+	tee::{ClusterId, EnclaveId},
 	U8BoundedVec,
 };
 use sp_arithmetic::per_things::Permill;
@@ -792,7 +793,6 @@ pub mod pallet {
 			nft_id: NFTId,
 			offchain_data: U8BoundedVec<T::NFTOffchainDataLimit>,
 		) -> DispatchResultWithPostInfo {
-			ensure!(false, Error::<T>::ComingSoon);
 			let who = ensure_signed(origin)?;
 
 			Nfts::<T>::try_mutate(nft_id, |maybe_nft| -> DispatchResult {

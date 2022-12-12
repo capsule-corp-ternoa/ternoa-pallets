@@ -16,9 +16,17 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-pub mod common;
-pub mod marketplace;
-pub mod nfts;
-pub mod tee;
+use frame_support::{
+	inherent::Vec, traits::Get, BoundedVec, CloneNoBound, PartialEqNoBound, RuntimeDebug,
+	RuntimeDebugNoBound,
+};
+use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
+use scale_info::TypeInfo;
+use sp_arithmetic::per_things::Permill;
+use sp_std::fmt::Debug;
 
-pub use common::{CompoundFee, ConfigOp, U8BoundedVec};
+///How Cluster IDs are encoded.
+pub type ClusterId = u32;
+
+///How Enclave IDs are encoded.
+pub type EnclaveId = u32;

@@ -22,9 +22,13 @@ use sp_runtime::traits::BadOrigin;
 use ternoa_common::traits::TEEExt;
 
 use crate::{
-	Cluster, ClusterId, ClusterIdGenerator, ClusterIndex, ClusterRegistry, Enclave, EnclaveId,
+	Cluster, ClusterIdGenerator, ClusterIndex, ClusterRegistry, Enclave,
 	EnclaveIdGenerator, EnclaveIndex, EnclaveProviderRegistry, EnclaveRegistry, Error, ProviderId,
 	ProviderKeys,
+};
+
+use primitives::{
+	tee::{ClusterId, EnclaveId},
 };
 
 #[test]

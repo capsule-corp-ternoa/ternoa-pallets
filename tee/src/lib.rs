@@ -36,7 +36,7 @@ pub use weights::WeightInfo;
 use sp_std::{vec, vec::Vec};
 
 use primitives::{
-	nfts::{ClusterId},
+	tee::{ClusterId, EnclaveId},
 };
 
 /// The current storage version.
@@ -724,8 +724,7 @@ impl<T: Config> Pallet<T> {
 
 impl<T: Config> traits::TEEExt for Pallet<T> {
 	type AccountId = T::AccountId;
-	// type ClusterId = u32;
-	type EnclaveId = u32;
+	
 
 	/// > If the account has an enclave, and the enclave is in the cluster, return the cluster and
 	/// > enclave
@@ -738,8 +737,8 @@ impl<T: Config> traits::TEEExt for Pallet<T> {
 	/// Returns:
 	///
 	/// A tuple of the cluster id and the enclave id.
-	fn ensure_enclave(account: Self::AccountId) -> Option<(Self::ClusterId, Self::EnclaveId)> {
-		let mut result: Option<(Self::ClusterId, Self::EnclaveId)> = None;
+	fn ensure_enclave(account: Self::AccountId) -> Option<(ClusterId, EnclaveId)> {
+		let mut result: Option<(ClusterId, EnclaveId)> = None;
 		let enclave_id: Option<EnclaveId> = EnclaveIndex::<T>::get(account);
 		match enclave_id {
 			Some(enc_id) => {
