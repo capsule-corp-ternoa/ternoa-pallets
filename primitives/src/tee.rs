@@ -16,14 +16,6 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use frame_support::{
-	inherent::Vec, traits::Get, BoundedVec, CloneNoBound, PartialEqNoBound, RuntimeDebug,
-	RuntimeDebugNoBound,
-};
-use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
-use scale_info::TypeInfo;
-use sp_arithmetic::per_things::Permill;
-use sp_std::fmt::Debug;
 
 ///How Cluster IDs are encoded.
 pub type ClusterId = u32;

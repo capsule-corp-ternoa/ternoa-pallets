@@ -38,7 +38,7 @@ use frame_support::{
 use frame_system::pallet_prelude::*;
 use primitives::{
 	nfts::{Collection, CollectionId, NFTData, NFTId, NFTState},
-	tee::{ClusterId, EnclaveId},
+	tee::{ClusterId},
 	U8BoundedVec,
 };
 use sp_arithmetic::per_things::Permill;
@@ -950,7 +950,6 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			fee: BalanceOf<T>,
 		) -> DispatchResultWithPostInfo {
-			ensure!(false, Error::<T>::ComingSoon);
 			ensure_root(origin)?;
 			SecretNftMintFee::<T>::put(fee);
 			let event = Event::SecretNFTMintFeeSet { fee };
