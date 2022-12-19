@@ -178,17 +178,6 @@ pub mod pallet {
 		OptionQuery,
 	>;
 
-	/// Host a map of secret NFTs and a vector of enclave addresses that sent a shard.
-	#[pallet::storage]
-	#[pallet::getter(fn secret_nfts_cluster_id)]
-	pub type SecretNftsClusterId<T: Config> = StorageMap<
-		_,
-		Blake2_128Concat,
-		NFTId,
-		ClusterId,
-		OptionQuery,
-	>;
-
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
