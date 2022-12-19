@@ -1604,7 +1604,7 @@ mod add_secret_shard {
 			assert_eq!(nft.state.is_secret, true);
 			assert_eq!(nft.state.is_syncing, true);
 			assert_eq!(shards.len(), 1);
-			assert!(shards.contains(&ALICE));
+			assert!(shards.contains(&(0,0)));
 
 			// Events checks.
 			let event = NFTsEvent::ShardAdded { nft_id: ALICE_NFT_ID, enclave: ALICE };
@@ -1683,7 +1683,7 @@ mod add_secret_shard {
 			NFT::add_secret_shard(alice, ALICE_NFT_ID).unwrap();
 
 			let err = NFT::add_secret_shard(frank, ALICE_NFT_ID);
-			assert_noop!(err, Error::<Test>::EnclaveNotBelongsToSameCluster);
+			assert_noop!(err, Error::<Test>::ShareNotFromValidCluster);
 		})
 	}
 

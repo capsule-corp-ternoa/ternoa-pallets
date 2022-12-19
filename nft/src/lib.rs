@@ -37,8 +37,8 @@ use frame_support::{
 };
 use frame_system::pallet_prelude::*;
 use primitives::{
-	nfts::{Collection, CollectionId, NFTData, NFTId, NFTState},
-	tee::{ClusterId},
+	nfts::{Collection, CollectionId, NFTData, NFTId, NFTState,},
+	tee::{ClusterId, EnclaveId},
 	U8BoundedVec,
 };
 use sp_arithmetic::per_things::Permill;
@@ -174,7 +174,7 @@ pub mod pallet {
 		_,
 		Blake2_128Concat,
 		NFTId,
-		BoundedVec<T::AccountId, T::ShardsNumber>,
+		BoundedVec<(ClusterId, EnclaveId), T::ShardsNumber>,
 		OptionQuery,
 	>;
 
@@ -326,7 +326,7 @@ pub mod pallet {
 		ComingSoon,
 		///Enclave which posted the shard for the NFT does not belongs to the 
 		///same cluster of the first posted shard
-		EnclaveNotBelongsToSameCluster,
+		ShareNotFromValidCluster,
 	}
 
 	#[pallet::call]
@@ -876,8 +876,7 @@ pub mod pallet {
 		pub fn add_secret_shard(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			let (is_registered_enclave, cluster_id) = Self::is_registered_enclave(&who);
-			ensure!(is_registered_enclave, Error::<T>::NotARegisteredEnclave);
+			ensure!(Self::is_registered_enclave(&who), Error::<T>::NotARegisteredEnclave);
 
 			let mut has_finished_sync = false;
 
@@ -889,33 +888,31 @@ pub mod pallet {
 				ensure!(nft.state.is_syncing, Error::<T>::NFTAlreadySynced);
 
 				SecretNftsShardsCount::<T>::try_mutate(nft_id, |maybe_shards| -> DispatchResult {
+					let (cluster_id, enclave_id) = Self::get_enclave(&who).unwrap();
 					if let Some(shards) = maybe_shards {
 						ensure!(
-							Self::is_enclave_from_same_cluster(nft_id, cluster_id),
-							Error::<T>::EnclaveNotBelongsToSameCluster
+							cluster_id == shards[0].0,
+							Error::<T>::ShareNotFromValidCluster
 						);
 						ensure!(
 							shards.len() < T::ShardsNumber::get() as usize,
 							Error::<T>::NFTHasReceivedAllShards
 						);
-						ensure!(!shards.contains(&who), Error::<T>::EnclaveAlreadyAddedShard);
+						ensure!(!shards.contains(&(cluster_id, enclave_id)), Error::<T>::EnclaveAlreadyAddedShard);
 						shards
-							.try_push(who.clone())
+							.try_push((cluster_id, enclave_id))
 							.map_err(|_| Error::<T>::NFTHasReceivedAllShards)?;
 						if shards.len() == T::ShardsNumber::get() as usize {
 							has_finished_sync = true;
 							*maybe_shards = None;
 						}
 					} else {
-							let mut shards: BoundedVec<T::AccountId, T::ShardsNumber> =
+							let mut shards: BoundedVec<(ClusterId, EnclaveId), T::ShardsNumber> =
 								BoundedVec::default();
 							shards
-								.try_push(who.clone())
+								.try_push((cluster_id, enclave_id))
 								.map_err(|_| Error::<T>::NFTHasReceivedAllShards)?;
 
-							if let Some(cluster_id) = cluster_id {
-								SecretNftsClusterId::<T>::insert(nft_id, cluster_id);
-							}
 							if shards.len() == T::ShardsNumber::get() as usize {
 								has_finished_sync = true;
 							} else {
@@ -1093,16 +1090,14 @@ impl<T: Config> Pallet<T> {
 		}
 	}
 
-	fn is_registered_enclave(account: &T::AccountId) -> (bool, Option<ClusterId>) {
-		let ensure_enclave = T::TEEExt::ensure_enclave(account.to_owned());
-		match ensure_enclave {
-			Some(ensure_enclave) => (true, Some(ensure_enclave.0)),
-			None => (false, None)
+	fn is_registered_enclave(account: &T::AccountId) -> bool {
+		let enclave_details = Self::get_enclave(account);
+		match enclave_details {
+			Some(enclave_details) => true,
+			None => false
 		}
 	}
-
-	fn is_enclave_from_same_cluster(nft_id: NFTId, enclave_cluster_id: Option<ClusterId>) -> bool {
-		let current_cluster_id = Self::secret_nfts_cluster_id(nft_id);
-		current_cluster_id == enclave_cluster_id
+	fn get_enclave(account: &T::AccountId) -> Option<(ClusterId, EnclaveId)> {
+		T::TEEExt::ensure_enclave(account.to_owned())
 	}
 }
