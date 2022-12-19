@@ -46,7 +46,11 @@ pub mod pallet {
 		traits::{Currency, ExistenceRequirement::KeepAlive, OnUnbalanced, WithdrawReasons},
 	};
 	use frame_system::pallet_prelude::*;
-	// use sp_runtime::traits::StaticLookup;
+	#[pallet::pallet]
+	#[pallet::generate_store(pub(super) trait Store)]
+	#[pallet::storage_version(STORAGE_VERSION)]
+	#[pallet::without_storage_info]
+	pub struct Pallet<T>(PhantomData<T>);
 
 	pub type BalanceOf<T> =
 		<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
@@ -89,15 +93,164 @@ pub mod pallet {
 		#[pallet::constant]
 		type MaxUriLen: Get<u16>;
 	}
+	//
+	// Enclave
+	//
+	#[pallet::storage]
+	#[pallet::getter(fn enclave_registry)]
+	pub type EnclaveRegistry<T: Config> =
+	StorageMap<_, Blake2_128Concat, EnclaveId, Enclave, OptionQuery>;
 
-	#[pallet::pallet]
-	#[pallet::generate_store(pub(super) trait Store)]
-	#[pallet::storage_version(STORAGE_VERSION)]
-	#[pallet::without_storage_info]
-	pub struct Pallet<T>(PhantomData<T>);
+	#[pallet::storage]
+	#[pallet::getter(fn enclave_id_generator)]
+	pub type EnclaveIdGenerator<T: Config> = StorageValue<_, EnclaveId, ValueQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn enclave_index)]
+	pub type EnclaveIndex<T: Config> =
+	StorageMap<_, Blake2_128Concat, T::AccountId, EnclaveId, OptionQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn enclave_operator)]
+	pub type EnclaveOperatorRegistry<T: Config> =
+	StorageMap<_, Blake2_128Concat, T::AccountId, EnclaveOperatorId, OptionQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn cluster_registry)]
+	pub type ClusterRegistry<T: Config> =
+	StorageMap<_, Blake2_128Concat, ClusterId, Cluster, OptionQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn cluster_id_generator)]
+	pub type ClusterIdGenerator<T: Config> = StorageValue<_, ClusterId, ValueQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn cluster_index)]
+	pub type ClusterIndex<T: Config> =
+	StorageMap<_, Blake2_128Concat, EnclaveId, ClusterId, OptionQuery>;
+
+	/// Creating a storage item called ProviderIdGenerator.
+	#[pallet::storage]
+	#[pallet::getter(fn provider_id_generator)]
+	pub type ProviderIdGenerator<T: Config> = StorageValue<_, ProviderId, ValueQuery>;
+
+	/// Creating a storage item called EnclaveOperatorIdGenerator.
+	#[pallet::storage]
+	#[pallet::getter(fn enclave_operator_id_generator)]
+	pub type EnclaveOperatorIdGenerator<T: Config> = StorageValue<_, EnclaveOperatorId, ValueQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn enclave_provider_keys)]
+	pub type ProviderKeys<T: Config> =
+	StorageMap<_, Blake2_128Concat, ProviderId, EnclaveProviderKeys<T::AccountId>, OptionQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn enclave_provider)]
+	pub type EnclaveProviderRegistry<T: Config> =
+	StorageMap<_, Blake2_128Concat, ProviderId, EnclaveProvider, OptionQuery>;
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
+
+	#[pallet::event]
+	#[pallet::generate_deposit(pub(super) fn deposit_event)]
+	pub enum Event<T: Config> {
+		// Enclave
+		AddedEnclave {
+			account: T::AccountId,
+			api_uri: Vec<u8>,
+			enclave_id: EnclaveId,
+		},
+		UnregisterEnclave {
+			account_id: T::AccountId,
+			enclave_id: EnclaveId,
+		},
+		AssignedEnclave {
+			enclave_id: EnclaveId,
+			cluster_id: ClusterId,
+		},
+		UnAssignedEnclave {
+			enclave_id: EnclaveId,
+		},
+		UpdatedEnclave {
+			enclave_id: EnclaveId,
+			api_uri: Vec<u8>,
+		},
+		NewEnclaveOwner {
+			enclave_id: EnclaveId,
+			owner: T::AccountId,
+		},
+		// Cluster
+		AddedCluster {
+			cluster_id: ClusterId,
+		},
+		RemovedCluster {
+			cluster_id: ClusterId,
+		},
+
+		RegisterEnclaveProvider {
+			id: EnclaveId,
+			enclave_provider_name: Vec<u8>,
+		},
+		RegisterEnclaveProviderKeys {
+			account_id: T::AccountId,
+			provider_id: ProviderId,
+			enclave_class: Option<Vec<u8>>,
+			public_key: Vec<u8>,
+		},
+		RegisterEnclaveOperator {
+			operator: T::AccountId,
+			enclave_operator_id: EnclaveOperatorId,
+		},
+	}
+
+	#[pallet::error]
+	pub enum Error<T> {
+		/// Unknown enclaveId
+		UnknownEnclaveId,
+		/// Unknown ClusterId
+		UnknownClusterId,
+		/// Account does not associated with an enclave
+		NotEnclaveOwner,
+		/// Enclave address registered to an account
+		EnclaveAddressAlreadyRegisteredtoTheAccount,
+		/// Enclave URI is short
+		UriTooShort,
+		/// Enclave URI is long
+		UriTooLong,
+		/// Maximum enclaves reached
+		EnclaveIdOverflow,
+		/// Maximum clusters reached
+		ClusterIdOverflow,
+		/// Cluster is already full, cannot assign any enclaves
+		ClusterIsAlreadyFull,
+		/// Enclave already assigned to a cluster
+		EnclaveAlreadyAssigned,
+		/// Enclave not assigned to a cluster
+		EnclaveNotAssigned,
+		/// Cannot assign to same cluster
+		CannotAssignToSameCluster,
+		/// Internal logical error
+		InternalLogicalError,
+		/// Maximum providers reached
+		ProviderIdOverflow,
+		/// Enclave provider already registered
+		EnclaveProviderAlreadyRegistered,
+		/// Unregistered enclave provider
+		UnregisteredEnclaveProvider,
+		/// TEE Provider already registered
+		ProviderAlreadyRegistered,
+		/// The given public key has been registered for another enclave provider
+		PublicKeyRegisteredForDifferentEnclaveProvider,
+		/// Assigning an operator to an invalid enclaveId
+		AssigningOperatorForUnknownEnclaveId,
+		/// Enclave operator account does not exists
+		EnclaveOperatorExists,
+		/// Unknown enclave operator account
+		UnknownEnclaveOperatorAccount,
+		/// Invalid IAS sign certificate
+		InvalidIASSigningCert,
+	}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
@@ -217,35 +370,10 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::register_enclave())]
 		pub fn register_enclave(
 			origin: OriginFor<T>,
-			ra_report: Vec<u8>, // JSON file
+			enclave_address: Vec<u8>,
 			api_uri: Vec<u8>,
 		) -> DispatchResultWithPostInfo {
 			let account = ensure_signed(origin)?;
-			// let mut valid = true;
-
-			// let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
-
-			// let attestation: serde_json::Value = serde_json::from_slice(&ra_report).unwrap();
-			// let report = attestation["raReport"].as_str().unwrap().as_bytes();
-			// let signature =
-			// 	hex::decode(attestation["signature"].as_str().unwrap().as_bytes()).unwrap();
-			// let raw_signing_cert =
-			// 	hex::decode(attestation["rawSigningCert"].as_str().unwrap().as_bytes()).unwrap();
-
-			// Do we need this confidential report?
-			// let res = Self::validate_ias_report(
-			// 	report,
-			// 	&signature,
-			// 	&raw_signing_cert,
-			// 	now
-			// );
-			//
-			// match res {
-			// 	Err(_) => {valid = false;}
-			// 	_ => {}
-			// }
-			//
-			// ensure!(valid, Error::<T>::InvalidIASSigningCert);
 
 			ensure!(
 				EnclaveOperatorRegistry::<T>::contains_key(account.clone()),
@@ -255,10 +383,20 @@ pub mod pallet {
 			ensure!(api_uri.len() < T::MaxUriLen::get().into(), Error::<T>::UriTooLong);
 			ensure!(api_uri.len() > T::MinUriLen::get().into(), Error::<T>::UriTooShort);
 
-			ensure!(
-				!EnclaveIndex::<T>::contains_key(&account),
-				Error::<T>::PublicKeyAlreadyTiedToACluster
-			);
+			let has_registered_index = EnclaveIndex::<T>::get(account.clone());
+
+			// Verify if the origin does not already have an enclave address associated with it.
+			match has_registered_index {
+				Some(enc_id) => {
+					let enc = EnclaveRegistry::<T>::get(enc_id).unwrap();
+					ensure!(
+						enc.enclave_address != enclave_address,
+						Error::<T>::EnclaveAddressAlreadyRegisteredtoTheAccount
+					)
+				}
+				_ => {}
+			}
+
 			let (enclave_id, new_id) = Self::new_enclave_id()?;
 			// Needs to have enough money
 			let imbalance = T::Currency::withdraw(
@@ -269,13 +407,35 @@ pub mod pallet {
 			)?;
 			T::FeesCollector::on_unbalanced(imbalance);
 
-			let enclave = Enclave::new(api_uri.clone());
+			let enclave = Enclave::new(api_uri.clone(), enclave_address);
 
 			EnclaveIndex::<T>::insert(account.clone(), enclave_id);
 			EnclaveRegistry::<T>::insert(enclave_id, enclave);
 			EnclaveIdGenerator::<T>::put(new_id);
 
 			Self::deposit_event(Event::AddedEnclave { account, api_uri, enclave_id });
+			Ok(().into())
+		}
+
+		/// Removes an enclave from the system
+		/// Origin- operator account address
+		/// If the enclave is assigned, it will be placed in queue for tech committee approval
+		/// If enclave is not already assigned, he can exit without permission.
+		#[pallet::weight(T::WeightInfo::register_enclave())]
+		pub fn unregister_enclave(
+			origin: OriginFor<T>,
+		) -> DispatchResultWithPostInfo {
+			let account = ensure_signed_or_root(origin)?;
+			match account {
+				Some(account_id) => {
+					let enclave_id  = EnclaveIndex::<T>::get(account_id.clone()).unwrap();
+					EnclaveRegistry::<T>::remove(enclave_id);
+					Self::deposit_event(Event::UnregisterEnclave { account_id,   enclave_id });
+				}
+				_ => {}
+			}
+
+
 			Ok(().into())
 		}
 
@@ -409,10 +569,10 @@ pub mod pallet {
 			let enclave_id =
 				EnclaveIndex::<T>::get(old_owner.clone()).ok_or(Error::<T>::NotEnclaveOwner)?;
 
-			ensure!(
-				!EnclaveIndex::<T>::contains_key(&new_owner),
-				Error::<T>::PublicKeyAlreadyTiedToACluster
-			);
+			// ensure!(
+			// 	!EnclaveIndex::<T>::contains_key(&new_owner),
+			// 	Error::<T>::PublicKeyAlreadyTiedToACluster
+			// );
 
 			ensure!(EnclaveRegistry::<T>::contains_key(enclave_id), Error::<T>::UnknownEnclaveId);
 
@@ -466,135 +626,11 @@ pub mod pallet {
 		}
 	}
 
-	#[pallet::event]
-	#[pallet::generate_deposit(pub(super) fn deposit_event)]
-	pub enum Event<T: Config> {
-		// Enclave
-		AddedEnclave {
-			account: T::AccountId,
-			api_uri: Vec<u8>,
-			enclave_id: EnclaveId,
-		},
-		AssignedEnclave {
-			enclave_id: EnclaveId,
-			cluster_id: ClusterId,
-		},
-		UnAssignedEnclave {
-			enclave_id: EnclaveId,
-		},
-		UpdatedEnclave {
-			enclave_id: EnclaveId,
-			api_uri: Vec<u8>,
-		},
-		NewEnclaveOwner {
-			enclave_id: EnclaveId,
-			owner: T::AccountId,
-		},
-		// Cluster
-		AddedCluster {
-			cluster_id: ClusterId,
-		},
-		RemovedCluster {
-			cluster_id: ClusterId,
-		},
 
-		RegisterEnclaveProvider {
-			id: EnclaveId,
-			enclave_provider_name: Vec<u8>,
-		},
-		RegisterEnclaveProviderKeys {
-			account_id: T::AccountId,
-			provider_id: ProviderId,
-			enclave_class: Option<Vec<u8>>,
-			public_key: Vec<u8>,
-		},
-		RegisterEnclaveOperator {
-			operator: T::AccountId,
-			enclave_operator_id: EnclaveOperatorId,
-		},
-	}
 
-	#[pallet::error]
-	pub enum Error<T> {
-		UnknownEnclaveId,
-		UnknownClusterId,
-		NotEnclaveOwner,
-		PublicKeyAlreadyTiedToACluster,
-		UriTooShort,
-		UriTooLong,
-		EnclaveIdOverflow,
-		ClusterIdOverflow,
-		ClusterIsAlreadyFull,
-		EnclaveAlreadyAssigned,
-		EnclaveNotAssigned,
-		CannotAssignToSameCluster,
-		InternalLogicalError,
-		ProviderIdOverflow,
-		EnclaveProviderAlreadyRegistered,
-		UnregisteredEnclaveProvider,
-		ProviderAlreadyRegistered,
-		PublicKeyRegisteredForDifferentEnclaveProvider,
-		AssigningOperatorForUnknownEnclaveId,
-		EnclaveOperatorExists,
-		UnknownEnclaveOperatorAccount,
-		InvalidIASSigningCert,
-	}
 
-	//
-	// Enclave
-	//
-	#[pallet::storage]
-	#[pallet::getter(fn enclave_registry)]
-	pub type EnclaveRegistry<T: Config> =
-		StorageMap<_, Blake2_128Concat, EnclaveId, Enclave, OptionQuery>;
 
-	#[pallet::storage]
-	#[pallet::getter(fn enclave_id_generator)]
-	pub type EnclaveIdGenerator<T: Config> = StorageValue<_, EnclaveId, ValueQuery>;
 
-	#[pallet::storage]
-	#[pallet::getter(fn enclave_index)]
-	pub type EnclaveIndex<T: Config> =
-		StorageMap<_, Blake2_128Concat, T::AccountId, EnclaveId, OptionQuery>;
-
-	#[pallet::storage]
-	#[pallet::getter(fn enclave_operator)]
-	pub type EnclaveOperatorRegistry<T: Config> =
-		StorageMap<_, Blake2_128Concat, T::AccountId, EnclaveOperatorId, OptionQuery>;
-
-	#[pallet::storage]
-	#[pallet::getter(fn cluster_registry)]
-	pub type ClusterRegistry<T: Config> =
-		StorageMap<_, Blake2_128Concat, ClusterId, Cluster, OptionQuery>;
-
-	#[pallet::storage]
-	#[pallet::getter(fn cluster_id_generator)]
-	pub type ClusterIdGenerator<T: Config> = StorageValue<_, ClusterId, ValueQuery>;
-
-	#[pallet::storage]
-	#[pallet::getter(fn cluster_index)]
-	pub type ClusterIndex<T: Config> =
-		StorageMap<_, Blake2_128Concat, EnclaveId, ClusterId, OptionQuery>;
-
-	/// Creating a storage item called ProviderIdGenerator.
-	#[pallet::storage]
-	#[pallet::getter(fn provider_id_generator)]
-	pub type ProviderIdGenerator<T: Config> = StorageValue<_, ProviderId, ValueQuery>;
-
-	/// Creating a storage item called EnclaveOperatorIdGenerator.
-	#[pallet::storage]
-	#[pallet::getter(fn enclave_operator_id_generator)]
-	pub type EnclaveOperatorIdGenerator<T: Config> = StorageValue<_, EnclaveOperatorId, ValueQuery>;
-
-	#[pallet::storage]
-	#[pallet::getter(fn enclave_provider_keys)]
-	pub type ProviderKeys<T: Config> =
-		StorageMap<_, Blake2_128Concat, ProviderId, EnclaveProviderKeys<T::AccountId>, OptionQuery>;
-
-	#[pallet::storage]
-	#[pallet::getter(fn enclave_provider)]
-	pub type EnclaveProviderRegistry<T: Config> =
-		StorageMap<_, Blake2_128Concat, ProviderId, EnclaveProvider, OptionQuery>;
 
 	// #[pallet::genesis_config]
 	// pub struct GenesisConfig<T: Config> {
