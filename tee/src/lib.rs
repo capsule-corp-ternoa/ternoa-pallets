@@ -155,49 +155,57 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		// Enclave
+		/// New Enclave account got added
 		AddedEnclave {
 			account: T::AccountId,
 			api_uri: Vec<u8>,
 			enclave_id: EnclaveId,
 		},
+		/// An enclave got unregistered
 		UnregisterEnclave {
 			account_id: T::AccountId,
 			enclave_id: EnclaveId,
 		},
+		/// An enclave got assigned to a cluster
 		AssignedEnclave {
 			enclave_id: EnclaveId,
 			cluster_id: ClusterId,
 		},
+		/// An enclave got assigned
 		UnAssignedEnclave {
 			enclave_id: EnclaveId,
 		},
+		/// An enclave got updated
 		UpdatedEnclave {
 			enclave_id: EnclaveId,
 			api_uri: Vec<u8>,
 		},
+		/// New enclave owner got added
 		NewEnclaveOwner {
 			enclave_id: EnclaveId,
 			owner: T::AccountId,
 		},
-		// Cluster
+		/// New cluster got added
 		AddedCluster {
 			cluster_id: ClusterId,
 		},
+		/// Cluster got removed
 		RemovedCluster {
 			cluster_id: ClusterId,
 		},
-
+		/// An enclave provider got registered
 		RegisterEnclaveProvider {
 			id: EnclaveId,
 			enclave_provider_name: Vec<u8>,
 		},
+		/// Enclave provider's key got registered
 		RegisterEnclaveProviderKeys {
 			account_id: T::AccountId,
 			provider_id: ProviderId,
 			enclave_class: Option<Vec<u8>>,
 			public_key: Vec<u8>,
 		},
+		/// Enclave operator account got registered
 		RegisterEnclaveOperator {
 			operator: T::AccountId,
 			enclave_operator_id: EnclaveOperatorId,
