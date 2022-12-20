@@ -1,4 +1,3 @@
-#![feature(associated_type_defaults)]
 // Copyright 2022 Capsule Corp (France) SAS.
 // This file is part of Ternoa.
 

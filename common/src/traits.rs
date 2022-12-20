@@ -20,6 +20,7 @@ use frame_support::{dispatch::DispatchResult, traits::Get, BoundedVec};
 use primitives::{
 	marketplace::{MarketplaceData, MarketplaceId},
 	nfts::{CollectionId, NFTData, NFTId, NFTState},
+	tee::{ClusterId , EnclaveId },
 };
 use sp_runtime::Permill;
 use sp_std::fmt::Debug;
@@ -107,8 +108,7 @@ pub trait MarketplaceExt {
 
 pub trait TEEExt {
 	type AccountId: Clone + PartialEq + Debug;
-	type ClusterId = u32;
-	type EnclaveId = u32;
+
 	/// Returns clusterId and EnclaveId for a given SGX Account
-	fn ensure_enclave(account: Self::AccountId) -> Option<(Self::ClusterId, Self::EnclaveId)>;
+	fn ensure_enclave(account: Self::AccountId) -> Option<(ClusterId, EnclaveId)>;
 }

@@ -14,31 +14,10 @@
 // You should have received a copy of the GNU General Public License
 // along with Ternoa.  If not, see <http://www.gnu.org/licenses/>.
 
-use parity_scale_codec::{Decode, Encode};
-use scale_info::TypeInfo;
-use sp_runtime::RuntimeDebug;
-use sp_std::vec::Vec;
-use primitives::tee::EnclaveId;
+#![cfg_attr(not(feature = "std"), no_std)]
 
-#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo)]
-pub struct Enclave {
-	pub api_uri: Vec<u8>,
-	pub enclave_address: Vec<u8>,
-}
+/// EnclaveId
+pub type EnclaveId = u32;
 
-impl Enclave {
-	pub fn new(api_uri: Vec<u8>, enclave_address: Vec<u8>) -> Self {
-		Self { api_uri, enclave_address }
-	}
-}
-
-#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo)]
-pub struct Cluster {
-	pub enclaves: Vec<EnclaveId>,
-}
-
-impl Cluster {
-	pub fn new(enclaves: Vec<EnclaveId>) -> Self {
-		Self { enclaves }
-	}
-}
+/// ClusterId
+pub type ClusterId = u32;
