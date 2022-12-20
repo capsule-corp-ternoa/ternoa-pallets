@@ -43,11 +43,12 @@ const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
+	use frame_system::pallet_prelude::*;
+
 	use frame_support::{
 		pallet_prelude::*,
 		traits::{Currency, ExistenceRequirement::KeepAlive, OnUnbalanced, WithdrawReasons},
 	};
-	use frame_system::pallet_prelude::*;
 
 	#[pallet::pallet]
 	#[pallet::without_storage_info]
@@ -434,8 +435,8 @@ pub mod pallet {
 
 		// Creates a Cluster
 		// A given cluster has list of enclaves
-		#[pallet::weight(T::WeightInfo::create_cluster())]
-		pub fn create_cluster(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+		#[pallet::weight(T::WeightInfo::register_cluster())]
+		pub fn register_cluster(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
 
 			let id = ClusterIdGenerator::<T>::get();
@@ -449,8 +450,8 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		#[pallet::weight(T::WeightInfo::remove_cluster())]
-		pub fn remove_cluster(
+		#[pallet::weight(T::WeightInfo::unregister_cluster())]
+		pub fn unregister_cluster(
 			origin: OriginFor<T>,
 			cluster_id: ClusterId,
 		) -> DispatchResultWithPostInfo {
