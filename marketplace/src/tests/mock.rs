@@ -48,6 +48,7 @@ frame_support::construct_runtime!(
 		Balances: pallet_balances,
 		NFT: ternoa_nft,
 		Marketplace: ternoa_marketplace,
+		TEE: ternoa_tee,
 	}
 );
 
@@ -118,6 +119,24 @@ impl pallet_balances::Config for Test {
 }
 
 parameter_types! {
+	pub const EnclaveFee: u64 = 5;
+	pub const ClusterSize: u32 = 5;
+	pub const MinUriLen: u16 = 5;
+	pub const MaxUriLen: u16 = 12;
+}
+
+impl ternoa_tee::Config for Test {
+	type RuntimeEvent = RuntimeEvent;
+	type WeightInfo = ();
+	type FeesCollector = ();
+	type Currency = Balances;
+	type EnclaveFee = EnclaveFee;
+	type ClusterSize = ClusterSize;
+	type MinUriLen = MinUriLen;
+	type MaxUriLen = MaxUriLen;
+}
+
+parameter_types! {
 	// NFT parameter types
 	pub const NFTInitialMintFee: Balance = NFT_MINT_FEE;
 	pub const MarketplaceInitialMintFee: Balance = MARKETPLACE_MINT_FEE;
@@ -144,6 +163,7 @@ impl ternoa_nft::Config for Test {
 	type CollectionSizeLimit = CollectionSizeLimit;
 	type InitialSecretMintFee = InitialSecretMintFee;
 	type ShardsNumber = ShardsNumber;
+	type TEEExt = TEE;
 }
 
 impl Config for Test {

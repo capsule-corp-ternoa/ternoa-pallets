@@ -2671,6 +2671,7 @@ dependencies = [
  "ternoa-marketplace",
  "ternoa-nft",
  "ternoa-pallets-primitives",
+ "ternoa-tee",
 ]
 
 [[package]]
@@ -2732,6 +2733,7 @@ dependencies = [
  "ternoa-common",
  "ternoa-nft",
  "ternoa-pallets-primitives",
+ "ternoa-tee",
 ]
 
 [[package]]
@@ -2786,6 +2788,7 @@ dependencies = [
  "ternoa-common",
  "ternoa-nft",
  "ternoa-pallets-primitives",
+ "ternoa-tee",
 ]
 
 [[package]]

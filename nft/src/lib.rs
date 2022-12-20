@@ -37,15 +37,14 @@ use frame_support::{
 };
 use frame_system::pallet_prelude::*;
 use primitives::{
-	nfts::{Collection, CollectionId, NFTData, NFTId, NFTState,},
+	nfts::{Collection, CollectionId, NFTData, NFTId, NFTState},
 	tee::{ClusterId, EnclaveId},
 	U8BoundedVec,
 };
 use sp_arithmetic::per_things::Permill;
 use sp_runtime::traits::{CheckedSub, StaticLookup};
 use sp_std::prelude::*;
-use ternoa_common::traits;
-use ternoa_common::traits::{TEEExt};
+use ternoa_common::{traits, traits::TEEExt};
 
 pub use weights::WeightInfo;
 
@@ -313,7 +312,7 @@ pub mod pallet {
 		CannotAddSecretToSecretNFTs,
 		/// Feature is not available yet
 		ComingSoon,
-		///Enclave which posted the shard for the NFT does not belongs to the 
+		///Enclave which posted the shard for the NFT does not belongs to the
 		///same cluster of the first posted shard
 		ShareNotFromValidCluster,
 	}
@@ -879,15 +878,15 @@ pub mod pallet {
 				SecretNftsShardsCount::<T>::try_mutate(nft_id, |maybe_shards| -> DispatchResult {
 					let (cluster_id, enclave_id) = Self::get_enclave(&who).unwrap();
 					if let Some(shards) = maybe_shards {
-						ensure!(
-							cluster_id == shards[0].0,
-							Error::<T>::ShareNotFromValidCluster
-						);
+						ensure!(cluster_id == shards[0].0, Error::<T>::ShareNotFromValidCluster);
 						ensure!(
 							shards.len() < T::ShardsNumber::get() as usize,
 							Error::<T>::NFTHasReceivedAllShards
 						);
-						ensure!(!shards.contains(&(cluster_id, enclave_id)), Error::<T>::EnclaveAlreadyAddedShard);
+						ensure!(
+							!shards.contains(&(cluster_id, enclave_id)),
+							Error::<T>::EnclaveAlreadyAddedShard
+						);
 						shards
 							.try_push((cluster_id, enclave_id))
 							.map_err(|_| Error::<T>::NFTHasReceivedAllShards)?;
@@ -896,17 +895,17 @@ pub mod pallet {
 							*maybe_shards = None;
 						}
 					} else {
-							let mut shards: BoundedVec<(ClusterId, EnclaveId), T::ShardsNumber> =
-								BoundedVec::default();
-							shards
-								.try_push((cluster_id, enclave_id))
-								.map_err(|_| Error::<T>::NFTHasReceivedAllShards)?;
+						let mut shards: BoundedVec<(ClusterId, EnclaveId), T::ShardsNumber> =
+							BoundedVec::default();
+						shards
+							.try_push((cluster_id, enclave_id))
+							.map_err(|_| Error::<T>::NFTHasReceivedAllShards)?;
 
-							if shards.len() == T::ShardsNumber::get() as usize {
-								has_finished_sync = true;
-							} else {
-								*maybe_shards = Some(shards);
-							}
+						if shards.len() == T::ShardsNumber::get() as usize {
+							has_finished_sync = true;
+						} else {
+							*maybe_shards = Some(shards);
+						}
 					}
 
 					Ok(().into())
@@ -1082,8 +1081,8 @@ impl<T: Config> Pallet<T> {
 	fn is_registered_enclave(account: &T::AccountId) -> bool {
 		let enclave_details = Self::get_enclave(account);
 		match enclave_details {
-			Some(enclave_details) => true,
-			None => false
+			Some(_enclave_details) => true,
+			None => false,
 		}
 	}
 	fn get_enclave(account: &T::AccountId) -> Option<(ClusterId, EnclaveId)> {
