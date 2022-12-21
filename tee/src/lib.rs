@@ -176,11 +176,8 @@ pub mod pallet {
 			enclave_id: EnclaveId,
 			api_uri: Vec<u8>,
 		},
-		/// New enclave owner got added
-		NewEnclaveOwner {
-			enclave_id: EnclaveId,
-			owner: T::AccountId,
-		},
+		/// Enclave force updated
+		EnclaveUpdated { enclave_id: EnclaveId, enclave_address: Vec<u8>, api_uri: Vec<u8> },
 		/// New cluster got added
 		AddedCluster {
 			cluster_id: ClusterId,
@@ -215,6 +212,8 @@ pub mod pallet {
 		EnclaveAlreadyAssigned,
 		/// Enclave not assigned to a cluster
 		EnclaveNotAssigned,
+		/// Enclave does not exists
+		EnclaveDoesNotExists,
 		/// Cannot assign to same cluster
 		CannotAssignToSameCluster,
 		/// Internal logical error
@@ -308,8 +307,6 @@ pub mod pallet {
 						<UnRegisteredEnclaves<T>>::put(un_reg_enclaves);
 						Self::deposit_event(Event::MovedForUnregistration { account_id,   enclave_id });
 					}
-
-
 				}
 				_ => {}
 			}
@@ -318,6 +315,7 @@ pub mod pallet {
 			Ok(().into())
 		}
 
+		// TODO:  Fix this
 		#[pallet::weight(T::WeightInfo::register_enclave())]
 		pub fn update_registration(
 			_origin: OriginFor<T>, _enclave_id: EnclaveId
@@ -329,10 +327,21 @@ pub mod pallet {
 
 		#[pallet::weight(T::WeightInfo::register_enclave())]
 		pub fn force_update_enclave(
-			_origin: OriginFor<T>, _enclave_id: EnclaveId, _enclave_address: Vec<u8>, _api_url: Vec<u8>
+			origin: OriginFor<T>, enclave_id: EnclaveId, enclave_address: Vec<u8>, api_uri: Vec<u8>
 		) -> DispatchResultWithPostInfo {
+			ensure_root(origin)?;
 
+			ensure!(api_uri.len() < T::MaxUriLen::get().into(), Error::<T>::UriTooLong);
+			ensure!(api_uri.len() > T::MinUriLen::get().into(), Error::<T>::UriTooShort);
 
+			EnclaveRegistry::<T>::try_mutate(enclave_id, |enc| -> DispatchResult {
+				let enc = enc.as_mut().ok_or(Error::<T>::EnclaveDoesNotExists)?;
+				enc.api_uri = api_uri.clone();
+				enc.enclave_address = enclave_address.clone();
+				Ok(())
+			})?;
+
+			Self::deposit_event(Event::EnclaveUpdated { enclave_id, enclave_address, api_uri });
 			Ok(().into())
 		}
 
@@ -403,7 +412,35 @@ pub mod pallet {
 						.position(|x| *x == enclave_id)
 						.ok_or(Error::<T>::InternalLogicalError)?;
 					cluster.enclaves.remove(index);
+
 					ClusterIndex::<T>::remove(enclave_id);
+
+					EnclaveRegistry::<T>::remove(enclave_id);
+
+					// get un registered enclaves
+					let mut un_reg_enclaves:  BoundedVec<EnclaveId, T::MaxUnRegisteredEnclaves> = <UnRegisteredEnclaves<T>>::get();
+					// get registered enclaves
+					let mut reg_enclaves = <RegisteredEnclaves<T>>::get();
+
+
+					// Clean up from registered enclaves
+					match reg_enclaves.binary_search(&enclave_id) {
+						Ok(idx) => {
+							reg_enclaves.remove(idx);
+							<RegisteredEnclaves<T>>::put(reg_enclaves);
+						}
+						Err(_) => {}
+					}
+
+					// Clean up from unregistered enclaves
+					match un_reg_enclaves.binary_search(&enclave_id) {
+						Ok(idx) => {
+							un_reg_enclaves.remove(idx);
+							<UnRegisteredEnclaves<T>>::put(un_reg_enclaves);
+						}
+						Err(_) => {}
+					}
+
 					Ok(())
 				} else {
 					Err(Error::<T>::UnknownClusterId)
@@ -465,6 +502,9 @@ pub mod pallet {
 			Ok(().into())
 		}
 
+		/// Removes a cluster
+		/// Mandate call
+		/// Cluster must be empty
 		#[pallet::weight(T::WeightInfo::unregister_cluster())]
 		pub fn unregister_cluster(
 			origin: OriginFor<T>,
