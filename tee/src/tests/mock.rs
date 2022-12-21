@@ -123,8 +123,8 @@ impl Config for Test {
 	type ClusterSize = ClusterSize;
 	type MinUriLen = MinUriLen;
 	type MaxUriLen = MaxUriLen;
-	type MaxRegisteredEnclaves = ();
-	type MaxUnRegisteredEnclaves = ();
+	type MaxRegisteredEnclaves = MaxRegisteredEnclavese;
+	type MaxUnRegisteredEnclaves = MaxUnRegisteredEnclavese;
 }
 
 // Do not use the `0` account id since this would be the default value

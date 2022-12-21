@@ -26,7 +26,7 @@ mod types;
 mod weights;
 
 use frame_support::dispatch::DispatchResultWithPostInfo;
-use frame_support::BoundedVec;
+use frame_support::{BoundedVec};
 pub use pallet::*;
 pub use types::*;
 
@@ -157,6 +157,11 @@ pub mod pallet {
 			account_id: T::AccountId,
 			enclave_id: EnclaveId,
 		},
+		/// An enclave moved for unregistration to a queue
+		MovedForUnregistration {
+			account_id: T::AccountId,
+			enclave_id: EnclaveId,
+		},
 		/// An enclave got assigned to a cluster
 		AssignedEnclave {
 			enclave_id: EnclaveId,
@@ -233,8 +238,6 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			let account = ensure_signed(origin)?;
 
-
-
 			ensure!(api_uri.len() < T::MaxUriLen::get().into(), Error::<T>::UriTooLong);
 			ensure!(api_uri.len() > T::MinUriLen::get().into(), Error::<T>::UriTooShort);
 
@@ -268,6 +271,12 @@ pub mod pallet {
 			EnclaveRegistry::<T>::insert(enclave_id, enclave);
 			EnclaveIdGenerator::<T>::put(new_id);
 
+			let reg_enclaves:  BoundedVec<EnclaveId, T::MaxRegisteredEnclaves> = <RegisteredEnclaves<T>>::get();
+			let reg_enclaves = reg_enclaves
+				.try_mutate(|v| v.push(7))
+				.unwrap();
+			<RegisteredEnclaves<T>>::put(reg_enclaves);
+
 			Self::deposit_event(Event::AddedEnclave { account, api_uri, enclave_id });
 			Ok(().into())
 		}
@@ -284,8 +293,23 @@ pub mod pallet {
 			match account {
 				Some(account_id) => {
 					let enclave_id  = EnclaveIndex::<T>::get(account_id.clone()).unwrap();
-					EnclaveRegistry::<T>::remove(enclave_id);
-					Self::deposit_event(Event::UnregisterEnclave { account_id,   enclave_id });
+
+					let un_reg_enclaves:  BoundedVec<EnclaveId, T::MaxUnRegisteredEnclaves> = <UnRegisteredEnclaves<T>>::get();
+
+					let reg_enclaves  = <RegisteredEnclaves<T>>::get();
+
+					if!reg_enclaves.contains(&enclave_id){
+						EnclaveRegistry::<T>::remove(enclave_id);
+						Self::deposit_event(Event::UnregisterEnclave { account_id,   enclave_id });
+					} else {
+						let un_reg_enclaves = un_reg_enclaves
+							.try_mutate(|v| v.push(enclave_id))
+							.unwrap();
+						<UnRegisteredEnclaves<T>>::put(un_reg_enclaves);
+						Self::deposit_event(Event::MovedForUnregistration { account_id,   enclave_id });
+					}
+
+
 				}
 				_ => {}
 			}
