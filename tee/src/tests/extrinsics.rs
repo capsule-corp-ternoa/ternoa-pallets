@@ -22,9 +22,8 @@ use sp_runtime::traits::BadOrigin;
 use ternoa_common::traits::TEEExt;
 
 use crate::{
-	Cluster, ClusterIdGenerator, ClusterIndex, ClusterRegistry, Enclave,
-	EnclaveIdGenerator, EnclaveIndex, EnclaveProviderRegistry, EnclaveRegistry, Error, ProviderId,
-	ProviderKeys,
+	Cluster, ClusterId, ClusterIdGenerator, ClusterIndex, ClusterRegistry, Enclave, EnclaveId,
+	EnclaveIdGenerator, EnclaveIndex, EnclaveRegistry, Error,
 };
 
 use primitives::{
@@ -40,26 +39,22 @@ fn register_enclave() {
 
 			let short_uri = "http".as_bytes().to_vec();
 			let valid_uri = "https://va".as_bytes().to_vec();
-			let att_rep: Vec<u8> = include_bytes!("./mock_attestation.json").to_vec();
+			let enclave_address: Vec<u8> = "samplere".as_bytes().to_vec();
 			let long_uri = "https://this".as_bytes().to_vec();
 
 			let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
 			let bob: mock::RuntimeOrigin = RawOrigin::Signed(BOB).into();
 			let dave: mock::RuntimeOrigin = RawOrigin::Signed(DAVE).into();
 
-			assert_ok!(TEE::register_enclave_operator(alice.clone(), ALICE));
-			assert_ok!(TEE::register_enclave_operator(alice.clone(), BOB));
-			assert_ok!(TEE::register_enclave_operator(alice.clone(), DAVE));
-
 			assert_eq!(EnclaveIndex::<Test>::iter().count(), 0);
 			assert_eq!(EnclaveRegistry::<Test>::iter().count(), 0);
 			assert_eq!(EnclaveIdGenerator::<Test>::get(), 0);
 
 			// Alice should be able to create an enclave if she has enough tokens.
-			assert_ok!(TEE::register_enclave(alice.clone(), att_rep.clone(), valid_uri.clone()));
+			assert_ok!(TEE::register_enclave(alice.clone(), enclave_address.clone(), valid_uri.clone()));
 			assert_eq!(Balances::free_balance(ALICE), 95);
 
-			let enclave = Enclave::new(valid_uri.clone());
+			let enclave = Enclave::new(valid_uri.clone(), enclave_address.clone());
 			let enclave_id: EnclaveId = 0;
 			assert!(EnclaveRegistry::<Test>::contains_key(enclave_id));
 			assert_eq!(EnclaveRegistry::<Test>::get(enclave_id), Some(enclave));
@@ -68,19 +63,19 @@ fn register_enclave() {
 			assert_eq!(EnclaveIdGenerator::<Test>::get(), 1);
 			//
 			// Alice should NOT be able to create an enclave if she already has one.
-			let ok = TEE::register_enclave(alice, att_rep.clone(), valid_uri.clone());
-			assert_noop!(ok, Error::<Test>::PublicKeyAlreadyTiedToACluster);
+			// let ok = TEE::register_enclave(alice, enclave_address.clone(),  valid_uri.clone());
+			// assert_noop!(ok, Error::<Test>::PublicKeyAlreadyTiedToACluster);
 
 			// Bob should NOT be able to create an enclave if the doesn't have enough tokens.
-			let ok = TEE::register_enclave(bob, att_rep.clone(), valid_uri.clone());
+			let ok = TEE::register_enclave(bob, enclave_address.clone(),  valid_uri.clone());
 			assert_noop!(ok, BalanceError::<Test>::InsufficientBalance);
 
 			// Dave should NOT be able to create an enclave if the uri is too short.
-			let ok = TEE::register_enclave(dave.clone(), att_rep.clone(), short_uri);
+			let ok = TEE::register_enclave(dave.clone(), enclave_address.clone(),  short_uri);
 			assert_noop!(ok, Error::<Test>::UriTooShort);
 
 			// Dave should NOT be able to create an enclave if the uri is too long.
-			let ok = TEE::register_enclave(dave, att_rep, long_uri);
+			let ok = TEE::register_enclave(dave, enclave_address.clone(),  long_uri);
 			assert_noop!(ok, Error::<Test>::UriTooLong);
 		})
 }
@@ -91,12 +86,10 @@ fn assign_enclave() {
 		.tokens(vec![(ALICE, 10), (BOB, 10), (DAVE, 10)])
 		.build()
 		.execute_with(|| {
-			let att_rep: &[u8] = include_bytes!("./mock_attestation.json");
-			let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
+			let att_rep: Vec<u8> = "samplere".as_bytes().to_vec();
+			let _alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
 
-			assert_ok!(TEE::register_enclave_operator(alice.clone(), ALICE));
-			assert_ok!(TEE::register_enclave_operator(alice.clone(), BOB));
-			assert_ok!(TEE::register_enclave_operator(alice.clone(), DAVE));
+
 			let valid_uri = "https://va".as_bytes().to_vec();
 
 			let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
@@ -105,7 +98,7 @@ fn assign_enclave() {
 
 			let cluster_id: ClusterId = 0;
 			let enclave_id: EnclaveId = 0;
-			assert_ok!(TEE::create_cluster(RawOrigin::Root.into()));
+			assert_ok!(TEE::register_cluster(RawOrigin::Root.into()));
 			assert_ok!(TEE::register_enclave(alice.clone(), att_rep.to_vec(), valid_uri.clone()));
 
 			// Alice should be able to assign her enclave to a cluster.
@@ -140,14 +133,13 @@ fn unassign_enclave() {
 			let valid_uri = "https://va".as_bytes().to_vec();
 			let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
 			let bob: mock::RuntimeOrigin = RawOrigin::Signed(BOB).into();
-			let att_rep: Vec<u8> = include_bytes!("./mock_attestation.json").to_vec();
+			let att_rep: Vec<u8> = "samplere".as_bytes().to_vec();
 
 			let cluster_id: ClusterId = 0;
 			let enclave_id: EnclaveId = 0;
 
-			assert_ok!(TEE::register_enclave_operator(alice.clone(), ALICE));
 
-			assert_ok!(TEE::create_cluster(RawOrigin::Root.into()));
+			assert_ok!(TEE::register_cluster(RawOrigin::Root.into()));
 			assert_ok!(TEE::register_enclave(alice.clone(), att_rep.clone(), valid_uri));
 			assert_ok!(TEE::assign_enclave(alice.clone(), cluster_id));
 			let cluster = ClusterRegistry::<Test>::get(cluster_id).unwrap();
@@ -183,16 +175,15 @@ fn update_enclave() {
 			let short_uri = "http".as_bytes().to_vec();
 			let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
 			let bob: mock::RuntimeOrigin = RawOrigin::Signed(BOB).into();
-			let att_rep: Vec<u8> = include_bytes!("./mock_attestation.json").to_vec();
-
-			assert_ok!(TEE::register_enclave_operator(alice.clone(), ALICE));
+			let att_rep: Vec<u8> = "samplere".as_bytes().to_vec();
+			let enclave_address: Vec<u8> = "samplere".as_bytes().to_vec();
 
 			assert_ok!(TEE::register_enclave(alice.clone(), att_rep.clone(), valid_uri.clone()));
 			let enclave_id: EnclaveId = 0;
 
 			// Alice should be able to update her enclave.
 			valid_uri = "https://zza".as_bytes().to_vec();
-			let enclave = Enclave::new(valid_uri.clone());
+			let enclave = Enclave::new(valid_uri.clone(), enclave_address);
 			assert_ok!(TEE::update_enclave(alice.clone(), valid_uri.clone()));
 			assert_eq!(EnclaveRegistry::<Test>::get(enclave_id), Some(enclave));
 
@@ -210,38 +201,36 @@ fn update_enclave() {
 		})
 }
 
-#[test]
-fn change_enclave_owner() {
-	ExtBuilder::default()
-		.tokens(vec![(ALICE, 10), (BOB, 10)])
-		.build()
-		.execute_with(|| {
-			let valid_uri = "https://va".as_bytes().to_vec();
-			let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
-			let att_rep: Vec<u8> = include_bytes!("./mock_attestation.json").to_vec();
-
-			assert_ok!(TEE::register_enclave_operator(alice.clone(), ALICE));
-
-			assert_ok!(TEE::register_enclave(alice.clone(), att_rep.clone(), valid_uri.clone()));
-			let enclave_id: EnclaveId = 0;
-
-			// Alice should be able to change owner of his enclave.
-			assert_ok!(TEE::change_enclave_owner(alice.clone(), BOB));
-			assert_eq!(EnclaveIndex::<Test>::get(BOB), Some(enclave_id));
-
-			// Alice should NOT be able to change the owner if she doesn't own an enclave.
-			let ok = TEE::change_enclave_owner(alice.clone(), BOB);
-			assert_noop!(ok, Error::<Test>::NotEnclaveOwner);
-
-			// Alice should NOT be able to change the owner if the new owner already has an enclave.
-			assert_ok!(TEE::register_enclave(alice.clone(), att_rep, valid_uri));
-			let ok = TEE::change_enclave_owner(alice.clone(), BOB);
-			assert_noop!(ok, Error::<Test>::PublicKeyAlreadyTiedToACluster);
-		})
-}
+// #[test]
+// fn change_enclave_owner() {
+// 	ExtBuilder::default()
+// 		.tokens(vec![(ALICE, 10), (BOB, 10)])
+// 		.build()
+// 		.execute_with(|| {
+// 			let valid_uri = "https://va".as_bytes().to_vec();
+// 			let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
+// 			let att_rep: Vec<u8> = "samplere".as_bytes().to_vec();
+//
+// 			assert_ok!(TEE::register_enclave(alice.clone(), att_rep.clone(), valid_uri.clone()));
+// 			let enclave_id: EnclaveId = 0;
+//
+// 			// Alice should be able to change owner of his enclave.
+// 			assert_ok!(TEE::change_enclave_owner(alice.clone(), BOB));
+// 			assert_eq!(EnclaveIndex::<Test>::get(BOB), Some(enclave_id));
+//
+// 			// Alice should NOT be able to change the owner if she doesn't own an enclave.
+// 			let ok = TEE::change_enclave_owner(alice.clone(), BOB);
+// 			assert_noop!(ok, Error::<Test>::NotEnclaveOwner);
+//
+// 			// Alice should NOT be able to change the owner if the new owner already has an enclave.
+// 			assert_ok!(TEE::register_enclave(alice.clone(), att_rep, valid_uri));
+// 			// let ok = TEE::change_enclave_owner(alice.clone(), BOB);
+// 			// assert_noop!(ok, Error::<Test>::PublicKeyAlreadyTiedToACluster);
+// 		})
+// }
 
 #[test]
-fn create_cluster() {
+fn register_cluster() {
 	ExtBuilder::default().build().execute_with(|| {
 		let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
 
@@ -253,20 +242,20 @@ fn create_cluster() {
 		let cluster = Cluster::new(Default::default());
 
 		// Sudo should be able to create clusters.
-		assert_ok!(TEE::create_cluster(RawOrigin::Root.into()));
+		assert_ok!(TEE::register_cluster(RawOrigin::Root.into()));
 		assert_eq!(ClusterIndex::<Test>::iter().count(), 0);
 		assert_eq!(ClusterRegistry::<Test>::get(cluster_id), Some(cluster));
 		assert_eq!(ClusterIdGenerator::<Test>::get(), 1);
 		assert_eq!(EnclaveIdGenerator::<Test>::get(), 0);
 
 		// Alice should NOT be able to create a cluster.
-		let ok = TEE::create_cluster(alice.clone());
+		let ok = TEE::register_cluster(alice.clone());
 		assert_noop!(ok, BadOrigin);
 	})
 }
 
 #[test]
-fn remove_cluster() {
+fn unregister_cluster() {
 	ExtBuilder::default()
 		.tokens(vec![(ALICE, 10), (BOB, 10)])
 		.build()
@@ -276,12 +265,9 @@ fn remove_cluster() {
 			let valid_uri = "https://va".as_bytes().to_vec();
 			let cluster_id: ClusterId = 0;
 			let cluster = Cluster::new(vec![0, 1]);
-			let att_rep: Vec<u8> = include_bytes!("./mock_attestation.json").to_vec();
+			let att_rep: Vec<u8> = "samplere".as_bytes().to_vec();
 
-			assert_ok!(TEE::register_enclave_operator(alice.clone(), ALICE));
-			assert_ok!(TEE::register_enclave_operator(alice.clone(), BOB));
-
-			assert_ok!(TEE::create_cluster(RawOrigin::Root.into()));
+			assert_ok!(TEE::register_cluster(RawOrigin::Root.into()));
 			assert_ok!(TEE::register_enclave(alice.clone(), att_rep.clone(), valid_uri.clone()));
 			assert_ok!(TEE::register_enclave(bob.clone(), att_rep.clone(), valid_uri.clone()));
 			assert_ok!(TEE::assign_enclave(alice.clone(), cluster_id));
@@ -295,107 +281,21 @@ fn remove_cluster() {
 			assert_eq!(ClusterIdGenerator::<Test>::get(), 1);
 
 			// Sudo should be remove an existing cluster
-			assert_ok!(TEE::remove_cluster(RawOrigin::Root.into(), cluster_id));
+			assert_ok!(TEE::unregister_cluster(RawOrigin::Root.into(), cluster_id));
 			assert_eq!(ClusterIndex::<Test>::iter().count(), 0);
 			assert_eq!(ClusterRegistry::<Test>::iter().count(), 0);
 
 			// Sudo should NOT be able to remove an non-existing cluster
-			let ok = TEE::remove_cluster(RawOrigin::Root.into(), 10);
+			let ok = TEE::unregister_cluster(RawOrigin::Root.into(), 10);
 			assert_noop!(ok, Error::<Test>::UnknownClusterId);
 
 			// Alice should NOT be able to remove a cluster.
-			let ok = TEE::remove_cluster(alice.clone(), 1);
+			let ok = TEE::unregister_cluster(alice.clone(), 1);
 			assert_noop!(ok, BadOrigin);
 		})
 }
 
-#[test]
-fn register_enclave_provider() {
-	ExtBuilder::default()
-		.tokens(vec![(ALICE, 10), (BOB, 10)])
-		.build()
-		.execute_with(|| {
-			let amd_provider = "AMD".as_bytes().to_vec();
-			let intel_provider = "INTEL".as_bytes().to_vec();
 
-			assert_ok!(TEE::register_enclave_provider(
-				RawOrigin::Root.into(),
-				amd_provider.clone()
-			));
-			let amd = EnclaveProviderRegistry::<Test>::get(0).unwrap();
-
-			assert_eq!(amd.enclave_provider_name, amd_provider.clone());
-			assert_ok!(TEE::register_enclave_provider(
-				RawOrigin::Root.into(),
-				intel_provider.clone()
-			));
-
-			let intel = EnclaveProviderRegistry::<Test>::get(1).unwrap();
-			assert_eq!(intel.enclave_provider_name, intel_provider.clone());
-
-			// Error if provider already exists
-			assert_noop!(
-				TEE::register_enclave_provider(RawOrigin::Root.into(), intel_provider.clone()),
-				Error::<Test>::EnclaveProviderAlreadyRegistered
-			);
-		})
-}
-
-#[test]
-fn enclave_operator() {
-	ExtBuilder::default()
-		.tokens(vec![(ALICE, 10), (BOB, 10)])
-		.build()
-		.execute_with(|| {
-			// Provider should be present
-			let amd_provider = "AMD".as_bytes().to_vec();
-			let intel_provider = "INTEL".as_bytes().to_vec();
-
-			let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
-			let bob: mock::RuntimeOrigin = RawOrigin::Signed(BOB).into();
-
-			// Enclave URI
-			let valid_uri = "https://va".as_bytes().to_vec();
-
-			// This is a mocked entry only, does not reflect the actual report
-			let att_rep: Vec<u8> = include_bytes!("./mock_attestation.json").to_vec();
-
-			// Register enclave provider -> Registering AMD as the provider
-			assert_ok!(TEE::register_enclave_provider(
-				RawOrigin::Root.into(),
-				amd_provider.clone()
-			));
-			// Register enclave provider -> Registering intel as the provider
-			assert_ok!(TEE::register_enclave_provider(
-				RawOrigin::Root.into(),
-				intel_provider.clone()
-			));
-
-			// Registering BOB as an enclave operator
-			assert_ok!(TEE::register_enclave_operator(alice.clone(), BOB));
-			// Try to register BOB again
-			// Registering BOB again should throw an error
-			assert_noop!(
-				TEE::register_enclave_operator(alice.clone(), BOB),
-				Error::<Test>::EnclaveOperatorExists
-			);
-
-			// Register enclave by BOB the operator should not throw an error
-			assert_ok!(TEE::register_enclave(bob.clone(), att_rep.clone(), valid_uri.clone()));
-
-			// Alice havent been registered as an enclave operator, should throw an error
-			assert_noop!(
-				TEE::register_enclave(alice.clone(), att_rep.clone(), valid_uri.clone()),
-				Error::<Test>::UnknownEnclaveOperatorAccount
-			);
-
-			// Registering ALICE as an enclave operator
-			assert_ok!(TEE::register_enclave_operator(alice.clone(), ALICE));
-
-			// Should not throw an error
-			assert_ok!(TEE::register_enclave(alice.clone(), att_rep, valid_uri.clone()));
-		})
-}
 
 #[test]
 fn ensure_enclave() {
@@ -403,8 +303,8 @@ fn ensure_enclave() {
 		.tokens(vec![(ALICE, 10), (BOB, 10)])
 		.build()
 		.execute_with(|| {
-			let amd_provider = "AMD".as_bytes().to_vec();
-			let intel_provider = "INTEL".as_bytes().to_vec();
+			let _amd_provider = "AMD".as_bytes().to_vec();
+			let _intel_provider = "INTEL".as_bytes().to_vec();
 
 			let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
 			let bob: mock::RuntimeOrigin = RawOrigin::Signed(BOB).into();
@@ -412,24 +312,16 @@ fn ensure_enclave() {
 			let valid_uri = "https://va".as_bytes().to_vec();
 			let cluster_id: ClusterId = 0;
 
-			let att_rep: Vec<u8> = include_bytes!("./mock_attestation.json").to_vec();
+			let att_rep: Vec<u8> = "samplere".as_bytes().to_vec();
 
-			assert_ok!(TEE::register_enclave_operator(alice.clone(), ALICE));
-			assert_ok!(TEE::register_enclave_operator(alice.clone(), BOB));
 
-			assert_ok!(TEE::create_cluster(RawOrigin::Root.into()));
+
+			assert_ok!(TEE::register_cluster(RawOrigin::Root.into()));
 			assert_ok!(TEE::register_enclave(alice.clone(), att_rep.clone(), valid_uri.clone()));
 			assert_ok!(TEE::register_enclave(bob.clone(), att_rep.clone(), valid_uri.clone()));
 			assert_ok!(TEE::assign_enclave(alice.clone(), cluster_id));
 			assert_ok!(TEE::assign_enclave(bob.clone(), cluster_id));
-			assert_ok!(TEE::register_enclave_provider(
-				RawOrigin::Root.into(),
-				amd_provider.clone()
-			));
-			assert_ok!(TEE::register_enclave_provider(
-				RawOrigin::Root.into(),
-				intel_provider.clone()
-			));
+
 
 			let res = TEE::ensure_enclave(BOB);
 			// Returns the registered `clusterId` and `enclaveId` for the given Enclave Operator
@@ -438,67 +330,3 @@ fn ensure_enclave() {
 		})
 }
 
-#[test]
-fn register_provider_keys() {
-	ExtBuilder::default()
-		.tokens(vec![(ALICE, 10), (BOB, 10)])
-		.build()
-		.execute_with(|| {
-			let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
-			let public_key = "MIGeMA0GCSqGSIb3DQEBAQUAA4GMADCBiAKBgHgI3ZgcuSPUzt9bIs857s9198lM"
-				.as_bytes()
-				.to_vec();
-			let enclave_class = Some("X86_64".as_bytes().to_vec());
-			let provider_id: ProviderId = 0;
-			// Registers INTEL as a provider
-			let intel_provider = "INTEL".as_bytes().to_vec();
-			assert_ok!(TEE::register_enclave_provider(
-				RawOrigin::Root.into(),
-				intel_provider.clone()
-			));
-
-			assert_ok!(TEE::register_provider_keys(
-				alice.clone(),
-				provider_id,
-				enclave_class.clone(),
-				public_key.clone(),
-			));
-
-			let intel = ProviderKeys::<Test>::get(0).unwrap();
-			assert_eq!(intel.public_key, public_key);
-
-			// Registering public key to already registered provider Id
-			assert_noop!(
-				TEE::register_provider_keys(
-					alice.clone(),
-					provider_id,
-					enclave_class.clone(),
-					public_key.clone(),
-				),
-				Error::<Test>::ProviderAlreadyRegistered
-			);
-
-			// Trying top register a key for not registered enclave provider
-			assert_noop!(
-				TEE::register_provider_keys(
-					alice.clone(),
-					1,
-					enclave_class.clone(),
-					public_key.clone(),
-				),
-				Error::<Test>::UnregisteredEnclaveProvider
-			);
-
-			// Register AMD as the provider but with intel public key
-			let amd_provider = "AMD".as_bytes().to_vec();
-			assert_ok!(TEE::register_enclave_provider(
-				RawOrigin::Root.into(),
-				amd_provider.clone()
-			));
-
-			assert_noop!(
-				TEE::register_provider_keys(alice.clone(), 1, enclave_class, public_key.clone(),),
-				Error::<Test>::PublicKeyRegisteredForDifferentEnclaveProvider
-			);
-		})
-}

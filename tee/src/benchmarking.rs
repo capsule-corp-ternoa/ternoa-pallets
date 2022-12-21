@@ -28,13 +28,13 @@ use sp_std::prelude::*;
 benchmarks! {
 	register_enclave {
 		let alice: T::AccountId = whitelisted_caller();
-		let ra_report: Vec<u8> = "SampleRep".as_bytes().to_vec();
+		let enclave_address: Vec<u8> = "samplere".as_bytes().to_vec();
 		let uri: Vec<u8> = "127.0.0.1".as_bytes().to_vec();
 		let enclave_id: EnclaveId = 0;
-		let enclave = Enclave::new(uri.clone());
+		let enclave = Enclave::new(uri.clone(), enclave_address.clone());
 
 		T::Currency::make_free_balance_be(&alice, BalanceOf::<T>::max_value());
-	}: _(RawOrigin::Signed(alice.clone().into()), ra_report, uri.clone())
+	}: _(RawOrigin::Signed(alice.clone().into()), enclave_address, uri.clone())
 	verify {
 		assert!(EnclaveRegistry::<T>::contains_key(enclave_id));
 		assert_eq!(EnclaveRegistry::<T>::get(enclave_id), Some(enclave));

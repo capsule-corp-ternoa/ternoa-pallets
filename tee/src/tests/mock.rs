@@ -110,17 +110,21 @@ parameter_types! {
 	pub const ClusterSize: u32 = 2;
 	pub const MinUriLen: u16 = 5;
 	pub const MaxUriLen: u16 = 12;
+	pub const MaxRegisteredEnclavese: u32 = 10;
+	pub const MaxUnRegisteredEnclavese: u32 = 10;
 }
 
 impl Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = ();
-	type FeesCollector = ();
 	type Currency = Balances;
+	type FeesCollector = ();
 	type EnclaveFee = EnclaveFee;
 	type ClusterSize = ClusterSize;
 	type MinUriLen = MinUriLen;
 	type MaxUriLen = MaxUriLen;
+	type MaxRegisteredEnclaves = MaxRegisteredEnclavese;
+	type MaxUnRegisteredEnclaves = MaxUnRegisteredEnclavese;
 }
 
 // Do not use the `0` account id since this would be the default value

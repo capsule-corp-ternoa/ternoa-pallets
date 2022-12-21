@@ -16,9 +16,8 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-
-///How Cluster IDs are encoded.
-pub type ClusterId = u32;
-
-///How Enclave IDs are encoded.
+/// EnclaveId
 pub type EnclaveId = u32;
+
+/// ClusterId
+pub type ClusterId = u32;

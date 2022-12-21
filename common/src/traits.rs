@@ -20,7 +20,7 @@ use frame_support::{dispatch::DispatchResult, traits::Get, BoundedVec};
 use primitives::{
 	marketplace::{MarketplaceData, MarketplaceId},
 	nfts::{CollectionId, NFTData, NFTId, NFTState},
-	tee::{ClusterId, EnclaveId},
+	tee::{ClusterId , EnclaveId },
 };
 use sp_runtime::Permill;
 use sp_std::fmt::Debug;
