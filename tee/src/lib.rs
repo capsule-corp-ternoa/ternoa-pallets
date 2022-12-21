@@ -31,7 +31,6 @@ pub use pallet::*;
 pub use types::*;
 
 use frame_support::traits::StorageVersion;
-use sp_runtime::traits::StaticLookup;
 use ternoa_common::traits;
 pub use weights::WeightInfo;
 use sp_std::{vec, vec::Vec};
@@ -51,11 +50,9 @@ pub mod pallet {
 	};
 
 	#[pallet::pallet]
-	#[pallet::without_storage_info]
 	#[pallet::generate_store(pub(super) trait Store)]
 	#[pallet::storage_version(STORAGE_VERSION)]
-
-	pub struct Pallet<T>(PhantomData<T>);
+	pub struct Pallet<T>(_);
 
 	pub type BalanceOf<T> =
 		<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
@@ -95,16 +92,23 @@ pub mod pallet {
 		type MaxUriLen: Get<u16>;
 
 		/// Max Assigned Enclaves
+		#[pallet::constant]
 		type MaxRegisteredEnclaves: Get<u16>;
 
 		/// Max Unassigned Enclaves
+		#[pallet::constant]
 		type MaxUnRegisteredEnclaves: Get<u16>;
 	}
 
-	#[pallet::storage]
-	#[pallet::getter(fn registered_enclaves)]
-	pub type RegisteredEnclaves<T: Config> =
-	StorageValue<_, BoundedVec<EnclaveId, T::MaxRegisteredEnclaves>, OptionQuery>;
+	// #[pallet::storage]
+	// #[pallet::getter(fn registered_enclaves)]
+	// pub type RegisteredEnclaves<T: Config> =
+	// 	StorageValue<_, BoundedVec<EnclaveId, T::MaxRegisteredEnclaves>, ValueQuery>;
+	//
+	// #[pallet::storage]
+	// #[pallet::getter(fn unregistered_enclaves)]
+	// pub type UnRegisteredEnclaves<T: Config> =
+	// 	StorageValue<_, BoundedVec<EnclaveId, T::MaxUnRegisteredEnclaves>, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn enclave_registry)]
@@ -271,7 +275,7 @@ pub mod pallet {
 		/// Origin- operator account address
 		/// If the enclave is assigned, it will be placed in queue for tech committee approval
 		/// If enclave is not already assigned, he can exit without permission.
-		#[pallet::weight(T::WeightInfo::register_enclave())]
+		#[pallet::weight(T::WeightInfo::unregister_enclave())]
 		pub fn unregister_enclave(
 			origin: OriginFor<T>,
 		) -> DispatchResultWithPostInfo {
@@ -288,6 +292,25 @@ pub mod pallet {
 
 			Ok(().into())
 		}
+
+		#[pallet::weight(T::WeightInfo::register_enclave())]
+		pub fn update_registration(
+			origin: OriginFor<T>, enclave_id: EnclaveId
+		) -> DispatchResultWithPostInfo {
+
+
+			Ok(().into())
+		}
+
+		#[pallet::weight(T::WeightInfo::register_enclave())]
+		pub fn force_update_enclave(
+			origin: OriginFor<T>, enclave_id: EnclaveId, enclave_address: Vec<u8>, api_url: Vec<u8>
+		) -> DispatchResultWithPostInfo {
+
+
+			Ok(().into())
+		}
+
 		/// ***** For this we donot need to pass enclave_address>?
 		/// `assign_enclave` assigns an enclave to a cluster
 		///
@@ -398,40 +421,7 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		/// `change_enclave_owner` changes the owner of an enclave
-		///
-		/// Arguments:
-		///
-		/// * `origin`: OriginFor<T> - The origin of the call.
-		/// * `new_owner`: The new owner of the enclave.
-		///
-		/// Returns:
-		///
-		/// DispatchResultWithPostInfo
-		#[pallet::weight(T::WeightInfo::change_enclave_owner())]
-		pub fn change_enclave_owner(
-			origin: OriginFor<T>,
-			new_owner: <T::Lookup as StaticLookup>::Source,
-		) -> DispatchResultWithPostInfo {
-			let old_owner = ensure_signed(origin)?;
-			let new_owner = T::Lookup::lookup(new_owner)?;
 
-			let enclave_id =
-				EnclaveIndex::<T>::get(old_owner.clone()).ok_or(Error::<T>::NotEnclaveOwner)?;
-
-			// ensure!(
-			// 	!EnclaveIndex::<T>::contains_key(&new_owner),
-			// 	Error::<T>::PublicKeyAlreadyTiedToACluster
-			// );
-
-			ensure!(EnclaveRegistry::<T>::contains_key(enclave_id), Error::<T>::UnknownEnclaveId);
-
-			EnclaveIndex::<T>::remove(old_owner);
-			EnclaveIndex::<T>::insert(new_owner.clone(), enclave_id);
-
-			Self::deposit_event(Event::NewEnclaveOwner { enclave_id, owner: new_owner });
-			Ok(().into())
-		}
 
 		// Creates a Cluster
 		// A given cluster has list of enclaves

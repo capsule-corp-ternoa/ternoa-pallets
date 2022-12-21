@@ -18,10 +18,10 @@ use frame_support::weights::Weight;
 
 pub trait WeightInfo {
 	fn register_enclave() -> Weight;
+	fn unregister_enclave() -> Weight;
 	fn assign_enclave() -> Weight;
 	fn unassign_enclave() -> Weight;
 	fn update_enclave() -> Weight;
-	fn change_enclave_owner() -> Weight;
 	fn register_cluster() -> Weight;
 	fn unregister_cluster() -> Weight;
 	fn register_enclave_provider() -> Weight;
@@ -36,6 +36,11 @@ impl WeightInfo for () {
 	fn register_enclave() -> Weight {
 		Weight::from_ref_time(10_000_000 as u64)
 	}
+
+	fn unregister_enclave() -> Weight {
+		Weight::from_ref_time(10_000_000 as u64)
+	}
+
 	// Storage: Tee EnclaveIndex (r:1 w:0)
 	// Storage: Tee ClusterIndex (r:1 w:1)
 	// Storage: Tee ClusterRegistry (r:1 w:1)
@@ -51,11 +56,6 @@ impl WeightInfo for () {
 	// Storage: Tee EnclaveIndex (r:1 w:0)
 	// Storage: Tee EnclaveRegistry (r:1 w:1)
 	fn update_enclave() -> Weight {
-		Weight::from_ref_time(10_000_000 as u64)
-	}
-	// Storage: Tee EnclaveIndex (r:2 w:2)
-	// Storage: Tee EnclaveRegistry (r:1 w:0)
-	fn change_enclave_owner() -> Weight {
 		Weight::from_ref_time(10_000_000 as u64)
 	}
 	// Storage: Tee EnclaveIdGenerator (r:1 w:0)
