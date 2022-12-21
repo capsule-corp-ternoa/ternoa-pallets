@@ -64,8 +64,10 @@ fn prepare_tests() {
 }
 
 fn prepare_tee_for_tests() {
+	let _short_uri = "http".as_bytes().to_vec();
 	let valid_uri = "https://va".as_bytes().to_vec();
-	let att_rep: Vec<u8> = include_bytes!("./mock_attestation.json").to_vec();
+	let enclave_address: Vec<u8> = "samplere".as_bytes().to_vec();
+	let _long_uri = "https://this".as_bytes().to_vec();
 
 	let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
 	let bob: mock::RuntimeOrigin = RawOrigin::Signed(BOB).into();
@@ -74,23 +76,18 @@ fn prepare_tee_for_tests() {
 	let eve: mock::RuntimeOrigin = RawOrigin::Signed(EVE).into();
 	let ferdie: mock::RuntimeOrigin = origin(FERDIE);
 
-	assert_ok!(TEE::register_enclave_operator(alice.clone(), ALICE));
-	assert_ok!(TEE::register_enclave_operator(bob.clone(), BOB));
-	assert_ok!(TEE::register_enclave_operator(charlie.clone(), CHARLIE));
-	assert_ok!(TEE::register_enclave_operator(dave.clone(), DAVE));
-	assert_ok!(TEE::register_enclave_operator(eve.clone(), EVE));
-	assert_ok!(TEE::register_enclave_operator(ferdie.clone(), FERDIE));
+	assert_ok!(TEE::register_enclave(alice.clone(), enclave_address.clone(), valid_uri.clone()));
+	assert_ok!(TEE::register_enclave(bob.clone(), enclave_address.clone(), valid_uri.clone()));
+	assert_ok!(TEE::register_enclave(charlie.clone(), enclave_address.clone(), valid_uri.clone()));
+	assert_ok!(TEE::register_enclave(dave.clone(), enclave_address.clone(), valid_uri.clone()));
+	assert_ok!(TEE::register_enclave(eve.clone(), enclave_address.clone(), valid_uri.clone()));
+	assert_ok!(TEE::register_enclave(ferdie.clone(), enclave_address.clone(), valid_uri.clone()));
 
 	let cluster_id: ClusterId = 0;
 	let second_cluster_id: ClusterId = 1;
-	assert_ok!(TEE::create_cluster(RawOrigin::Root.into()));
-	assert_ok!(TEE::create_cluster(RawOrigin::Root.into()));
-	assert_ok!(TEE::register_enclave(alice.clone(), att_rep.to_vec(), valid_uri.clone()));
-	assert_ok!(TEE::register_enclave(bob.clone(), att_rep.to_vec(), valid_uri.clone()));
-	assert_ok!(TEE::register_enclave(charlie.clone(), att_rep.to_vec(), valid_uri.clone()));
-	assert_ok!(TEE::register_enclave(dave.clone(), att_rep.to_vec(), valid_uri.clone()));
-	assert_ok!(TEE::register_enclave(eve.clone(), att_rep.to_vec(), valid_uri.clone()));
-	assert_ok!(TEE::register_enclave(ferdie.clone(), att_rep.to_vec(), valid_uri.clone()));
+	// let enclave_id: EnclaveId = 0;
+	assert_ok!(TEE::register_cluster(RawOrigin::Root.into()));
+	assert_ok!(TEE::register_cluster(RawOrigin::Root.into()));
 
 	assert_ok!(TEE::assign_enclave(alice.clone(), cluster_id));
 	assert_ok!(TEE::assign_enclave(bob.clone(), cluster_id));
