@@ -93,25 +93,26 @@ pub mod pallet {
 
 		/// Max Assigned Enclaves
 		#[pallet::constant]
-		type MaxRegisteredEnclaves: Get<u16>;
+		type MaxRegisteredEnclaves: Get<u32>;
 
 		/// Max Unassigned Enclaves
 		#[pallet::constant]
-		type MaxUnRegisteredEnclaves: Get<u16>;
+		type MaxUnRegisteredEnclaves: Get<u32>;
 	}
 
-	// #[pallet::storage]
-	// #[pallet::getter(fn registered_enclaves)]
-	// pub type RegisteredEnclaves<T: Config> =
-	// 	StorageValue<_, BoundedVec<EnclaveId, T::MaxRegisteredEnclaves>, ValueQuery>;
-	//
-	// #[pallet::storage]
-	// #[pallet::getter(fn unregistered_enclaves)]
-	// pub type UnRegisteredEnclaves<T: Config> =
-	// 	StorageValue<_, BoundedVec<EnclaveId, T::MaxUnRegisteredEnclaves>, ValueQuery>;
+	#[pallet::storage]
+	#[pallet::getter(fn registered_enclaves)]
+	pub type RegisteredEnclaves<T: Config> =
+		StorageValue<_, BoundedVec<EnclaveId, T::MaxRegisteredEnclaves>, ValueQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn unregistered_enclaves)]
+	pub type UnRegisteredEnclaves<T: Config> =
+		StorageValue<_, BoundedVec<EnclaveId, T::MaxUnRegisteredEnclaves>, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn enclave_registry)]
+	#[pallet::unbounded]
 	pub type EnclaveRegistry<T: Config> =
 	StorageMap<_, Blake2_128Concat, EnclaveId, Enclave, OptionQuery>;
 
@@ -127,6 +128,7 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn cluster_registry)]
+	#[pallet::unbounded]
 	pub type ClusterRegistry<T: Config> =
 	StorageMap<_, Blake2_128Concat, ClusterId, Cluster, OptionQuery>;
 
