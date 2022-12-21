@@ -36,7 +36,6 @@ pub use weights::WeightInfo;
 use sp_std::{vec, vec::Vec};
 use primitives::tee::{ClusterId, EnclaveId};
 
-/// The current storage version.
 const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
 
 #[frame_support::pallet]
@@ -297,7 +296,7 @@ pub mod pallet {
 
 		#[pallet::weight(T::WeightInfo::register_enclave())]
 		pub fn update_registration(
-			origin: OriginFor<T>, enclave_id: EnclaveId
+			_origin: OriginFor<T>, _enclave_id: EnclaveId
 		) -> DispatchResultWithPostInfo {
 
 
@@ -306,7 +305,7 @@ pub mod pallet {
 
 		#[pallet::weight(T::WeightInfo::register_enclave())]
 		pub fn force_update_enclave(
-			origin: OriginFor<T>, enclave_id: EnclaveId, enclave_address: Vec<u8>, api_url: Vec<u8>
+			_origin: OriginFor<T>, _enclave_id: EnclaveId, _enclave_address: Vec<u8>, _api_url: Vec<u8>
 		) -> DispatchResultWithPostInfo {
 
 
