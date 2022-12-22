@@ -314,8 +314,10 @@ pub mod pallet {
 		CannotAddSecretToCapsuleNFTs,
 		/// Operation is not permitted because the NFT is already a secret.
 		CannotAddSecretToSecretNFTs,
-		/// Feature is not available yet
-		ComingSoon,
+		/// Operation is not permitted because the NFT is rented.
+		CannotAddSecretToRentedNFTs,
+		/// Operation is not permitted because the NFT is delegated.
+		CannotAddSecretToDelegatedNFTs,
 		///Enclave which posted the shard for the NFT does not belongs to the
 		///same cluster of the first posted shard
 		ShareNotFromValidCluster,
@@ -797,6 +799,9 @@ pub mod pallet {
 				ensure!(!nft.state.is_listed, Error::<T>::CannotAddSecretToListedNFTs);
 				ensure!(!nft.state.is_capsule, Error::<T>::CannotAddSecretToCapsuleNFTs);
 				ensure!(!nft.state.is_secret, Error::<T>::CannotAddSecretToSecretNFTs);
+				ensure!(!nft.state.is_rented, Error::<T>::CannotAddSecretToRentedNFTs);
+				ensure!(!nft.state.is_delegated, Error::<T>::CannotAddSecretToDelegatedNFTs);
+
 
 				// The Caller needs to pay the Secret NFT Mint fee.
 				let secret_nft_mint_fee = SecretNftMintFee::<T>::get();
