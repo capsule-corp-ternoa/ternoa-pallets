@@ -82,7 +82,7 @@ pub mod pallet {
 
 		/// Link to the NFT pallet.
 		type TEEExt: TEEExt<AccountId = Self::AccountId>;
-		
+
 		// Constants
 		/// Default fee for minting NFTs.
 		#[pallet::constant]
@@ -261,8 +261,12 @@ pub mod pallet {
 		CannotBurnRentedNFTs,
 		/// Operation is not allowed because the NFT is rented
 		CannotSetRoyaltyForRentedNFTs,
+		/// Operation is not allowed because the NFT is secret and syncing
+		CannotSetRoyaltyForSyncingNFTs,
 		/// Operation is not allowed because the NFT is rented
 		CannotDelegateRentedNFTs,
+		/// Operation is not allowed because the NFT is secret and syncing
+		CannotDelegateSyncingNFTs,
 		/// Operation is not allowed because the collection limit is too low.
 		CollectionLimitExceededMaximumAllowed,
 		/// No NFT was found with that NFT id.
@@ -529,6 +533,7 @@ pub mod pallet {
 				ensure!(!nft.state.is_listed, Error::<T>::CannotDelegateListedNFTs);
 				ensure!(!nft.state.is_capsule, Error::<T>::CannotDelegateCapsuleNFTs);
 				ensure!(!nft.state.is_rented, Error::<T>::CannotDelegateRentedNFTs);
+				ensure!(!nft.state.is_syncing, Error::<T>::CannotDelegateSyncingNFTs);
 
 				// Execute
 				nft.state.is_delegated = is_delegated;
@@ -569,6 +574,7 @@ pub mod pallet {
 				ensure!(!nft.state.is_capsule, Error::<T>::CannotSetRoyaltyForCapsuleNFTs);
 				ensure!(!nft.state.is_delegated, Error::<T>::CannotSetRoyaltyForDelegatedNFTs);
 				ensure!(!nft.state.is_rented, Error::<T>::CannotSetRoyaltyForRentedNFTs);
+				ensure!(!nft.state.is_syncing, Error::<T>::CannotSetRoyaltyForSyncingNFTs);
 
 				// Execute
 				nft.royalty = royalty;

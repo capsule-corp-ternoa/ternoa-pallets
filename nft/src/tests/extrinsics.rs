@@ -787,6 +787,21 @@ mod delegate_nft {
 			assert_noop!(err, Error::<Test>::CannotDelegateRentedNFTs);
 		})
 	}
+
+	#[test]
+	fn cannot_delegate_syncing_nfts() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
+			prepare_tests();
+			let alice: mock::RuntimeOrigin = origin(ALICE);
+			// Set alice's NFT to capsule.
+			let nft_state = NFTState::new(false, false, false, false, false, true, false);
+			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
+			// Delegate capsule NFT.
+			let err = NFT::delegate_nft(alice, ALICE_NFT_ID, None);
+			// Should fail because NFT is secret and syncing.
+			assert_noop!(err, Error::<Test>::CannotDelegateSyncingNFTs);
+		})
+	}
 }
 
 mod set_royalty {
@@ -909,6 +924,21 @@ mod set_royalty {
 			let err = NFT::set_royalty(alice, ALICE_NFT_ID, PERCENT_80);
 			// Should fail because you cannot set royalty for capsule NFTs.
 			assert_noop!(err, Error::<Test>::CannotSetRoyaltyForRentedNFTs);
+		})
+	}
+
+	#[test]
+	fn cannot_set_royalty_for_syncing_nfts() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
+			prepare_tests();
+			let alice: mock::RuntimeOrigin = origin(ALICE);
+			// Set Alice's NFT to capsule.
+			let nft_state = NFTState::new(false, false, false, false, false, true, false);
+			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
+			// Set royalty.
+			let err = NFT::set_royalty(alice, ALICE_NFT_ID, PERCENT_80);
+			// Should fail because you cannot set royalty for capsule NFTs.
+			assert_noop!(err, Error::<Test>::CannotSetRoyaltyForSyncingNFTs);
 		})
 	}
 }
