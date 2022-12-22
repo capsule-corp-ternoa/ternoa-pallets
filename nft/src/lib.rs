@@ -80,6 +80,9 @@ pub mod pallet {
 		/// What we do with additional fees.
 		type FeesCollector: OnUnbalanced<NegativeImbalanceOf<Self>>;
 
+		/// Link to the NFT pallet.
+		type TEEExt: TEEExt<AccountId = Self::AccountId>;
+		
 		// Constants
 		/// Default fee for minting NFTs.
 		#[pallet::constant]
@@ -104,9 +107,6 @@ pub mod pallet {
 		/// The number of necessary shards to consider the Secret NFT valid.
 		#[pallet::constant]
 		type ShardsNumber: Get<u32>;
-
-		/// Link to the NFT pallet.
-		type TEEExt: TEEExt<AccountId = Self::AccountId>;
 	}
 
 	/// How much does it cost to mint a NFT (extra fee on top of the tx fees).
@@ -926,7 +926,7 @@ pub mod pallet {
 				Self::deposit_event(event);
 			}
 
-			Ok(().into())
+			Ok(Pays::No.into())
 		}
 
 		/// Set the fee for minting a secret NFT if the caller is root.
