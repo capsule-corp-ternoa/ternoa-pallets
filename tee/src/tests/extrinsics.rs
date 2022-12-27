@@ -22,8 +22,8 @@ use sp_runtime::traits::BadOrigin;
 use ternoa_common::traits::TEEExt;
 
 use crate::{
-	Cluster, ClusterId, ClusterIdGenerator, ClusterIndex, ClusterRegistry, Enclave, EnclaveId,
-	EnclaveIdGenerator, EnclaveIndex, EnclaveRegistry, Error,
+	Cluster, ClusterId, ClusterIdGenerator, EnclaveClusterId, ClusterData, Enclave, EnclaveId,
+	EnclaveIdGenerator, AccountEnclaveId, EnclaveData, Error,
 };
 
 #[test]
@@ -42,8 +42,8 @@ fn register_enclave() {
 			let bob: mock::RuntimeOrigin = RawOrigin::Signed(BOB).into();
 			let dave: mock::RuntimeOrigin = RawOrigin::Signed(DAVE).into();
 
-			assert_eq!(EnclaveIndex::<Test>::iter().count(), 0);
-			assert_eq!(EnclaveRegistry::<Test>::iter().count(), 0);
+			assert_eq!(AccountEnclaveId::<Test>::iter().count(), 0);
+			assert_eq!(EnclaveData::<Test>::iter().count(), 0);
 			assert_eq!(EnclaveIdGenerator::<Test>::get(), 0);
 
 			// Alice should be able to create an enclave if she has enough tokens.
@@ -52,10 +52,10 @@ fn register_enclave() {
 
 			let enclave = Enclave::new(valid_uri.clone(), enclave_address.clone());
 			let enclave_id: EnclaveId = 0;
-			assert!(EnclaveRegistry::<Test>::contains_key(enclave_id));
-			assert_eq!(EnclaveRegistry::<Test>::get(enclave_id), Some(enclave));
-			assert!(EnclaveIndex::<Test>::contains_key(ALICE));
-			assert_eq!(EnclaveIndex::<Test>::get(ALICE).unwrap(), enclave_id);
+			assert!(EnclaveData::<Test>::contains_key(enclave_id));
+			assert_eq!(EnclaveData::<Test>::get(enclave_id), Some(enclave));
+			assert!(AccountEnclaveId::<Test>::contains_key(ALICE));
+			assert_eq!(AccountEnclaveId::<Test>::get(ALICE).unwrap(), enclave_id);
 			assert_eq!(EnclaveIdGenerator::<Test>::get(), 1);
 			//
 			// Alice should NOT be able to create an enclave if she already has one.
@@ -99,9 +99,9 @@ fn assign_enclave() {
 
 			// Alice should be able to assign her enclave to a cluster.
 			assert_ok!(TEE::assign_enclave(alice.clone(), cluster_id));
-			let cluster = ClusterRegistry::<Test>::get(cluster_id).unwrap();
+			let cluster = ClusterData::<Test>::get(cluster_id).unwrap();
 			assert_eq!(cluster.enclaves, vec![enclave_id]);
-			assert_eq!(ClusterIndex::<Test>::get(enclave_id), Some(cluster_id));
+			assert_eq!(EnclaveClusterId::<Test>::get(enclave_id), Some(cluster_id));
 
 			// Alice should NOT be able to assign her enclave if it is already assigned.
 			let ok = TEE::assign_enclave(alice, cluster_id);
@@ -138,16 +138,16 @@ fn unassign_enclave() {
 			assert_ok!(TEE::register_cluster(RawOrigin::Root.into()));
 			assert_ok!(TEE::register_enclave(alice.clone(), att_rep.clone(), valid_uri));
 			assert_ok!(TEE::assign_enclave(alice.clone(), cluster_id));
-			let cluster = ClusterRegistry::<Test>::get(cluster_id).unwrap();
+			let cluster = ClusterData::<Test>::get(cluster_id).unwrap();
 			assert_eq!(cluster.enclaves, vec![enclave_id]);
-			assert_eq!(ClusterIndex::<Test>::get(enclave_id), Some(cluster_id));
+			assert_eq!(EnclaveClusterId::<Test>::get(enclave_id), Some(cluster_id));
 
 			// Alice should be able to unassign her enclave from a cluster.
 			assert_ok!(TEE::unassign_enclave(alice.clone()));
-			let cluster = ClusterRegistry::<Test>::get(cluster_id).unwrap();
+			let cluster = ClusterData::<Test>::get(cluster_id).unwrap();
 			let empty: Vec<EnclaveId> = Default::default();
 			assert_eq!(cluster.enclaves, empty);
-			assert_eq!(ClusterIndex::<Test>::get(enclave_id), None);
+			assert_eq!(EnclaveClusterId::<Test>::get(enclave_id), None);
 
 			// Alice should NOT be able to unassign her enclave if the enclave is already
 			// unassigned.
@@ -181,7 +181,7 @@ fn update_enclave() {
 			valid_uri = "https://zza".as_bytes().to_vec();
 			let enclave = Enclave::new(valid_uri.clone(), enclave_address);
 			assert_ok!(TEE::update_enclave(alice.clone(), valid_uri.clone()));
-			assert_eq!(EnclaveRegistry::<Test>::get(enclave_id), Some(enclave));
+			assert_eq!(EnclaveData::<Test>::get(enclave_id), Some(enclave));
 
 			// Dave should NOT be able to update an enclave if the uri is too short.
 			let ok = TEE::update_enclave(alice.clone(), short_uri.clone());
@@ -230,8 +230,8 @@ fn register_cluster() {
 	ExtBuilder::default().build().execute_with(|| {
 		let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
 
-		assert_eq!(ClusterIndex::<Test>::iter().count(), 0);
-		assert_eq!(ClusterRegistry::<Test>::iter().count(), 0);
+		assert_eq!(EnclaveClusterId::<Test>::iter().count(), 0);
+		assert_eq!(ClusterData::<Test>::iter().count(), 0);
 		assert_eq!(ClusterIdGenerator::<Test>::get(), 0);
 		assert_eq!(EnclaveIdGenerator::<Test>::get(), 0);
 		let cluster_id: ClusterId = 0;
@@ -239,8 +239,8 @@ fn register_cluster() {
 
 		// Sudo should be able to create clusters.
 		assert_ok!(TEE::register_cluster(RawOrigin::Root.into()));
-		assert_eq!(ClusterIndex::<Test>::iter().count(), 0);
-		assert_eq!(ClusterRegistry::<Test>::get(cluster_id), Some(cluster));
+		assert_eq!(EnclaveClusterId::<Test>::iter().count(), 0);
+		assert_eq!(ClusterData::<Test>::get(cluster_id), Some(cluster));
 		assert_eq!(ClusterIdGenerator::<Test>::get(), 1);
 		assert_eq!(EnclaveIdGenerator::<Test>::get(), 0);
 
@@ -269,17 +269,17 @@ fn unregister_cluster() {
 			assert_ok!(TEE::assign_enclave(alice.clone(), cluster_id));
 			assert_ok!(TEE::assign_enclave(bob.clone(), cluster_id));
 
-			assert_eq!(ClusterIndex::<Test>::iter().count(), 2);
-			assert_eq!(ClusterIndex::<Test>::get(0), Some(0));
-			assert_eq!(ClusterIndex::<Test>::get(1), Some(0));
-			assert_eq!(ClusterRegistry::<Test>::iter().count(), 1);
-			assert_eq!(ClusterRegistry::<Test>::get(0), Some(cluster));
+			assert_eq!(EnclaveClusterId::<Test>::iter().count(), 2);
+			assert_eq!(EnclaveClusterId::<Test>::get(0), Some(0));
+			assert_eq!(EnclaveClusterId::<Test>::get(1), Some(0));
+			assert_eq!(ClusterData::<Test>::iter().count(), 1);
+			assert_eq!(ClusterData::<Test>::get(0), Some(cluster));
 			assert_eq!(ClusterIdGenerator::<Test>::get(), 1);
 
 			// Sudo should be remove an existing cluster
 			assert_ok!(TEE::unregister_cluster(RawOrigin::Root.into(), cluster_id));
-			assert_eq!(ClusterIndex::<Test>::iter().count(), 0);
-			assert_eq!(ClusterRegistry::<Test>::iter().count(), 0);
+			assert_eq!(EnclaveClusterId::<Test>::iter().count(), 0);
+			assert_eq!(ClusterData::<Test>::iter().count(), 0);
 
 			// Sudo should NOT be able to remove an non-existing cluster
 			let ok = TEE::unregister_cluster(RawOrigin::Root.into(), 10);
