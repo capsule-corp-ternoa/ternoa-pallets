@@ -18,12 +18,11 @@
 use super::*;
 use crate::Pallet as Sgx;
 use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, whitelisted_caller};
-use frame_support::{traits::Currency};
+use frame_support::traits::Currency;
 use frame_system::RawOrigin;
 
 use sp_runtime::traits::Bounded;
 use sp_std::prelude::*;
-
 
 benchmarks! {
 	register_enclave {

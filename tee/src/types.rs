@@ -14,11 +14,11 @@
 // You should have received a copy of the GNU General Public License
 // along with Ternoa.  If not, see <http://www.gnu.org/licenses/>.
 
-use parity_scale_codec::{Decode, Encode };
+use parity_scale_codec::{Decode, Encode};
+use primitives::tee::EnclaveId;
 use scale_info::TypeInfo;
 use sp_runtime::RuntimeDebug;
 use sp_std::vec::Vec;
-use primitives::tee::EnclaveId;
 
 #[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 // #[codec(mel_bound)]
@@ -44,4 +44,3 @@ impl Cluster {
 		Self { enclaves }
 	}
 }
-

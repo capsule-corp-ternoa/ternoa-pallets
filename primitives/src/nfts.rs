@@ -33,7 +33,6 @@ pub type NFTId = u32;
 /// How collection IDs are encoded.
 pub type CollectionId = u32;
 
-
 #[derive(Encode, Decode, Eq, TypeInfo, Clone, Copy, PartialEq, RuntimeDebug, MaxEncodedLen)]
 pub enum NFTStateModifiers {
 	Capsule = 0x01,
