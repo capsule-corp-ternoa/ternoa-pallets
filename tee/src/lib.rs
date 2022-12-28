@@ -283,8 +283,9 @@ pub mod pallet {
 			EnclaveIdGenerator::<T>::put(new_id);
 
 			let reg_enclaves:  BoundedVec<EnclaveId, T::MaxRegisteredEnclaves> = <EnclaveRegistrationList<T>>::get();
+
 			let reg_enclaves = reg_enclaves
-				.try_mutate(|v| v.push(7))
+				.try_mutate(|v| v.push(enclave_id))
 				.ok_or(Error::<T>::ErrorAddingToQueue)?;
 			<EnclaveRegistrationList<T>>::put(reg_enclaves);
 

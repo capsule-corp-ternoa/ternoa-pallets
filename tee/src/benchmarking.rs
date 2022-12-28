@@ -16,13 +16,12 @@
 #![cfg(feature = "runtime-benchmarks")]
 
 use super::*;
-use crate::Pallet as Sgx;
-use frame_benchmarking::{account as benchmark_account, benchmarks, impl_benchmark_test_suite, whitelisted_caller};
+use crate::Pallet as TEE;
+use frame_benchmarking::{account as benchmark_account, benchmarks, impl_benchmark_test_suite};
 use frame_support::{traits::Currency};
 use frame_system::RawOrigin;
 
 use sp_runtime::traits::Bounded;
-use sp_runtime::traits::StaticLookup;
 use sp_std::prelude::*;
 
 
@@ -43,43 +42,39 @@ pub fn prepare_benchmarks<T: Config>()  {
 }
 
 benchmarks! {
-	// register_enclave {
-	// 	let alice: T::AccountId = whitelisted_caller();
-	// 	let enclave_address: Vec<u8> = "samplere".as_bytes().to_vec();
-	// 	let uri: Vec<u8> = "127.0.0.1".as_bytes().to_vec();
-	// 	let enclave_id: EnclaveId = 0;
-	// 	let enclave = Enclave::new(uri.clone(), enclave_address.clone());
-	//
-	// 	T::Currency::make_free_balance_be(&alice, BalanceOf::<T>::max_value());
-	// }: _(RawOrigin::Signed(alice.clone().into()), enclave_address, uri.clone())
-	// verify {
-	// 	assert!(EnclaveRegistry::<T>::contains_key(enclave_id));
-	// 	assert_eq!(EnclaveRegistry::<T>::get(enclave_id), Some(enclave));
-	// 	assert!(EnclaveIndex::<T>::contains_key(alice.clone()));
-	// 	assert_eq!(EnclaveIndex::<T>::get(alice.clone()).unwrap(), enclave_id);
-	// 	assert_eq!(EnclaveIdGenerator::<T>::get(), 1);
-	// }
+	register_enclave {
+		prepare_benchmarks::<T>();
+		let alice = origin::<T>("ALICE");
+		let enclave_address: Vec<u8> = "samplere".as_bytes().to_vec();
+		let uri: Vec<u8> = "127.0.0.1".as_bytes().to_vec();
+		let enclave_id: EnclaveId = 0;
+		let enclave = Enclave::new(uri.clone(), enclave_address.clone());
+
+	}: _(alice.clone(), enclave_address, uri.clone())
+	verify {
+		assert!(EnclaveData::<T>::contains_key(enclave_id));
+		assert_eq!(EnclaveData::<T>::get(enclave_id), Some(enclave));
+		assert_eq!(EnclaveIdGenerator::<T>::get(), 1);
+		assert_eq!(EnclaveRegistrationList::<T>::get().len(), 1);
+		assert!(EnclaveRegistrationList::<T>::get().contains(&enclave_id));
+	}
 
 	assign_enclave {
+		prepare_benchmarks::<T>();
+		let alice = origin::<T>("ALICE");
 
-		let benchmark_data = prepare_benchmarks::<T>();
-		let alice: T::AccountId = get_account::<T>("ALICE");
-
-		// let alice: T::AccountId = whitelisted_caller();
 		let enclave_id: EnclaveId = 0;
 		let cluster_id: ClusterId = 0;
 		let enclave_address: Vec<u8> = "192.168.1.1".as_bytes().to_vec();
 		let uri: Vec<u8> = "127.0.0.1".as_bytes().to_vec();
-		T::Currency::make_free_balance_be(&alice, BalanceOf::<T>::max_value());
 
-		Sgx::<T>::register_cluster(RawOrigin::Root.into());
-		Sgx::<T>::register_enclave(alice.clone(), enclave_address.clone(), uri.clone());
+		TEE::<T>::register_cluster(RawOrigin::Root.into()).unwrap();
+		TEE::<T>::register_enclave(alice.clone().into(), enclave_address.clone(), uri.clone()).unwrap();
 
-	}: _(origin::<T>("ALICE"), cluster_id)
+	}: _(alice, cluster_id)
 	verify {
-		assert_eq!(1, 1)
-		// assert_eq!(ClusterRegistry::<T>::get(cluster_id).unwrap().enclaves, vec![enclave_id]);
-		// assert_eq!(ClusterIndex::<T>::get(enclave_id), Some(cluster_id));
+		assert_eq!(ClusterData::<T>::get(cluster_id).unwrap().enclaves, vec![enclave_id]);
+		assert_eq!(EnclaveClusterId::<T>::get(enclave_id), Some(cluster_id));
 	}
 
 	// unassign_enclave {
@@ -92,9 +87,9 @@ benchmarks! {
 	//
 	// 	T::Currency::make_free_balance_be(&alice, BalanceOf::<T>::max_value());
 	//
-	// 	drop(Sgx::<T>::register_cluster(RawOrigin::Root.into()));
-	// 	drop(Sgx::<T>::register_enclave(RawOrigin::Root.into(), enclave_address, uri.clone()));
-	// 	drop(Sgx::<T>::assign_enclave(RawOrigin::Signed(alice.clone()).into(), cluster_id));
+	// 	drop(TEE::<T>::register_cluster(RawOrigin::Root.into()));
+	// 	drop(TEE::<T>::register_enclave(RawOrigin::Root.into(), enclave_address, uri.clone()));
+	// 	drop(TEE::<T>::assign_enclave(RawOrigin::Signed(alice.clone()).into(), cluster_id));
 	// }: _(RawOrigin::Signed(alice.clone().into()))
 	// verify {
 	// 	assert_eq!(ClusterRegistry::<T>::get(cluster_id).unwrap().enclaves, empty);
@@ -110,7 +105,7 @@ benchmarks! {
 	//
 	// 	T::Currency::make_free_balance_be(&alice, BalanceOf::<T>::max_value());
 	//
-	// 	drop(Sgx::<T>::register_enclave(RawOrigin::Signed(alice.clone()).into(), ra_report, uri.clone()));
+	// 	drop(TEE::<T>::register_enclave(RawOrigin::Signed(alice.clone()).into(), ra_report, uri.clone()));
 	// }: _(RawOrigin::Signed(alice.clone().into()), new_uri.clone())
 	// verify {
 	// 	assert_eq!(EnclaveRegistry::<T>::get(enclave_id).unwrap().api_uri, new_uri);
@@ -137,7 +132,7 @@ benchmarks! {
 	// 	let enclave_id: EnclaveId = 0;
 	// 	let enclave = Enclave::new(uri.clone(), enclave_address.clone());
 	//
-	// 	drop(Sgx::<T>::register_enclave(RawOrigin::Root.into(), enclave_address, uri.clone()));
+	// 	drop(TEE::<T>::register_enclave(RawOrigin::Root.into(), enclave_address, uri.clone()));
 	//
 	// }: _(RawOrigin::Root, cluster_id)
 	// verify {
@@ -146,4 +141,4 @@ benchmarks! {
 	// }
 }
 
-impl_benchmark_test_suite!(Sgx, crate::tests::mock::new_test_ext(), crate::tests::mock::Test);
+impl_benchmark_test_suite!(TEE, crate::tests::mock::new_test_ext(), crate::tests::mock::Test);
