@@ -201,16 +201,10 @@ pub mod pallet {
 		EnclaveNotAssigned,
 		/// Enclave does not exists
 		EnclaveDoesNotExists,
-		/// Cannot assign to same cluster
-		CannotAssignToSameCluster,
 		/// Internal logical error
 		InternalLogicalError,
-		/// Assigning an operator to an invalid enclaveId
-		AssigningOperatorForUnknownEnclaveId,
 		/// Unknown enclave operator account
 		UnknownEnclaveOperatorAccount,
-		/// Invalid IAS sign certificate
-		InvalidIASSigningCert,
 		/// Error Adding To Queue
 		ErrorAddingToQueue,
 	}
