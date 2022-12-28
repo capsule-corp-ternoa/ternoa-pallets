@@ -252,18 +252,16 @@ pub mod pallet {
 			ensure!(api_uri.len() < T::MaxUriLen::get().into(), Error::<T>::UriTooLong);
 			ensure!(api_uri.len() > T::MinUriLen::get().into(), Error::<T>::UriTooShort);
 
-			let has_registered_index = AccountEnclaveId::<T>::get(account.clone());
+			let result = AccountEnclaveId::<T>::get(&account).and_then(|enclave_id| {
+				EnclaveData::<T>::get(enclave_id).map(|enc| enc)
+			});
 
-			// Verify if the origin does not already have an enclave address associated with it.
-			match has_registered_index {
-				Some(enc_id) => {
-					let enc = EnclaveData::<T>::get(enc_id).ok_or(Error::<T>::UnknownEnclaveId)?;
-					ensure!(
-						enc.enclave_address != enclave_address,
+			if result.is_some() {
+				let  enclave = result.ok_or(Error::<T>::EnclaveDoesNotExists)?;
+				ensure!(
+						enclave.enclave_address != enclave_address,
 						Error::<T>::EnclaveAddressAlreadyRegisteredtoTheAccount
 					)
-				}
-				_ => {}
 			}
 
 			let (enclave_id, new_id) = Self::new_enclave_id()?;
