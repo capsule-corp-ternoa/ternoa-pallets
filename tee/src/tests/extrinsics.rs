@@ -22,8 +22,8 @@ use sp_runtime::traits::BadOrigin;
 use ternoa_common::traits::TEEExt;
 
 use crate::{
-	Cluster, ClusterId, ClusterIdGenerator, EnclaveClusterId, ClusterData, Enclave, EnclaveId,
-	EnclaveIdGenerator, AccountEnclaveId, EnclaveData, Error,
+	AccountEnclaveId, Cluster, ClusterData, ClusterId, ClusterIdGenerator, Enclave,
+	EnclaveClusterId, EnclaveData, EnclaveId, EnclaveIdGenerator, Error,
 };
 
 #[test]
@@ -32,7 +32,6 @@ fn register_enclave() {
 		.tokens(vec![(ALICE, 100), (BOB, 0), (DAVE, 10)])
 		.build()
 		.execute_with(|| {
-
 			let short_uri = "http".as_bytes().to_vec();
 			let valid_uri = "https://va".as_bytes().to_vec();
 			let enclave_address: Vec<u8> = "samplere".as_bytes().to_vec();
@@ -47,7 +46,11 @@ fn register_enclave() {
 			assert_eq!(EnclaveIdGenerator::<Test>::get(), 0);
 
 			// Alice should be able to create an enclave if she has enough tokens.
-			assert_ok!(TEE::register_enclave(alice.clone(), enclave_address.clone(), valid_uri.clone()));
+			assert_ok!(TEE::register_enclave(
+				alice.clone(),
+				enclave_address.clone(),
+				valid_uri.clone()
+			));
 			assert_eq!(Balances::free_balance(ALICE), 95);
 
 			let enclave = Enclave::new(valid_uri.clone(), enclave_address.clone());
@@ -63,15 +66,15 @@ fn register_enclave() {
 			// assert_noop!(ok, Error::<Test>::PublicKeyAlreadyTiedToACluster);
 
 			// Bob should NOT be able to create an enclave if the doesn't have enough tokens.
-			let ok = TEE::register_enclave(bob, enclave_address.clone(),  valid_uri.clone());
+			let ok = TEE::register_enclave(bob, enclave_address.clone(), valid_uri.clone());
 			assert_noop!(ok, BalanceError::<Test>::InsufficientBalance);
 
 			// Dave should NOT be able to create an enclave if the uri is too short.
-			let ok = TEE::register_enclave(dave.clone(), enclave_address.clone(),  short_uri);
+			let ok = TEE::register_enclave(dave.clone(), enclave_address.clone(), short_uri);
 			assert_noop!(ok, Error::<Test>::UriTooShort);
 
 			// Dave should NOT be able to create an enclave if the uri is too long.
-			let ok = TEE::register_enclave(dave, enclave_address.clone(),  long_uri);
+			let ok = TEE::register_enclave(dave, enclave_address.clone(), long_uri);
 			assert_noop!(ok, Error::<Test>::UriTooLong);
 		})
 }
@@ -84,7 +87,6 @@ fn assign_enclave() {
 		.execute_with(|| {
 			let att_rep: Vec<u8> = "samplere".as_bytes().to_vec();
 			let _alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
-
 
 			let valid_uri = "https://va".as_bytes().to_vec();
 
@@ -133,7 +135,6 @@ fn unassign_enclave() {
 
 			let cluster_id: ClusterId = 0;
 			let enclave_id: EnclaveId = 0;
-
 
 			assert_ok!(TEE::register_cluster(RawOrigin::Root.into()));
 			assert_ok!(TEE::register_enclave(alice.clone(), att_rep.clone(), valid_uri));
@@ -291,8 +292,6 @@ fn unregister_cluster() {
 		})
 }
 
-
-
 #[test]
 fn ensure_enclave() {
 	ExtBuilder::default()
@@ -310,14 +309,11 @@ fn ensure_enclave() {
 
 			let att_rep: Vec<u8> = "samplere".as_bytes().to_vec();
 
-
-
 			assert_ok!(TEE::register_cluster(RawOrigin::Root.into()));
 			assert_ok!(TEE::register_enclave(alice.clone(), att_rep.clone(), valid_uri.clone()));
 			assert_ok!(TEE::register_enclave(bob.clone(), att_rep.clone(), valid_uri.clone()));
 			assert_ok!(TEE::assign_enclave(alice.clone(), cluster_id));
 			assert_ok!(TEE::assign_enclave(bob.clone(), cluster_id));
-
 
 			let res = TEE::ensure_enclave(BOB);
 			// Returns the registered `clusterId` and `enclaveId` for the given Enclave Operator
@@ -325,4 +321,3 @@ fn ensure_enclave() {
 			assert_eq!(res, Some((0, 1)));
 		})
 }
-

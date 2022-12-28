@@ -18,12 +18,11 @@
 use super::*;
 use crate::Pallet as TEE;
 use frame_benchmarking::{account as benchmark_account, benchmarks, impl_benchmark_test_suite};
-use frame_support::{traits::Currency};
+use frame_support::traits::Currency;
 use frame_system::RawOrigin;
 
 use sp_runtime::traits::Bounded;
 use sp_std::prelude::*;
-
 
 pub fn get_account<T: Config>(name: &'static str) -> T::AccountId {
 	let account: T::AccountId = benchmark_account(name, 0, 0);
@@ -33,7 +32,7 @@ pub fn origin<T: Config>(name: &'static str) -> RawOrigin<T::AccountId> {
 	RawOrigin::Signed(get_account::<T>(name))
 }
 
-pub fn prepare_benchmarks<T: Config>()  {
+pub fn prepare_benchmarks<T: Config>() {
 	let alice: T::AccountId = get_account::<T>("ALICE");
 	let bob: T::AccountId = get_account::<T>("BOB");
 
