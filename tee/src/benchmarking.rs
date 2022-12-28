@@ -77,39 +77,40 @@ benchmarks! {
 		assert_eq!(EnclaveClusterId::<T>::get(enclave_id), Some(cluster_id));
 	}
 
-	// unassign_enclave {
-	// 	let alice: T::AccountId = whitelisted_caller();
-	// 	let enclave_address: Vec<u8> = "192.168.1.1".as_bytes().to_vec();
-	// 	let uri: Vec<u8> = "127.0.0.1".as_bytes().to_vec();
-	// 	let enclave_id: EnclaveId = 0;
-	// 	let cluster_id: ClusterId = 0;
-	// 	let empty: Vec<EnclaveId> = vec![];
-	//
-	// 	T::Currency::make_free_balance_be(&alice, BalanceOf::<T>::max_value());
-	//
-	// 	drop(TEE::<T>::register_cluster(RawOrigin::Root.into()));
-	// 	drop(TEE::<T>::register_enclave(RawOrigin::Root.into(), enclave_address, uri.clone()));
-	// 	drop(TEE::<T>::assign_enclave(RawOrigin::Signed(alice.clone()).into(), cluster_id));
-	// }: _(RawOrigin::Signed(alice.clone().into()))
-	// verify {
-	// 	assert_eq!(ClusterRegistry::<T>::get(cluster_id).unwrap().enclaves, empty);
-	// 	assert_eq!(ClusterIndex::<T>::get(enclave_id), None);
-	// }
-	//
-	// update_enclave {
-	// 	let alice: T::AccountId = whitelisted_caller();
-	// 	let ra_report: Vec<u8> = "SampleRep".as_bytes().to_vec();
-	// 	let uri: Vec<u8> = "127.0.0.1".as_bytes().to_vec();
-	// 	let enclave_id: EnclaveId = 0;
-	// 	let new_uri: Vec<u8> = vec![0, 1, 2];
-	//
-	// 	T::Currency::make_free_balance_be(&alice, BalanceOf::<T>::max_value());
-	//
-	// 	drop(TEE::<T>::register_enclave(RawOrigin::Signed(alice.clone()).into(), ra_report, uri.clone()));
-	// }: _(RawOrigin::Signed(alice.clone().into()), new_uri.clone())
-	// verify {
-	// 	assert_eq!(EnclaveRegistry::<T>::get(enclave_id).unwrap().api_uri, new_uri);
-	// }
+	unassign_enclave {
+		prepare_benchmarks::<T>();
+		let alice = origin::<T>("ALICE");
+
+		let enclave_id: EnclaveId = 0;
+		let cluster_id: ClusterId = 0;
+		let enclave_address: Vec<u8> = "192.168.1.1".as_bytes().to_vec();
+		let uri: Vec<u8> = "127.0.0.1".as_bytes().to_vec();
+		let empty: Vec<EnclaveId> = vec![];
+		TEE::<T>::register_cluster(RawOrigin::Root.into()).unwrap();
+		TEE::<T>::register_enclave(alice.clone().into(), enclave_address.clone(), uri.clone()).unwrap();
+		TEE::<T>::assign_enclave(alice.clone().into(), cluster_id).unwrap();
+	}: _(alice)
+	verify {
+		assert_eq!(ClusterData::<T>::get(cluster_id).unwrap().enclaves, empty);
+		assert_eq!(EnclaveClusterId::<T>::get(enclave_id), None);
+	}
+
+	update_enclave {
+		prepare_benchmarks::<T>();
+		let alice = origin::<T>("ALICE");
+
+		let enclave_id: EnclaveId = 0;
+		let cluster_id: ClusterId = 0;
+		let enclave_address: Vec<u8> = "192.168.1.1".as_bytes().to_vec();
+		let uri: Vec<u8> = "127.0.0.1".as_bytes().to_vec();
+		let new_api_uri: Vec<u8> = "168.0.0.1".as_bytes().to_vec();
+		let empty: Vec<EnclaveId> = vec![];
+
+		TEE::<T>::register_enclave(alice.clone().into(), enclave_address.clone(), uri.clone()).unwrap();
+	}: _(alice, new_api_uri.clone())
+	verify {
+		assert_eq!(EnclaveData::<T>::get(enclave_id).unwrap().api_uri, new_api_uri);
+	}
 	//
 	// register_cluster {
 	// 	let cluster = Cluster::new(Default::default());
