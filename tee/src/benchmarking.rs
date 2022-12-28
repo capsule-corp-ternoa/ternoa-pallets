@@ -111,35 +111,35 @@ benchmarks! {
 	verify {
 		assert_eq!(EnclaveData::<T>::get(enclave_id).unwrap().api_uri, new_api_uri);
 	}
-	//
-	// register_cluster {
-	// 	let cluster = Cluster::new(Default::default());
-	// 	let cluster_id: ClusterId = 0;
-	// }: _(RawOrigin::Root)
-	// verify {
-	// 	assert_eq!(ClusterIndex::<T>::iter().count(), 0);
-	// 	assert_eq!(ClusterRegistry::<T>::get(cluster_id), Some(cluster));
-	// 	assert_eq!(ClusterRegistry::<T>::iter().count(), 1);
-	// 	assert_eq!(ClusterIdGenerator::<T>::get(), 1);
-	// }
-	//
-	// unregister_cluster {
-	// 	let cluster = Cluster::new(Default::default());
-	// 	let cluster_id: ClusterId = 0;
-	//
-	// 	let alice: T::AccountId = whitelisted_caller();
-	// 	let enclave_address: Vec<u8> = "samplere".as_bytes().to_vec();
-	// 	let uri: Vec<u8> = "127.0.0.1".as_bytes().to_vec();
-	// 	let enclave_id: EnclaveId = 0;
-	// 	let enclave = Enclave::new(uri.clone(), enclave_address.clone());
-	//
-	// 	drop(TEE::<T>::register_enclave(RawOrigin::Root.into(), enclave_address, uri.clone()));
-	//
-	// }: _(RawOrigin::Root, cluster_id)
-	// verify {
-	// 	assert_eq!(ClusterRegistry::<T>::get(cluster_id), None);
-	// 	assert_eq!(ClusterRegistry::<T>::iter().count(), 0);
-	// }
+
+	register_cluster {
+		let cluster = Cluster::new(Default::default());
+		let cluster_id: ClusterId = 0;
+	}: _(RawOrigin::Root)
+	verify {
+		assert_eq!(EnclaveClusterId::<T>::iter().count(), 0);
+		assert_eq!(ClusterData::<T>::get(cluster_id), Some(cluster));
+		assert_eq!(ClusterData::<T>::iter().count(), 1);
+		assert_eq!(ClusterIdGenerator::<T>::get(), 1);
+	}
+
+	unregister_cluster {
+		prepare_benchmarks::<T>();
+		let alice = origin::<T>("ALICE");
+		let enclave_address: Vec<u8> = "samplere".as_bytes().to_vec();
+		let uri: Vec<u8> = "127.0.0.1".as_bytes().to_vec();
+		let enclave_id: EnclaveId = 0;
+		let cluster_id: ClusterId = 0;
+		let enclave = Enclave::new(uri.clone(), enclave_address.clone());
+
+		TEE::<T>::register_cluster(RawOrigin::Root.into()).unwrap();
+		TEE::<T>::register_enclave(alice.clone().into(), enclave_address.clone(), uri.clone()).unwrap();
+
+	}: _(RawOrigin::Root, cluster_id)
+	verify {
+		assert_eq!(ClusterData::<T>::get(cluster_id), None);
+		assert_eq!(ClusterData::<T>::iter().count(), 0);
+	}
 }
 
 impl_benchmark_test_suite!(TEE, crate::tests::mock::new_test_ext(), crate::tests::mock::Test);
