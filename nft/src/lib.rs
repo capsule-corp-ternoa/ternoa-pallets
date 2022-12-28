@@ -889,7 +889,10 @@ pub mod pallet {
 				SecretNftsShardsCount::<T>::try_mutate(nft_id, |maybe_shards| -> DispatchResult {
 					if let Some((cluster_id, enclave_id)) = enclave_details {
 						if let Some(shards) = maybe_shards {
-							ensure!(cluster_id == shards[0].0, Error::<T>::ShareNotFromValidCluster);
+							ensure!(
+								cluster_id == shards[0].0,
+								Error::<T>::ShareNotFromValidCluster
+							);
 							ensure!(
 								shards.len() < T::ShardsNumber::get() as usize,
 								Error::<T>::NFTHasReceivedAllShards
