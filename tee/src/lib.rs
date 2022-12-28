@@ -329,11 +329,33 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		// TODO:  Fix this
+		/// Update registration can be called only BEFORE assign_enclave.
 		#[pallet::weight(T::WeightInfo::register_enclave())]
 		pub fn update_registration(
-			_origin: OriginFor<T>, _enclave_id: EnclaveId
+			origin: OriginFor<T>,
+			enclave_address: Vec<u8>,
+			api_uri: Vec<u8>,
 		) -> DispatchResultWithPostInfo {
+			let account = ensure_signed(origin)?;
+
+			ensure!(api_uri.len() < T::MaxUriLen::get().into(), Error::<T>::UriTooLong);
+			ensure!(api_uri.len() > T::MinUriLen::get().into(), Error::<T>::UriTooShort);
+
+			let enclave_id = AccountEnclaveId::<T>::get(&account).ok_or(Error::<T>::NotEnclaveOwner)?;
+
+			ensure!(
+				!EnclaveClusterId::<T>::contains_key(enclave_id),
+				Error::<T>::EnclaveAlreadyAssigned,
+			);
+
+			EnclaveData::<T>::try_mutate(enclave_id, |enc| -> DispatchResult {
+				let enc = enc.as_mut().ok_or(Error::<T>::EnclaveDoesNotExists)?;
+				enc.api_uri = api_uri.clone();
+				enc.enclave_address = enclave_address.clone();
+				Ok(())
+			})?;
+
+			Self::deposit_event(Event::EnclaveForceUpdated { enclave_id, enclave_address, api_uri });
 
 
 			Ok(().into())
