@@ -19,7 +19,6 @@ use frame_support::{assert_noop, assert_ok};
 use frame_system::RawOrigin;
 use pallet_balances::Error as BalanceError;
 use sp_runtime::traits::BadOrigin;
-use ternoa_common::traits::TEEExt;
 
 use crate::{
 	AccountEnclaveId, Cluster, ClusterData, ClusterId, ClusterIdGenerator, Enclave,
@@ -249,7 +248,6 @@ fn unassign_an_uassigned_enclave() {
 		.execute_with(|| {
 			let valid_uri = "https://va".as_bytes().to_vec();
 			let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
-			let bob: mock::RuntimeOrigin = RawOrigin::Signed(BOB).into();
 			let att_rep: Vec<u8> = "samplere".as_bytes().to_vec();
 
 			let cluster_id: ClusterId = 0;
@@ -397,29 +395,29 @@ fn unregister_cluster_by_unknown_account() {
 		})
 }
 
-#[test]
-fn ensure_enclave() {
-	ExtBuilder::default()
-		.tokens(vec![(ALICE, 10), (BOB, 10)])
-		.build()
-		.execute_with(|| {
-			let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
-			let bob: mock::RuntimeOrigin = RawOrigin::Signed(BOB).into();
-
-			let valid_uri = "https://va".as_bytes().to_vec();
-			let cluster_id: ClusterId = 0;
-
-			let att_rep: Vec<u8> = "samplere".as_bytes().to_vec();
-
-			assert_ok!(TEE::register_cluster(RawOrigin::Root.into()));
-			assert_ok!(TEE::register_enclave(alice.clone(), att_rep.clone(), valid_uri.clone()));
-			assert_ok!(TEE::register_enclave(bob.clone(), att_rep.clone(), valid_uri.clone()));
-			assert_ok!(TEE::assign_enclave(alice.clone(), cluster_id));
-			assert_ok!(TEE::assign_enclave(bob.clone(), cluster_id));
-
-			let res = TEE::ensure_enclave(BOB);
-			// Returns the registered `clusterId` and `enclaveId` for the given Enclave Operator
-			// AccountId
-			assert_eq!(res, Some((0, 1)));
-		})
-}
+// #[test]
+// fn ensure_enclave() {
+// 	ExtBuilder::default()
+// 		.tokens(vec![(ALICE, 10), (BOB, 10)])
+// 		.build()
+// 		.execute_with(|| {
+// 			let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
+// 			let bob: mock::RuntimeOrigin = RawOrigin::Signed(BOB).into();
+//
+// 			let valid_uri = "https://va".as_bytes().to_vec();
+// 			let cluster_id: ClusterId = 0;
+//
+// 			let att_rep: Vec<u8> = "samplere".as_bytes().to_vec();
+//
+// 			assert_ok!(TEE::register_cluster(RawOrigin::Root.into()));
+// 			assert_ok!(TEE::register_enclave(alice.clone(), att_rep.clone(), valid_uri.clone()));
+// 			assert_ok!(TEE::register_enclave(bob.clone(), att_rep.clone(), valid_uri.clone()));
+// 			assert_ok!(TEE::assign_enclave(alice.clone(), cluster_id));
+// 			assert_ok!(TEE::assign_enclave(bob.clone(), cluster_id));
+//
+// 			let res = TEE::ensure_enclave(BOB);
+// 			// Returns the registered `clusterId` and `enclaveId` for the given Enclave Operator
+// 			// AccountId
+// 			assert_eq!(res, Some((0, 1)));
+// 		})
+// }
