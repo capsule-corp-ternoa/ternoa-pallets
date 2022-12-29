@@ -213,14 +213,13 @@ fn assigning_enclave_to_unknown_cluster() {
 }
 
 #[test]
-fn unassign_enclave() {
+fn unassign_enclave_success() {
 	ExtBuilder::default()
 		.tokens(vec![(ALICE, 10), (BOB, 10)])
 		.build()
 		.execute_with(|| {
 			let valid_uri = "https://va".as_bytes().to_vec();
 			let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
-			let bob: mock::RuntimeOrigin = RawOrigin::Signed(BOB).into();
 			let att_rep: Vec<u8> = "samplere".as_bytes().to_vec();
 
 			let cluster_id: ClusterId = 0;
@@ -239,13 +238,42 @@ fn unassign_enclave() {
 			let empty: Vec<EnclaveId> = Default::default();
 			assert_eq!(cluster.enclaves, empty);
 			assert_eq!(EnclaveClusterId::<Test>::get(enclave_id), None);
+		})
+}
+
+#[test]
+fn unassign_an_uassigned_enclave() {
+	ExtBuilder::default()
+		.tokens(vec![(ALICE, 10), (BOB, 10)])
+		.build()
+		.execute_with(|| {
+			let valid_uri = "https://va".as_bytes().to_vec();
+			let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
+			let bob: mock::RuntimeOrigin = RawOrigin::Signed(BOB).into();
+			let att_rep: Vec<u8> = "samplere".as_bytes().to_vec();
+
+			let cluster_id: ClusterId = 0;
+
+			assert_ok!(TEE::register_cluster(RawOrigin::Root.into()));
+			assert_ok!(TEE::register_enclave(alice.clone(), att_rep.clone(), valid_uri));
+			assert_ok!(TEE::assign_enclave(alice.clone(), cluster_id));
+
+			// Alice should be able to unassigned her enclave from a cluster.
+			assert_ok!(TEE::unassign_enclave(alice.clone()));
 
 			// Alice should NOT be able to unassigned her enclave if the enclave is already
 			// unassigned.
-			let ok = TEE::unassign_enclave(alice.clone());
-			assert_noop!(ok, Error::<Test>::EnclaveNotAssigned);
+			assert_noop!(TEE::unassign_enclave(alice.clone()), Error::<Test>::EnclaveNotAssigned);
+		})
+}
 
-			// Bob should NOT be able to unassigned his enclave if he does not have one
+#[test]
+fn unassign_by_non_enclave_owner() {
+	ExtBuilder::default()
+		.tokens(vec![(ALICE, 10), (BOB, 10)])
+		.build()
+		.execute_with(|| {
+			let bob: mock::RuntimeOrigin = RawOrigin::Signed(BOB).into();
 			let ok = TEE::unassign_enclave(bob.clone());
 			assert_noop!(ok, Error::<Test>::NotEnclaveOwner);
 		})
@@ -258,10 +286,7 @@ fn update_enclave() {
 		.build()
 		.execute_with(|| {
 			let mut valid_uri = "https://va".as_bytes().to_vec();
-			let long_uri = "https://this".as_bytes().to_vec();
-			let short_uri = "http".as_bytes().to_vec();
 			let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
-			let bob: mock::RuntimeOrigin = RawOrigin::Signed(BOB).into();
 			let att_rep: Vec<u8> = "samplere".as_bytes().to_vec();
 			let enclave_address: Vec<u8> = "samplere".as_bytes().to_vec();
 
@@ -273,16 +298,25 @@ fn update_enclave() {
 			let enclave = Enclave::new(valid_uri.clone(), enclave_address);
 			assert_ok!(TEE::update_enclave(alice.clone(), valid_uri.clone()));
 			assert_eq!(EnclaveData::<Test>::get(enclave_id), Some(enclave));
+		})
+}
 
-			// Dave should NOT be able to update an enclave if the uri is too short.
-			let ok = TEE::update_enclave(alice.clone(), short_uri.clone());
-			assert_noop!(ok, Error::<Test>::UriTooShort);
+#[test]
+fn update_enclave_by_nop_operator_account() {
+	ExtBuilder::default()
+		.tokens(vec![(ALICE, 10), (BOB, 10)])
+		.build()
+		.execute_with(|| {
+			let mut valid_uri = "https://va".as_bytes().to_vec();
 
-			// Dave should NOT be able to update an enclave if the uri is too long.
-			let ok = TEE::update_enclave(alice.clone(), long_uri);
-			assert_noop!(ok, Error::<Test>::UriTooLong);
+			let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
+			let bob: mock::RuntimeOrigin = RawOrigin::Signed(BOB).into();
+			let att_rep: Vec<u8> = "samplere".as_bytes().to_vec();
+			assert_ok!(TEE::register_enclave(alice.clone(), att_rep.clone(), valid_uri.clone()));
 
-			// Bob should NOT be able to update his enclave if he doesn't have one.
+			// Alice should be able to update her enclave.
+			valid_uri = "https://tna".as_bytes().to_vec();
+
 			let ok = TEE::update_enclave(bob.clone(), valid_uri.clone());
 			assert_noop!(ok, Error::<Test>::NotEnclaveOwner);
 		})
@@ -291,8 +325,6 @@ fn update_enclave() {
 #[test]
 fn register_cluster_success() {
 	ExtBuilder::default().build().execute_with(|| {
-		let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
-
 		assert_eq!(EnclaveClusterId::<Test>::iter().count(), 0);
 		assert_eq!(ClusterData::<Test>::iter().count(), 0);
 		assert_eq!(ClusterIdGenerator::<Test>::get(), 0);
@@ -306,10 +338,6 @@ fn register_cluster_success() {
 		assert_eq!(ClusterData::<Test>::get(cluster_id), Some(cluster));
 		assert_eq!(ClusterIdGenerator::<Test>::get(), 1);
 		assert_eq!(EnclaveIdGenerator::<Test>::get(), 0);
-
-		// Alice should NOT be able to create a cluster.
-		let ok = TEE::register_cluster(alice.clone());
-		assert_noop!(ok, BadOrigin);
 	})
 }
 
@@ -343,14 +371,6 @@ fn unregister_cluster() {
 			assert_ok!(TEE::unregister_cluster(RawOrigin::Root.into(), cluster_id));
 			assert_eq!(EnclaveClusterId::<Test>::iter().count(), 0);
 			assert_eq!(ClusterData::<Test>::iter().count(), 0);
-
-			// Sudo should NOT be able to remove an non-existing cluster
-			let ok = TEE::unregister_cluster(RawOrigin::Root.into(), 10);
-			assert_noop!(ok, Error::<Test>::UnknownClusterId);
-
-			// Alice should NOT be able to remove a cluster.
-			let ok = TEE::unregister_cluster(alice.clone(), 1);
-			assert_noop!(ok, BadOrigin);
 		})
 }
 
@@ -360,12 +380,8 @@ fn unregister_unknown_cluster() {
 		.tokens(vec![(ALICE, 10), (BOB, 10)])
 		.build()
 		.execute_with(|| {
-			let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
-
 			let ok = TEE::unregister_cluster(RawOrigin::Root.into(), 10);
 			assert_noop!(ok, Error::<Test>::UnknownClusterId);
-
-			assert_noop!(TEE::unregister_cluster(alice.clone(), 1), BadOrigin);
 		})
 }
 
