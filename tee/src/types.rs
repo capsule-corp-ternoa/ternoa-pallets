@@ -21,7 +21,6 @@ use sp_runtime::RuntimeDebug;
 use sp_std::vec::Vec;
 
 #[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo)]
-// #[codec(mel_bound)]
 pub struct Enclave {
 	pub api_uri: Vec<u8>,
 	pub enclave_address: Vec<u8>,
@@ -34,7 +33,6 @@ impl Enclave {
 }
 
 #[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo)]
-// #[codec(mel_bound)]
 pub struct Cluster {
 	pub enclaves: Vec<EnclaveId>,
 }
