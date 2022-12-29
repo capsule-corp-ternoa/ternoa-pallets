@@ -299,7 +299,7 @@ pub mod pallet {
 		}
 
 		/// Update registration can be called only BEFORE assign_enclave.
-		#[pallet::weight(T::WeightInfo::register_enclave())]
+		#[pallet::weight(T::WeightInfo::update_registration())]
 		pub fn update_registration(
 			origin: OriginFor<T>,
 			enclave_address: Vec<u8>,
@@ -334,7 +334,7 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		#[pallet::weight(T::WeightInfo::register_enclave())]
+		#[pallet::weight(T::WeightInfo::force_update_enclave())]
 		pub fn force_update_enclave(
 			origin: OriginFor<T>,
 			enclave_id: EnclaveId,
