@@ -25,8 +25,6 @@ use crate::{
 	EnclaveClusterId, EnclaveData, EnclaveId, EnclaveIdGenerator, Error,
 };
 
-use primitives::tee::{ClusterId, EnclaveId};
-
 #[test]
 fn register_enclave_success() {
 	ExtBuilder::default()
