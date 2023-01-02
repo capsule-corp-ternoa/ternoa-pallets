@@ -69,22 +69,10 @@ pub fn prepare_benchmarks<T: Config>() -> BenchmarkData {
 		None,
 	));
 
-	// let _short_uri = "http".as_bytes().to_vec();
-	// let valid_uri = "https://va".as_bytes().to_vec();
-	// let enclave_address: Vec<u8> = "samplere".as_bytes().to_vec();
-	// let _long_uri = "https://this".as_bytes().to_vec();
+	let enclave_address: Vec<u8> = "samplere".as_bytes().to_vec();
+	let uri: Vec<u8> = "127.0.0.1".as_bytes().to_vec();
 
-	assert_ok!(T::TEEExt::register_and_assign_enclave(alice));
-	// assert_ok!(TEE::register_enclave(bob.clone(), enclave_address.clone(), valid_uri.clone()));
-
-	// let cluster_id: ClusterId = 0;
-	// let second_cluster_id: ClusterId = 1;
-	// // let enclave_id: EnclaveId = 0;
-	// assert_ok!(TEE::register_cluster(RawOrigin::Root.into()));
-	// assert_ok!(TEE::register_cluster(RawOrigin::Root.into()));
-
-	// assert_ok!(TEE::assign_enclave(alice.clone(), cluster_id));
-	// assert_ok!(TEE::assign_enclave(bob.clone(), cluster_id));
+	assert_ok!(T::TEEExt::register_and_assign_enclave(alice, enclave_address, uri, None));
 
 	BenchmarkData {
 		nft_id: NFT::<T>::next_nft_id() - 1,

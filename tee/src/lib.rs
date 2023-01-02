@@ -617,10 +617,13 @@ impl<T: Config> traits::TEEExt for Pallet<T> {
 	}
 
 	/// Register and assign an enclave in a cluster
-	fn register_and_assign_enclave(account: Self::AccountId) -> DispatchResult {
-		let enclave_address: Vec<u8> = "samplere".as_bytes().to_vec();
-		let uri: Vec<u8> = "127.0.0.1".as_bytes().to_vec();
-		let enclave = Enclave::new(uri.clone(), enclave_address.clone());
+	fn register_and_assign_enclave(
+		account: Self::AccountId,
+		enclave_address: Vec<u8>,
+		api_uri: Vec<u8>,
+		cluster_id: Option<ClusterId>,
+	) -> DispatchResult {
+		let enclave = Enclave::new(api_uri.clone(), enclave_address.clone());
 		let (enclave_id, new_id) = Self::new_enclave_id()?;
 
 		AccountEnclaveId::<T>::insert(account.clone(), enclave_id);
@@ -635,17 +638,25 @@ impl<T: Config> traits::TEEExt for Pallet<T> {
 			.ok_or(Error::<T>::ErrorAddingToQueue)?;
 		<EnclaveRegistrationList<T>>::put(reg_enclaves);
 
-		let cluster_id = ClusterIdGenerator::<T>::get();
-		let new_cluster_id = cluster_id.checked_add(1).ok_or(Error::<T>::ClusterIdOverflow)?;
+		let new_cluster_id;
+		let next_cluster_id;
+		if let Some(cluster_id) = cluster_id {
+			new_cluster_id = cluster_id;
+			next_cluster_id = new_cluster_id.checked_add(1).ok_or(Error::<T>::ClusterIdOverflow)?;
+		} else {
+			new_cluster_id = ClusterIdGenerator::<T>::get();
+			next_cluster_id = new_cluster_id.checked_add(1).ok_or(Error::<T>::ClusterIdOverflow)?;
+		}
+
 		let cluster = Cluster::new(Default::default());
 
-		ClusterData::<T>::insert(cluster_id, cluster);
-		ClusterIdGenerator::<T>::put(new_cluster_id);
+		ClusterData::<T>::insert(new_cluster_id, cluster);
+		ClusterIdGenerator::<T>::put(next_cluster_id);
 
-		ClusterData::<T>::mutate(cluster_id, |cluster_opt| {
+		ClusterData::<T>::mutate(new_cluster_id, |cluster_opt| {
 			if let Some(cluster) = cluster_opt {
 				cluster.enclaves.push(enclave_id);
-				EnclaveClusterId::<T>::insert(enclave_id, cluster_id);
+				EnclaveClusterId::<T>::insert(enclave_id, new_cluster_id);
 
 				Ok(())
 			} else {
