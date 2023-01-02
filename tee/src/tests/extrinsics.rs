@@ -394,30 +394,3 @@ fn unregister_cluster_by_unknown_account() {
 			assert_noop!(TEE::unregister_cluster(alice.clone(), 1), BadOrigin);
 		})
 }
-
-// #[test]
-// fn ensure_enclave() {
-// 	ExtBuilder::default()
-// 		.tokens(vec![(ALICE, 10), (BOB, 10)])
-// 		.build()
-// 		.execute_with(|| {
-// 			let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
-// 			let bob: mock::RuntimeOrigin = RawOrigin::Signed(BOB).into();
-//
-// 			let valid_uri = "https://va".as_bytes().to_vec();
-// 			let cluster_id: ClusterId = 0;
-//
-// 			let att_rep: Vec<u8> = "samplere".as_bytes().to_vec();
-//
-// 			assert_ok!(TEE::register_cluster(RawOrigin::Root.into()));
-// 			assert_ok!(TEE::register_enclave(alice.clone(), att_rep.clone(), valid_uri.clone()));
-// 			assert_ok!(TEE::register_enclave(bob.clone(), att_rep.clone(), valid_uri.clone()));
-// 			assert_ok!(TEE::assign_enclave(alice.clone(), cluster_id));
-// 			assert_ok!(TEE::assign_enclave(bob.clone(), cluster_id));
-//
-// 			let res = TEE::ensure_enclave(BOB);
-// 			// Returns the registered `clusterId` and `enclaveId` for the given Enclave Operator
-// 			// AccountId
-// 			assert_eq!(res, Some((0, 1)));
-// 		})
-// }
