@@ -16,118 +16,129 @@
 #![cfg(feature = "runtime-benchmarks")]
 
 use super::*;
-use crate::Pallet as Sgx;
-use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, whitelisted_caller};
+use crate::Pallet as TEE;
+use frame_benchmarking::{account as benchmark_account, benchmarks, impl_benchmark_test_suite};
 use frame_support::traits::Currency;
 use frame_system::RawOrigin;
 
 use sp_runtime::traits::Bounded;
 use sp_std::prelude::*;
 
+pub fn get_account<T: Config>(name: &'static str) -> T::AccountId {
+	let account: T::AccountId = benchmark_account(name, 0, 0);
+	account
+}
+pub fn origin<T: Config>(name: &'static str) -> RawOrigin<T::AccountId> {
+	RawOrigin::Signed(get_account::<T>(name))
+}
+
+pub fn prepare_benchmarks<T: Config>() {
+	let alice: T::AccountId = get_account::<T>("ALICE");
+	let bob: T::AccountId = get_account::<T>("BOB");
+
+	T::Currency::make_free_balance_be(&alice, BalanceOf::<T>::max_value());
+	T::Currency::make_free_balance_be(&bob, BalanceOf::<T>::max_value());
+}
+
 benchmarks! {
 	register_enclave {
-		let alice: T::AccountId = whitelisted_caller();
+		prepare_benchmarks::<T>();
+		let alice = origin::<T>("ALICE");
 		let enclave_address: Vec<u8> = "samplere".as_bytes().to_vec();
 		let uri: Vec<u8> = "127.0.0.1".as_bytes().to_vec();
 		let enclave_id: EnclaveId = 0;
 		let enclave = Enclave::new(uri.clone(), enclave_address.clone());
 
-		T::Currency::make_free_balance_be(&alice, BalanceOf::<T>::max_value());
-	}: _(RawOrigin::Signed(alice.clone().into()), enclave_address, uri.clone())
+	}: _(alice.clone(), enclave_address, uri.clone())
 	verify {
-		assert!(EnclaveRegistry::<T>::contains_key(enclave_id));
-		assert_eq!(EnclaveRegistry::<T>::get(enclave_id), Some(enclave));
-		assert!(EnclaveIndex::<T>::contains_key(alice.clone()));
-		assert_eq!(EnclaveIndex::<T>::get(alice.clone()).unwrap(), enclave_id);
+		assert!(EnclaveData::<T>::contains_key(enclave_id));
+		assert_eq!(EnclaveData::<T>::get(enclave_id), Some(enclave));
 		assert_eq!(EnclaveIdGenerator::<T>::get(), 1);
+		assert_eq!(EnclaveRegistrationList::<T>::get().len(), 1);
+		assert!(EnclaveRegistrationList::<T>::get().contains(&enclave_id));
 	}
 
 	assign_enclave {
-		let alice: T::AccountId = whitelisted_caller();
+		prepare_benchmarks::<T>();
+		let alice = origin::<T>("ALICE");
+
 		let enclave_id: EnclaveId = 0;
 		let cluster_id: ClusterId = 0;
-		let ra_report: Vec<u8> = "SampleRep".as_bytes().to_vec();
+		let enclave_address: Vec<u8> = "192.168.1.1".as_bytes().to_vec();
 		let uri: Vec<u8> = "127.0.0.1".as_bytes().to_vec();
-		T::Currency::make_free_balance_be(&alice, BalanceOf::<T>::max_value());
 
-		drop(Sgx::<T>::create_cluster(RawOrigin::Root.into()));
-		drop(Sgx::<T>::register_enclave(RawOrigin::Signed(alice.clone()).into(), ra_report, uri.clone()));
-	}: _(RawOrigin::Signed(alice.clone().into()), cluster_id)
+		TEE::<T>::register_cluster(RawOrigin::Root.into()).unwrap();
+		TEE::<T>::register_enclave(alice.clone().into(), enclave_address.clone(), uri.clone()).unwrap();
+
+	}: _(alice, cluster_id)
 	verify {
-		assert_eq!(ClusterRegistry::<T>::get(cluster_id).unwrap().enclaves, vec![enclave_id]);
-		assert_eq!(ClusterIndex::<T>::get(enclave_id), Some(cluster_id));
+		assert_eq!(ClusterData::<T>::get(cluster_id).unwrap().enclaves, vec![enclave_id]);
+		assert_eq!(EnclaveClusterId::<T>::get(enclave_id), Some(cluster_id));
 	}
 
 	unassign_enclave {
-		let alice: T::AccountId = whitelisted_caller();
-		let ra_report: Vec<u8> = "SampleRep".as_bytes().to_vec();
-		let uri: Vec<u8> = "127.0.0.1".as_bytes().to_vec();
+		prepare_benchmarks::<T>();
+		let alice = origin::<T>("ALICE");
+
 		let enclave_id: EnclaveId = 0;
 		let cluster_id: ClusterId = 0;
+		let enclave_address: Vec<u8> = "192.168.1.1".as_bytes().to_vec();
+		let uri: Vec<u8> = "127.0.0.1".as_bytes().to_vec();
 		let empty: Vec<EnclaveId> = vec![];
-
-		T::Currency::make_free_balance_be(&alice, BalanceOf::<T>::max_value());
-
-		drop(Sgx::<T>::create_cluster(RawOrigin::Root.into()));
-		drop(Sgx::<T>::register_enclave(RawOrigin::Signed(alice.clone()).into(), ra_report, uri.clone()));
-		drop(Sgx::<T>::assign_enclave(RawOrigin::Signed(alice.clone()).into(), cluster_id));
-	}: _(RawOrigin::Signed(alice.clone().into()))
+		TEE::<T>::register_cluster(RawOrigin::Root.into()).unwrap();
+		TEE::<T>::register_enclave(alice.clone().into(), enclave_address.clone(), uri.clone()).unwrap();
+		TEE::<T>::assign_enclave(alice.clone().into(), cluster_id).unwrap();
+	}: _(alice)
 	verify {
-		assert_eq!(ClusterRegistry::<T>::get(cluster_id).unwrap().enclaves, empty);
-		assert_eq!(ClusterIndex::<T>::get(enclave_id), None);
+		assert_eq!(ClusterData::<T>::get(cluster_id).unwrap().enclaves, empty);
+		assert_eq!(EnclaveClusterId::<T>::get(enclave_id), None);
 	}
 
 	update_enclave {
-		let alice: T::AccountId = whitelisted_caller();
-		let ra_report: Vec<u8> = "SampleRep".as_bytes().to_vec();
-		let uri: Vec<u8> = "127.0.0.1".as_bytes().to_vec();
+		prepare_benchmarks::<T>();
+		let alice = origin::<T>("ALICE");
+
 		let enclave_id: EnclaveId = 0;
-		let new_uri: Vec<u8> = vec![0, 1, 2];
-
-		T::Currency::make_free_balance_be(&alice, BalanceOf::<T>::max_value());
-
-		drop(Sgx::<T>::register_enclave(RawOrigin::Signed(alice.clone()).into(), ra_report, uri.clone()));
-	}: _(RawOrigin::Signed(alice.clone().into()), new_uri.clone())
-	verify {
-		assert_eq!(EnclaveRegistry::<T>::get(enclave_id).unwrap().api_uri, new_uri);
-	}
-
-	change_enclave_owner {
-		let alice: T::AccountId = whitelisted_caller();
-		let bob: T::AccountId = account("bob", 0, 0);
-		let bob_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(bob.clone());
-		let ra_report: Vec<u8> = "SampleRep".as_bytes().to_vec();
+		let cluster_id: ClusterId = 0;
+		let enclave_address: Vec<u8> = "192.168.1.1".as_bytes().to_vec();
 		let uri: Vec<u8> = "127.0.0.1".as_bytes().to_vec();
-		T::Currency::make_free_balance_be(&alice, BalanceOf::<T>::max_value());
+		let new_api_uri: Vec<u8> = "168.0.0.1".as_bytes().to_vec();
+		let empty: Vec<EnclaveId> = vec![];
 
-		drop(Sgx::<T>::register_enclave(RawOrigin::Signed(alice.clone()).into(), ra_report, uri.clone()));
-	}: _(RawOrigin::Signed(alice.clone().into()), bob_lookup)
+		TEE::<T>::register_enclave(alice.clone().into(), enclave_address.clone(), uri.clone()).unwrap();
+	}: _(alice, new_api_uri.clone())
 	verify {
-		assert!(EnclaveIndex::<T>::contains_key(bob.clone()));
-		assert!(!EnclaveIndex::<T>::contains_key(alice.clone()));
+		assert_eq!(EnclaveData::<T>::get(enclave_id).unwrap().api_uri, new_api_uri);
 	}
 
-	create_cluster {
+	register_cluster {
 		let cluster = Cluster::new(Default::default());
 		let cluster_id: ClusterId = 0;
 	}: _(RawOrigin::Root)
 	verify {
-		assert_eq!(ClusterIndex::<T>::iter().count(), 0);
-		assert_eq!(ClusterRegistry::<T>::get(cluster_id), Some(cluster));
-		assert_eq!(ClusterRegistry::<T>::iter().count(), 1);
+		assert_eq!(EnclaveClusterId::<T>::iter().count(), 0);
+		assert_eq!(ClusterData::<T>::get(cluster_id), Some(cluster));
+		assert_eq!(ClusterData::<T>::iter().count(), 1);
 		assert_eq!(ClusterIdGenerator::<T>::get(), 1);
 	}
 
-	remove_cluster {
-		let cluster = Cluster::new(Default::default());
+	unregister_cluster {
+		prepare_benchmarks::<T>();
+		let alice = origin::<T>("ALICE");
+		let enclave_address: Vec<u8> = "samplere".as_bytes().to_vec();
+		let uri: Vec<u8> = "127.0.0.1".as_bytes().to_vec();
+		let enclave_id: EnclaveId = 0;
 		let cluster_id: ClusterId = 0;
+		let enclave = Enclave::new(uri.clone(), enclave_address.clone());
 
-		drop(Sgx::<T>::create_cluster(RawOrigin::Root.into()));
+		TEE::<T>::register_cluster(RawOrigin::Root.into()).unwrap();
+		TEE::<T>::register_enclave(alice.clone().into(), enclave_address.clone(), uri.clone()).unwrap();
+
 	}: _(RawOrigin::Root, cluster_id)
 	verify {
-		assert_eq!(ClusterRegistry::<T>::get(cluster_id), None);
-		assert_eq!(ClusterRegistry::<T>::iter().count(), 0);
+		assert_eq!(ClusterData::<T>::get(cluster_id), None);
+		assert_eq!(ClusterData::<T>::iter().count(), 0);
 	}
 }
 
-impl_benchmark_test_suite!(Sgx, crate::tests::mock::new_test_ext(), crate::tests::mock::Test);
+impl_benchmark_test_suite!(TEE, crate::tests::mock::new_test_ext(), crate::tests::mock::Test);
