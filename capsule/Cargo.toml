@@ -33,6 +33,7 @@ ternoa-nft = { default-features = false, path = "../nft" }
 
 # We needs this dependencies to run our tests
 [dev-dependencies]
+ternoa-tee = { default-features = false, path = "../tee" }
 pallet-balances = { git = "https://github.com/capsule-corp-ternoa/substrate", tag = "ternoa-substrate-2022-10-01" }
 sp-core = { git = "https://github.com/capsule-corp-ternoa/substrate", tag = "ternoa-substrate-2022-10-01", default-features = false }
 sp-io = { git = "https://github.com/capsule-corp-ternoa/substrate", tag = "ternoa-substrate-2022-10-01", default-features = false }

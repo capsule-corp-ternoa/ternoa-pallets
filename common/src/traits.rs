@@ -108,7 +108,14 @@ pub trait MarketplaceExt {
 
 pub trait TEEExt {
 	type AccountId: Clone + PartialEq + Debug;
-
 	/// Returns clusterId and EnclaveId for a given SGX Account
 	fn ensure_enclave(account: Self::AccountId) -> Option<(ClusterId, EnclaveId)>;
+
+	/// Register and assign an enclave
+	fn register_and_assign_enclave(
+		account: Self::AccountId,
+		enclave_address: Vec<u8>,
+		api_uri: Vec<u8>,
+		cluster_id: Option<ClusterId>,
+	) -> DispatchResult;
 }

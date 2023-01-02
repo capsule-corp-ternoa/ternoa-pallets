@@ -25,7 +25,10 @@ mod tests;
 mod types;
 mod weights;
 
-use frame_support::{dispatch::DispatchResultWithPostInfo, BoundedVec};
+use frame_support::{
+	dispatch::{DispatchResult, DispatchResultWithPostInfo},
+	BoundedVec,
+};
 pub use pallet::*;
 pub use types::*;
 
@@ -611,5 +614,56 @@ impl<T: Config> traits::TEEExt for Pallet<T> {
 			None => (),
 		}
 		result
+	}
+
+	/// Register and assign an enclave in a cluster
+	fn register_and_assign_enclave(
+		account: Self::AccountId,
+		enclave_address: Vec<u8>,
+		api_uri: Vec<u8>,
+		cluster_id: Option<ClusterId>,
+	) -> DispatchResult {
+		let enclave = Enclave::new(api_uri.clone(), enclave_address.clone());
+		let (enclave_id, new_id) = Self::new_enclave_id()?;
+
+		AccountEnclaveId::<T>::insert(account.clone(), enclave_id);
+		EnclaveData::<T>::insert(enclave_id, enclave);
+		EnclaveIdGenerator::<T>::put(new_id);
+
+		let reg_enclaves: BoundedVec<EnclaveId, T::MaxRegisteredEnclaves> =
+			<EnclaveRegistrationList<T>>::get();
+
+		let reg_enclaves = reg_enclaves
+			.try_mutate(|v| v.push(enclave_id))
+			.ok_or(Error::<T>::ErrorAddingToQueue)?;
+		<EnclaveRegistrationList<T>>::put(reg_enclaves);
+
+		let new_cluster_id;
+		let next_cluster_id;
+		if let Some(cluster_id) = cluster_id {
+			new_cluster_id = cluster_id;
+			next_cluster_id = new_cluster_id.checked_add(1).ok_or(Error::<T>::ClusterIdOverflow)?;
+		} else {
+			new_cluster_id = ClusterIdGenerator::<T>::get();
+			next_cluster_id = new_cluster_id.checked_add(1).ok_or(Error::<T>::ClusterIdOverflow)?;
+		}
+
+		let cluster = Cluster::new(Default::default());
+
+		ClusterData::<T>::insert(new_cluster_id, cluster);
+		ClusterIdGenerator::<T>::put(next_cluster_id);
+
+		ClusterData::<T>::mutate(new_cluster_id, |cluster_opt| {
+			if let Some(cluster) = cluster_opt {
+				cluster.enclaves.push(enclave_id);
+				EnclaveClusterId::<T>::insert(enclave_id, new_cluster_id);
+
+				Ok(())
+			} else {
+				Err(Error::<T>::UnknownClusterId)
+			}
+		})?;
+
+		Ok(())
 	}
 }

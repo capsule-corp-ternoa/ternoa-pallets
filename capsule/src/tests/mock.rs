@@ -42,6 +42,7 @@ frame_support::construct_runtime!(
 		Balances: pallet_balances,
 		NFT: ternoa_nft,
 		Capsule: ternoa_capsule,
+		TEE: ternoa_tee,
 	}
 );
 
@@ -110,6 +111,28 @@ impl pallet_balances::Config for Test {
 }
 
 parameter_types! {
+	pub const EnclaveFee: u64 = 5;
+	pub const ClusterSize: u32 = 5;
+	pub const MinUriLen: u16 = 5;
+	pub const MaxUriLen: u16 = 12;
+	pub const MaxRegisteredEnclavese: u32 = 10;
+	pub const MaxUnRegisteredEnclavese: u32 = 10;
+}
+
+impl ternoa_tee::Config for Test {
+	type RuntimeEvent = RuntimeEvent;
+	type WeightInfo = ();
+	type Currency = Balances;
+	type FeesCollector = ();
+	type EnclaveFee = EnclaveFee;
+	type ClusterSize = ClusterSize;
+	type MinUriLen = MinUriLen;
+	type MaxUriLen = MaxUriLen;
+	type MaxRegisteredEnclaves = MaxRegisteredEnclavese;
+	type MaxUnRegisteredEnclaves = MaxUnRegisteredEnclavese;
+}
+
+parameter_types! {
 	pub const IPFSLengthLimit: u32 = 5;
 	pub const CapsuleCountLimit: u32 = 2;
 	pub const CapsulePalletId: PalletId = PalletId(*b"mockcaps");
@@ -121,6 +144,7 @@ impl ternoa_nft::Config for Test {
 	type Currency = Balances;
 	type FeesCollector = ();
 	type IPFSLengthLimit = IPFSLengthLimit;
+	type TEEExt = TEE;
 }
 
 impl Config for Test {

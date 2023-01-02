@@ -15,14 +15,13 @@
 // along with Ternoa.  If not, see <http://www.gnu.org/licenses/>.
 
 use super::mock::*;
+use crate::{tests::mock, Collection, CollectionId, Error, Event as NFTsEvent, NFTData, NFTId};
 use frame_support::{assert_noop, assert_ok, error::BadOrigin, BoundedVec};
 use frame_system::RawOrigin;
 use pallet_balances::Error as BalanceError;
-use primitives::nfts::NFTState;
+use primitives::{nfts::NFTState, tee::ClusterId};
 use sp_arithmetic::per_things::Permill;
 use ternoa_common::traits::NFTExt;
-
-use crate::{tests::mock, Collection, CollectionId, Error, Event as NFTsEvent, NFTData, NFTId};
 
 const ALICE_NFT_ID: NFTId = 0;
 const BOB_NFT_ID: NFTId = 1;
@@ -62,6 +61,40 @@ fn prepare_tests() {
 
 	assert_eq!(NFT::collections(ALICE_COLLECTION_ID).is_some(), true);
 	assert_eq!(NFT::collections(BOB_COLLECTION_ID).is_some(), true);
+}
+
+fn prepare_tee_for_tests() {
+	let _short_uri = "http".as_bytes().to_vec();
+	let valid_uri = "https://va".as_bytes().to_vec();
+	let enclave_address: Vec<u8> = "samplere".as_bytes().to_vec();
+	let _long_uri = "https://this".as_bytes().to_vec();
+
+	let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
+	let bob: mock::RuntimeOrigin = RawOrigin::Signed(BOB).into();
+	let charlie: mock::RuntimeOrigin = RawOrigin::Signed(CHARLIE).into();
+	let dave: mock::RuntimeOrigin = RawOrigin::Signed(DAVE).into();
+	let eve: mock::RuntimeOrigin = RawOrigin::Signed(EVE).into();
+	let ferdie: mock::RuntimeOrigin = origin(FERDIE);
+
+	assert_ok!(TEE::register_enclave(alice.clone(), enclave_address.clone(), valid_uri.clone()));
+	assert_ok!(TEE::register_enclave(bob.clone(), enclave_address.clone(), valid_uri.clone()));
+	assert_ok!(TEE::register_enclave(charlie.clone(), enclave_address.clone(), valid_uri.clone()));
+	assert_ok!(TEE::register_enclave(dave.clone(), enclave_address.clone(), valid_uri.clone()));
+	assert_ok!(TEE::register_enclave(eve.clone(), enclave_address.clone(), valid_uri.clone()));
+	assert_ok!(TEE::register_enclave(ferdie.clone(), enclave_address.clone(), valid_uri.clone()));
+
+	let cluster_id: ClusterId = 0;
+	let second_cluster_id: ClusterId = 1;
+	// let enclave_id: EnclaveId = 0;
+	assert_ok!(TEE::register_cluster(RawOrigin::Root.into()));
+	assert_ok!(TEE::register_cluster(RawOrigin::Root.into()));
+
+	assert_ok!(TEE::assign_enclave(alice.clone(), cluster_id));
+	assert_ok!(TEE::assign_enclave(bob.clone(), cluster_id));
+	assert_ok!(TEE::assign_enclave(charlie.clone(), cluster_id));
+	assert_ok!(TEE::assign_enclave(dave.clone(), cluster_id));
+	assert_ok!(TEE::assign_enclave(eve.clone(), cluster_id));
+	assert_ok!(TEE::assign_enclave(ferdie.clone(), second_cluster_id));
 }
 
 mod create_nft {
@@ -333,65 +366,74 @@ mod burn_nft {
 		})
 	}
 
-	// #[test]
-	// fn burn_synced_secret_nft() {
-	// 	ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
-	// 		prepare_tests();
-	// 		let alice: mock::RuntimeOrigin = origin(ALICE);
-	// 		let offchain_data: BoundedVec<u8, NFTOffchainDataLimit> = BoundedVec::default();
-	// 		// Add a secret to Alice's NFT.
-	// 		NFT::add_secret(alice.clone(), ALICE_NFT_ID, offchain_data.clone()).unwrap();
+	#[test]
+	fn burn_synced_secret_nft() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
+			prepare_tests();
+			let alice: mock::RuntimeOrigin = origin(ALICE);
+			let offchain_data: BoundedVec<u8, NFTOffchainDataLimit> = BoundedVec::default();
+			// Add a secret to Alice's NFT.
+			NFT::add_secret(alice.clone(), ALICE_NFT_ID, offchain_data.clone()).unwrap();
 
-	// 		// Set listed to true for Alice's NFT.
-	// 		let nft_state = NFTState::new(false, false, true, false, false, true, false);
-	// 		NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
+			// Set listed to true for Alice's NFT.
+			let nft_state = NFTState::new(false, false, true, false, false, true, false);
+			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
 
-	// 		assert_eq!(NFT::secret_nfts_offchain_data(ALICE_NFT_ID).unwrap(), offchain_data);
+			assert_eq!(NFT::secret_nfts_offchain_data(ALICE_NFT_ID).unwrap(), offchain_data);
 
-	// 		// Burning the nft.
-	// 		let ok = NFT::burn_nft(alice, ALICE_NFT_ID);
-	// 		assert_ok!(ok);
+			// Burning the nft.
+			let ok = NFT::burn_nft(alice, ALICE_NFT_ID);
+			assert_ok!(ok);
 
-	// 		// Final state checks.
-	// 		assert!(NFT::nfts(ALICE_NFT_ID).is_none());
-	// 		assert!(NFT::secret_nfts_offchain_data(ALICE_NFT_ID).is_none());
+			// Final state checks.
+			assert!(NFT::nfts(ALICE_NFT_ID).is_none());
+			assert!(NFT::secret_nfts_offchain_data(ALICE_NFT_ID).is_none());
 
-	// 		// Events checks.
-	// 		let event = NFTsEvent::NFTBurned { nft_id: ALICE_NFT_ID };
-	// 		let event = RuntimeEvent::NFT(event);
-	// 		System::assert_last_event(event);
-	// 	})
-	// }
+			// Events checks.
+			let event = NFTsEvent::NFTBurned { nft_id: ALICE_NFT_ID };
+			let event = RuntimeEvent::NFT(event);
+			System::assert_last_event(event);
+		})
+	}
 
-	// #[test]
-	// fn burn_not_synced_secret_nft() {
-	// 	ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
-	// 		prepare_tests();
-	// 		let alice: mock::RuntimeOrigin = origin(ALICE);
-	// 		let offchain_data: BoundedVec<u8, NFTOffchainDataLimit> = BoundedVec::default();
-	// 		// Add a secret to Alice's NFT.
-	// 		NFT::add_secret(alice.clone(), ALICE_NFT_ID, offchain_data.clone()).unwrap();
+	#[test]
+	fn burn_not_synced_secret_nft() {
+		ExtBuilder::new_build(vec![
+			(ALICE, 1000),
+			(BOB, 1000),
+			(CHARLIE, 1000),
+			(DAVE, 1000),
+			(EVE, 1000),
+			(FERDIE, 1000),
+		])
+		.execute_with(|| {
+			prepare_tests();
+			prepare_tee_for_tests();
+			let alice: mock::RuntimeOrigin = origin(ALICE);
+			let offchain_data: BoundedVec<u8, NFTOffchainDataLimit> = BoundedVec::default();
+			// Add a secret to Alice's NFT.
+			NFT::add_secret(alice.clone(), ALICE_NFT_ID, offchain_data.clone()).unwrap();
 
-	// 		NFT::add_secret_shard(alice.clone(), ALICE_NFT_ID).unwrap();
+			NFT::add_secret_shard(alice.clone(), ALICE_NFT_ID).unwrap();
 
-	// 		assert_eq!(NFT::secret_nfts_offchain_data(ALICE_NFT_ID).unwrap(), offchain_data);
-	// 		assert_eq!(NFT::secret_nfts_shards_count(ALICE_NFT_ID).unwrap().len(), 1);
+			assert_eq!(NFT::secret_nfts_offchain_data(ALICE_NFT_ID).unwrap(), offchain_data);
+			assert_eq!(NFT::secret_nfts_shards_count(ALICE_NFT_ID).unwrap().len(), 1);
 
-	// 		// Burning the nft.
-	// 		let ok = NFT::burn_nft(alice, ALICE_NFT_ID);
-	// 		assert_ok!(ok);
+			// Burning the nft.
+			let ok = NFT::burn_nft(alice, ALICE_NFT_ID);
+			assert_ok!(ok);
 
-	// 		// Final state checks.
-	// 		assert!(NFT::nfts(ALICE_NFT_ID).is_none());
-	// 		assert!(NFT::secret_nfts_offchain_data(ALICE_NFT_ID).is_none());
-	// 		assert!(NFT::secret_nfts_shards_count(ALICE_NFT_ID).is_none());
+			// Final state checks.
+			assert!(NFT::nfts(ALICE_NFT_ID).is_none());
+			assert!(NFT::secret_nfts_offchain_data(ALICE_NFT_ID).is_none());
+			assert!(NFT::secret_nfts_shards_count(ALICE_NFT_ID).is_none());
 
-	// 		// Events checks.
-	// 		let event = NFTsEvent::NFTBurned { nft_id: ALICE_NFT_ID };
-	// 		let event = RuntimeEvent::NFT(event);
-	// 		System::assert_last_event(event);
-	// 	})
-	// }
+			// Events checks.
+			let event = NFTsEvent::NFTBurned { nft_id: ALICE_NFT_ID };
+			let event = RuntimeEvent::NFT(event);
+			System::assert_last_event(event);
+		})
+	}
 
 	#[test]
 	fn nft_not_found() {
@@ -745,6 +787,21 @@ mod delegate_nft {
 			assert_noop!(err, Error::<Test>::CannotDelegateRentedNFTs);
 		})
 	}
+
+	#[test]
+	fn cannot_delegate_syncing_nfts() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
+			prepare_tests();
+			let alice: mock::RuntimeOrigin = origin(ALICE);
+			// Set alice's NFT to capsule.
+			let nft_state = NFTState::new(false, false, false, false, false, true, false);
+			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
+			// Delegate capsule NFT.
+			let err = NFT::delegate_nft(alice, ALICE_NFT_ID, None);
+			// Should fail because NFT is secret and syncing.
+			assert_noop!(err, Error::<Test>::CannotDelegateSyncingNFTs);
+		})
+	}
 }
 
 mod set_royalty {
@@ -867,6 +924,21 @@ mod set_royalty {
 			let err = NFT::set_royalty(alice, ALICE_NFT_ID, PERCENT_80);
 			// Should fail because you cannot set royalty for capsule NFTs.
 			assert_noop!(err, Error::<Test>::CannotSetRoyaltyForRentedNFTs);
+		})
+	}
+
+	#[test]
+	fn cannot_set_royalty_for_syncing_nfts() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
+			prepare_tests();
+			let alice: mock::RuntimeOrigin = origin(ALICE);
+			// Set Alice's NFT to capsule.
+			let nft_state = NFTState::new(false, false, false, false, false, true, false);
+			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
+			// Set royalty.
+			let err = NFT::set_royalty(alice, ALICE_NFT_ID, PERCENT_80);
+			// Should fail because you cannot set royalty for capsule NFTs.
+			assert_noop!(err, Error::<Test>::CannotSetRoyaltyForSyncingNFTs);
 		})
 	}
 }
@@ -1328,24 +1400,210 @@ mod add_nft_to_collection {
 	}
 }
 
-mod coming_soon {
+mod add_secret {
 	use super::*;
 
 	#[test]
-	fn add_secret_coming_soon() {
+	fn add_secret() {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			prepare_tests();
 			let alice: mock::RuntimeOrigin = origin(ALICE);
-			let err = NFT::add_secret(alice, INVALID_ID, BoundedVec::default());
-			assert_noop!(err, Error::<Test>::ComingSoon);
+			let offchain_data: BoundedVec<u8, NFTOffchainDataLimit> = BoundedVec::default();
+			// Add a secret to Alice's NFT.
+			let ok = NFT::add_secret(alice, ALICE_NFT_ID, offchain_data.clone());
+			assert_ok!(ok);
+
+			// Final state checks.
+			let nft = NFT::nfts(ALICE_NFT_ID).unwrap();
+			let secret_offchain_data = NFT::secret_nfts_offchain_data(ALICE_NFT_ID).unwrap();
+			assert_eq!(nft.state.is_secret, true);
+			assert_eq!(nft.state.is_syncing, true);
+			assert_eq!(secret_offchain_data, offchain_data.clone());
+
+			// Events checks.
+			let event = NFTsEvent::SecretAddedToNFT { nft_id: ALICE_NFT_ID, offchain_data };
+			let event = RuntimeEvent::NFT(event);
+			System::assert_last_event(event);
 		})
 	}
 
 	#[test]
-	fn create_secret_nft_coming_soon() {
+	fn nft_not_found() {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			prepare_tests();
 			let alice: mock::RuntimeOrigin = origin(ALICE);
+			let offchain_data: BoundedVec<u8, NFTOffchainDataLimit> = BoundedVec::default();
+			// Add a secret to Alice's NFT.
+			let err = NFT::add_secret(alice, INVALID_ID, offchain_data.clone());
+			assert_noop!(err, Error::<Test>::NFTNotFound);
+		})
+	}
+
+	#[test]
+	fn not_the_nft_owner() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
+			prepare_tests();
+			let alice: mock::RuntimeOrigin = origin(ALICE);
+			let offchain_data: BoundedVec<u8, NFTOffchainDataLimit> = BoundedVec::default();
+			// Add a secret to Alice's NFT.
+			let err = NFT::add_secret(alice, BOB_NFT_ID, offchain_data.clone());
+			assert_noop!(err, Error::<Test>::NotTheNFTOwner);
+		})
+	}
+
+	#[test]
+	fn cannot_add_secret_to_listed_nfts() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
+			prepare_tests();
+			let alice: mock::RuntimeOrigin = origin(ALICE);
+			let offchain_data: BoundedVec<u8, NFTOffchainDataLimit> = BoundedVec::default();
+			// Set Alice's NFT to listed
+			let nft_state = NFTState::new(false, true, false, false, false, false, false);
+			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
+
+			// Add a secret to Alice's NFT.
+			let err = NFT::add_secret(alice, ALICE_NFT_ID, offchain_data.clone());
+			assert_noop!(err, Error::<Test>::CannotAddSecretToListedNFTs);
+		})
+	}
+
+	#[test]
+	fn cannot_add_secret_to_capsule_nfts() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
+			prepare_tests();
+			let alice: mock::RuntimeOrigin = origin(ALICE);
+			let offchain_data: BoundedVec<u8, NFTOffchainDataLimit> = BoundedVec::default();
+			// Set Alice's NFT to listed
+			let nft_state = NFTState::new(true, false, false, false, false, false, false);
+			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
+
+			// Add a secret to Alice's NFT.
+			let err = NFT::add_secret(alice, ALICE_NFT_ID, offchain_data.clone());
+			assert_noop!(err, Error::<Test>::CannotAddSecretToCapsuleNFTs);
+		})
+	}
+
+	#[test]
+	fn cannot_add_secret_to_secret_nfts() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
+			prepare_tests();
+			let alice: mock::RuntimeOrigin = origin(ALICE);
+			let offchain_data: BoundedVec<u8, NFTOffchainDataLimit> = BoundedVec::default();
+			// Set Alice's NFT to listed
+			let nft_state = NFTState::new(false, false, true, false, false, false, false);
+			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
+
+			// Add a secret to Alice's NFT.
+			let err = NFT::add_secret(alice, ALICE_NFT_ID, offchain_data.clone());
+			assert_noop!(err, Error::<Test>::CannotAddSecretToSecretNFTs);
+		})
+	}
+
+	#[test]
+	fn cannot_add_secret_to_rented_nfts() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
+			prepare_tests();
+			let alice: mock::RuntimeOrigin = origin(ALICE);
+			let offchain_data: BoundedVec<u8, NFTOffchainDataLimit> = BoundedVec::default();
+			// Set Alice's NFT to listed
+			let nft_state = NFTState::new(false, false, false, false, false, false, true);
+			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
+
+			// Add a secret to Alice's NFT.
+			let err = NFT::add_secret(alice, ALICE_NFT_ID, offchain_data.clone());
+			assert_noop!(err, Error::<Test>::CannotAddSecretToRentedNFTs);
+		})
+	}
+
+	#[test]
+	fn cannot_add_secret_to_delegated_nfts() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
+			prepare_tests();
+			let alice: mock::RuntimeOrigin = origin(ALICE);
+			let offchain_data: BoundedVec<u8, NFTOffchainDataLimit> = BoundedVec::default();
+			// Set Alice's NFT to listed
+			let nft_state = NFTState::new(false, false, false, true, false, false, false);
+			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
+
+			// Add a secret to Alice's NFT.
+			let err = NFT::add_secret(alice, ALICE_NFT_ID, offchain_data.clone());
+			assert_noop!(err, Error::<Test>::CannotAddSecretToDelegatedNFTs);
+		})
+	}
+
+	#[test]
+	fn not_enough_balance() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
+			prepare_tests();
+			let alice: mock::RuntimeOrigin = origin(ALICE);
+			let offchain_data: BoundedVec<u8, NFTOffchainDataLimit> = BoundedVec::default();
+
+			Balances::set_balance(RuntimeOrigin::root(), ALICE, 0, 0).unwrap();
+
+			// Add a secret to Alice's NFT.
+			let err = NFT::add_secret(alice, ALICE_NFT_ID, offchain_data.clone());
+			assert_noop!(err, BalanceError::<Test>::InsufficientBalance);
+		})
+	}
+}
+
+mod create_secret_nft {
+	use super::*;
+
+	#[test]
+	fn create_secret_nft() {
+		ExtBuilder::new_build(vec![(ALICE, 1000)]).execute_with(|| {
+			let alice: mock::RuntimeOrigin = origin(ALICE);
+			let alice_balance = Balances::free_balance(ALICE);
+			let offchain_data: BoundedVec<u8, NFTOffchainDataLimit> = BoundedVec::default();
+			let mut data =
+				NFTData::new_default(ALICE, BoundedVec::default(), PERCENT_100, None, false);
+			data.state.is_secret = true;
+			data.state.is_syncing = true;
+
+			// Create NFT without a collection.
+			NFT::create_secret_nft(
+				alice,
+				data.offchain_data.clone(),
+				offchain_data.clone(),
+				data.royalty,
+				data.collection_id,
+				data.state.is_soulbound,
+			)
+			.unwrap();
+			let nft_id = NFT::get_next_nft_id() - 1;
+
+			// Final state checks.
+			let nft = NFT::nfts(nft_id);
+			let secret_offchain_data = NFT::secret_nfts_offchain_data(nft_id).unwrap();
+			assert_eq!(nft, Some(data.clone()));
+			assert_eq!(
+				Balances::free_balance(ALICE),
+				alice_balance - NFT::nft_mint_fee() - NFT::secret_nft_mint_fee()
+			);
+			assert_eq!(secret_offchain_data, offchain_data.clone());
+
+			// Events checks.
+			let event = RuntimeEvent::NFT(NFTsEvent::NFTCreated {
+				nft_id,
+				owner: data.owner,
+				offchain_data: data.offchain_data,
+				royalty: data.royalty,
+				collection_id: data.collection_id,
+				is_soulbound: data.state.is_soulbound,
+				mint_fee: NFT::nft_mint_fee(),
+			});
+			System::assert_has_event(event);
+			let event = RuntimeEvent::NFT(NFTsEvent::SecretAddedToNFT { nft_id, offchain_data });
+			System::assert_last_event(event);
+		})
+	}
+
+	#[test]
+	fn insufficient_balance() {
+		ExtBuilder::new_build(vec![(ALICE, NFT_MINT_FEE + 1)]).execute_with(|| {
+			let alice: mock::RuntimeOrigin = origin(ALICE);
+			// Should fail and storage should remain empty.
 			let err = NFT::create_secret_nft(
 				alice,
 				BoundedVec::default(),
@@ -1354,399 +1612,286 @@ mod coming_soon {
 				None,
 				false,
 			);
-			assert_noop!(err, Error::<Test>::ComingSoon);
+			assert_noop!(err, Error::<Test>::InsufficientBalance);
 		})
 	}
 
 	#[test]
-	fn add_secret_shard_coming_soon() {
-		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
+	fn keep_alive() {
+		ExtBuilder::new_build(vec![(ALICE, 2 * NFT_MINT_FEE + SECRET_NFT_MINT_FEE), (BOB, 1000)])
+			.execute_with(|| {
+				prepare_tests();
+				let alice: mock::RuntimeOrigin = origin(ALICE);
+				let alice_balance = Balances::free_balance(ALICE);
+
+				// Try to create an NFT.
+				let err = NFT::create_secret_nft(
+					alice,
+					BoundedVec::default(),
+					BoundedVec::default(),
+					PERCENT_0,
+					None,
+					false,
+				);
+
+				// Should fail because Alice's account must stay alive.
+				assert_noop!(err, BalanceError::<Test>::KeepAlive);
+				// Alice's balance should not have been changed
+				assert_eq!(Balances::free_balance(ALICE), alice_balance);
+			})
+	}
+}
+
+mod add_secret_shard {
+	use super::*;
+
+	#[test]
+	fn add_secret_shard() {
+		ExtBuilder::new_build(vec![
+			(ALICE, 1000),
+			(BOB, 1000),
+			(CHARLIE, 1000),
+			(DAVE, 1000),
+			(EVE, 1000),
+			(FERDIE, 1000),
+		])
+		.execute_with(|| {
 			prepare_tests();
+			prepare_tee_for_tests();
 			let alice: mock::RuntimeOrigin = origin(ALICE);
-			let err = NFT::add_secret_shard(alice, INVALID_ID);
-			assert_noop!(err, Error::<Test>::ComingSoon);
+			let offchain_data: BoundedVec<u8, NFTOffchainDataLimit> = BoundedVec::default();
+			// Add a secret to Alice's NFT.
+			let ok = NFT::add_secret(alice.clone(), ALICE_NFT_ID, offchain_data.clone());
+			assert_ok!(ok);
+
+			//TODO change when tee function is ready.
+			NFT::add_secret_shard(alice, ALICE_NFT_ID).unwrap();
+
+			// Final state checks.
+			let nft = NFT::nfts(ALICE_NFT_ID).unwrap();
+			let shards = NFT::secret_nfts_shards_count(ALICE_NFT_ID).unwrap();
+			assert_eq!(nft.state.is_secret, true);
+			assert_eq!(nft.state.is_syncing, true);
+			assert_eq!(shards.len(), 1);
+			assert!(shards.contains(&(0, 0)));
+
+			// Events checks.
+			let event = NFTsEvent::ShardAdded { nft_id: ALICE_NFT_ID, enclave: ALICE };
+			let event = RuntimeEvent::NFT(event);
+			System::assert_last_event(event);
 		})
 	}
 
 	#[test]
-	fn set_secret_nft_mint_fee_coming_soon() {
+	fn add_last_secret_shard() {
+		ExtBuilder::new_build(vec![
+			(ALICE, 1000),
+			(BOB, 1000),
+			(CHARLIE, 1000),
+			(DAVE, 1000),
+			(EVE, 1000),
+			(FERDIE, 1000),
+		])
+		.execute_with(|| {
+			prepare_tests();
+			prepare_tee_for_tests();
+			let alice: mock::RuntimeOrigin = origin(ALICE);
+			let bob: mock::RuntimeOrigin = origin(BOB);
+			let charlie: mock::RuntimeOrigin = origin(CHARLIE);
+			let dave: mock::RuntimeOrigin = origin(DAVE);
+			let eve: mock::RuntimeOrigin = origin(EVE);
+
+			let offchain_data: BoundedVec<u8, NFTOffchainDataLimit> = BoundedVec::default();
+			// Add a secret to Alice's NFT.
+			let ok = NFT::add_secret(alice.clone(), ALICE_NFT_ID, offchain_data.clone());
+			assert_ok!(ok);
+
+			NFT::add_secret_shard(alice, ALICE_NFT_ID).unwrap();
+			NFT::add_secret_shard(bob, ALICE_NFT_ID).unwrap();
+			NFT::add_secret_shard(charlie, ALICE_NFT_ID).unwrap();
+			NFT::add_secret_shard(dave, ALICE_NFT_ID).unwrap();
+			NFT::add_secret_shard(eve, ALICE_NFT_ID).unwrap();
+
+			// Final state checks.
+			let nft = NFT::nfts(ALICE_NFT_ID).unwrap();
+			let shards = NFT::secret_nfts_shards_count(ALICE_NFT_ID);
+			assert_eq!(nft.state.is_secret, true);
+			assert_eq!(nft.state.is_syncing, false);
+			assert_eq!(shards, None);
+
+			// Events checks.
+			let event =
+				RuntimeEvent::NFT(NFTsEvent::ShardAdded { nft_id: ALICE_NFT_ID, enclave: ALICE });
+			let final_event =
+				RuntimeEvent::NFT(NFTsEvent::SecretNFTSynced { nft_id: ALICE_NFT_ID });
+			System::assert_has_event(event);
+			System::assert_last_event(final_event);
+		})
+	}
+
+	#[test]
+	fn not_a_registered_enclave() {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			prepare_tests();
 			let alice: mock::RuntimeOrigin = origin(ALICE);
-			let err = NFT::set_secret_nft_mint_fee(alice, 150);
-			assert_noop!(err, Error::<Test>::ComingSoon);
+			let offchain_data: BoundedVec<u8, NFTOffchainDataLimit> = BoundedVec::default();
+			// Add a secret to Alice's NFT.
+			let ok = NFT::add_secret(alice.clone(), ALICE_NFT_ID, offchain_data.clone());
+			assert_ok!(ok);
+
+			let err = NFT::add_secret_shard(alice, ALICE_NFT_ID);
+			assert_noop!(err, Error::<Test>::NotARegisteredEnclave);
+		})
+	}
+
+	#[test]
+	fn share_not_from_valid_cluster() {
+		ExtBuilder::new_build(vec![
+			(ALICE, 1000),
+			(BOB, 1000),
+			(CHARLIE, 1000),
+			(DAVE, 1000),
+			(EVE, 1000),
+			(FERDIE, 1000),
+		])
+		.execute_with(|| {
+			prepare_tests();
+			prepare_tee_for_tests();
+			let alice: mock::RuntimeOrigin = origin(ALICE);
+			let ferdie: mock::RuntimeOrigin = origin(FERDIE);
+
+			let offchain_data: BoundedVec<u8, NFTOffchainDataLimit> = BoundedVec::default();
+			// Add a secret to Alice's NFT.
+			let ok = NFT::add_secret(alice.clone(), ALICE_NFT_ID, offchain_data.clone());
+			assert_ok!(ok);
+
+			NFT::add_secret_shard(alice, ALICE_NFT_ID).unwrap();
+
+			let err = NFT::add_secret_shard(ferdie, ALICE_NFT_ID);
+			assert_noop!(err, Error::<Test>::ShareNotFromValidCluster);
+		})
+	}
+
+	#[test]
+	fn nft_is_not_secret() {
+		ExtBuilder::new_build(vec![
+			(ALICE, 1000),
+			(BOB, 1000),
+			(CHARLIE, 1000),
+			(DAVE, 1000),
+			(EVE, 1000),
+			(FERDIE, 1000),
+		])
+		.execute_with(|| {
+			prepare_tests();
+			prepare_tee_for_tests();
+
+			let alice: mock::RuntimeOrigin = origin(ALICE);
+
+			let err = NFT::add_secret_shard(alice, ALICE_NFT_ID);
+
+			// Should fail because Alice's NFT is not a secret NFT.
+			assert_noop!(err, Error::<Test>::NFTIsNotSecret);
+		})
+	}
+
+	#[test]
+	fn nft_already_synced() {
+		ExtBuilder::new_build(vec![
+			(ALICE, 1000),
+			(BOB, 1000),
+			(CHARLIE, 1000),
+			(DAVE, 1000),
+			(EVE, 1000),
+			(FERDIE, 1000),
+		])
+		.execute_with(|| {
+			prepare_tests();
+			prepare_tee_for_tests();
+
+			let alice: mock::RuntimeOrigin = origin(ALICE);
+			let bob: mock::RuntimeOrigin = origin(BOB);
+			let charlie: mock::RuntimeOrigin = origin(CHARLIE);
+			let dave: mock::RuntimeOrigin = origin(DAVE);
+			let eve: mock::RuntimeOrigin = origin(EVE);
+
+			let offchain_data: BoundedVec<u8, NFTOffchainDataLimit> = BoundedVec::default();
+			// Add a secret to Alice's NFT.
+			let ok = NFT::add_secret(alice.clone(), ALICE_NFT_ID, offchain_data.clone());
+			assert_ok!(ok);
+
+			NFT::add_secret_shard(alice.clone(), ALICE_NFT_ID).unwrap();
+			NFT::add_secret_shard(bob, ALICE_NFT_ID).unwrap();
+			NFT::add_secret_shard(charlie, ALICE_NFT_ID).unwrap();
+			NFT::add_secret_shard(dave, ALICE_NFT_ID).unwrap();
+			NFT::add_secret_shard(eve, ALICE_NFT_ID).unwrap();
+
+			let err = NFT::add_secret_shard(alice, ALICE_NFT_ID);
+
+			// Should fail because Alice's secret NFT is already synced.
+			assert_noop!(err, Error::<Test>::NFTAlreadySynced);
+		})
+	}
+
+	#[test]
+	fn enclave_already_added_shard() {
+		ExtBuilder::new_build(vec![
+			(ALICE, 1000),
+			(BOB, 1000),
+			(CHARLIE, 1000),
+			(DAVE, 1000),
+			(EVE, 1000),
+			(FERDIE, 1000),
+		])
+		.execute_with(|| {
+			prepare_tests();
+			prepare_tee_for_tests();
+
+			let alice: mock::RuntimeOrigin = origin(ALICE);
+			let offchain_data: BoundedVec<u8, NFTOffchainDataLimit> = BoundedVec::default();
+
+			// Add a secret to Alice's NFT.
+			let ok = NFT::add_secret(alice.clone(), ALICE_NFT_ID, offchain_data.clone());
+			assert_ok!(ok);
+
+			NFT::add_secret_shard(alice.clone(), ALICE_NFT_ID).unwrap();
+
+			let err = NFT::add_secret_shard(alice, ALICE_NFT_ID);
+
+			// Should fail because enclave has already added shard.
+			assert_noop!(err, Error::<Test>::EnclaveAlreadyAddedShard);
 		})
 	}
 }
 
-// mod add_secret {
-// 	use super::*;
+mod set_secret_nft_mint_fee {
+	use super::*;
 
-// 	#[test]
-// 	fn add_secret() {
-// 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
-// 			prepare_tests();
-// 			let alice: mock::RuntimeOrigin = origin(ALICE);
-// 			let offchain_data: BoundedVec<u8, NFTOffchainDataLimit> = BoundedVec::default();
-// 			// Add a secret to Alice's NFT.
-// 			let ok = NFT::add_secret(alice, ALICE_NFT_ID, offchain_data.clone());
-// 			assert_ok!(ok);
+	#[test]
+	fn set_secret_nft_mint_fee() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
+			prepare_tests();
+			// Set new secret nft mint fee.
+			let ok = NFT::set_secret_nft_mint_fee(root(), 150);
+			assert_ok!(ok);
 
-// 			// Final state checks.
-// 			let nft = NFT::nfts(ALICE_NFT_ID).unwrap();
-// 			let secret_offchain_data = NFT::secret_nfts_offchain_data(ALICE_NFT_ID).unwrap();
-// 			assert_eq!(nft.state.is_secret, true);
-// 			assert_eq!(nft.state.is_syncing, true);
-// 			assert_eq!(secret_offchain_data, offchain_data.clone());
+			// Final state checks.
+			assert_eq!(NFT::secret_nft_mint_fee(), 150);
 
-// 			// Events checks.
-// 			let event = NFTsEvent::SecretAddedToNFT { nft_id: ALICE_NFT_ID, offchain_data };
-// 			let event = RuntimeEvent::NFT(event);
-// 			System::assert_last_event(event);
-// 		})
-// 	}
+			// Events checks.
+			let event = NFTsEvent::SecretNFTMintFeeSet { fee: 150 };
+			let event = RuntimeEvent::NFT(event);
+			System::assert_last_event(event);
+		})
+	}
 
-// 	#[test]
-// 	fn nft_not_found() {
-// 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
-// 			prepare_tests();
-// 			let alice: mock::RuntimeOrigin = origin(ALICE);
-// 			let offchain_data: BoundedVec<u8, NFTOffchainDataLimit> = BoundedVec::default();
-// 			// Add a secret to Alice's NFT.
-// 			let err = NFT::add_secret(alice, INVALID_ID, offchain_data.clone());
-// 			assert_noop!(err, Error::<Test>::NFTNotFound);
-// 		})
-// 	}
-
-// 	#[test]
-// 	fn not_the_nft_owner() {
-// 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
-// 			prepare_tests();
-// 			let alice: mock::RuntimeOrigin = origin(ALICE);
-// 			let offchain_data: BoundedVec<u8, NFTOffchainDataLimit> = BoundedVec::default();
-// 			// Add a secret to Alice's NFT.
-// 			let err = NFT::add_secret(alice, BOB_NFT_ID, offchain_data.clone());
-// 			assert_noop!(err, Error::<Test>::NotTheNFTOwner);
-// 		})
-// 	}
-
-// 	#[test]
-// 	fn cannot_add_secret_to_listed_nfts() {
-// 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
-// 			prepare_tests();
-// 			let alice: mock::RuntimeOrigin = origin(ALICE);
-// 			let offchain_data: BoundedVec<u8, NFTOffchainDataLimit> = BoundedVec::default();
-// 			// Set Alice's NFT to listed
-// 			let nft_state = NFTState::new(false, true, false, false, false, false, false);
-// 			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
-
-// 			// Add a secret to Alice's NFT.
-// 			let err = NFT::add_secret(alice, ALICE_NFT_ID, offchain_data.clone());
-// 			assert_noop!(err, Error::<Test>::CannotAddSecretToListedNFTs);
-// 		})
-// 	}
-
-// 	#[test]
-// 	fn cannot_add_secret_to_capsule_nfts() {
-// 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
-// 			prepare_tests();
-// 			let alice: mock::RuntimeOrigin = origin(ALICE);
-// 			let offchain_data: BoundedVec<u8, NFTOffchainDataLimit> = BoundedVec::default();
-// 			// Set Alice's NFT to listed
-// 			let nft_state = NFTState::new(true, false, false, false, false, false, false);
-// 			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
-
-// 			// Add a secret to Alice's NFT.
-// 			let err = NFT::add_secret(alice, ALICE_NFT_ID, offchain_data.clone());
-// 			assert_noop!(err, Error::<Test>::CannotAddSecretToCapsuleNFTs);
-// 		})
-// 	}
-
-// 	#[test]
-// 	fn cannot_add_secret_to_secret_nfts() {
-// 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
-// 			prepare_tests();
-// 			let alice: mock::RuntimeOrigin = origin(ALICE);
-// 			let offchain_data: BoundedVec<u8, NFTOffchainDataLimit> = BoundedVec::default();
-// 			// Set Alice's NFT to listed
-// 			let nft_state = NFTState::new(false, false, true, false, false, false, false);
-// 			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
-
-// 			// Add a secret to Alice's NFT.
-// 			let err = NFT::add_secret(alice, ALICE_NFT_ID, offchain_data.clone());
-// 			assert_noop!(err, Error::<Test>::CannotAddSecretToSecretNFTs);
-// 		})
-// 	}
-
-// 	#[test]
-// 	fn not_enough_balance() {
-// 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
-// 			prepare_tests();
-// 			let alice: mock::RuntimeOrigin = origin(ALICE);
-// 			let offchain_data: BoundedVec<u8, NFTOffchainDataLimit> = BoundedVec::default();
-
-// 			Balances::set_balance(RuntimeOrigin::root(), ALICE, 0, 0).unwrap();
-
-// 			// Add a secret to Alice's NFT.
-// 			let err = NFT::add_secret(alice, ALICE_NFT_ID, offchain_data.clone());
-// 			assert_noop!(err, BalanceError::<Test>::InsufficientBalance);
-// 		})
-// 	}
-// }
-
-// mod create_secret_nft {
-// 	use super::*;
-
-// 	#[test]
-// 	fn create_secret_nft() {
-// 		ExtBuilder::new_build(vec![(ALICE, 1000)]).execute_with(|| {
-// 			let alice: mock::RuntimeOrigin = origin(ALICE);
-// 			let alice_balance = Balances::free_balance(ALICE);
-// 			let offchain_data: BoundedVec<u8, NFTOffchainDataLimit> = BoundedVec::default();
-// 			let mut data =
-// 				NFTData::new_default(ALICE, BoundedVec::default(), PERCENT_100, None, false);
-// 			data.state.is_secret = true;
-// 			data.state.is_syncing = true;
-
-// 			// Create NFT without a collection.
-// 			NFT::create_secret_nft(
-// 				alice,
-// 				data.offchain_data.clone(),
-// 				offchain_data.clone(),
-// 				data.royalty,
-// 				data.collection_id,
-// 				data.state.is_soulbound,
-// 			)
-// 			.unwrap();
-// 			let nft_id = NFT::get_next_nft_id() - 1;
-
-// 			// Final state checks.
-// 			let nft = NFT::nfts(nft_id);
-// 			let secret_offchain_data = NFT::secret_nfts_offchain_data(nft_id).unwrap();
-// 			assert_eq!(nft, Some(data.clone()));
-// 			assert_eq!(
-// 				Balances::free_balance(ALICE),
-// 				alice_balance - NFT::nft_mint_fee() - NFT::secret_nft_mint_fee()
-// 			);
-// 			assert_eq!(secret_offchain_data, offchain_data.clone());
-
-// 			// Events checks.
-// 			let event = RuntimeEvent::NFT(NFTsEvent::NFTCreated {
-// 				nft_id,
-// 				owner: data.owner,
-// 				offchain_data: data.offchain_data,
-// 				royalty: data.royalty,
-// 				collection_id: data.collection_id,
-// 				is_soulbound: data.state.is_soulbound,
-// 				mint_fee: NFT::nft_mint_fee(),
-// 			});
-// 			System::assert_has_event(event);
-// 			let event = RuntimeEvent::NFT(NFTsEvent::SecretAddedToNFT { nft_id, offchain_data });
-// 			System::assert_last_event(event);
-// 		})
-// 	}
-
-// 	#[test]
-// 	fn insufficient_balance() {
-// 		ExtBuilder::new_build(vec![(ALICE, NFT_MINT_FEE + 1)]).execute_with(|| {
-// 			let alice: mock::RuntimeOrigin = origin(ALICE);
-// 			// Should fail and storage should remain empty.
-// 			let err = NFT::create_secret_nft(
-// 				alice,
-// 				BoundedVec::default(),
-// 				BoundedVec::default(),
-// 				PERCENT_0,
-// 				None,
-// 				false,
-// 			);
-// 			assert_noop!(err, Error::<Test>::InsufficientBalance);
-// 		})
-// 	}
-
-// 	#[test]
-// 	fn keep_alive() {
-// 		ExtBuilder::new_build(vec![(ALICE, 2 * NFT_MINT_FEE + SECRET_NFT_MINT_FEE), (BOB, 1000)])
-// 			.execute_with(|| {
-// 				prepare_tests();
-// 				let alice: mock::RuntimeOrigin = origin(ALICE);
-// 				let alice_balance = Balances::free_balance(ALICE);
-
-// 				// Try to create an NFT.
-// 				let err = NFT::create_secret_nft(
-// 					alice,
-// 					BoundedVec::default(),
-// 					BoundedVec::default(),
-// 					PERCENT_0,
-// 					None,
-// 					false,
-// 				);
-
-// 				// Should fail because Alice's account must stay alive.
-// 				assert_noop!(err, BalanceError::<Test>::KeepAlive);
-// 				// Alice's balance should not have been changed
-// 				assert_eq!(Balances::free_balance(ALICE), alice_balance);
-// 			})
-// 	}
-// }
-
-// mod add_secret_shard {
-// 	use super::*;
-
-// 	#[test]
-// 	fn add_secret_shard() {
-// 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
-// 			prepare_tests();
-// 			let alice: mock::RuntimeOrigin = origin(ALICE);
-// 			let offchain_data: BoundedVec<u8, NFTOffchainDataLimit> = BoundedVec::default();
-// 			// Add a secret to Alice's NFT.
-// 			let ok = NFT::add_secret(alice.clone(), ALICE_NFT_ID, offchain_data.clone());
-// 			assert_ok!(ok);
-
-// 			//TODO change when tee function is ready.
-// 			NFT::add_secret_shard(alice, ALICE_NFT_ID).unwrap();
-
-// 			// Final state checks.
-// 			let nft = NFT::nfts(ALICE_NFT_ID).unwrap();
-// 			let shards = NFT::secret_nfts_shards_count(ALICE_NFT_ID).unwrap();
-// 			assert_eq!(nft.state.is_secret, true);
-// 			assert_eq!(nft.state.is_syncing, true);
-// 			assert_eq!(shards.len(), 1);
-// 			assert!(shards.contains(&ALICE));
-
-// 			// Events checks.
-// 			let event = NFTsEvent::ShardAdded { nft_id: ALICE_NFT_ID, enclave: ALICE };
-// 			let event = RuntimeEvent::NFT(event);
-// 			System::assert_last_event(event);
-// 		})
-// 	}
-
-// 	#[test]
-// 	fn add_last_secret_shard() {
-// 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
-// 			prepare_tests();
-// 			let alice: mock::RuntimeOrigin = origin(ALICE);
-// 			let offchain_data: BoundedVec<u8, NFTOffchainDataLimit> = BoundedVec::default();
-// 			// Add a secret to Alice's NFT.
-// 			let ok = NFT::add_secret(alice.clone(), ALICE_NFT_ID, offchain_data.clone());
-// 			assert_ok!(ok);
-
-// 			for i in 10..ShardsNumber::get() + 10 - 1 {
-// 				let i_account: mock::RuntimeOrigin = origin(i.into());
-// 				NFT::add_secret_shard(i_account, ALICE_NFT_ID).unwrap();
-// 			}
-
-// 			//TODO change when tee function is ready.
-// 			NFT::add_secret_shard(alice, ALICE_NFT_ID).unwrap();
-
-// 			// Final state checks.
-// 			let nft = NFT::nfts(ALICE_NFT_ID).unwrap();
-// 			let shards = NFT::secret_nfts_shards_count(ALICE_NFT_ID);
-// 			assert_eq!(nft.state.is_secret, true);
-// 			assert_eq!(nft.state.is_syncing, false);
-// 			assert_eq!(shards, None);
-
-// 			// Events checks.
-// 			let event =
-// 				RuntimeEvent::NFT(NFTsEvent::ShardAdded { nft_id: ALICE_NFT_ID, enclave: ALICE });
-// 			let final_event =
-// 				RuntimeEvent::NFT(NFTsEvent::SecretNFTSynced { nft_id: ALICE_NFT_ID });
-// 			System::assert_has_event(event);
-// 			System::assert_last_event(final_event);
-// 		})
-// 	}
-
-// 	// //TODO
-// 	// #[test]
-// 	// fn not_a_registered_enclave() {
-// 	// 	ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
-// 	// 		prepare_tests();
-// 	// 		let alice: mock::RuntimeOrigin = origin(ALICE);
-
-// 	// 	})
-// 	// }
-
-// 	#[test]
-// 	fn nft_is_not_secret() {
-// 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
-// 			prepare_tests();
-// 			let alice: mock::RuntimeOrigin = origin(ALICE);
-
-// 			//TODO change when tee function is ready.
-// 			let err = NFT::add_secret_shard(alice, ALICE_NFT_ID);
-
-// 			// Should fail because Alice's NFT is not a secret NFT.
-// 			assert_noop!(err, Error::<Test>::NFTIsNotSecret);
-// 		})
-// 	}
-
-// 	#[test]
-// 	fn nft_already_synced() {
-// 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
-// 			prepare_tests();
-// 			let alice: mock::RuntimeOrigin = origin(ALICE);
-
-// 			// Set Alice's NFT secret and secret_synced to true.
-// 			let nft_state = NFTState::new(false, false, true, false, false, false, false);
-// 			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
-
-// 			//TODO change when tee function is ready.
-// 			let err = NFT::add_secret_shard(alice, ALICE_NFT_ID);
-
-// 			// Should fail because Alice's secret NFT is already synced.
-// 			assert_noop!(err, Error::<Test>::NFTAlreadySynced);
-// 		})
-// 	}
-
-// 	#[test]
-// 	fn enclave_already_added_shard() {
-// 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
-// 			prepare_tests();
-// 			let alice: mock::RuntimeOrigin = origin(ALICE);
-// 			let offchain_data: BoundedVec<u8, NFTOffchainDataLimit> = BoundedVec::default();
-
-// 			// Add a secret to Alice's NFT.
-// 			let ok = NFT::add_secret(alice.clone(), ALICE_NFT_ID, offchain_data.clone());
-// 			assert_ok!(ok);
-
-// 			NFT::add_secret_shard(alice.clone(), ALICE_NFT_ID).unwrap();
-
-// 			//TODO change when tee function is ready.
-// 			let err = NFT::add_secret_shard(alice, ALICE_NFT_ID);
-
-// 			// Should fail because enclave has already added shard.
-// 			assert_noop!(err, Error::<Test>::EnclaveAlreadyAddedShard);
-// 		})
-// 	}
-// }
-
-// mod set_secret_nft_mint_fee {
-// 	use super::*;
-
-// 	#[test]
-// 	fn set_secret_nft_mint_fee() {
-// 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
-// 			prepare_tests();
-// 			// Set new secret nft mint fee.
-// 			let ok = NFT::set_secret_nft_mint_fee(root(), 150);
-// 			assert_ok!(ok);
-
-// 			// Final state checks.
-// 			assert_eq!(NFT::secret_nft_mint_fee(), 150);
-
-// 			// Events checks.
-// 			let event = NFTsEvent::SecretNFTMintFeeSet { fee: 150 };
-// 			let event = RuntimeEvent::NFT(event);
-// 			System::assert_last_event(event);
-// 		})
-// 	}
-
-// 	#[test]
-// 	fn bad_origin() {
-// 		ExtBuilder::new_build(vec![(ALICE, 10000)]).execute_with(|| {
-// 			// Try to change secret nft mint fee as not root.
-// 			let err = NFT::set_secret_nft_mint_fee(origin(ALICE), 150);
-// 			// Should fail because Alice is not the root.
-// 			assert_noop!(err, BadOrigin);
-// 		})
-// 	}
-// }
+	#[test]
+	fn bad_origin() {
+		ExtBuilder::new_build(vec![(ALICE, 10000)]).execute_with(|| {
+			// Try to change secret nft mint fee as not root.
+			let err = NFT::set_secret_nft_mint_fee(origin(ALICE), 150);
+			// Should fail because Alice is not the root.
+			assert_noop!(err, BadOrigin);
+		})
+	}
+}

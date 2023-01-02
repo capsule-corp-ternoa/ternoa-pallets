@@ -38,12 +38,13 @@ use frame_support::{
 use frame_system::pallet_prelude::*;
 use primitives::{
 	nfts::{Collection, CollectionId, NFTData, NFTId, NFTState},
+	tee::{ClusterId, EnclaveId},
 	U8BoundedVec,
 };
 use sp_arithmetic::per_things::Permill;
 use sp_runtime::traits::{CheckedSub, StaticLookup};
 use sp_std::prelude::*;
-use ternoa_common::traits;
+use ternoa_common::{traits, traits::TEEExt};
 
 pub use weights::WeightInfo;
 
@@ -78,6 +79,9 @@ pub mod pallet {
 
 		/// What we do with additional fees.
 		type FeesCollector: OnUnbalanced<NegativeImbalanceOf<Self>>;
+
+		/// Link to the TEE pallet.
+		type TEEExt: TEEExt<AccountId = Self::AccountId>;
 
 		// Constants
 		/// Default fee for minting NFTs.
@@ -169,7 +173,7 @@ pub mod pallet {
 		_,
 		Blake2_128Concat,
 		NFTId,
-		BoundedVec<T::AccountId, T::ShardsNumber>,
+		BoundedVec<(ClusterId, EnclaveId), T::ShardsNumber>,
 		OptionQuery,
 	>;
 
@@ -257,8 +261,12 @@ pub mod pallet {
 		CannotBurnRentedNFTs,
 		/// Operation is not allowed because the NFT is rented
 		CannotSetRoyaltyForRentedNFTs,
+		/// Operation is not allowed because the NFT is secret and syncing
+		CannotSetRoyaltyForSyncingNFTs,
 		/// Operation is not allowed because the NFT is rented
 		CannotDelegateRentedNFTs,
+		/// Operation is not allowed because the NFT is secret and syncing
+		CannotDelegateSyncingNFTs,
 		/// Operation is not allowed because the collection limit is too low.
 		CollectionLimitExceededMaximumAllowed,
 		/// No NFT was found with that NFT id.
@@ -306,8 +314,13 @@ pub mod pallet {
 		CannotAddSecretToCapsuleNFTs,
 		/// Operation is not permitted because the NFT is already a secret.
 		CannotAddSecretToSecretNFTs,
-		/// Feature is not available yet
-		ComingSoon,
+		/// Operation is not permitted because the NFT is rented.
+		CannotAddSecretToRentedNFTs,
+		/// Operation is not permitted because the NFT is delegated.
+		CannotAddSecretToDelegatedNFTs,
+		/// Enclave which posted the shard for the NFT does not belongs to the
+		/// same cluster of the first posted shard
+		ShareNotFromValidCluster,
 	}
 
 	#[pallet::call]
@@ -522,6 +535,7 @@ pub mod pallet {
 				ensure!(!nft.state.is_listed, Error::<T>::CannotDelegateListedNFTs);
 				ensure!(!nft.state.is_capsule, Error::<T>::CannotDelegateCapsuleNFTs);
 				ensure!(!nft.state.is_rented, Error::<T>::CannotDelegateRentedNFTs);
+				ensure!(!nft.state.is_syncing, Error::<T>::CannotDelegateSyncingNFTs);
 
 				// Execute
 				nft.state.is_delegated = is_delegated;
@@ -562,6 +576,7 @@ pub mod pallet {
 				ensure!(!nft.state.is_capsule, Error::<T>::CannotSetRoyaltyForCapsuleNFTs);
 				ensure!(!nft.state.is_delegated, Error::<T>::CannotSetRoyaltyForDelegatedNFTs);
 				ensure!(!nft.state.is_rented, Error::<T>::CannotSetRoyaltyForRentedNFTs);
+				ensure!(!nft.state.is_syncing, Error::<T>::CannotSetRoyaltyForSyncingNFTs);
 
 				// Execute
 				nft.royalty = royalty;
@@ -774,7 +789,6 @@ pub mod pallet {
 			nft_id: NFTId,
 			offchain_data: U8BoundedVec<T::NFTOffchainDataLimit>,
 		) -> DispatchResultWithPostInfo {
-			ensure!(false, Error::<T>::ComingSoon);
 			let who = ensure_signed(origin)?;
 
 			Nfts::<T>::try_mutate(nft_id, |maybe_nft| -> DispatchResult {
@@ -785,6 +799,8 @@ pub mod pallet {
 				ensure!(!nft.state.is_listed, Error::<T>::CannotAddSecretToListedNFTs);
 				ensure!(!nft.state.is_capsule, Error::<T>::CannotAddSecretToCapsuleNFTs);
 				ensure!(!nft.state.is_secret, Error::<T>::CannotAddSecretToSecretNFTs);
+				ensure!(!nft.state.is_rented, Error::<T>::CannotAddSecretToRentedNFTs);
+				ensure!(!nft.state.is_delegated, Error::<T>::CannotAddSecretToDelegatedNFTs);
 
 				// The Caller needs to pay the Secret NFT Mint fee.
 				let secret_nft_mint_fee = SecretNftMintFee::<T>::get();
@@ -834,7 +850,6 @@ pub mod pallet {
 			collection_id: Option<CollectionId>,
 			is_soulbound: bool,
 		) -> DispatchResultWithPostInfo {
-			ensure!(false, Error::<T>::ComingSoon);
 			let who = ensure_signed(origin.clone())?;
 
 			// Check balance
@@ -857,12 +872,11 @@ pub mod pallet {
 		/// Must be called by registered enclaves.
 		#[pallet::weight(T::WeightInfo::add_secret_shard())]
 		pub fn add_secret_shard(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
-			ensure!(false, Error::<T>::ComingSoon);
 			let who = ensure_signed(origin)?;
-			ensure!(
-				/* TODO is_registered_enclave(who) */ true,
-				Error::<T>::NotARegisteredEnclave
-			);
+
+			let enclave_details =
+				T::TEEExt::ensure_enclave(who.clone()).ok_or(Error::<T>::NotARegisteredEnclave)?;
+
 			let mut has_finished_sync = false;
 
 			Nfts::<T>::try_mutate(nft_id, |maybe_nft| -> DispatchResult {
@@ -873,32 +887,37 @@ pub mod pallet {
 				ensure!(nft.state.is_syncing, Error::<T>::NFTAlreadySynced);
 
 				SecretNftsShardsCount::<T>::try_mutate(nft_id, |maybe_shards| -> DispatchResult {
+					let (cluster_id, enclave_id) = enclave_details;
 					if let Some(shards) = maybe_shards {
+						ensure!(cluster_id == shards[0].0, Error::<T>::ShareNotFromValidCluster);
 						ensure!(
 							shards.len() < T::ShardsNumber::get() as usize,
 							Error::<T>::NFTHasReceivedAllShards
 						);
-						ensure!(!shards.contains(&who), Error::<T>::EnclaveAlreadyAddedShard);
+						ensure!(
+							!shards.contains(&(cluster_id, enclave_id)),
+							Error::<T>::EnclaveAlreadyAddedShard
+						);
 						shards
-							.try_push(who.clone())
+							.try_push((cluster_id, enclave_id))
 							.map_err(|_| Error::<T>::NFTHasReceivedAllShards)?;
 						if shards.len() == T::ShardsNumber::get() as usize {
 							has_finished_sync = true;
 							*maybe_shards = None;
 						}
 					} else {
-						let mut shards: BoundedVec<T::AccountId, T::ShardsNumber> =
+						let mut shards: BoundedVec<(ClusterId, EnclaveId), T::ShardsNumber> =
 							BoundedVec::default();
 						shards
-							.try_push(who.clone())
+							.try_push((cluster_id, enclave_id))
 							.map_err(|_| Error::<T>::NFTHasReceivedAllShards)?;
+
 						if shards.len() == T::ShardsNumber::get() as usize {
 							has_finished_sync = true;
 						} else {
 							*maybe_shards = Some(shards);
 						}
 					}
-
 					Ok(().into())
 				})?;
 
@@ -917,7 +936,7 @@ pub mod pallet {
 				Self::deposit_event(event);
 			}
 
-			Ok(().into())
+			Ok(Pays::No.into())
 		}
 
 		/// Set the fee for minting a secret NFT if the caller is root.
@@ -926,7 +945,6 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			fee: BalanceOf<T>,
 		) -> DispatchResultWithPostInfo {
-			ensure!(false, Error::<T>::ComingSoon);
 			ensure_root(origin)?;
 			SecretNftMintFee::<T>::put(fee);
 			let event = Event::SecretNFTMintFeeSet { fee };

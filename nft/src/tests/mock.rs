@@ -33,6 +33,10 @@ type Block = frame_system::mocking::MockBlock<Test>;
 // for our account id. This would mess with some tests.
 pub const ALICE: u64 = 1;
 pub const BOB: u64 = 2;
+pub const CHARLIE: u64 = 3;
+pub const DAVE: u64 = 4;
+pub const EVE: u64 = 5;
+pub const FERDIE: u64 = 6;
 pub const COLLECTOR: u64 = 99;
 pub const NFT_MINT_FEE: Balance = 10;
 pub const SECRET_NFT_MINT_FEE: Balance = 75;
@@ -46,6 +50,7 @@ frame_support::construct_runtime!(
 		System: frame_system,
 		Balances: pallet_balances,
 		NFT: ternoa_nft,
+		TEE: ternoa_tee,
 	}
 );
 
@@ -116,6 +121,28 @@ impl pallet_balances::Config for Test {
 }
 
 parameter_types! {
+	pub const EnclaveFee: u64 = 5;
+	pub const ClusterSize: u32 = 5;
+	pub const MinUriLen: u16 = 5;
+	pub const MaxUriLen: u16 = 12;
+	pub const MaxRegisteredEnclavese: u32 = 10;
+	pub const MaxUnRegisteredEnclavese: u32 = 10;
+}
+
+impl ternoa_tee::Config for Test {
+	type RuntimeEvent = RuntimeEvent;
+	type WeightInfo = ();
+	type Currency = Balances;
+	type FeesCollector = ();
+	type EnclaveFee = EnclaveFee;
+	type ClusterSize = ClusterSize;
+	type MinUriLen = MinUriLen;
+	type MaxUriLen = MaxUriLen;
+	type MaxRegisteredEnclaves = MaxRegisteredEnclavese;
+	type MaxUnRegisteredEnclaves = MaxUnRegisteredEnclavese;
+}
+
+parameter_types! {
 	pub const InitialMintFee: Balance = NFT_MINT_FEE;
 	pub const NFTOffchainDataLimit: u32 = 10;
 	pub const CollectionOffchainDataLimit: u32 = 10;
@@ -135,6 +162,7 @@ impl Config for Test {
 	type CollectionSizeLimit = CollectionSizeLimit;
 	type InitialSecretMintFee = InitialSecretMintFee;
 	type ShardsNumber = ShardsNumber;
+	type TEEExt = TEE;
 }
 
 pub struct MockFeeCollector;
