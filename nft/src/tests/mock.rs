@@ -51,7 +51,6 @@ frame_support::construct_runtime!(
 		Balances: pallet_balances,
 		NFT: ternoa_nft,
 		TEE: ternoa_tee,
-
 	}
 );
 

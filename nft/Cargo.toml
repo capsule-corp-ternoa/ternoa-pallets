@@ -30,6 +30,7 @@ log = { default-features = false, version = "0.4.17" }
 # Ternoa
 ternoa-common = { default-features = false, path = "../common" }
 primitives = { package = "ternoa-pallets-primitives", default-features = false, path = "../primitives" }
+ternoa-tee = { default-features = false, path = "../tee" }
 
 # We needs this dependencies to run our tests
 [dev-dependencies]

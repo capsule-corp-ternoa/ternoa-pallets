@@ -24,7 +24,6 @@ use sp_arithmetic::per_things::Permill;
 use sp_runtime::traits::{Bounded, StaticLookup};
 use sp_std::prelude::*;
 use ternoa_common::traits::NFTExt;
-
 use crate::Pallet as NFT;
 
 pub struct BenchmarkData {
@@ -69,6 +68,28 @@ pub fn prepare_benchmarks<T: Config>() -> BenchmarkData {
 		collection_offchain_data,
 		None,
 	));
+
+	// let _short_uri = "http".as_bytes().to_vec();
+	// let valid_uri = "https://va".as_bytes().to_vec();
+	// let enclave_address: Vec<u8> = "samplere".as_bytes().to_vec();
+	// let _long_uri = "https://this".as_bytes().to_vec();
+
+	// assert_ok!(TEE::register_enclave(
+	// 	origin::<T>("ALICE").into(),
+	// 	enclave_address.clone(),
+	// 	valid_uri.clone()
+	// ));
+	// assert_ok!(TEE::register_enclave(bob.clone(), enclave_address.clone(), valid_uri.clone()));
+
+	// let cluster_id: ClusterId = 0;
+	// let second_cluster_id: ClusterId = 1;
+	// // let enclave_id: EnclaveId = 0;
+	// assert_ok!(TEE::register_cluster(RawOrigin::Root.into()));
+	// assert_ok!(TEE::register_cluster(RawOrigin::Root.into()));
+
+	// assert_ok!(TEE::assign_enclave(alice.clone(), cluster_id));
+	// assert_ok!(TEE::assign_enclave(bob.clone(), cluster_id));
+
 	BenchmarkData {
 		nft_id: NFT::<T>::next_nft_id() - 1,
 		collection_id: NFT::<T>::next_collection_id() - 1,
@@ -194,45 +215,45 @@ benchmarks! {
 		assert_eq!(NFT::<T>::collections(benchmark_data.collection_id).unwrap().nfts.contains(&benchmark_data.nft_id), true);
 	}
 
-	// create_secret_nft {
-	// 	let s in 0 .. T::CollectionSizeLimit::get() - 1;
-	// 	let benchmark_data = prepare_benchmarks::<T>();
-	// 	let alice: T::AccountId = get_account::<T>("ALICE");
-	// 	let nft_offchain_data: BoundedVec<u8, T::NFTOffchainDataLimit> = BoundedVec::try_from(vec![1; T::NFTOffchainDataLimit::get() as usize]).unwrap();
-	// 	let secret_offchain_data: BoundedVec<u8, T::NFTOffchainDataLimit> = BoundedVec::try_from(vec![1; T::NFTOffchainDataLimit::get() as usize]).unwrap();
-	// 	// Fill the collection.
-	// 	NFT::<T>::create_filled_collection(alice.clone(), benchmark_data.collection_id, 0, s).unwrap();
-	// }: _(origin::<T>("ALICE"), nft_offchain_data, secret_offchain_data, PERCENT_100, Some(benchmark_data.collection_id), false)
-	// verify {
-	// 	// Get The NFT id.
-	// 	let nft_id = NFT::<T>::next_nft_id() - 1;
-	// 	// Get The NFT.
-	// 	let nft = NFT::<T>::nfts(nft_id).unwrap();
-	// 	// Get the secret offchain_data
-	// 	let secret_offchain_data = NFT::<T>::secret_nfts_offchain_data(nft_id);
-	// 	assert_eq!(nft.owner, alice);
-	// 	assert_eq!(NFT::<T>::collections(benchmark_data.collection_id).unwrap().nfts.contains(&nft_id), true);
-	// 	assert_eq!(nft.collection_id, Some(benchmark_data.collection_id));
-	// 	assert_eq!(nft.state.is_secret, true);
-	// 	assert_eq!(nft.state.is_syncing, true);
-	// 	assert!(secret_offchain_data.is_some());
-	// }
+	create_secret_nft {
+		let s in 0 .. T::CollectionSizeLimit::get() - 1;
+		let benchmark_data = prepare_benchmarks::<T>();
+		let alice: T::AccountId = get_account::<T>("ALICE");
+		let nft_offchain_data: BoundedVec<u8, T::NFTOffchainDataLimit> = BoundedVec::try_from(vec![1; T::NFTOffchainDataLimit::get() as usize]).unwrap();
+		let secret_offchain_data: BoundedVec<u8, T::NFTOffchainDataLimit> = BoundedVec::try_from(vec![1; T::NFTOffchainDataLimit::get() as usize]).unwrap();
+		// Fill the collection.
+		NFT::<T>::create_filled_collection(alice.clone(), benchmark_data.collection_id, 0, s).unwrap();
+	}: _(origin::<T>("ALICE"), nft_offchain_data, secret_offchain_data, PERCENT_100, Some(benchmark_data.collection_id), false)
+	verify {
+		// Get The NFT id.
+		let nft_id = NFT::<T>::next_nft_id() - 1;
+		// Get The NFT.
+		let nft = NFT::<T>::nfts(nft_id).unwrap();
+		// Get the secret offchain_data
+		let secret_offchain_data = NFT::<T>::secret_nfts_offchain_data(nft_id);
+		assert_eq!(nft.owner, alice);
+		assert_eq!(NFT::<T>::collections(benchmark_data.collection_id).unwrap().nfts.contains(&nft_id), true);
+		assert_eq!(nft.collection_id, Some(benchmark_data.collection_id));
+		assert_eq!(nft.state.is_secret, true);
+		assert_eq!(nft.state.is_syncing, true);
+		assert!(secret_offchain_data.is_some());
+	}
 
-	// add_secret {
-	// 	let benchmark_data = prepare_benchmarks::<T>();
-	// 	let alice: T::AccountId = get_account::<T>("ALICE");
-	// 	let secret_offchain_data: BoundedVec<u8, T::NFTOffchainDataLimit> = BoundedVec::try_from(vec![1; T::NFTOffchainDataLimit::get() as usize]).unwrap();
-	// }: _(origin::<T>("ALICE"), benchmark_data.nft_id, secret_offchain_data)
-	// verify {
-	// 	// Get The NFT.
-	// 	let nft = NFT::<T>::nfts(benchmark_data.nft_id).unwrap();
-	// 	let secret_offchain_data = NFT::<T>::secret_nfts_offchain_data(benchmark_data.nft_id);
-	// 	assert_eq!(nft.state.is_secret, true);
-	// 	assert_eq!(nft.state.is_syncing, true);
-	// 	assert!(secret_offchain_data.is_some());
-	// }
+	add_secret {
+		let benchmark_data = prepare_benchmarks::<T>();
+		let alice: T::AccountId = get_account::<T>("ALICE");
+		let secret_offchain_data: BoundedVec<u8, T::NFTOffchainDataLimit> = BoundedVec::try_from(vec![1; T::NFTOffchainDataLimit::get() as usize]).unwrap();
+	}: _(origin::<T>("ALICE"), benchmark_data.nft_id, secret_offchain_data)
+	verify {
+		// Get The NFT.
+		let nft = NFT::<T>::nfts(benchmark_data.nft_id).unwrap();
+		let secret_offchain_data = NFT::<T>::secret_nfts_offchain_data(benchmark_data.nft_id);
+		assert_eq!(nft.state.is_secret, true);
+		assert_eq!(nft.state.is_syncing, true);
+		assert!(secret_offchain_data.is_some());
+	}
 
-	// //TODO change when tee
+	//TODO change when tee
 	// add_secret_shard {
 	// 	let benchmark_data = prepare_benchmarks::<T>();
 	// 	let alice = origin::<T>("ALICE");
@@ -246,18 +267,18 @@ benchmarks! {
 	// 	let alice: T::AccountId = get_account::<T>("ALICE");
 	// 	assert_eq!(nft.state.is_secret, true);
 	// 	assert_eq!(nft.state.is_syncing, true);
-	// 	assert!(shards.contains(&alice));
+	// 	assert!(shards.contains(&(0,0)));
 
 	// }
 
-	// set_secret_nft_mint_fee {
-	// 	let old_mint_fee = NFT::<T>::secret_nft_mint_fee();
-	// 	let new_mint_fee = 150u32;
-	// }: _(RawOrigin::Root, new_mint_fee.clone().into())
-	// verify {
-	// 	assert_ne!(old_mint_fee, new_mint_fee.clone().into());
-	// 	assert_eq!(NFT::<T>::secret_nft_mint_fee(), new_mint_fee.into());
-	// }
+	set_secret_nft_mint_fee {
+		let old_mint_fee = NFT::<T>::secret_nft_mint_fee();
+		let new_mint_fee = 150u32;
+	}: _(RawOrigin::Root, new_mint_fee.clone().into())
+	verify {
+		assert_ne!(old_mint_fee, new_mint_fee.clone().into());
+		assert_eq!(NFT::<T>::secret_nft_mint_fee(), new_mint_fee.into());
+	}
 }
 
 impl_benchmark_test_suite!(NFT, crate::tests::mock::new_test_ext(), crate::tests::mock::Test);
