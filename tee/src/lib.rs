@@ -201,33 +201,6 @@ pub mod pallet {
 
 	#[pallet::error]
 	pub enum Error<T> {
-		/// Unknown enclaveId
-		UnknownEnclaveId,
-		/// Unknown ClusterId
-		UnknownClusterId,
-		/// Enclave address registered to an account
-		AddressAlreadyHasAnEnclave,
-		/// Enclave URI is short
-		UriTooShort,
-		/// Enclave URI is long
-		UriTooLong,
-		/// Maximum enclaves reached
-		EnclaveIdOverflow,
-		/// Maximum clusters reached
-		ClusterIdOverflow,
-		/// Cluster is already full, cannot assign any enclaves
-		ClusterIsFull,
-		/// Enclave already assigned to a cluster
-		EnclaveAlreadyAssigned,
-		/// Enclave not assigned to a cluster
-		EnclaveNotAssigned,
-		/// Internal logical error
-		InternalLogicalError,
-		/// Unknown enclave operator account
-		UnknownEnclaveOperatorAccount,
-		/// Error Adding To Queue
-		ErrorAddingToQueue,
-
 		/// Enclave was not found in storage
 		EnclaveNotFound,
 		/// The registration already exists
@@ -242,14 +215,16 @@ pub mod pallet {
 		UnregistrationLimitReached,
 		/// The registration does not exist
 		RegistrationNotFound,
-		/// The cluster does not exists
-		ClusterNotFound,
 		/// Enclave address does not exists
 		EnclaveAddressNotFound,
+		/// The cluster does not exists
+		ClusterNotFound,
 		/// Cluster id does not exist for this address
 		ClusterIdNotFound,
 		/// The cluster still have enclaves associated to it
 		ClusterIsNotEmpty,
+		/// Cluster is already full, cannot assign any enclaves
+		ClusterIsFull,
 	}
 
 	#[pallet::call]
