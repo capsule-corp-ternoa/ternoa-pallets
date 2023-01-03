@@ -614,6 +614,50 @@ mod create_contract {
 	}
 
 	#[test]
+	fn amount_too_low_renter_cancellation_fee() {
+		ExtBuilder::new_build(None).execute_with(|| {
+			prepare_tests();
+			let alice: mock::RuntimeOrigin = origin(ALICE);
+
+			// Try to create a contract without enough funds to cover for the cancellation fee.
+			let err = Rent::create_contract(
+				alice,
+				ALICE_NFT_ID_6,
+				DurationInput::Fixed(BLOCK_DURATION),
+				AcceptanceType::AutoAcceptance(None),
+				false,
+				RentFee::Tokens(TOKENS),
+				CancellationFee::FixedTokens(1),
+				CancellationFee::None,
+			);
+
+			assert_noop!(err, Error::<Test>::AmountTooLow);
+		})
+	}
+
+	#[test]
+	fn amount_too_low_rentee_cancellation_fee() {
+		ExtBuilder::new_build(None).execute_with(|| {
+			prepare_tests();
+			let alice: mock::RuntimeOrigin = origin(ALICE);
+
+			// Try to create a contract without enough funds to cover for the cancellation fee.
+			let err = Rent::create_contract(
+				alice,
+				ALICE_NFT_ID_6,
+				DurationInput::Fixed(BLOCK_DURATION),
+				AcceptanceType::AutoAcceptance(None),
+				false,
+				RentFee::Tokens(TOKENS),
+				CancellationFee::None,
+				CancellationFee::FixedTokens(1),
+			);
+
+			assert_noop!(err, Error::<Test>::AmountTooLow);
+		})
+	}
+
+	#[test]
 	fn not_ennough_funds_for_cancellation_fee() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();

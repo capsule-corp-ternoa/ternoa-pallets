@@ -78,6 +78,10 @@ pub mod pallet {
 		type MarketplaceExt: MarketplaceExt<AccountId = Self::AccountId, Balance = BalanceOf<Self>>;
 
 		// Constants
+		/// The minimum amount required to keep an account open.
+		#[pallet::constant]
+		type ExistentialDeposit: Get<BalanceOf<Self>>;
+
 		/// Minimum required length of auction.
 		#[pallet::constant]
 		type MinAuctionDuration: Get<Self::BlockNumber>;
@@ -311,6 +315,8 @@ pub mod pallet {
 		CannotEndAuctionWithoutBids,
 		/// Cannot list because the NFT secret is not synced.
 		CannotListNotSyncedSecretNFTs,
+		/// Amount too low (lower than existential deposit).
+		AmountTooLow,
 	}
 
 	#[pallet::call]
@@ -492,6 +498,7 @@ pub mod pallet {
 
 				ensure!(!auction.is_creator(&who), Error::<T>::CannotAddBidToYourOwnAuctions);
 				ensure!(auction.has_started(now), Error::<T>::AuctionNotStarted);
+				ensure!(amount > T::ExistentialDeposit::get(), Error::<T>::AmountTooLow);
 
 				// ensure the bid is larger than the current highest bid.
 				if let Some(highest_bid) = auction.get_highest_bid() {

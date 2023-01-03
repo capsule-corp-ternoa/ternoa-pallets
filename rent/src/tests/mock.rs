@@ -174,6 +174,7 @@ impl Config for Test {
 	type ActionsInBlockLimit = ActionsInBlockLimit;
 	type MaximumContractAvailabilityLimit = MaximumContractAvailabilityLimit;
 	type MaximumContractDurationLimit = MaximumContractDurationLimit;
+	type ExistentialDeposit = ExistentialDeposit;
 }
 
 pub struct MockFeeCollector;

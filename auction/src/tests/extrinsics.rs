@@ -922,6 +922,36 @@ pub mod add_bid {
 	}
 
 	#[test]
+	fn amount_too_low() {
+		ExtBuilder::new_build(None).execute_with(|| {
+			prepare_tests();
+			let alice: mock::RuntimeOrigin = origin(ALICE);
+
+			// Cancel auction
+			Auction::cancel_auction(alice.clone(), ALICE_NFT_ID_1).unwrap();
+
+			//Create auction.
+			Auction::create_auction(
+				alice,
+				ALICE_NFT_ID_1,
+				ALICE_MARKETPLACE_ID,
+				DEFAULT_STARTBLOCK,
+				DEFAULT_ENDBLOCK,
+				0u128,
+				Some(DEFAULT_PRICE + 10),
+			)
+			.unwrap();
+
+			run_to_block(DEFAULT_STARTBLOCK);
+
+			let auction = Auctions::<Test>::get(ALICE_NFT_ID_1).unwrap();
+			let bob_bid = auction.start_price + 1;
+			let err = Auction::add_bid(origin(BOB), ALICE_NFT_ID_1, bob_bid);
+			assert_noop!(err, Error::<Test>::AmountTooLow);
+		})
+	}
+
+	#[test]
 	fn cannot_bid_less_than_the_highest_bid() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
@@ -975,7 +1005,7 @@ pub mod add_bid {
 
 			let auction = Auctions::<Test>::get(ALICE_NFT_ID_1).unwrap();
 
-			let bid = Balances::free_balance(BOB);
+			let bid = Balances::free_balance(BOB) - 1u128;
 			assert!(bid > auction.start_price);
 
 			assert_ok!(Auction::add_bid(origin(BOB), ALICE_NFT_ID_1, bid));

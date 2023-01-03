@@ -89,6 +89,10 @@ pub mod pallet {
 		type NFTExt: NFTExt<AccountId = Self::AccountId>;
 
 		// Constants
+		/// The minimum amount required to keep an account open.
+		#[pallet::constant]
+		type ExistentialDeposit: Get<BalanceOf<Self>>;
+
 		/// The auctions pallet id - will be used to generate account id.
 		#[pallet::constant]
 		type PalletId: Get<PalletId>;
@@ -258,6 +262,8 @@ pub mod pallet {
 		DurationExceedsMaximumLimit,
 		/// Duration invalid
 		DurationInvalid,
+		/// Amount too low (lower than existential deposit).
+		AmountTooLow,
 	}
 
 	#[pallet::hooks]
@@ -390,8 +396,21 @@ pub mod pallet {
 			// 2. Add Contract to the Queue
 			// 3. Add Contract to Storage
 			// 4. Set NFT to Rented State
-			let amount = renter_cancellation_fee.get_balance().unwrap_or(0u32.into());
-			T::Currency::transfer(&who, &pallet, amount, KeepAlive)
+			let renter_cancellation_fee_amount =
+				renter_cancellation_fee.get_balance().unwrap_or(0u32.into());
+			let rentee_cancellation_fee_amount =
+				rentee_cancellation_fee.get_balance().unwrap_or(0u32.into());
+			ensure!(
+				renter_cancellation_fee_amount == 0u32.into() ||
+					renter_cancellation_fee_amount > T::ExistentialDeposit::get(),
+				Error::<T>::AmountTooLow
+			);
+			ensure!(
+				rentee_cancellation_fee_amount == 0u32.into() ||
+					rentee_cancellation_fee_amount > T::ExistentialDeposit::get(),
+				Error::<T>::AmountTooLow
+			);
+			T::Currency::transfer(&who, &pallet, renter_cancellation_fee_amount, KeepAlive)
 				.map_err(|_| Error::<T>::NotEnoughFundsForCancellationFee)?;
 
 			if let Some(id) = renter_cancellation_fee.get_nft() {
