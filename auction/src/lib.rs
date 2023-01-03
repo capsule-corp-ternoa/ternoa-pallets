@@ -181,6 +181,7 @@ pub mod pallet {
 		}
 	}
 
+	/// Data related to auctions
 	#[pallet::storage]
 	#[pallet::getter(fn auctions)]
 	pub type Auctions<T: Config> = StorageMap<
@@ -191,11 +192,13 @@ pub mod pallet {
 		OptionQuery,
 	>;
 
+	/// Sorted lists of block deadlines
 	#[pallet::storage]
 	#[pallet::getter(fn deadlines)]
 	pub type Deadlines<T: Config> =
 		StorageValue<_, DeadlineList<T::BlockNumber, T::ParallelAuctionLimit>, ValueQuery>;
 
+	/// Holds the balance that user can claim
 	#[pallet::storage]
 	#[pallet::getter(fn claims)]
 	pub type Claims<T: Config> =
