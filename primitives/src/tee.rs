@@ -16,8 +16,5 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-/// EnclaveId
-pub type EnclaveId = u32;
-
 /// ClusterId
 pub type ClusterId = u32;

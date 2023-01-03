@@ -14,31 +14,54 @@
 // You should have received a copy of the GNU General Public License
 // along with Ternoa.  If not, see <http://www.gnu.org/licenses/>.
 
-use parity_scale_codec::{Decode, Encode};
-use primitives::tee::EnclaveId;
+use frame_support::{traits::Get, BoundedVec, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound};
+use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
-use sp_runtime::RuntimeDebug;
-use sp_std::vec::Vec;
+use sp_std::fmt::Debug;
 
-#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo)]
-pub struct Enclave {
-	pub api_uri: Vec<u8>,
-	pub enclave_address: Vec<u8>,
+#[derive(
+	Encode, Decode, CloneNoBound, PartialEqNoBound, Eq, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen,
+)]
+#[scale_info(skip_type_params(MaxUriLen))]
+#[codec(mel_bound(AccountId: MaxEncodedLen))]
+pub struct Enclave<AccountId, MaxUriLen>
+where
+	AccountId: Clone + PartialEq + Debug,
+	MaxUriLen: Get<u32>,
+{
+	pub enclave_address: AccountId,
+	pub api_uri: BoundedVec<u8, MaxUriLen>,
 }
 
-impl Enclave {
-	pub fn new(api_uri: Vec<u8>, enclave_address: Vec<u8>) -> Self {
-		Self { api_uri, enclave_address }
+impl<AccountId, MaxUriLen> Enclave<AccountId, MaxUriLen>
+where
+	AccountId: Clone + PartialEq + Debug,
+	MaxUriLen: Get<u32>,
+{
+	pub fn new(enclave_address: AccountId, api_uri: BoundedVec<u8, MaxUriLen>) -> Self {
+		Self { enclave_address, api_uri }
 	}
 }
 
-#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo)]
-pub struct Cluster {
-	pub enclaves: Vec<EnclaveId>,
+#[derive(
+	Encode, Decode, CloneNoBound, PartialEqNoBound, Eq, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen,
+)]
+#[scale_info(skip_type_params(ClusterSize))]
+#[codec(mel_bound(AccountId: MaxEncodedLen))]
+pub struct Cluster<AccountId, ClusterSize>
+where
+	AccountId: Clone + PartialEq + Debug,
+	ClusterSize: Get<u32>,
+{
+	pub enclaves: BoundedVec<AccountId, ClusterSize>,
 }
 
-impl Cluster {
-	pub fn new(enclaves: Vec<EnclaveId>) -> Self {
+impl<AccountId, ClusterSize> Cluster<AccountId, ClusterSize>
+where
+	AccountId: Clone + PartialEq + Debug,
+	ClusterSize: Get<u32>,
+{
+	pub fn new(enclaves: BoundedVec<AccountId, ClusterSize>) -> Self {
 		Self { enclaves }
 	}
 }

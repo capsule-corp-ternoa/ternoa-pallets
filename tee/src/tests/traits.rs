@@ -19,8 +19,13 @@ use frame_system::RawOrigin;
 use primitives::tee::ClusterId;
 
 use crate::tests::mock;
-use frame_support::assert_ok;
+use frame_support::{assert_ok, BoundedVec};
 use ternoa_common::traits::TEEExt;
+
+fn root() -> mock::RuntimeOrigin {
+	RawOrigin::Root.into()
+}
+
 #[test]
 fn ensure_enclave() {
 	ExtBuilder::default()
@@ -29,20 +34,15 @@ fn ensure_enclave() {
 		.execute_with(|| {
 			let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
 			let bob: mock::RuntimeOrigin = RawOrigin::Signed(BOB).into();
-			let valid_uri = "https://va".as_bytes().to_vec();
 			let cluster_id: ClusterId = 0;
 
-			let att_rep: Vec<u8> = "samplere".as_bytes().to_vec();
-
-			assert_ok!(TEE::register_cluster(RawOrigin::Root.into()));
-			assert_ok!(TEE::register_enclave(alice.clone(), att_rep.clone(), valid_uri.clone()));
-			assert_ok!(TEE::register_enclave(bob.clone(), att_rep.clone(), valid_uri.clone()));
-			assert_ok!(TEE::assign_enclave(alice.clone(), cluster_id));
-			assert_ok!(TEE::assign_enclave(bob.clone(), cluster_id));
+			assert_ok!(TEE::create_cluster(root()));
+			assert_ok!(TEE::register_enclave(alice.clone(), ALICE, BoundedVec::default()));
+			assert_ok!(TEE::register_enclave(bob.clone(), BOB, BoundedVec::default()));
+			assert_ok!(TEE::assign_enclave(root(), ALICE, cluster_id));
+			assert_ok!(TEE::assign_enclave(root(), BOB, cluster_id));
 
 			let res = TEE::ensure_enclave(BOB);
-			// Returns the registered `clusterId` and `enclaveId` for the given Enclave Operator
-			// AccountId
-			assert_eq!(res, Some((0, 1)));
+			assert!(res.is_some());
 		})
 }

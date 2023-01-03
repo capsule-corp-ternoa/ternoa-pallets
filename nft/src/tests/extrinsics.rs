@@ -64,37 +64,31 @@ fn prepare_tests() {
 }
 
 fn prepare_tee_for_tests() {
-	let _short_uri = "http".as_bytes().to_vec();
-	let valid_uri = "https://va".as_bytes().to_vec();
-	let enclave_address: Vec<u8> = "samplere".as_bytes().to_vec();
-	let _long_uri = "https://this".as_bytes().to_vec();
-
-	let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
-	let bob: mock::RuntimeOrigin = RawOrigin::Signed(BOB).into();
-	let charlie: mock::RuntimeOrigin = RawOrigin::Signed(CHARLIE).into();
-	let dave: mock::RuntimeOrigin = RawOrigin::Signed(DAVE).into();
-	let eve: mock::RuntimeOrigin = RawOrigin::Signed(EVE).into();
+	let alice: mock::RuntimeOrigin = origin(ALICE);
+	let bob: mock::RuntimeOrigin = origin(BOB);
+	let charlie: mock::RuntimeOrigin = origin(CHARLIE);
+	let dave: mock::RuntimeOrigin = origin(DAVE);
+	let eve: mock::RuntimeOrigin = origin(EVE);
 	let ferdie: mock::RuntimeOrigin = origin(FERDIE);
 
-	assert_ok!(TEE::register_enclave(alice.clone(), enclave_address.clone(), valid_uri.clone()));
-	assert_ok!(TEE::register_enclave(bob.clone(), enclave_address.clone(), valid_uri.clone()));
-	assert_ok!(TEE::register_enclave(charlie.clone(), enclave_address.clone(), valid_uri.clone()));
-	assert_ok!(TEE::register_enclave(dave.clone(), enclave_address.clone(), valid_uri.clone()));
-	assert_ok!(TEE::register_enclave(eve.clone(), enclave_address.clone(), valid_uri.clone()));
-	assert_ok!(TEE::register_enclave(ferdie.clone(), enclave_address.clone(), valid_uri.clone()));
+	assert_ok!(TEE::register_enclave(alice.clone(), ALICE, BoundedVec::default()));
+	assert_ok!(TEE::register_enclave(bob.clone(), BOB, BoundedVec::default()));
+	assert_ok!(TEE::register_enclave(charlie.clone(), CHARLIE, BoundedVec::default()));
+	assert_ok!(TEE::register_enclave(dave.clone(), DAVE, BoundedVec::default()));
+	assert_ok!(TEE::register_enclave(eve.clone(), EVE, BoundedVec::default()));
+	assert_ok!(TEE::register_enclave(ferdie.clone(), FERDIE, BoundedVec::default()));
 
 	let cluster_id: ClusterId = 0;
 	let second_cluster_id: ClusterId = 1;
-	// let enclave_id: EnclaveId = 0;
-	assert_ok!(TEE::register_cluster(RawOrigin::Root.into()));
-	assert_ok!(TEE::register_cluster(RawOrigin::Root.into()));
+	assert_ok!(TEE::create_cluster(root()));
+	assert_ok!(TEE::create_cluster(root()));
 
-	assert_ok!(TEE::assign_enclave(alice.clone(), cluster_id));
-	assert_ok!(TEE::assign_enclave(bob.clone(), cluster_id));
-	assert_ok!(TEE::assign_enclave(charlie.clone(), cluster_id));
-	assert_ok!(TEE::assign_enclave(dave.clone(), cluster_id));
-	assert_ok!(TEE::assign_enclave(eve.clone(), cluster_id));
-	assert_ok!(TEE::assign_enclave(ferdie.clone(), second_cluster_id));
+	assert_ok!(TEE::assign_enclave(root(), ALICE, cluster_id));
+	assert_ok!(TEE::assign_enclave(root(), BOB, cluster_id));
+	assert_ok!(TEE::assign_enclave(root(), CHARLIE, cluster_id));
+	assert_ok!(TEE::assign_enclave(root(), DAVE, cluster_id));
+	assert_ok!(TEE::assign_enclave(root(), EVE, cluster_id));
+	assert_ok!(TEE::assign_enclave(root(), FERDIE, second_cluster_id));
 }
 
 mod create_nft {
@@ -397,7 +391,7 @@ mod burn_nft {
 	}
 
 	#[test]
-	fn burn_not_synced_secret_nft() {
+	fn burn_syncing_secret_nft() {
 		ExtBuilder::new_build(vec![
 			(ALICE, 1000),
 			(BOB, 1000),
@@ -1664,7 +1658,6 @@ mod add_secret_shard {
 			let ok = NFT::add_secret(alice.clone(), ALICE_NFT_ID, offchain_data.clone());
 			assert_ok!(ok);
 
-			//TODO change when tee function is ready.
 			NFT::add_secret_shard(alice, ALICE_NFT_ID).unwrap();
 
 			// Final state checks.
@@ -1673,7 +1666,7 @@ mod add_secret_shard {
 			assert_eq!(nft.state.is_secret, true);
 			assert_eq!(nft.state.is_syncing, true);
 			assert_eq!(shards.len(), 1);
-			assert!(shards.contains(&(0, 0)));
+			assert!(shards.contains(&(0, ALICE)));
 
 			// Events checks.
 			let event = NFTsEvent::ShardAdded { nft_id: ALICE_NFT_ID, enclave: ALICE };

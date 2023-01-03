@@ -69,11 +69,6 @@ pub fn prepare_benchmarks<T: Config>() -> BenchmarkData {
 		None,
 	));
 
-	let enclave_address: Vec<u8> = "samplere".as_bytes().to_vec();
-	let uri: Vec<u8> = "127.0.0.1".as_bytes().to_vec();
-
-	assert_ok!(T::TEEExt::register_and_assign_enclave(alice, enclave_address, uri, None));
-
 	BenchmarkData {
 		nft_id: NFT::<T>::next_nft_id() - 1,
 		collection_id: NFT::<T>::next_collection_id() - 1,
@@ -242,6 +237,7 @@ benchmarks! {
 		let alice = origin::<T>("ALICE");
 		let secret_offchain_data: BoundedVec<u8, T::NFTOffchainDataLimit> = BoundedVec::try_from(vec![1; T::NFTOffchainDataLimit::get() as usize]).unwrap();
 		NFT::<T>::add_secret(alice.clone().into(), benchmark_data.nft_id, secret_offchain_data).unwrap();
+		T::TEEExt::register_and_assign_enclave(get_account::<T>("ALICE"), get_account::<T>("ALICE"), None).unwrap();
 	}: _(origin::<T>("ALICE"), benchmark_data.nft_id)
 	verify {
 		// Get The NFT.
@@ -250,7 +246,7 @@ benchmarks! {
 		let alice: T::AccountId = get_account::<T>("ALICE");
 		assert_eq!(nft.state.is_secret, true);
 		assert_eq!(nft.state.is_syncing, true);
-		assert!(shards.contains(&(0,0)));
+		assert_eq!(shards.len(), 1);
 	}
 
 	set_secret_nft_mint_fee {

@@ -38,7 +38,7 @@ use frame_support::{
 use frame_system::pallet_prelude::*;
 use primitives::{
 	nfts::{Collection, CollectionId, NFTData, NFTId, NFTState},
-	tee::{ClusterId, EnclaveId},
+	tee::ClusterId,
 	U8BoundedVec,
 };
 use sp_arithmetic::per_things::Permill;
@@ -173,7 +173,7 @@ pub mod pallet {
 		_,
 		Blake2_128Concat,
 		NFTId,
-		BoundedVec<(ClusterId, EnclaveId), T::ShardsNumber>,
+		BoundedVec<(ClusterId, T::AccountId), T::ShardsNumber>,
 		OptionQuery,
 	>;
 
@@ -874,7 +874,7 @@ pub mod pallet {
 		pub fn add_secret_shard(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			let enclave_details =
+			let (cluster_id, operator_address) =
 				T::TEEExt::ensure_enclave(who.clone()).ok_or(Error::<T>::NotARegisteredEnclave)?;
 
 			let mut has_finished_sync = false;
@@ -887,7 +887,6 @@ pub mod pallet {
 				ensure!(nft.state.is_syncing, Error::<T>::NFTAlreadySynced);
 
 				SecretNftsShardsCount::<T>::try_mutate(nft_id, |maybe_shards| -> DispatchResult {
-					let (cluster_id, enclave_id) = enclave_details;
 					if let Some(shards) = maybe_shards {
 						ensure!(cluster_id == shards[0].0, Error::<T>::ShareNotFromValidCluster);
 						ensure!(
@@ -895,21 +894,21 @@ pub mod pallet {
 							Error::<T>::NFTHasReceivedAllShards
 						);
 						ensure!(
-							!shards.contains(&(cluster_id, enclave_id)),
+							!shards.contains(&(cluster_id, operator_address.clone())),
 							Error::<T>::EnclaveAlreadyAddedShard
 						);
 						shards
-							.try_push((cluster_id, enclave_id))
+							.try_push((cluster_id, operator_address))
 							.map_err(|_| Error::<T>::NFTHasReceivedAllShards)?;
 						if shards.len() == T::ShardsNumber::get() as usize {
 							has_finished_sync = true;
 							*maybe_shards = None;
 						}
 					} else {
-						let mut shards: BoundedVec<(ClusterId, EnclaveId), T::ShardsNumber> =
+						let mut shards: BoundedVec<(ClusterId, T::AccountId), T::ShardsNumber> =
 							BoundedVec::default();
 						shards
-							.try_push((cluster_id, enclave_id))
+							.try_push((cluster_id, operator_address))
 							.map_err(|_| Error::<T>::NFTHasReceivedAllShards)?;
 
 						if shards.len() == T::ShardsNumber::get() as usize {

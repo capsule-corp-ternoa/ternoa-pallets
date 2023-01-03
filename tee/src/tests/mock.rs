@@ -108,10 +108,8 @@ impl pallet_balances::Config for Test {
 parameter_types! {
 	pub const EnclaveFee: u64 = 5;
 	pub const ClusterSize: u32 = 2;
-	pub const MinUriLen: u16 = 5;
 	pub const MaxUriLen: u16 = 12;
-	pub const MaxRegisteredEnclavese: u32 = 10;
-	pub const MaxUnRegisteredEnclavese: u32 = 10;
+	pub const ListSizeLimit: u32 = 10;
 }
 
 impl Config for Test {
@@ -121,17 +119,15 @@ impl Config for Test {
 	type FeesCollector = ();
 	type EnclaveFee = EnclaveFee;
 	type ClusterSize = ClusterSize;
-	type MinUriLen = MinUriLen;
 	type MaxUriLen = MaxUriLen;
-	type MaxRegisteredEnclaves = MaxRegisteredEnclavese;
-	type MaxUnRegisteredEnclaves = MaxUnRegisteredEnclavese;
+	type ListSizeLimit = ListSizeLimit;
 }
 
 // Do not use the `0` account id since this would be the default value
 // for our account id. This would mess with some tests.
 pub const ALICE: u64 = 1;
 pub const BOB: u64 = 2;
-pub const DAVE: u64 = 3;
+// pub const DAVE: u64 = 3;
 
 pub struct ExtBuilder {
 	endowed_accounts: Vec<(u64, u64)>,
