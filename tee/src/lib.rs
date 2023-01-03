@@ -46,7 +46,7 @@ pub mod pallet {
 
 	use frame_support::{
 		pallet_prelude::*,
-		traits::{Currency, ExistenceRequirement::KeepAlive, OnUnbalanced, WithdrawReasons},
+		traits::{Currency, OnUnbalanced},
 	};
 
 	#[pallet::pallet]
@@ -75,10 +75,6 @@ pub mod pallet {
 		type FeesCollector: OnUnbalanced<NegativeImbalanceOf<Self>>;
 
 		// Constants
-		/// Host much does it cost to mint enclave (extra fee on top of the tx fees)
-		#[pallet::constant]
-		type EnclaveFee: Get<BalanceOf<Self>>;
-
 		/// Size of a cluster
 		#[pallet::constant]
 		type ClusterSize: Get<u32>;
@@ -340,15 +336,6 @@ pub mod pallet {
 							EnclaveData::<T>::get(&operator_address).is_none(),
 							Error::<T>::OperatorAlreadyExists
 						);
-
-						// Take the enclave registration fee
-						let imbalance = T::Currency::withdraw(
-							&operator_address,
-							T::EnclaveFee::get(),
-							WithdrawReasons::FEE,
-							KeepAlive,
-						)?;
-						T::FeesCollector::on_unbalanced(imbalance);
 
 						// Add enclave account to operator
 						EnclaveAccountOperator::<T>::insert(

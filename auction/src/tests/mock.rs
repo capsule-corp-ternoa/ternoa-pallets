@@ -129,7 +129,6 @@ impl pallet_balances::Config for Test {
 }
 
 parameter_types! {
-	pub const EnclaveFee: u64 = 5;
 	pub const ClusterSize: u32 = 5;
 	pub const MaxUriLen: u32 = 12;
 	pub const ListSizeLimit: u32 = 10;
@@ -140,7 +139,6 @@ impl ternoa_tee::Config for Test {
 	type WeightInfo = ();
 	type Currency = Balances;
 	type FeesCollector = ();
-	type EnclaveFee = EnclaveFee;
 	type ClusterSize = ClusterSize;
 	type MaxUriLen = MaxUriLen;
 	type ListSizeLimit = ListSizeLimit;
