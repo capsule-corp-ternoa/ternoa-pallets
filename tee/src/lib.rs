@@ -44,10 +44,7 @@ pub mod pallet {
 	use super::*;
 	use frame_system::pallet_prelude::*;
 
-	use frame_support::{
-		pallet_prelude::*,
-		traits::{Currency, OnUnbalanced},
-	};
+	use frame_support::{pallet_prelude::*, traits::Currency};
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
@@ -56,9 +53,6 @@ pub mod pallet {
 
 	pub type BalanceOf<T> =
 		<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
-	pub(crate) type NegativeImbalanceOf<T> = <<T as Config>::Currency as Currency<
-		<T as frame_system::Config>::AccountId,
-	>>::NegativeImbalance;
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
@@ -70,9 +64,6 @@ pub mod pallet {
 
 		/// Currency type.
 		type Currency: Currency<Self::AccountId>;
-
-		/// What we do with additional fees
-		type FeesCollector: OnUnbalanced<NegativeImbalanceOf<Self>>;
 
 		// Constants
 		/// Size of a cluster
