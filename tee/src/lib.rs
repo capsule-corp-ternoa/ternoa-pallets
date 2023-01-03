@@ -443,26 +443,14 @@ pub mod pallet {
 						EnclaveId,
 						T::MaxUnRegisteredEnclaves,
 					> = <EnclaveUnregistrationList<T>>::get();
-					// get registered enclaves
+
 					let mut registration_list = <EnclaveRegistrationList<T>>::get();
 
-					// Clean up from registered enclaves
-					match registration_list.binary_search(&enclave_id) {
-						Ok(idx) => {
-							registration_list.remove(idx);
-							<EnclaveRegistrationList<T>>::put(registration_list);
-						},
-						Err(_) => {},
-					}
+					registration_list.retain(|&val| val!= enclave_id);
+					<EnclaveRegistrationList<T>>::put(registration_list);
 
-					// Clean up from unregistered enclaves
-					match unregistered_enclaves.binary_search(&enclave_id) {
-						Ok(idx) => {
-							unregistered_enclaves.remove(idx);
-							<EnclaveUnregistrationList<T>>::put(unregistered_enclaves);
-						},
-						Err(_) => {},
-					}
+					unregistered_enclaves.retain(|&val| val!= enclave_id);
+					<EnclaveUnregistrationList<T>>::put(unregistered_enclaves);
 
 					Ok(())
 				} else {
