@@ -273,7 +273,7 @@ fn unassign_by_non_enclave_owner() {
 		.execute_with(|| {
 			let bob: mock::RuntimeOrigin = RawOrigin::Signed(BOB).into();
 			let ok = TEE::unassign_enclave(bob.clone());
-			assert_noop!(ok, Error::<Test>::NotEnclaveOwner);
+			assert_noop!(ok, Error::<Test>::EnclaveNotFound);
 		})
 }
 
@@ -316,7 +316,7 @@ fn update_enclave_by_nop_operator_account() {
 			valid_uri = "https://tna".as_bytes().to_vec();
 
 			let ok = TEE::update_enclave(bob.clone(), valid_uri.clone());
-			assert_noop!(ok, Error::<Test>::NotEnclaveOwner);
+			assert_noop!(ok, Error::<Test>::EnclaveNotFound);
 		})
 }
 

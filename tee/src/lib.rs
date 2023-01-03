@@ -185,9 +185,9 @@ pub mod pallet {
 		/// Unknown ClusterId
 		UnknownClusterId,
 		/// Account does not associated with an enclave
-		NotEnclaveOwner,
+		EnclaveNotFound,
 		/// Enclave address registered to an account
-		EnclaveAddressAlreadyRegisteredtoTheAccount,
+		AddressAlreadyHasAnEnclave,
 		/// Enclave URI is short
 		UriTooShort,
 		/// Enclave URI is long
@@ -220,26 +220,26 @@ pub mod pallet {
 			enclave_address: Vec<u8>,
 			api_uri: Vec<u8>,
 		) -> DispatchResultWithPostInfo {
-			let account = ensure_signed(origin)?;
+			let who = ensure_signed(origin)?;
 
 			ensure!(api_uri.len() < T::MaxUriLen::get().into(), Error::<T>::UriTooLong);
 			ensure!(api_uri.len() > T::MinUriLen::get().into(), Error::<T>::UriTooShort);
 
-			let result = AccountEnclaveId::<T>::get(&account)
+			let result = AccountEnclaveId::<T>::get(&who)
 				.and_then(|enclave_id| EnclaveData::<T>::get(enclave_id).map(|enc| enc));
 
-			if result.is_some() {
+						if result.is_some() {
 				let enclave = result.ok_or(Error::<T>::EnclaveDoesNotExists)?;
 				ensure!(
 					enclave.enclave_address != enclave_address,
-					Error::<T>::EnclaveAddressAlreadyRegisteredtoTheAccount
+					Error::<T>::AddressAlreadyHasAnEnclave
 				)
 			}
 
 			let (enclave_id, new_id) = Self::new_enclave_id()?;
 			// Needs to have enough money
 			let imbalance = T::Currency::withdraw(
-				&account,
+				&who,
 				T::EnclaveFee::get(),
 				WithdrawReasons::FEE,
 				KeepAlive,
@@ -248,19 +248,19 @@ pub mod pallet {
 
 			let enclave = Enclave::new(api_uri.clone(), enclave_address);
 
-			AccountEnclaveId::<T>::insert(account.clone(), enclave_id);
+			AccountEnclaveId::<T>::insert(who.clone(), enclave_id);
 			EnclaveData::<T>::insert(enclave_id, enclave);
 			EnclaveIdGenerator::<T>::put(new_id);
 
-			let reg_enclaves: BoundedVec<EnclaveId, T::MaxRegisteredEnclaves> =
+			let registration_list: BoundedVec<EnclaveId, T::MaxRegisteredEnclaves> =
 				<EnclaveRegistrationList<T>>::get();
 
-			let reg_enclaves = reg_enclaves
+			let registration_list = registration_list
 				.try_mutate(|v| v.push(enclave_id))
 				.ok_or(Error::<T>::ErrorAddingToQueue)?;
-			<EnclaveRegistrationList<T>>::put(reg_enclaves);
+			<EnclaveRegistrationList<T>>::put(registration_list);
 
-			Self::deposit_event(Event::EnclaveAdded { account, api_uri, enclave_id });
+			Self::deposit_event(Event::EnclaveAdded { account: who, api_uri, enclave_id });
 			Ok(().into())
 		}
 
@@ -270,8 +270,8 @@ pub mod pallet {
 		/// If enclave is not already assigned, he can exit without permission.
 		#[pallet::weight(T::WeightInfo::unregister_enclave())]
 		pub fn unregister_enclave(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
-			let account = ensure_signed_or_root(origin)?;
-			match account {
+			let who = ensure_signed_or_root(origin)?;
+			match who {
 				Some(account_id) => {
 					let enclave_id = AccountEnclaveId::<T>::get(account_id.clone())
 						.ok_or(Error::<T>::UnknownEnclaveOperatorAccount)?;
@@ -279,9 +279,9 @@ pub mod pallet {
 					let unregistered_enclaves: BoundedVec<EnclaveId, T::MaxUnRegisteredEnclaves> =
 						<EnclaveUnregistrationList<T>>::get();
 
-					let reg_enclaves = <EnclaveRegistrationList<T>>::get();
+					let registration_list = <EnclaveRegistrationList<T>>::get();
 
-					if !reg_enclaves.contains(&enclave_id) {
+					if !registration_list.contains(&enclave_id) {
 						EnclaveData::<T>::remove(enclave_id);
 						Self::deposit_event(Event::EnclaveUnregistered { account_id, enclave_id });
 					} else {
@@ -308,13 +308,13 @@ pub mod pallet {
 			enclave_address: Vec<u8>,
 			api_uri: Vec<u8>,
 		) -> DispatchResultWithPostInfo {
-			let account = ensure_signed(origin)?;
+			let who = ensure_signed(origin)?;
 
 			ensure!(api_uri.len() < T::MaxUriLen::get().into(), Error::<T>::UriTooLong);
 			ensure!(api_uri.len() > T::MinUriLen::get().into(), Error::<T>::UriTooShort);
 
 			let enclave_id =
-				AccountEnclaveId::<T>::get(&account).ok_or(Error::<T>::NotEnclaveOwner)?;
+				AccountEnclaveId::<T>::get(&who).ok_or(Error::<T>::EnclaveNotFound)?;
 
 			ensure!(
 				!EnclaveClusterId::<T>::contains_key(enclave_id),
@@ -380,9 +380,9 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			cluster_id: ClusterId,
 		) -> DispatchResultWithPostInfo {
-			let account = ensure_signed(origin)?;
+			let who = ensure_signed(origin)?;
 			let enclave_id =
-				AccountEnclaveId::<T>::get(&account).ok_or(Error::<T>::NotEnclaveOwner)?;
+				AccountEnclaveId::<T>::get(&who).ok_or(Error::<T>::EnclaveNotFound)?;
 
 			ensure!(
 				!EnclaveClusterId::<T>::contains_key(enclave_id),
@@ -419,9 +419,9 @@ pub mod pallet {
 		/// DispatchResultWithPostInfo
 		#[pallet::weight(T::WeightInfo::unassign_enclave())]
 		pub fn unassign_enclave(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
-			let account = ensure_signed(origin)?;
+			let who = ensure_signed(origin)?;
 			let enclave_id =
-				AccountEnclaveId::<T>::get(&account).ok_or(Error::<T>::NotEnclaveOwner)?;
+				AccountEnclaveId::<T>::get(&who).ok_or(Error::<T>::EnclaveNotFound)?;
 			let cluster_id =
 				EnclaveClusterId::<T>::get(enclave_id).ok_or(Error::<T>::EnclaveNotAssigned)?;
 
@@ -444,13 +444,13 @@ pub mod pallet {
 						T::MaxUnRegisteredEnclaves,
 					> = <EnclaveUnregistrationList<T>>::get();
 					// get registered enclaves
-					let mut reg_enclaves = <EnclaveRegistrationList<T>>::get();
+					let mut registration_list = <EnclaveRegistrationList<T>>::get();
 
 					// Clean up from registered enclaves
-					match reg_enclaves.binary_search(&enclave_id) {
+					match registration_list.binary_search(&enclave_id) {
 						Ok(idx) => {
-							reg_enclaves.remove(idx);
-							<EnclaveRegistrationList<T>>::put(reg_enclaves);
+							registration_list.remove(idx);
+							<EnclaveRegistrationList<T>>::put(registration_list);
 						},
 						Err(_) => {},
 					}
@@ -489,9 +489,9 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			api_uri: Vec<u8>,
 		) -> DispatchResultWithPostInfo {
-			let account = ensure_signed(origin)?;
+			let who = ensure_signed(origin)?;
 			let enclave_id =
-				AccountEnclaveId::<T>::get(&account).ok_or(Error::<T>::NotEnclaveOwner)?;
+				AccountEnclaveId::<T>::get(&who).ok_or(Error::<T>::EnclaveNotFound)?;
 
 			ensure!(api_uri.len() < T::MaxUriLen::get().into(), Error::<T>::UriTooLong);
 			ensure!(api_uri.len() > T::MinUriLen::get().into(), Error::<T>::UriTooShort);
@@ -556,8 +556,6 @@ pub mod pallet {
 
 // Helper Methods for Storage
 impl<T: Config> Pallet<T> {
-	// TODO: Replace these functions with a generic function or a Macro
-
 	/// `new_enclave_id` returns a tuple of the current enclave id and the next enclave id
 	///
 	/// Returns:
@@ -630,13 +628,13 @@ impl<T: Config> traits::TEEExt for Pallet<T> {
 		EnclaveData::<T>::insert(enclave_id, enclave);
 		EnclaveIdGenerator::<T>::put(new_id);
 
-		let reg_enclaves: BoundedVec<EnclaveId, T::MaxRegisteredEnclaves> =
+		let registration_list: BoundedVec<EnclaveId, T::MaxRegisteredEnclaves> =
 			<EnclaveRegistrationList<T>>::get();
 
-		let reg_enclaves = reg_enclaves
+		let registration_list = registration_list
 			.try_mutate(|v| v.push(enclave_id))
 			.ok_or(Error::<T>::ErrorAddingToQueue)?;
-		<EnclaveRegistrationList<T>>::put(reg_enclaves);
+		<EnclaveRegistrationList<T>>::put(registration_list);
 
 		let new_cluster_id;
 		let next_cluster_id;
