@@ -121,7 +121,7 @@ impl pallet_balances::Config for Test {
 parameter_types! {
 	pub const EnclaveFee: u64 = 5;
 	pub const ClusterSize: u32 = 5;
-	pub const MaxUriLen: u16 = 12;
+	pub const MaxUriLen: u32 = 12;
 	pub const ListSizeLimit: u32 = 10;
 }
 
