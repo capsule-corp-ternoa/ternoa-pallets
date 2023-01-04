@@ -280,9 +280,11 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			ensure!(EnclaveData::<T>::get(&who).is_some(), Error::<T>::EnclaveNotFound);
+			let enclave = EnclaveData::<T>::get(&who).ok_or(Error::<T>::EnclaveNotFound)?;
+
 			ensure!(
-				EnclaveAccountOperator::<T>::get(&new_enclave_address).is_none(),
+				enclave.enclave_address == new_enclave_address ||
+					EnclaveAccountOperator::<T>::get(&new_enclave_address).is_none(),
 				Error::<T>::EnclaveAddressAlreadyExists
 			);
 
@@ -318,8 +320,7 @@ pub mod pallet {
 							cluster.enclaves.len() < T::ClusterSize::get() as usize,
 							Error::<T>::ClusterIsFull
 						);
-						// TODO: this scenario cannot be tested since this error is being captured
-						// and prevented in register_enclave
+
 						ensure!(
 							EnclaveAccountOperator::<T>::get(&registration.enclave_address)
 								.is_none(),
@@ -367,7 +368,7 @@ pub mod pallet {
 			operator_address: T::AccountId,
 		) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
-			// TODO: Do we need to check if the operator exists before removing?
+
 			EnclaveRegistrations::<T>::remove(operator_address.clone());
 			Self::deposit_event(Event::RegistrationRemoved { operator_address });
 			Ok(().into())
@@ -385,7 +386,7 @@ pub mod pallet {
 				let enclave = maybe_enclave.as_mut().ok_or(Error::<T>::EnclaveNotFound)?;
 
 				ensure!(
-					EnclaveAccountOperator::<T>::get(&enclave.enclave_address).is_none(),
+					EnclaveAccountOperator::<T>::get(&enclave.enclave_address).is_some(),
 					Error::<T>::EnclaveAddressNotFound
 				);
 
@@ -430,12 +431,15 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
 
-			ensure!(
-				EnclaveAccountOperator::<T>::get(&new_enclave_address).is_none(),
-				Error::<T>::EnclaveAddressAlreadyExists
-			);
 			EnclaveData::<T>::try_mutate(&operator_address, |maybe_enclave| -> DispatchResult {
 				let enclave = maybe_enclave.as_mut().ok_or(Error::<T>::EnclaveNotFound)?;
+
+				ensure!(
+					enclave.enclave_address == new_enclave_address ||
+						EnclaveAccountOperator::<T>::get(&new_enclave_address).is_none(),
+					Error::<T>::EnclaveAddressAlreadyExists
+				);
+
 				enclave.enclave_address = new_enclave_address.clone();
 				enclave.api_uri = new_api_uri.clone();
 				Ok(())
