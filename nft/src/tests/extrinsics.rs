@@ -43,6 +43,7 @@ fn root() -> mock::RuntimeOrigin {
 fn prepare_tests() {
 	let alice: mock::RuntimeOrigin = origin(ALICE);
 	let bob: mock::RuntimeOrigin = origin(BOB);
+	let operator mock::RuntimeOrigin = origin(EVE);
 
 	//Create alice NFT.
 	NFT::create_nft(alice.clone(), BoundedVec::default(), PERCENT_100, None, false).unwrap();
