@@ -280,9 +280,11 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			ensure!(EnclaveData::<T>::get(&who).is_some(), Error::<T>::EnclaveNotFound);
+			let enclave = EnclaveData::<T>::get(&who).ok_or(Error::<T>::EnclaveNotFound)?;
+
 			ensure!(
-				EnclaveAccountOperator::<T>::get(&new_enclave_address).is_none(),
+				enclave.enclave_address == new_enclave_address ||
+					EnclaveAccountOperator::<T>::get(&new_enclave_address).is_none(),
 				Error::<T>::EnclaveAddressAlreadyExists
 			);
 
@@ -429,12 +431,15 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
 
-			ensure!(
-				EnclaveAccountOperator::<T>::get(&new_enclave_address).is_none(),
-				Error::<T>::EnclaveAddressAlreadyExists
-			);
 			EnclaveData::<T>::try_mutate(&operator_address, |maybe_enclave| -> DispatchResult {
 				let enclave = maybe_enclave.as_mut().ok_or(Error::<T>::EnclaveNotFound)?;
+
+				ensure!(
+					enclave.enclave_address == new_enclave_address ||
+						EnclaveAccountOperator::<T>::get(&new_enclave_address).is_none(),
+					Error::<T>::EnclaveAddressAlreadyExists
+				);
+
 				enclave.enclave_address = new_enclave_address.clone();
 				enclave.api_uri = new_api_uri.clone();
 				Ok(())
