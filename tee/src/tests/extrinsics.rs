@@ -19,8 +19,8 @@ use frame_support::{assert_noop, assert_ok, BoundedVec};
 use frame_system::RawOrigin;
 
 use crate::{
-	Cluster, ClusterData,  Enclave, EnclaveAccountOperator,
-	EnclaveClusterId, EnclaveData, EnclaveRegistrations, EnclaveUnregistrations, Error,
+	Cluster, ClusterData, Enclave, EnclaveAccountOperator, EnclaveClusterId, EnclaveData,
+	EnclaveRegistrations, EnclaveUnregistrations, Error,
 };
 
 fn origin(account: u64) -> mock::RuntimeOrigin {
@@ -72,7 +72,6 @@ mod register_enclave {
 	}
 }
 
-
 mod remove_enclave_registration {
 	use super::*;
 
@@ -92,8 +91,6 @@ mod remove_enclave_registration {
 			})
 	}
 }
-
-
 
 mod unresgiter_enclave {
 	use super::*;
@@ -154,6 +151,35 @@ mod unresgiter_enclave {
 					TEE::unregister_enclave(alice.clone()),
 					Error::<Test>::UnregistrationAlreadyExists
 				);
+			})
+	}
+}
+
+// TODO: This is failing, not all scenarios been covered
+mod remove_enclave {
+	use super::*;
+
+	#[test]
+	fn remove_enclave() {
+		ExtBuilder::default()
+			.tokens(vec![(ALICE, 1000), (EVE, 100)])
+			.build()
+			.execute_with(|| {
+				let alice: mock::RuntimeOrigin = origin(ALICE);
+				let api_uri: BoundedVec<u8, MaxUriLen> =
+					"enclave_api".as_bytes().to_vec().try_into().unwrap();
+				// origin, enclave_address, api_uri
+				// origin is operator which is alice
+				assert_ok!(TEE::register_enclave(alice.clone(), EVE, api_uri.clone()));
+				assert_ok!(TEE::create_cluster(root()));
+				// origin is root
+				// operator address is alice
+				// cluster -> 0
+				assert_ok!(TEE::assign_enclave(root(), ALICE.clone(), 0));
+
+				// origin -> root
+				// operator address -> alice
+				assert_ok!(TEE::remove_enclave(root(), ALICE));
 			})
 	}
 }
