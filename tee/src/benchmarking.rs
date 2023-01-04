@@ -18,7 +18,10 @@
 use super::*;
 use crate::Pallet as TEE;
 use frame_benchmarking::{account as benchmark_account, benchmarks, impl_benchmark_test_suite};
-use frame_support::{BoundedVec, traits::{Get, Currency}};
+use frame_support::{
+	traits::{Currency, Get},
+	BoundedVec,
+};
 use frame_system::RawOrigin;
 
 use sp_runtime::traits::Bounded;
@@ -43,10 +46,10 @@ pub fn prepare_benchmarks<T: Config>() {
 benchmarks! {
 	register_enclave {
 		prepare_benchmarks::<T>();
-        let alice: T::AccountId = get_account::<T>("ALICE");
+		let alice: T::AccountId = get_account::<T>("ALICE");
 		let enclave_address: T::AccountId= get_account::<T>("ALICE");
 		let uri: BoundedVec<u8, T::MaxUriLen> = BoundedVec::try_from(vec![1; T::MaxUriLen::get() as usize]).unwrap();
-        let enclave = Enclave::new(enclave_address.clone(), uri.clone());
+		let enclave = Enclave::new(enclave_address.clone(), uri.clone());
 
 	}: _(origin::<T>("ALICE"), enclave_address.clone(), uri)
 	verify {
@@ -55,22 +58,22 @@ benchmarks! {
 
 	assign_enclave {
 		prepare_benchmarks::<T>();
-        let alice: T::AccountId = get_account::<T>("ALICE");
+		let alice: T::AccountId = get_account::<T>("ALICE");
 		let cluster_id: ClusterId = 0;
 		let enclave_address: T::AccountId= get_account::<T>("ALICE");
 		let uri: BoundedVec<u8, T::MaxUriLen> = BoundedVec::try_from(vec![1; T::MaxUriLen::get() as usize]).unwrap();
-        let enclave = Enclave::new(enclave_address.clone(), uri.clone());
+		let enclave = Enclave::new(enclave_address.clone(), uri.clone());
 
 		TEE::<T>::create_cluster(RawOrigin::Root.into()).unwrap();
 		TEE::<T>::register_enclave(origin::<T>("ALICE").into(), enclave_address.clone(), uri.clone()).unwrap();
 
 	}: _(RawOrigin::Root, alice.clone(), cluster_id)
 	verify {
-        assert_eq!(EnclaveAccountOperator::<T>::get(enclave_address), Some(alice.clone()));
-        assert_eq!(EnclaveData::<T>::get(alice.clone()), Some(enclave));
-        assert_eq!(EnclaveClusterId::<T>::get(alice.clone()), Some(cluster_id));
+		assert_eq!(EnclaveAccountOperator::<T>::get(enclave_address), Some(alice.clone()));
+		assert_eq!(EnclaveData::<T>::get(alice.clone()), Some(enclave));
+		assert_eq!(EnclaveClusterId::<T>::get(alice.clone()), Some(cluster_id));
 		assert_eq!(ClusterData::<T>::get(cluster_id).unwrap().enclaves, vec![alice.clone()]);
-        assert_eq!(EnclaveRegistrations::<T>::get(alice), None);
+		assert_eq!(EnclaveRegistrations::<T>::get(alice), None);
 	}
 
 	// unassign_enclave {
