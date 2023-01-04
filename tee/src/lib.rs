@@ -212,8 +212,6 @@ pub mod pallet {
 		ClusterIsNotEmpty,
 		/// Cluster is already full, cannot assign any enclaves
 		ClusterIsFull,
-		/// Unregistration not found in storage
-		UnregistrationNotFound,
 	}
 
 	#[pallet::call]
@@ -400,9 +398,9 @@ pub mod pallet {
 
 					// Remove enclave from unregistration list
 					EnclaveUnregistrations::<T>::try_mutate(|x| -> DispatchResult {
-						ensure!(!x.contains(&operator_address), Error::<T>::UnregistrationNotFound);
-						x.try_push(operator_address.clone())
-							.map_err(|_| Error::<T>::UnregistrationLimitReached)?;
+						if let Some(index) = x.iter().position(|x| *x == operator_address.clone()) {
+							x.swap_remove(index);
+						}
 						Ok(())
 					})?;
 
