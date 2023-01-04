@@ -318,6 +318,8 @@ pub mod pallet {
 							cluster.enclaves.len() < T::ClusterSize::get() as usize,
 							Error::<T>::ClusterIsFull
 						);
+						// TODO: this scenario cannot be tested since this error is being captured
+						// and prevented in register_enclave
 						ensure!(
 							EnclaveAccountOperator::<T>::get(&registration.enclave_address)
 								.is_none(),
