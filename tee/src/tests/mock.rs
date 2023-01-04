@@ -125,6 +125,7 @@ impl Config for Test {
 pub const ALICE: u64 = 1;
 pub const BOB: u64 = 2;
 // pub const DAVE: u64 = 3;
+pub const EVE: u64 = 4;
 
 pub struct ExtBuilder {
 	endowed_accounts: Vec<(u64, u64)>,

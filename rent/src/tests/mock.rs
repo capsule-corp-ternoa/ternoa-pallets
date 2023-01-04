@@ -19,7 +19,7 @@ use frame_support::{
 	traits::{ConstU32, Contains, Currency, Hooks},
 	PalletId,
 };
-use sp_core::H256;
+use sp_core::{bounded::BoundedVec, H256};
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
@@ -36,6 +36,8 @@ pub const CHARLIE: u64 = 3;
 pub const COLLECTOR: u64 = 99;
 pub const NFT_MINT_FEE: Balance = 10;
 pub const SECRET_NFT_MINT_FEE: Balance = 75;
+pub const API_URI: BoundedVec<u8, MaxUriLen> =
+	"enclave_api".as_bytes().to_vec().try_into().unwrap();
 
 frame_support::construct_runtime!(
 	pub enum Test where
