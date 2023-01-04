@@ -212,6 +212,8 @@ pub mod pallet {
 		ClusterIsNotEmpty,
 		/// Cluster is already full, cannot assign any enclaves
 		ClusterIsFull,
+		/// Unregistration not found in storage
+		UnregistrationNotFound,
 	}
 
 	#[pallet::call]
@@ -396,6 +398,14 @@ pub mod pallet {
 				ClusterData::<T>::try_mutate(cluster_id, |maybe_cluster| -> DispatchResult {
 					let cluster = maybe_cluster.as_mut().ok_or(Error::<T>::ClusterNotFound)?;
 
+					// Remove enclave from unregistration list
+					EnclaveUnregistrations::<T>::try_mutate(|x| -> DispatchResult {
+						ensure!(!x.contains(&operator_address), Error::<T>::UnregistrationNotFound);
+						x.try_push(operator_address.clone())
+							.map_err(|_| Error::<T>::UnregistrationLimitReached)?;
+						Ok(())
+					})?;
+
 					// Remove the operator from cluster
 					if let Some(index) =
 						cluster.enclaves.iter().position(|x| *x == operator_address.clone())
@@ -434,11 +444,17 @@ pub mod pallet {
 			EnclaveData::<T>::try_mutate(&operator_address, |maybe_enclave| -> DispatchResult {
 				let enclave = maybe_enclave.as_mut().ok_or(Error::<T>::EnclaveNotFound)?;
 
-				ensure!(
-					enclave.enclave_address == new_enclave_address ||
+				if enclave.enclave_address != new_enclave_address {
+					ensure!(
 						EnclaveAccountOperator::<T>::get(&new_enclave_address).is_none(),
-					Error::<T>::EnclaveAddressAlreadyExists
-				);
+						Error::<T>::EnclaveAddressAlreadyExists
+					);
+					EnclaveAccountOperator::<T>::remove(enclave.enclave_address.clone());
+					EnclaveAccountOperator::<T>::insert(
+						new_enclave_address.clone(),
+						operator_address.clone(),
+					);
+				}
 
 				enclave.enclave_address = new_enclave_address.clone();
 				enclave.api_uri = new_api_uri.clone();
