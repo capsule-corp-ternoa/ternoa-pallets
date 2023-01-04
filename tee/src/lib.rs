@@ -367,6 +367,7 @@ pub mod pallet {
 			operator_address: T::AccountId,
 		) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
+			// TODO: Do we need to check if the operator exists before removing?
 			EnclaveRegistrations::<T>::remove(operator_address.clone());
 			Self::deposit_event(Event::RegistrationRemoved { operator_address });
 			Ok(().into())

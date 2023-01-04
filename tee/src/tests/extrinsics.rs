@@ -72,6 +72,29 @@ mod register_enclave {
 	}
 }
 
+
+mod remove_enclave_registration {
+	use super::*;
+
+	#[test]
+	fn remove_registration() {
+		ExtBuilder::default()
+			.tokens(vec![(ALICE, 1000), (EVE, 100)])
+			.build()
+			.execute_with(|| {
+				let alice: mock::RuntimeOrigin = origin(ALICE);
+				let api_uri: BoundedVec<u8, MaxUriLen> =
+					"enclave_api".as_bytes().to_vec().try_into().unwrap();
+				assert_ok!(TEE::register_enclave(alice.clone(), EVE, api_uri.clone()));
+				assert!(EnclaveRegistrations::<Test>::get(ALICE).is_some());
+				assert_ok!(TEE::remove_registration(root(), ALICE));
+				assert!(EnclaveRegistrations::<Test>::get(ALICE).is_none());
+			})
+	}
+}
+
+
+
 mod unresgiter_enclave {
 	use super::*;
 	use frame_support::traits::Len;
