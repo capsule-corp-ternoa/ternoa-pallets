@@ -385,7 +385,7 @@ pub mod pallet {
 				let enclave = maybe_enclave.as_mut().ok_or(Error::<T>::EnclaveNotFound)?;
 
 				ensure!(
-					EnclaveAccountOperator::<T>::get(&enclave.enclave_address).is_none(),
+					EnclaveAccountOperator::<T>::get(&enclave.enclave_address).is_some(),
 					Error::<T>::EnclaveAddressNotFound
 				);
 
