@@ -318,8 +318,7 @@ pub mod pallet {
 							cluster.enclaves.len() < T::ClusterSize::get() as usize,
 							Error::<T>::ClusterIsFull
 						);
-						// TODO: this scenario cannot be tested since this error is being captured
-						// and prevented in register_enclave
+
 						ensure!(
 							EnclaveAccountOperator::<T>::get(&registration.enclave_address)
 								.is_none(),
@@ -367,7 +366,7 @@ pub mod pallet {
 			operator_address: T::AccountId,
 		) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
-			// TODO: Do we need to check if the operator exists before removing?
+
 			EnclaveRegistrations::<T>::remove(operator_address.clone());
 			Self::deposit_event(Event::RegistrationRemoved { operator_address });
 			Ok(().into())
