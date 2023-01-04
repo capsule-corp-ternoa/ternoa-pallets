@@ -53,23 +53,25 @@ benchmarks! {
 		assert_eq!(EnclaveRegistrations::<T>::get(alice), Some(enclave));
 	}
 
-	// assign_enclave {
-	// 	prepare_benchmarks::<T>();
-	// 	let alice = origin::<T>("ALICE");
+	assign_enclave {
+		prepare_benchmarks::<T>();
+        let alice: T::AccountId = get_account::<T>("ALICE");
+		let cluster_id: ClusterId = 0;
+		let enclave_address: T::AccountId= get_account::<T>("ALICE");
+		let uri: BoundedVec<u8, T::MaxUriLen> = BoundedVec::try_from(vec![1; T::MaxUriLen::get() as usize]).unwrap();
+        let enclave = Enclave::new(enclave_address.clone(), uri.clone());
 
-	// 	let enclave_id: EnclaveId = 0;
-	// 	let cluster_id: ClusterId = 0;
-	// 	let enclave_address: Vec<u8> = "192.168.1.1".as_bytes().to_vec();
-	// 	let uri: Vec<u8> = "127.0.0.1".as_bytes().to_vec();
+		TEE::<T>::create_cluster(RawOrigin::Root.into()).unwrap();
+		TEE::<T>::register_enclave(origin::<T>("ALICE").into(), enclave_address.clone(), uri.clone()).unwrap();
 
-	// 	TEE::<T>::register_cluster(RawOrigin::Root.into()).unwrap();
-	// 	TEE::<T>::register_enclave(alice.clone().into(), enclave_address.clone(), uri.clone()).unwrap();
-
-	// }: _(alice, cluster_id)
-	// verify {
-	// 	assert_eq!(ClusterData::<T>::get(cluster_id).unwrap().enclaves, vec![enclave_id]);
-	// 	assert_eq!(EnclaveClusterId::<T>::get(enclave_id), Some(cluster_id));
-	// }
+	}: _(RawOrigin::Root, alice.clone(), cluster_id)
+	verify {
+        assert_eq!(EnclaveAccountOperator::<T>::get(enclave_address), Some(alice.clone()));
+        assert_eq!(EnclaveData::<T>::get(alice.clone()), Some(enclave));
+        assert_eq!(EnclaveClusterId::<T>::get(alice.clone()), Some(cluster_id));
+		assert_eq!(ClusterData::<T>::get(cluster_id).unwrap().enclaves, vec![alice.clone()]);
+        assert_eq!(EnclaveRegistrations::<T>::get(alice), None);
+	}
 
 	// unassign_enclave {
 	// 	prepare_benchmarks::<T>();
