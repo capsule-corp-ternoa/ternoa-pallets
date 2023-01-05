@@ -84,7 +84,7 @@ impl WeightInfo for () {
 	fn remove_cluster() -> Weight {
 		Weight::from_ref_time(10_000_000 as u64)
 	}
-	// Storage: Tee ClusterRegistry (r:1 w:1)
+	// Storage: Tee EnclaveUpdates (r:1 w:1)
 	fn remove_update_request() -> Weight {
 		Weight::from_ref_time(10_000_000 as u64)
 	}
