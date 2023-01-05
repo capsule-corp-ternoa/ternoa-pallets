@@ -23,6 +23,7 @@ pub trait WeightInfo {
 	fn assign_enclave() -> Weight;
 	fn remove_enclave() -> Weight;
 	fn remove_registration() -> Weight;
+	fn remove_update_request() -> Weight;
 	fn force_update_enclave() -> Weight;
 	fn create_cluster() -> Weight;
 	fn remove_cluster() -> Weight;
@@ -81,6 +82,10 @@ impl WeightInfo for () {
 
 	// Storage: Tee ClusterRegistry (r:1 w:1)
 	fn remove_cluster() -> Weight {
+		Weight::from_ref_time(10_000_000 as u64)
+	}
+	// Storage: Tee ClusterRegistry (r:1 w:1)
+	fn remove_update_request() -> Weight {
 		Weight::from_ref_time(10_000_000 as u64)
 	}
 }

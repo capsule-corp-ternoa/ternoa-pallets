@@ -162,6 +162,8 @@ pub mod pallet {
 		},
 		/// An enclave got unregistered
 		RegistrationRemoved { operator_address: T::AccountId },
+		/// An enclave update request unregistered
+		UpdateRequestRemoved { operator_address: T::AccountId },
 		/// An enclave moved for unregistration to a queue
 		MovedForUnregistration { operator_address: T::AccountId },
 		/// An enclave got assigned to a cluster
@@ -371,6 +373,19 @@ pub mod pallet {
 
 			EnclaveRegistrations::<T>::remove(operator_address.clone());
 			Self::deposit_event(Event::RegistrationRemoved { operator_address });
+			Ok(().into())
+		}
+
+
+		/// Remove an enclave update request from storage
+		#[pallet::weight(T::WeightInfo::remove_update_request())]
+		pub fn remove_update_request(
+			origin: OriginFor<T>,
+			operator_address: T::AccountId,
+		) -> DispatchResultWithPostInfo {
+			ensure_root(origin)?;
+			EnclaveUpdates::<T>::remove(operator_address.clone());
+			Self::deposit_event(Event::UpdateRequestRemoved { operator_address });
 			Ok(().into())
 		}
 

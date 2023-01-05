@@ -125,6 +125,28 @@ benchmarks! {
 		assert_eq!(EnclaveRegistrations::<T>::get(alice), None);
 	}
 
+	remove_update_request {
+		prepare_benchmarks::<T>();
+		let alice: T::AccountId = get_account::<T>("ALICE");
+		let cluster_id: ClusterId = 0;
+		let enclave_address: T::AccountId= get_account::<T>("ALICE");
+		let uri: BoundedVec<u8, T::MaxUriLen> = BoundedVec::try_from(vec![1; T::MaxUriLen::get() as usize]).unwrap();
+		let enclave = Enclave::new(enclave_address.clone(), uri.clone());
+
+		TEE::<T>::create_cluster(RawOrigin::Root.into()).unwrap();
+		TEE::<T>::register_enclave(origin::<T>("ALICE").into(), enclave_address.clone(), uri.clone()).unwrap();
+		TEE::<T>::assign_enclave(RawOrigin::Root.into(), alice.clone(), cluster_id).unwrap();
+
+		let bob: T::AccountId = get_account::<T>("BOB");
+		let new_enclave_address: T::AccountId= get_account::<T>("BOB");
+		let new_uri: BoundedVec<u8, T::MaxUriLen> = BoundedVec::try_from(vec![1; T::MaxUriLen::get() as usize]).unwrap();
+		let new_enclave = Enclave::new(new_enclave_address.clone(), new_uri.clone());
+		TEE::<T>::update_enclave(origin::<T>("ALICE").into(), new_enclave_address.clone(), new_uri).unwrap();
+	}: _(RawOrigin::Root, alice.clone())
+	verify {
+		assert_eq!(EnclaveUpdates::<T>::get(alice), None);
+	}
+
 	remove_enclave {
 		prepare_benchmarks::<T>();
 		let alice: T::AccountId = get_account::<T>("ALICE");

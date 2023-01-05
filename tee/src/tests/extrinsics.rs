@@ -92,6 +92,34 @@ mod remove_enclave_registration {
 	}
 }
 
+mod remove_update_request {
+	use super::*;
+
+	#[test]
+	fn remove_update_request() {
+		ExtBuilder::default()
+			.tokens(vec![(ALICE, 1000), (EVE, 100)])
+			.build()
+			.execute_with(|| {
+				let alice: mock::RuntimeOrigin = origin(ALICE);
+				let api_uri: BoundedVec<u8, MaxUriLen> =
+					"api_uri".as_bytes().to_vec().try_into().unwrap();
+				let new_api_uri: BoundedVec<u8, MaxUriLen> =
+					"new_api_uri".as_bytes().to_vec().try_into().unwrap();
+
+				assert_ok!(TEE::register_enclave(alice.clone(), EVE, api_uri.clone()));
+				assert_ok!(TEE::create_cluster(root()));
+				assert_ok!(TEE::assign_enclave(root(), ALICE.clone(), 0));
+
+				assert_ok!(TEE::update_enclave(alice.clone(), BOB, new_api_uri.clone()));
+
+				assert_ok!(TEE::remove_update_request(root(), ALICE));
+				assert!(EnclaveUpdates::<Test>::get(ALICE).is_none());
+
+			})
+	}
+}
+
 mod unregister_enclave {
 	use super::*;
 	use frame_support::traits::Len;
