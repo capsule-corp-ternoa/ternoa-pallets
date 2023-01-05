@@ -119,7 +119,6 @@ mod remove_update_request {
 
 				let event_update_request_removed = tests::mock::RuntimeEvent::TEE(
 					crate::Event::UpdateRequestRemoved { operator_address: ALICE }
-
 				);
 				assert!(System::events()
 					.iter()
