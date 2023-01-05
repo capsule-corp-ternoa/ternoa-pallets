@@ -93,6 +93,7 @@ mod remove_enclave_registration {
 }
 
 mod remove_update_request {
+	use crate::tests;
 	use super::*;
 
 	#[test]
@@ -116,6 +117,13 @@ mod remove_update_request {
 				assert_ok!(TEE::remove_update_request(root(), ALICE));
 				assert!(EnclaveUpdates::<Test>::get(ALICE).is_none());
 
+				let event_update_request_removed = tests::mock::RuntimeEvent::TEE(
+					crate::Event::UpdateRequestRemoved { operator_address: ALICE }
+
+				);
+				assert!(System::events()
+					.iter()
+					.any(|record| record.event == event_update_request_removed));
 			})
 	}
 }
