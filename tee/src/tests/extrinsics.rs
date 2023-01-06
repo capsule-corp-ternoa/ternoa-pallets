@@ -125,6 +125,36 @@ mod remove_update_request {
 					.any(|record| record.event == event_update_request_removed));
 			})
 	}
+
+	#[test]
+	fn remove_update_request_with_invalid_operator() {
+		ExtBuilder::default()
+			.tokens(vec![(ALICE, 1000), (EVE, 100)])
+			.build()
+			.execute_with(|| {
+				let alice: mock::RuntimeOrigin = origin(ALICE);
+				let api_uri: BoundedVec<u8, MaxUriLen> =
+					"api_uri".as_bytes().to_vec().try_into().unwrap();
+				let new_api_uri: BoundedVec<u8, MaxUriLen> =
+					"new_api_uri".as_bytes().to_vec().try_into().unwrap();
+
+				assert_ok!(TEE::register_enclave(alice.clone(), EVE, api_uri.clone()));
+				assert_ok!(TEE::create_cluster(root()));
+				assert_ok!(TEE::assign_enclave(root(), ALICE.clone(), 0));
+
+				assert_ok!(TEE::update_enclave(alice.clone(), BOB, new_api_uri.clone()));
+
+				assert_ok!(TEE::remove_update_request(root(), BOB));
+				assert!(EnclaveUpdates::<Test>::get(ALICE).is_some());
+
+				let event_update_request_removed = tests::mock::RuntimeEvent::TEE(
+					crate::Event::UpdateRequestRemoved { operator_address: ALICE }
+				);
+				assert!(System::events()
+					.iter()
+					.any(|record| record.event != event_update_request_removed));
+			})
+	}
 }
 
 mod unregister_enclave {
