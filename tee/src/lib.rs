@@ -384,8 +384,13 @@ pub mod pallet {
 			operator_address: T::AccountId,
 		) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
-			EnclaveUpdates::<T>::remove(operator_address.clone());
-			Self::deposit_event(Event::UpdateRequestRemoved { operator_address });
+
+			EnclaveUpdates::<T>::contains_key(operator_address.clone())
+				.then(|| {
+					EnclaveUpdates::<T>::remove(operator_address.clone());
+					Self::deposit_event(Event::UpdateRequestRemoved { operator_address });
+				});
+
 			Ok(().into())
 		}
 
