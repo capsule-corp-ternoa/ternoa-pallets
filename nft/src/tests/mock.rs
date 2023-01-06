@@ -34,9 +34,9 @@ type Block = frame_system::mocking::MockBlock<Test>;
 pub const ALICE: u64 = 1;
 pub const BOB: u64 = 2;
 pub const CHARLIE: u64 = 3;
-pub const DAVE: u64 = 4;
-pub const EVE: u64 = 5;
-pub const FERDIE: u64 = 6;
+pub const ALICE_ENCLAVE: u64 = 4;
+pub const BOB_ENCLAVE: u64 = 5;
+pub const CHARLIE_ENCLAVE: u64 = 6;
 pub const COLLECTOR: u64 = 99;
 pub const NFT_MINT_FEE: Balance = 10;
 pub const SECRET_NFT_MINT_FEE: Balance = 75;
@@ -121,7 +121,7 @@ impl pallet_balances::Config for Test {
 }
 
 parameter_types! {
-	pub const ClusterSize: u32 = 5;
+	pub const ClusterSize: u32 = 2;
 	pub const MaxUriLen: u32 = 12;
 	pub const ListSizeLimit: u32 = 10;
 }
@@ -141,7 +141,7 @@ parameter_types! {
 	pub const CollectionOffchainDataLimit: u32 = 10;
 	pub const CollectionSizeLimit: u32 = 10;
 	pub const InitialSecretMintFee: Balance = SECRET_NFT_MINT_FEE;
-	pub const ShardsNumber: u32 = 5;
+	pub const ShardsNumber: u32 = 2;
 }
 
 impl Config for Test {
