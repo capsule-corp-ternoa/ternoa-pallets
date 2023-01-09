@@ -162,6 +162,10 @@ pub mod pallet {
 		},
 		/// An enclave got unregistered
 		RegistrationRemoved { operator_address: T::AccountId },
+		/// An enclave update request was cancelled by operator
+		UpdateRequestCancelled { operator_address: T::AccountId },
+		/// An enclave update request was removed
+		UpdateRequestRemoved { operator_address: T::AccountId },
 		/// An enclave moved for unregistration to a queue
 		MovedForUnregistration { operator_address: T::AccountId },
 		/// An enclave got assigned to a cluster
@@ -212,6 +216,12 @@ pub mod pallet {
 		ClusterIsNotEmpty,
 		/// Cluster is already full, cannot assign any enclaves
 		ClusterIsFull,
+		/// The given operator account and enclave account are same
+		OperatorAndEnclaveAreSame,
+		/// The operator already asked for request
+		UpdateRequestAlreadyExists,
+		/// The update request was not found in storage
+		UpdateRequestNotFound,
 	}
 
 	#[pallet::call]
@@ -225,6 +235,7 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
+			ensure!(who.clone() != enclave_address.clone(), Error::<T>::OperatorAndEnclaveAreSame);
 			ensure!(
 				EnclaveRegistrations::<T>::get(&who).is_none(),
 				Error::<T>::RegistrationAlreadyExists
@@ -263,7 +274,16 @@ pub mod pallet {
 					Self::deposit_event(Event::MovedForUnregistration { operator_address: who });
 				},
 				None => {
-					EnclaveRegistrations::<T>::remove(who.clone());
+					EnclaveRegistrations::<T>::try_mutate(
+						&who,
+						|maybe_registration| -> DispatchResult {
+							let _ = maybe_registration
+								.as_mut()
+								.ok_or(Error::<T>::RegistrationNotFound)?;
+							*maybe_registration = None;
+							Ok(())
+						},
+					)?;
 					Self::deposit_event(Event::RegistrationRemoved { operator_address: who });
 				},
 			}
@@ -280,7 +300,16 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
+			ensure!(
+				who.clone() != new_enclave_address.clone(),
+				Error::<T>::OperatorAndEnclaveAreSame
+			);
+
 			let enclave = EnclaveData::<T>::get(&who).ok_or(Error::<T>::EnclaveNotFound)?;
+			ensure!(
+				EnclaveUpdates::<T>::get(&who).is_none(),
+				Error::<T>::UpdateRequestAlreadyExists
+			);
 
 			ensure!(
 				enclave.enclave_address == new_enclave_address ||
@@ -296,6 +325,21 @@ pub mod pallet {
 				new_enclave_address,
 				new_api_uri,
 			});
+			Ok(().into())
+		}
+
+		/// Remove the operator update request
+		#[pallet::weight(T::WeightInfo::remove_update())]
+		pub fn cancel_update(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+			let who = ensure_signed(origin)?;
+
+			EnclaveUpdates::<T>::try_mutate(&who, |maybe_update| -> DispatchResult {
+				let _ = maybe_update.as_mut().ok_or(Error::<T>::UpdateRequestNotFound)?;
+				*maybe_update = None;
+				Ok(())
+			})?;
+
+			Self::deposit_event(Event::UpdateRequestCancelled { operator_address: who });
 			Ok(().into())
 		}
 
@@ -369,8 +413,36 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
 
-			EnclaveRegistrations::<T>::remove(operator_address.clone());
+			EnclaveRegistrations::<T>::try_mutate(
+				&operator_address,
+				|maybe_registration| -> DispatchResult {
+					if let Some(_) = maybe_registration {
+						*maybe_registration = None;
+					}
+					Ok(())
+				},
+			)?;
+
 			Self::deposit_event(Event::RegistrationRemoved { operator_address });
+			Ok(().into())
+		}
+
+		/// Remove an enclave update request from storage
+		#[pallet::weight(T::WeightInfo::remove_update())]
+		pub fn remove_update(
+			origin: OriginFor<T>,
+			operator_address: T::AccountId,
+		) -> DispatchResultWithPostInfo {
+			ensure_root(origin)?;
+
+			EnclaveUpdates::<T>::try_mutate(&operator_address, |maybe_update| -> DispatchResult {
+				if let Some(_) = maybe_update {
+					*maybe_update = None;
+				}
+				Ok(())
+			})?;
+
+			Self::deposit_event(Event::UpdateRequestRemoved { operator_address });
 			Ok(().into())
 		}
 
@@ -403,6 +475,16 @@ pub mod pallet {
 						}
 						Ok(())
 					})?;
+
+					EnclaveUpdates::<T>::try_mutate(
+						&operator_address,
+						|maybe_update| -> DispatchResult {
+							if let Some(_) = maybe_update {
+								*maybe_update = None;
+							}
+							Ok(())
+						},
+					)?;
 
 					// Remove the operator from cluster
 					if let Some(index) =
@@ -439,6 +521,11 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
 
+			ensure!(
+				operator_address.clone() != new_enclave_address.clone(),
+				Error::<T>::OperatorAndEnclaveAreSame
+			);
+
 			EnclaveData::<T>::try_mutate(&operator_address, |maybe_enclave| -> DispatchResult {
 				let enclave = maybe_enclave.as_mut().ok_or(Error::<T>::EnclaveNotFound)?;
 
@@ -447,7 +534,6 @@ pub mod pallet {
 						EnclaveAccountOperator::<T>::get(&new_enclave_address).is_none(),
 						Error::<T>::EnclaveAddressAlreadyExists
 					);
-					EnclaveAccountOperator::<T>::remove(enclave.enclave_address.clone());
 					EnclaveAccountOperator::<T>::insert(
 						new_enclave_address.clone(),
 						operator_address.clone(),
@@ -458,7 +544,12 @@ pub mod pallet {
 				enclave.api_uri = new_api_uri.clone();
 				Ok(())
 			})?;
-			EnclaveUpdates::<T>::remove(operator_address.clone());
+			EnclaveUpdates::<T>::try_mutate(&operator_address, |maybe_update| -> DispatchResult {
+				if let Some(_) = maybe_update {
+					*maybe_update = None;
+				}
+				Ok(())
+			})?;
 
 			Self::deposit_event(Event::EnclaveUpdated {
 				operator_address,

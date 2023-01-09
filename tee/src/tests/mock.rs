@@ -124,8 +124,10 @@ impl Config for Test {
 // for our account id. This would mess with some tests.
 pub const ALICE: u64 = 1;
 pub const BOB: u64 = 2;
-// pub const DAVE: u64 = 3;
-pub const EVE: u64 = 4;
+pub const CHARLIE: u64 = 3;
+pub const ALICE_ENCLAVE: u64 = 4;
+pub const BOB_ENCLAVE: u64 = 5;
+pub const CHARLIE_ENCLAVE: u64 = 6;
 
 pub struct ExtBuilder {
 	endowed_accounts: Vec<(u64, u64)>,
