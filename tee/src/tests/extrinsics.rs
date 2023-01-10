@@ -53,7 +53,7 @@ mod register_enclave {
 	}
 
 	#[test]
-	fn operator_and_enclave_are_same() {
+	fn operator_and_enclave_are_the_same() {
 		ExtBuilder::default()
 			.tokens(vec![(ALICE, 1000), (CHARLIE, 100)])
 			.build()
@@ -70,7 +70,7 @@ mod register_enclave {
 	}
 
 	#[test]
-	fn register_enclave_enclave_address_exists() {
+	fn registration_already_exists() {
 		ExtBuilder::default()
 			.tokens(vec![(ALICE, 1000), (CHARLIE, 100)])
 			.build()
@@ -147,7 +147,7 @@ mod unregister_enclave {
 	use super::*;
 
 	#[test]
-	fn unregister_unassigned_enclave() {
+	fn unregister_enclave() {
 		ExtBuilder::default()
 			.tokens(vec![(ALICE, 1000), (CHARLIE, 100)])
 			.build()
@@ -164,7 +164,7 @@ mod unregister_enclave {
 	}
 
 	#[test]
-	fn unregister_assigned_enclave() {
+	fn unregister_enclave_assigned() {
 		ExtBuilder::default()
 			.tokens(vec![(ALICE, 1000), (CHARLIE, 100)])
 			.build()
@@ -183,7 +183,7 @@ mod unregister_enclave {
 	}
 
 	#[test]
-	fn registration_not_found() {
+	fn unregister_enclave_unassigned() {
 		ExtBuilder::default()
 			.tokens(vec![(ALICE, 1000), (CHARLIE, 100)])
 			.build()
@@ -197,7 +197,7 @@ mod unregister_enclave {
 	}
 
 	#[test]
-	fn unregistration_called_morethan_once() {
+	fn unregistration_already_exists() {
 		ExtBuilder::default()
 			.tokens(vec![(ALICE, 1000), (CHARLIE, 100)])
 			.build()
@@ -267,7 +267,7 @@ mod remove_cluster {
 	}
 
 	#[test]
-	fn remove_invalid_cluster_id() {
+	fn cluster_not_found() {
 		ExtBuilder::default().build().execute_with(|| {
 			assert_noop!(TEE::remove_cluster(root(), 0u32), Error::<Test>::ClusterNotFound);
 		})
@@ -318,7 +318,7 @@ mod assign_enclave {
 	}
 
 	#[test]
-	fn enclave_registration_not_found() {
+	fn registration_not_found() {
 		ExtBuilder::default().tokens(vec![(ALICE, 1000)]).build().execute_with(|| {
 			assert_noop!(
 				TEE::assign_enclave(root(), ALICE, 0),
@@ -430,7 +430,7 @@ mod update_enclave {
 	}
 
 	#[test]
-	fn update_invalid_enclave() {
+	fn enclave_not_found() {
 		ExtBuilder::default()
 			.tokens(vec![(ALICE, 1000), (CHARLIE, 100)])
 			.build()
