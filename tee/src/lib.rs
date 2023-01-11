@@ -330,7 +330,7 @@ pub mod pallet {
 		}
 
 		/// Remove the operator update request
-		#[pallet::weight(T::WeightInfo::remove_update())]
+		#[pallet::weight(T::WeightInfo::cancel_update())]
 		pub fn cancel_update(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
