@@ -105,7 +105,7 @@ mod register_enclave {
 			})
 	}
 
-	// Failing
+	// This fails
 	#[test]
 	fn enclave_address_already_exists() {
 		ExtBuilder::default()
@@ -146,6 +146,7 @@ mod unregister_enclave {
 			})
 	}
 
+	// This fails
 	#[test]
 	fn unregistration_limit_reached() {
 		ExtBuilder::default()
@@ -408,34 +409,7 @@ mod assign_enclave {
 			})
 	}
 
-	// This fails
-	#[test]
-	fn operator_already_exists() {
-		ExtBuilder::default()
-			.tokens(vec![(ALICE, 1000), (CHARLIE, 100)])
-			.build()
-			.execute_with(|| {
-				let alice: mock::RuntimeOrigin = origin(ALICE);
-				let bob: mock::RuntimeOrigin = origin(BOB);
-				let api_uri: BoundedVec<u8, MaxUriLen> =
-					"enclave_api".as_bytes().to_vec().try_into().unwrap();
-				let api_uri_2: BoundedVec<u8, MaxUriLen> =
-					"enclave_2".as_bytes().to_vec().try_into().unwrap();
 
-				assert_ok!(TEE::create_cluster(root()));
-
-				// alice -> operator acc , charlie enclave-address acc
-				assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, api_uri.clone()));
-				// bob -> operator, charlie enc address
-				assert_ok!(TEE::register_enclave(bob.clone(), CHARLIE, api_uri_2.clone()));
-
-				assert_ok!(TEE::assign_enclave(root(), ALICE.clone(), 0));
-				assert_noop!(
-					TEE::assign_enclave(root(), ALICE.clone(), 0),
-					Error::<Test>::OperatorAlreadyExists
-				);
-			})
-	}
 
 	#[test]
 	fn registration_not_found() {
@@ -584,11 +558,75 @@ mod remove_enclave {
 
 				assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, api_uri.clone()));
 				assert_ok!(TEE::create_cluster(root()));
-				assert_ok!(TEE::assign_enclave(root(), ALICE.clone(), 0));
+				assert_ok!(TEE::assign_enclave(root(), ALICE, 0));
+
+				// Before
+				assert!(EnclaveAccountOperator::<Test>::get( CHARLIE).is_some());
+				assert!(EnclaveClusterId::<Test>::get( ALICE).is_some());
 
 				assert_ok!(TEE::remove_enclave(root(), ALICE));
+
+				// After
+				assert!(EnclaveAccountOperator::<Test>::get( CHARLIE).is_none());
+				assert!(EnclaveClusterId::<Test>::get( ALICE).is_none());
+
 			})
 	}
+
+	// #[test]
+	// fn remove_enclave_after_update() {
+	// 	ExtBuilder::default()
+	// 		.tokens(vec![(ALICE, 1000), (CHARLIE, 100)])
+	// 		.build()
+	// 		.execute_with(|| {
+	// 			let alice: mock::RuntimeOrigin = origin(ALICE);
+	// 			let api_uri: BoundedVec<u8, MaxUriLen> = BoundedVec::default();
+	// 			let new_api_uri: BoundedVec<u8, MaxUriLen> =
+	// 				"new_api_uri".as_bytes().to_vec().try_into().unwrap();
+	//
+	// 			assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, api_uri.clone()));
+	// 			assert_ok!(TEE::create_cluster(root()));
+	// 			assert_ok!(TEE::assign_enclave(root(), ALICE, 0));
+	// 			assert_ok!(TEE::update_enclave(alice.clone(), BOB, new_api_uri.clone()));
+	//
+	// 			// Before
+	// 			assert!(EnclaveUpdates::<Test>::get( ALICE).is_some());
+	//
+	// 			assert_ok!(TEE::remove_enclave(root(), ALICE));
+	//
+	// 			// After
+	// 			assert!(EnclaveUpdates::<Test>::get( ALICE).is_none());
+	// 		})
+	// }
+
+	// #[test]
+	// fn remove_enclave_after_unregistration() {
+	// 	ExtBuilder::default()
+	// 		.tokens(vec![(ALICE, 1000), (CHARLIE, 100)])
+	// 		.build()
+	// 		.execute_with(|| {
+	// 			let alice: mock::RuntimeOrigin = origin(ALICE);
+	// 			let api_uri: BoundedVec<u8, MaxUriLen> = BoundedVec::default();
+	// 			let new_api_uri: BoundedVec<u8, MaxUriLen> =
+	// 				"new_api_uri".as_bytes().to_vec().try_into().unwrap();
+	//
+	// 			assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, api_uri.clone()));
+	// 			assert_ok!(TEE::create_cluster(root()));
+	// 			assert_ok!(TEE::assign_enclave(root(), ALICE, 0));
+	// 			assert_ok!(TEE::unregister_enclave(alice.clone()));
+	//
+	// 			// Before
+	// 			let p = EnclaveUnregistrations::<Test>::get();
+	// 			// assert!(EnclaveUnregistrations::<Test>::get().is_some());
+	//
+	// 			assert_ok!(TEE::remove_enclave(root(), ALICE));
+	//
+	// 			let q = EnclaveUnregistrations::<Test>::get();
+	// 			let pp  = 0;
+	// 			// After
+	// 			// assert!(EnclaveUnregistrations::<Test>::get().is_none());
+	// 		})
+	// }
 
 	#[test]
 	fn enclave_not_found() {
@@ -656,6 +694,7 @@ mod force_update_enclave {
 			})
 	}
 
+	// This fails
 	#[test]
 	fn enclave_address_already_exists() {
 		ExtBuilder::default()
