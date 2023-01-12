@@ -19,7 +19,7 @@ use crate::{
 	Cluster, ClusterData, Enclave, EnclaveAccountOperator, EnclaveClusterId, EnclaveData,
 	EnclaveRegistrations, EnclaveUnregistrations, EnclaveUpdates, Error,
 };
-use frame_support::{assert_noop, assert_ok, BoundedVec};
+use frame_support::{assert_noop, assert_ok, error::BadOrigin, BoundedVec};
 use frame_system::RawOrigin;
 use ternoa_common::traits::TEEExt;
 
@@ -131,8 +131,8 @@ mod register_enclave {
 }
 
 mod unregister_enclave {
-	use frame_support::traits::Len;
 	use super::*;
+	use frame_support::traits::Len;
 
 	#[test]
 	fn unregister_enclave() {
@@ -389,6 +389,13 @@ mod assign_enclave {
 	}
 
 	#[test]
+	fn bad_origin() {
+		ExtBuilder::default().tokens(vec![(ALICE, 1000)]).build().execute_with(|| {
+			assert_noop!(TEE::assign_enclave(origin(ALICE), ALICE.clone(), 0), BadOrigin);
+		})
+	}
+
+	#[test]
 	fn enclave_address_already_exists() {
 		ExtBuilder::default()
 			.tokens(vec![(ALICE, 1000), (CHARLIE, 100)])
@@ -476,6 +483,12 @@ mod remove_registration {
 				assert!(EnclaveRegistrations::<Test>::get(ALICE).is_none());
 			})
 	}
+	#[test]
+	fn bad_origin() {
+		ExtBuilder::default().tokens(vec![(ALICE, 1000)]).build().execute_with(|| {
+			assert_noop!(TEE::remove_registration(origin(ALICE), ALICE), BadOrigin);
+		})
+	}
 }
 
 mod remove_update {
@@ -507,6 +520,13 @@ mod remove_update {
 				});
 				assert!(System::events().iter().any(|record| record.event == event));
 			})
+	}
+
+	#[test]
+	fn bad_origin() {
+		ExtBuilder::default().tokens(vec![(ALICE, 1000)]).build().execute_with(|| {
+			assert_noop!(TEE::remove_update(origin(ALICE), ALICE), BadOrigin);
+		})
 	}
 
 	#[test]
@@ -567,7 +587,12 @@ mod remove_enclave {
 				assert!(EnclaveClusterId::<Test>::get(ALICE).is_none());
 			})
 	}
-
+	#[test]
+	fn bad_origin() {
+		ExtBuilder::default().tokens(vec![(ALICE, 1000)]).build().execute_with(|| {
+			assert_noop!(TEE::remove_enclave(origin(ALICE), ALICE), BadOrigin);
+		})
+	}
 
 	#[test]
 	fn enclave_not_found() {
@@ -633,6 +658,16 @@ mod force_update_enclave {
 				assert_eq!(EnclaveData::<Test>::get(ALICE).unwrap(), updated_record);
 				assert!(EnclaveUpdates::<Test>::get(ALICE).is_none());
 			})
+	}
+
+	#[test]
+	fn bad_origin() {
+		ExtBuilder::default().tokens(vec![(ALICE, 1000)]).build().execute_with(|| {
+			assert_noop!(
+				TEE::force_update_enclave(origin(ALICE), ALICE, BOB, BoundedVec::default()),
+				BadOrigin
+			);
+		})
 	}
 
 	#[test]
@@ -716,6 +751,13 @@ mod create_cluster {
 			assert_eq!(ClusterData::<Test>::get(0), Some(cluster));
 		})
 	}
+
+	#[test]
+	fn bad_origin() {
+		ExtBuilder::default().tokens(vec![(ALICE, 1000)]).build().execute_with(|| {
+			assert_noop!(TEE::create_cluster(origin(ALICE)), BadOrigin);
+		})
+	}
 }
 
 mod remove_cluster {
@@ -727,6 +769,14 @@ mod remove_cluster {
 			assert_ok!(TEE::create_cluster(root()));
 			assert_ok!(TEE::remove_cluster(root(), 0u32));
 			assert!(ClusterData::<Test>::get(0).is_none());
+		})
+	}
+
+	#[test]
+	fn bad_origin() {
+		ExtBuilder::default().tokens(vec![(ALICE, 1000)]).build().execute_with(|| {
+			let alice: mock::RuntimeOrigin = origin(ALICE);
+			assert_noop!(TEE::remove_cluster(alice, 0u32), BadOrigin);
 		})
 	}
 
