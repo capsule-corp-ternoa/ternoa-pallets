@@ -33,6 +33,7 @@ pub use pallet::*;
 pub use types::*;
 
 use frame_support::traits::StorageVersion;
+
 use primitives::tee::ClusterId;
 use ternoa_common::traits;
 pub use weights::WeightInfo;
@@ -329,7 +330,7 @@ pub mod pallet {
 		}
 
 		/// Remove the operator update request
-		#[pallet::weight(T::WeightInfo::remove_update())]
+		#[pallet::weight(T::WeightInfo::cancel_update())]
 		pub fn cancel_update(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
@@ -628,6 +629,14 @@ impl<T: Config> traits::TEEExt for Pallet<T> {
 	) -> DispatchResult {
 		EnclaveAccountOperator::<T>::insert(enclave_address, operator_address.clone());
 		EnclaveClusterId::<T>::insert(operator_address, cluster_id.unwrap_or(0u32));
+		Ok(())
+	}
+
+	fn fill_unregistration_list(address: Self::AccountId, number: u8) -> DispatchResult {
+		EnclaveUnregistrations::<T>::try_mutate(|x| -> DispatchResult {
+			*x = BoundedVec::try_from(vec![address.clone(); number as usize]).unwrap();
+			Ok(())
+		})?;
 		Ok(())
 	}
 }
