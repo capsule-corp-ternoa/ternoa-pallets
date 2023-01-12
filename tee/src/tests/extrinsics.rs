@@ -523,7 +523,6 @@ mod remove_registration {
 
 mod remove_update {
 	use super::*;
-	use crate::tests;
 
 	#[test]
 	fn remove_update() {
@@ -578,13 +577,9 @@ mod remove_update {
 				assert_ok!(TEE::remove_update(root(), BOB));
 				assert!(EnclaveUpdates::<Test>::get(ALICE).is_some());
 
-				let event_update_request_removed =
-					tests::mock::RuntimeEvent::TEE(crate::Event::UpdateRequestRemoved {
-						operator_address: ALICE,
-					});
-				assert!(System::events()
-					.iter()
-					.any(|record| record.event != event_update_request_removed));
+				let event =
+					RuntimeEvent::TEE(TEEEvent::UpdateRequestRemoved { operator_address: BOB });
+				System::assert_last_event(event);
 			})
 	}
 }
@@ -600,20 +595,32 @@ mod remove_enclave {
 			.execute_with(|| {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
 				let api_uri: BoundedVec<u8, MaxUriLen> = BoundedVec::default();
-
+				let new_api_uri: BoundedVec<u8, MaxUriLen> =
+					"new_api_uri".as_bytes().to_vec().try_into().unwrap();
 				assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, api_uri.clone()));
 				assert_ok!(TEE::create_cluster(root()));
 				assert_ok!(TEE::assign_enclave(root(), ALICE, 0));
 
-				// Before
 				assert!(EnclaveAccountOperator::<Test>::get(CHARLIE).is_some());
 				assert!(EnclaveClusterId::<Test>::get(ALICE).is_some());
+				assert!(ClusterData::<Test>::get(0).unwrap().enclaves.get(0).is_some());
+
+				assert_ok!(TEE::update_enclave(alice.clone(), BOB, new_api_uri.clone()));
+				assert_ok!(TEE::unregister_enclave(alice.clone()));
+
+				assert!(EnclaveUnregistrations::<Test>::get().get(0).is_some());
+
+				assert!(EnclaveUpdates::<Test>::get(ALICE).is_some());
+				assert!(EnclaveData::<Test>::get(ALICE).is_some());
 
 				assert_ok!(TEE::remove_enclave(root(), ALICE));
 
-				// After
+				assert!(EnclaveUnregistrations::<Test>::get().get(0).is_none());
+				assert!(EnclaveData::<Test>::get(ALICE).is_none());
 				assert!(EnclaveAccountOperator::<Test>::get(CHARLIE).is_none());
 				assert!(EnclaveClusterId::<Test>::get(ALICE).is_none());
+				assert!(EnclaveUpdates::<Test>::get(ALICE).is_none());
+				assert!(ClusterData::<Test>::get(0).unwrap().enclaves.get(0).is_none());
 
 				let event = RuntimeEvent::TEE(TEEEvent::EnclaveRemoved { operator_address: ALICE });
 				System::assert_last_event(event);
@@ -657,7 +664,6 @@ mod remove_enclave {
 				assert_ok!(TEE::create_cluster(root()));
 				assert_ok!(TEE::assign_enclave(root(), ALICE, 0));
 
-				// TODO: Check if this is correct?
 				EnclaveClusterId::<Test>::remove(ALICE);
 
 				assert_noop!(TEE::remove_enclave(root(), ALICE), Error::<Test>::ClusterIdNotFound);
