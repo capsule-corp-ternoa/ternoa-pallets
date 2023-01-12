@@ -105,7 +105,6 @@ mod register_enclave {
 			})
 	}
 
-	// This fails
 	#[test]
 	fn enclave_address_already_exists() {
 		ExtBuilder::default()
@@ -150,7 +149,6 @@ mod unregister_enclave {
 			})
 	}
 
-	// This fails
 	#[test]
 	fn unregistration_limit_reached() {
 		ExtBuilder::default()
