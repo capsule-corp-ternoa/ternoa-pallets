@@ -103,7 +103,7 @@ mod register_enclave {
 
 				assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, api_uri.clone()));
 				assert_ok!(TEE::create_cluster(root()));
-				assert_ok!(TEE::assign_enclave(root(), ALICE.clone(), 0));
+				assert_ok!(TEE::assign_enclave(root(), ALICE, 0));
 
 				assert_noop!(
 					TEE::register_enclave(alice.clone(), CHARLIE, api_uri.clone()),
@@ -225,7 +225,7 @@ mod unregister_enclave {
 
 				assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, api_uri.clone()));
 				assert_ok!(TEE::create_cluster(root()));
-				assert_ok!(TEE::assign_enclave(root(), ALICE.clone(), 0));
+				assert_ok!(TEE::assign_enclave(root(), ALICE, 0));
 
 				assert_ok!(TEE::unregister_enclave(alice.clone()));
 				assert_noop!(
@@ -252,7 +252,7 @@ mod update_enclave {
 
 				assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, api_uri.clone()));
 				assert_ok!(TEE::create_cluster(root()));
-				assert_ok!(TEE::assign_enclave(root(), ALICE.clone(), 0));
+				assert_ok!(TEE::assign_enclave(root(), ALICE, 0));
 
 				assert_ok!(TEE::update_enclave(alice.clone(), BOB, new_api_uri.clone()));
 
@@ -295,7 +295,7 @@ mod update_enclave {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
 				assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, BoundedVec::default()));
 				assert_ok!(TEE::create_cluster(root()));
-				assert_ok!(TEE::assign_enclave(root(), ALICE.clone(), 0));
+				assert_ok!(TEE::assign_enclave(root(), ALICE, 0));
 				assert_ok!(TEE::update_enclave(alice.clone(), BOB, BoundedVec::default()));
 
 				let err = TEE::update_enclave(alice.clone(), BOB, BoundedVec::default());
@@ -335,7 +335,7 @@ mod update_enclave {
 				assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, api_uri.clone()));
 				assert_ok!(TEE::register_enclave(eve.clone(), DAVE, api_uri.clone()));
 
-				assert_ok!(TEE::assign_enclave(root(), ALICE.clone(), 0));
+				assert_ok!(TEE::assign_enclave(root(), ALICE, 0));
 				assert_ok!(TEE::assign_enclave(root(), EVE.clone(), 0));
 
 				assert_noop!(
@@ -399,9 +399,9 @@ mod assign_enclave {
 
 				assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, api_uri.clone()));
 				assert_ok!(TEE::create_cluster(root()));
-				assert_ok!(TEE::assign_enclave(root(), ALICE.clone(), cluster_id));
+				assert_ok!(TEE::assign_enclave(root(), ALICE, cluster_id));
 
-				let enclave_data = Enclave::new(CHARLIE.clone(), api_uri);
+				let enclave_data = Enclave::new(CHARLIE, api_uri);
 				assert_eq!(EnclaveData::<Test>::get(ALICE), Some(enclave_data));
 
 				let cluster_id = 0;
@@ -417,7 +417,7 @@ mod assign_enclave {
 	#[test]
 	fn bad_origin() {
 		ExtBuilder::default().tokens(vec![(ALICE, 1000)]).build().execute_with(|| {
-			assert_noop!(TEE::assign_enclave(origin(ALICE), ALICE.clone(), 0), BadOrigin);
+			assert_noop!(TEE::assign_enclave(origin(ALICE), ALICE, 0), BadOrigin);
 		})
 	}
 
@@ -434,9 +434,9 @@ mod assign_enclave {
 				assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, api_uri.clone()));
 				assert_ok!(TEE::register_enclave(bob.clone(), CHARLIE, api_uri.clone()));
 				assert_ok!(TEE::create_cluster(root()));
-				assert_ok!(TEE::assign_enclave(root(), ALICE.clone(), 0));
+				assert_ok!(TEE::assign_enclave(root(), ALICE, 0));
 				assert_noop!(
-					TEE::assign_enclave(root(), BOB.clone(), 0),
+					TEE::assign_enclave(root(), BOB, 0),
 					Error::<Test>::EnclaveAddressAlreadyExists
 				);
 			})
@@ -538,7 +538,7 @@ mod remove_update {
 
 				assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, api_uri.clone()));
 				assert_ok!(TEE::create_cluster(root()));
-				assert_ok!(TEE::assign_enclave(root(), ALICE.clone(), 0));
+				assert_ok!(TEE::assign_enclave(root(), ALICE, 0));
 
 				assert_ok!(TEE::update_enclave(alice.clone(), BOB, new_api_uri.clone()));
 
@@ -571,7 +571,7 @@ mod remove_update {
 
 				assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, api_uri.clone()));
 				assert_ok!(TEE::create_cluster(root()));
-				assert_ok!(TEE::assign_enclave(root(), ALICE.clone(), 0));
+				assert_ok!(TEE::assign_enclave(root(), ALICE, 0));
 
 				assert_ok!(TEE::update_enclave(alice.clone(), BOB, new_api_uri.clone()));
 
@@ -637,7 +637,7 @@ mod remove_enclave {
 
 				assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, api_uri.clone()));
 				assert_ok!(TEE::create_cluster(root()));
-				assert_ok!(TEE::assign_enclave(root(), ALICE.clone(), 0));
+				assert_ok!(TEE::assign_enclave(root(), ALICE, 0));
 
 				assert_ok!(TEE::remove_enclave(root(), ALICE));
 				assert_noop!(TEE::remove_enclave(root(), ALICE), Error::<Test>::EnclaveNotFound);
@@ -655,7 +655,7 @@ mod remove_enclave {
 
 				assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, api_uri.clone()));
 				assert_ok!(TEE::create_cluster(root()));
-				assert_ok!(TEE::assign_enclave(root(), ALICE.clone(), 0));
+				assert_ok!(TEE::assign_enclave(root(), ALICE, 0));
 
 				// TODO: Check if this is correct?
 				EnclaveClusterId::<Test>::remove(ALICE);
