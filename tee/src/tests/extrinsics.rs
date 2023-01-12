@@ -122,7 +122,10 @@ mod register_enclave {
 				assert_ok!(TEE::register_enclave(bob.clone(), CHARLIE, api_uri.clone()));
 
 				assert_ok!(TEE::assign_enclave(root(), ALICE, 0));
-				assert_noop!(TEE::assign_enclave(root(), BOB, 0), Error::<Test>::EnclaveAddressAlreadyExists);
+				assert_noop!(
+					TEE::assign_enclave(root(), BOB, 0),
+					Error::<Test>::EnclaveAddressAlreadyExists
+				);
 			})
 	}
 }
@@ -697,7 +700,6 @@ mod force_update_enclave {
 			.tokens(vec![(ALICE, 1000), (CHARLIE, 100)])
 			.build()
 			.execute_with(|| {
-
 				let alice: mock::RuntimeOrigin = origin(ALICE);
 				let bob: mock::RuntimeOrigin = origin(BOB);
 				let api_uri: BoundedVec<u8, MaxUriLen> = BoundedVec::default();
