@@ -17,7 +17,7 @@
 use super::{mock, mock::*};
 use crate::{
 	Cluster, ClusterData, Enclave, EnclaveAccountOperator, EnclaveClusterId, EnclaveData,
-	EnclaveRegistrations, EnclaveUnregistrations, EnclaveUpdates, Error,
+	EnclaveRegistrations, EnclaveUnregistrations, EnclaveUpdates, Error, Event as TEEEvent,
 };
 use frame_support::{assert_noop, assert_ok, error::BadOrigin, BoundedVec};
 use frame_system::RawOrigin;
@@ -48,6 +48,13 @@ mod register_enclave {
 				assert_eq!(EnclaveRegistrations::<Test>::get(ALICE), Some(expected));
 				assert!(EnclaveData::<Test>::get(ALICE).is_none());
 				assert!(EnclaveAccountOperator::<Test>::get(ALICE).is_none());
+
+				let event = RuntimeEvent::TEE(TEEEvent::EnclaveAddedForRegistration {
+					operator_address: ALICE,
+					enclave_address: CHARLIE,
+					api_uri,
+				});
+				System::assert_last_event(event);
 			})
 	}
 
@@ -146,6 +153,10 @@ mod unregister_enclave {
 				assert_ok!(TEE::unregister_enclave(alice.clone()));
 
 				assert!(EnclaveRegistrations::<Test>::get(ALICE).is_none());
+
+				let event =
+					RuntimeEvent::TEE(TEEEvent::RegistrationRemoved { operator_address: ALICE });
+				System::assert_last_event(event);
 			})
 	}
 
@@ -248,6 +259,13 @@ mod update_enclave {
 				let updated_enclave = Enclave::new(BOB, new_api_uri.clone());
 
 				assert_eq!(EnclaveUpdates::<Test>::get(ALICE).unwrap(), updated_enclave);
+
+				let event = RuntimeEvent::TEE(TEEEvent::MovedForUpdate {
+					operator_address: ALICE,
+					new_enclave_address: BOB,
+					new_api_uri,
+				});
+				System::assert_last_event(event);
 			})
 	}
 
@@ -346,6 +364,10 @@ mod cancel_update {
 				assert_ok!(TEE::cancel_update(alice.clone()));
 
 				assert!(EnclaveUpdates::<Test>::get(ALICE).is_none());
+
+				let event =
+					RuntimeEvent::TEE(TEEEvent::UpdateRequestCancelled { operator_address: ALICE });
+				System::assert_last_event(event);
 			})
 	}
 
@@ -373,16 +395,22 @@ mod assign_enclave {
 			.execute_with(|| {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
 				let api_uri: BoundedVec<u8, MaxUriLen> = BoundedVec::default();
+				let cluster_id = 0u32;
 
 				assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, api_uri.clone()));
 				assert_ok!(TEE::create_cluster(root()));
-				assert_ok!(TEE::assign_enclave(root(), ALICE.clone(), 0));
+				assert_ok!(TEE::assign_enclave(root(), ALICE.clone(), cluster_id));
 
 				let enclave_data = Enclave::new(CHARLIE.clone(), api_uri);
 				assert_eq!(EnclaveData::<Test>::get(ALICE), Some(enclave_data));
 
 				let cluster_id = 0;
 				assert_eq!(EnclaveClusterId::<Test>::get(ALICE), Some(cluster_id));
+				let event = RuntimeEvent::TEE(TEEEvent::EnclaveAssigned {
+					operator_address: ALICE,
+					cluster_id,
+				});
+				System::assert_last_event(event);
 			})
 	}
 
@@ -479,6 +507,10 @@ mod remove_registration {
 				assert!(EnclaveRegistrations::<Test>::get(ALICE).is_some());
 				assert_ok!(TEE::remove_registration(root(), ALICE));
 				assert!(EnclaveRegistrations::<Test>::get(ALICE).is_none());
+
+				let event =
+					RuntimeEvent::TEE(TEEEvent::RegistrationRemoved { operator_address: ALICE });
+				System::assert_last_event(event);
 			})
 	}
 	#[test]
@@ -513,10 +545,9 @@ mod remove_update {
 				assert_ok!(TEE::remove_update(root(), ALICE));
 				assert!(EnclaveUpdates::<Test>::get(ALICE).is_none());
 
-				let event = tests::mock::RuntimeEvent::TEE(crate::Event::UpdateRequestRemoved {
-					operator_address: ALICE,
-				});
-				assert!(System::events().iter().any(|record| record.event == event));
+				let event =
+					RuntimeEvent::TEE(TEEEvent::UpdateRequestRemoved { operator_address: ALICE });
+				System::assert_last_event(event);
 			})
 	}
 
@@ -583,6 +614,9 @@ mod remove_enclave {
 				// After
 				assert!(EnclaveAccountOperator::<Test>::get(CHARLIE).is_none());
 				assert!(EnclaveClusterId::<Test>::get(ALICE).is_none());
+
+				let event = RuntimeEvent::TEE(TEEEvent::EnclaveRemoved { operator_address: ALICE });
+				System::assert_last_event(event);
 			})
 	}
 	#[test]
@@ -652,9 +686,16 @@ mod force_update_enclave {
 				assert!(EnclaveUpdates::<Test>::get(ALICE).is_some());
 				assert_ok!(TEE::force_update_enclave(root(), ALICE, BOB, new_api_uri.clone()));
 
-				let updated_record = Enclave::new(BOB, new_api_uri);
+				let updated_record = Enclave::new(BOB, new_api_uri.clone());
 				assert_eq!(EnclaveData::<Test>::get(ALICE).unwrap(), updated_record);
 				assert!(EnclaveUpdates::<Test>::get(ALICE).is_none());
+
+				let event = RuntimeEvent::TEE(TEEEvent::EnclaveUpdated {
+					operator_address: ALICE,
+					new_enclave_address: BOB,
+					new_api_uri,
+				});
+				System::assert_last_event(event);
 			})
 	}
 
@@ -747,6 +788,9 @@ mod create_cluster {
 			assert_ok!(TEE::create_cluster(root()));
 			let cluster = Cluster::new(Default::default());
 			assert_eq!(ClusterData::<Test>::get(0), Some(cluster));
+
+			let event = RuntimeEvent::TEE(TEEEvent::ClusterAdded { cluster_id: 0 });
+			System::assert_last_event(event);
 		})
 	}
 
@@ -767,6 +811,9 @@ mod remove_cluster {
 			assert_ok!(TEE::create_cluster(root()));
 			assert_ok!(TEE::remove_cluster(root(), 0u32));
 			assert!(ClusterData::<Test>::get(0).is_none());
+
+			let event = RuntimeEvent::TEE(TEEEvent::ClusterRemoved { cluster_id: 0 });
+			System::assert_last_event(event);
 		})
 	}
 
