@@ -609,7 +609,6 @@ mod remove_enclave {
 				assert_ok!(TEE::unregister_enclave(alice.clone()));
 
 				assert!(EnclaveUnregistrations::<Test>::get().get(0).is_some());
-
 				assert!(EnclaveUpdates::<Test>::get(ALICE).is_some());
 				assert!(EnclaveData::<Test>::get(ALICE).is_some());
 
