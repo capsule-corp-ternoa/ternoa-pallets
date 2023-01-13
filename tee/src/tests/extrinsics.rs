@@ -304,7 +304,7 @@ mod update_enclave {
 	}
 
 	#[test]
-	fn enclave_not_found() {
+	fn update_prohibited_for_unassigned_enclave() {
 		ExtBuilder::default()
 			.tokens(vec![(ALICE, 1000), (CHARLIE, 100)])
 			.build()
@@ -315,7 +315,7 @@ mod update_enclave {
 
 				assert_noop!(
 					TEE::update_enclave(alice.clone(), BOB, new_api_uri.clone()),
-					Error::<Test>::EnclaveNotFound
+					Error::<Test>::UpdateProhibitedForUnassignedEnclave
 				);
 			})
 	}

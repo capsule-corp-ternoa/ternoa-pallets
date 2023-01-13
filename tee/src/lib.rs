@@ -140,8 +140,8 @@ pub mod pallet {
 
 	/// Holds generated ClusterIds
 	#[pallet::storage]
-	#[pallet::getter(fn cluster_id_generator)]
-	pub type ClusterIdGenerator<T: Config> = StorageValue<_, ClusterId, ValueQuery>;
+	#[pallet::getter(fn next_cluster_id)]
+	pub type NextClusterId<T: Config> = StorageValue<_, ClusterId, ValueQuery>;
 
 	/// Map stores Enclave operator | ClusterId
 	#[pallet::storage]
@@ -223,6 +223,8 @@ pub mod pallet {
 		UpdateRequestAlreadyExists,
 		/// The update request was not found in storage
 		UpdateRequestNotFound,
+		/// The update is not allowed for unassigned enclave
+		UpdateProhibitedForUnassignedEnclave,
 	}
 
 	#[pallet::call]
@@ -306,7 +308,7 @@ pub mod pallet {
 				Error::<T>::OperatorAndEnclaveAreSame
 			);
 
-			let enclave = EnclaveData::<T>::get(&who).ok_or(Error::<T>::EnclaveNotFound)?;
+			let enclave = EnclaveData::<T>::get(&who).ok_or(Error::<T>::UpdateProhibitedForUnassignedEnclave)?;
 			ensure!(
 				EnclaveUpdates::<T>::get(&who).is_none(),
 				Error::<T>::UpdateRequestAlreadyExists
@@ -596,11 +598,11 @@ pub mod pallet {
 impl<T: Config> Pallet<T> {
 	/// Increment the cluster id generator and return the id
 	fn get_next_cluster_id() -> ClusterId {
-		let id = ClusterIdGenerator::<T>::get();
+		let id = NextClusterId::<T>::get();
 		let next_id = id
 			.checked_add(1)
 			.expect("If u32 is not enough we should crash for safety; qed.");
-		ClusterIdGenerator::<T>::put(next_id);
+		NextClusterId::<T>::put(next_id);
 
 		id
 	}
