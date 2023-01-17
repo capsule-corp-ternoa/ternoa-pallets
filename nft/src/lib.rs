@@ -460,7 +460,7 @@ pub mod pallet {
 			// Check for secret nft to remove secret offchain data and shards count.
 			if nft.state.is_secret {
 				SecretNftsOffchainData::<T>::remove(nft_id);
-				if nft.state.is_syncing {
+				if nft.state.is_secret_syncing {
 					SecretNftsShardsCount::<T>::remove(nft_id);
 				}
 			}
@@ -496,7 +496,7 @@ pub mod pallet {
 					!(nft.state.is_soulbound && nft.creator != nft.owner),
 					Error::<T>::CannotTransferNotCreatedSoulboundNFTs
 				);
-				ensure!(!nft.state.is_syncing, Error::<T>::CannotTransferNotSyncedSecretNFTs);
+				ensure!(!nft.state.is_secret_syncing, Error::<T>::CannotTransferNotSyncedSecretNFTs);
 				ensure!(!nft.state.is_rented, Error::<T>::CannotTransferRentedNFTs);
 
 				// Execute
@@ -535,7 +535,7 @@ pub mod pallet {
 				ensure!(!nft.state.is_listed, Error::<T>::CannotDelegateListedNFTs);
 				ensure!(!nft.state.is_capsule, Error::<T>::CannotDelegateCapsuleNFTs);
 				ensure!(!nft.state.is_rented, Error::<T>::CannotDelegateRentedNFTs);
-				ensure!(!nft.state.is_syncing, Error::<T>::CannotDelegateSyncingNFTs);
+				ensure!(!nft.state.is_secret_syncing, Error::<T>::CannotDelegateSyncingNFTs);
 
 				// Execute
 				nft.state.is_delegated = is_delegated;
@@ -576,7 +576,7 @@ pub mod pallet {
 				ensure!(!nft.state.is_capsule, Error::<T>::CannotSetRoyaltyForCapsuleNFTs);
 				ensure!(!nft.state.is_delegated, Error::<T>::CannotSetRoyaltyForDelegatedNFTs);
 				ensure!(!nft.state.is_rented, Error::<T>::CannotSetRoyaltyForRentedNFTs);
-				ensure!(!nft.state.is_syncing, Error::<T>::CannotSetRoyaltyForSyncingNFTs);
+				ensure!(!nft.state.is_secret_syncing, Error::<T>::CannotSetRoyaltyForSyncingNFTs);
 
 				// Execute
 				nft.royalty = royalty;
@@ -811,7 +811,7 @@ pub mod pallet {
 
 				// Execute
 				nft.state.is_secret = true;
-				nft.state.is_syncing = true;
+				nft.state.is_secret_syncing = true;
 
 				SecretNftsOffchainData::<T>::insert(nft_id, offchain_data.clone());
 
@@ -884,7 +884,7 @@ pub mod pallet {
 
 				// Checks
 				ensure!(nft.state.is_secret, Error::<T>::NFTIsNotSecret);
-				ensure!(nft.state.is_syncing, Error::<T>::NFTAlreadySynced);
+				ensure!(nft.state.is_secret_syncing, Error::<T>::NFTAlreadySynced);
 
 				SecretNftsShardsCount::<T>::try_mutate(nft_id, |maybe_shards| -> DispatchResult {
 					if let Some(shards) = maybe_shards {
@@ -921,7 +921,7 @@ pub mod pallet {
 				})?;
 
 				if has_finished_sync {
-					nft.state.is_syncing = false;
+					nft.state.is_secret_syncing = false;
 				}
 
 				Ok(().into())
@@ -1024,7 +1024,7 @@ impl<T: Config> traits::NFTExt for Pallet<T> {
 		collection_id: Option<CollectionId>,
 		is_soulbound: bool,
 	) -> Result<NFTId, DispatchResult> {
-		let nft_state = NFTState::new(false, false, false, false, is_soulbound, false, false);
+		let nft_state = NFTState::new(false, false, false, false, is_soulbound, false, false, false, false);
 		let nft = NFTData::new(
 			owner.clone(),
 			owner.clone(),

@@ -361,7 +361,7 @@ mod burn_nft {
 			NFT::add_secret(alice.clone(), ALICE_NFT_ID, offchain_data.clone()).unwrap();
 
 			// Set listed to true for Alice's NFT.
-			let nft_state = NFTState::new(false, false, true, false, false, true, false);
+			let nft_state = NFTState::new(false, false, true, false, false, true, false, false, false);
 			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
 
 			assert_eq!(NFT::secret_nfts_offchain_data(ALICE_NFT_ID).unwrap(), offchain_data);
@@ -441,7 +441,7 @@ mod burn_nft {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			prepare_tests();
 			// Set listed to true for Alice's NFT.
-			let nft_state = NFTState::new(false, true, false, false, false, false, false);
+			let nft_state = NFTState::new(false, true, false, false, false, false, false, false, false);
 			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
 			// Burning an nft.
 			let err = NFT::burn_nft(origin(ALICE), ALICE_NFT_ID);
@@ -455,7 +455,7 @@ mod burn_nft {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			prepare_tests();
 			// Set capsule to true for Alice's NFT.
-			let nft_state = NFTState::new(true, false, false, false, false, false, false);
+			let nft_state = NFTState::new(true, false, false, false, false, false, false, false, false);
 			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
 			// Burning an nft.
 			let err = NFT::burn_nft(origin(ALICE), ALICE_NFT_ID);
@@ -482,7 +482,7 @@ mod burn_nft {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			prepare_tests();
 			// Set capsule to true for Alice's NFT.
-			let nft_state = NFTState::new(false, false, false, false, false, false, true);
+			let nft_state = NFTState::new(false, false, false, false, false, false, true, false, false);
 			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
 			// Burning an nft.
 			let err = NFT::burn_nft(origin(ALICE), ALICE_NFT_ID);
@@ -559,7 +559,7 @@ mod transfer_nft {
 			prepare_tests();
 			let alice: mock::RuntimeOrigin = origin(ALICE);
 			// Set NFT to listed.
-			let nft_state = NFTState::new(false, true, false, false, false, false, false);
+			let nft_state = NFTState::new(false, true, false, false, false, false, false, false, false);
 			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
 			// Try to transfer.
 			let err = NFT::transfer_nft(alice, ALICE_NFT_ID, BOB);
@@ -574,7 +574,7 @@ mod transfer_nft {
 			prepare_tests();
 			let alice: mock::RuntimeOrigin = origin(ALICE);
 			// Set NFT to capsule.
-			let nft_state = NFTState::new(true, false, false, false, false, false, false);
+			let nft_state = NFTState::new(true, false, false, false, false, false, false, false, false);
 			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
 			// Try to transfer.
 			let err = NFT::transfer_nft(alice, ALICE_NFT_ID, BOB);
@@ -623,7 +623,7 @@ mod transfer_nft {
 			prepare_tests();
 			let alice: mock::RuntimeOrigin = origin(ALICE);
 			// Set NFT to unsynced secret.
-			let nft_state = NFTState::new(false, false, true, false, false, true, false);
+			let nft_state = NFTState::new(false, false, true, false, false, true, false, false, false);
 			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
 			// Try to transfer.
 			let err = NFT::transfer_nft(alice, ALICE_NFT_ID, BOB);
@@ -638,7 +638,7 @@ mod transfer_nft {
 			prepare_tests();
 			let alice: mock::RuntimeOrigin = origin(ALICE);
 			// Set NFT to listed.
-			let nft_state = NFTState::new(false, false, false, false, false, false, true);
+			let nft_state = NFTState::new(false, false, false, false, false, false, true, false, false);
 			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
 			// Try to transfer.
 			let err = NFT::transfer_nft(alice, ALICE_NFT_ID, BOB);
@@ -729,7 +729,7 @@ mod delegate_nft {
 			prepare_tests();
 			let alice: mock::RuntimeOrigin = origin(ALICE);
 			// Set alice's NFT to listed.
-			let nft_state = NFTState::new(false, true, false, false, false, false, false);
+			let nft_state = NFTState::new(false, true, false, false, false, false, false, false, false);
 			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
 			// Delegate listed NFT.
 			let err = NFT::delegate_nft(alice, ALICE_NFT_ID, None);
@@ -744,7 +744,7 @@ mod delegate_nft {
 			prepare_tests();
 			let alice: mock::RuntimeOrigin = origin(ALICE);
 			// Set alice's NFT to capsule.
-			let nft_state = NFTState::new(true, false, false, false, false, false, false);
+			let nft_state = NFTState::new(true, false, false, false, false, false, false, false, false);
 			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
 			// Delegate capsule NFT.
 			let err = NFT::delegate_nft(alice, ALICE_NFT_ID, None);
@@ -759,7 +759,7 @@ mod delegate_nft {
 			prepare_tests();
 			let alice: mock::RuntimeOrigin = origin(ALICE);
 			// Set alice's NFT to capsule.
-			let nft_state = NFTState::new(false, false, false, false, false, false, true);
+			let nft_state = NFTState::new(false, false, false, false, false, false, true, false, false);
 			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
 			// Delegate capsule NFT.
 			let err = NFT::delegate_nft(alice, ALICE_NFT_ID, None);
@@ -774,7 +774,7 @@ mod delegate_nft {
 			prepare_tests();
 			let alice: mock::RuntimeOrigin = origin(ALICE);
 			// Set alice's NFT to capsule.
-			let nft_state = NFTState::new(false, false, false, false, false, true, false);
+			let nft_state = NFTState::new(false, false, false, false, false, true, false, false, false);
 			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
 			// Delegate capsule NFT.
 			let err = NFT::delegate_nft(alice, ALICE_NFT_ID, None);
@@ -854,7 +854,7 @@ mod set_royalty {
 			prepare_tests();
 			let alice: mock::RuntimeOrigin = origin(ALICE);
 			// Set Alice's NFT to listed.
-			let nft_state = NFTState::new(false, true, false, false, false, false, false);
+			let nft_state = NFTState::new(false, true, false, false, false, false, false, false, false);
 			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
 			// Set royalty.
 			let err = NFT::set_royalty(alice, ALICE_NFT_ID, PERCENT_80);
@@ -869,7 +869,7 @@ mod set_royalty {
 			prepare_tests();
 			let alice: mock::RuntimeOrigin = origin(ALICE);
 			// Set Alice's NFT to capsule.
-			let nft_state = NFTState::new(true, false, false, false, false, false, false);
+			let nft_state = NFTState::new(true, false, false, false, false, false, false, false, false);
 			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
 			// Set royalty.
 			let err = NFT::set_royalty(alice, ALICE_NFT_ID, PERCENT_80);
@@ -898,7 +898,7 @@ mod set_royalty {
 			prepare_tests();
 			let alice: mock::RuntimeOrigin = origin(ALICE);
 			// Set Alice's NFT to capsule.
-			let nft_state = NFTState::new(false, false, false, false, false, false, true);
+			let nft_state = NFTState::new(false, false, false, false, false, false, true, false, false);
 			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
 			// Set royalty.
 			let err = NFT::set_royalty(alice, ALICE_NFT_ID, PERCENT_80);
@@ -913,7 +913,7 @@ mod set_royalty {
 			prepare_tests();
 			let alice: mock::RuntimeOrigin = origin(ALICE);
 			// Set Alice's NFT to capsule.
-			let nft_state = NFTState::new(false, false, false, false, false, true, false);
+			let nft_state = NFTState::new(false, false, false, false, false, true, false, false, false);
 			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
 			// Set royalty.
 			let err = NFT::set_royalty(alice, ALICE_NFT_ID, PERCENT_80);
@@ -1397,7 +1397,7 @@ mod add_secret {
 			let nft = NFT::nfts(ALICE_NFT_ID).unwrap();
 			let secret_offchain_data = NFT::secret_nfts_offchain_data(ALICE_NFT_ID).unwrap();
 			assert_eq!(nft.state.is_secret, true);
-			assert_eq!(nft.state.is_syncing, true);
+			assert_eq!(nft.state.is_secret_syncing, true);
 			assert_eq!(secret_offchain_data, offchain_data.clone());
 
 			// Events checks.
@@ -1438,7 +1438,7 @@ mod add_secret {
 			let alice: mock::RuntimeOrigin = origin(ALICE);
 			let offchain_data: BoundedVec<u8, NFTOffchainDataLimit> = BoundedVec::default();
 			// Set Alice's NFT to listed
-			let nft_state = NFTState::new(false, true, false, false, false, false, false);
+			let nft_state = NFTState::new(false, true, false, false, false, false, false, false, false);
 			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
 
 			// Add a secret to Alice's NFT.
@@ -1454,7 +1454,7 @@ mod add_secret {
 			let alice: mock::RuntimeOrigin = origin(ALICE);
 			let offchain_data: BoundedVec<u8, NFTOffchainDataLimit> = BoundedVec::default();
 			// Set Alice's NFT to listed
-			let nft_state = NFTState::new(true, false, false, false, false, false, false);
+			let nft_state = NFTState::new(true, false, false, false, false, false, false, false, false);
 			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
 
 			// Add a secret to Alice's NFT.
@@ -1470,7 +1470,7 @@ mod add_secret {
 			let alice: mock::RuntimeOrigin = origin(ALICE);
 			let offchain_data: BoundedVec<u8, NFTOffchainDataLimit> = BoundedVec::default();
 			// Set Alice's NFT to listed
-			let nft_state = NFTState::new(false, false, true, false, false, false, false);
+			let nft_state = NFTState::new(false, false, true, false, false, false, false, false, false);
 			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
 
 			// Add a secret to Alice's NFT.
@@ -1486,7 +1486,7 @@ mod add_secret {
 			let alice: mock::RuntimeOrigin = origin(ALICE);
 			let offchain_data: BoundedVec<u8, NFTOffchainDataLimit> = BoundedVec::default();
 			// Set Alice's NFT to listed
-			let nft_state = NFTState::new(false, false, false, false, false, false, true);
+			let nft_state = NFTState::new(false, false, false, false, false, false, true, false, false);
 			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
 
 			// Add a secret to Alice's NFT.
@@ -1502,7 +1502,7 @@ mod add_secret {
 			let alice: mock::RuntimeOrigin = origin(ALICE);
 			let offchain_data: BoundedVec<u8, NFTOffchainDataLimit> = BoundedVec::default();
 			// Set Alice's NFT to listed
-			let nft_state = NFTState::new(false, false, false, true, false, false, false);
+			let nft_state = NFTState::new(false, false, false, true, false, false, false, false, false);
 			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
 
 			// Add a secret to Alice's NFT.
@@ -1539,7 +1539,7 @@ mod create_secret_nft {
 			let mut data =
 				NFTData::new_default(ALICE, BoundedVec::default(), PERCENT_100, None, false);
 			data.state.is_secret = true;
-			data.state.is_syncing = true;
+			data.state.is_secret_syncing = true;
 
 			// Create NFT without a collection.
 			NFT::create_secret_nft(
@@ -1643,7 +1643,7 @@ mod add_secret_shard {
 				let nft = NFT::nfts(ALICE_NFT_ID).unwrap();
 				let shards = NFT::secret_nfts_shards_count(ALICE_NFT_ID).unwrap();
 				assert_eq!(nft.state.is_secret, true);
-				assert_eq!(nft.state.is_syncing, true);
+				assert_eq!(nft.state.is_secret_syncing, true);
 				assert_eq!(shards.len(), 1);
 				assert!(shards.contains(&(0, ALICE)));
 
@@ -1675,7 +1675,7 @@ mod add_secret_shard {
 				let nft = NFT::nfts(ALICE_NFT_ID).unwrap();
 				let shards = NFT::secret_nfts_shards_count(ALICE_NFT_ID);
 				assert_eq!(nft.state.is_secret, true);
-				assert_eq!(nft.state.is_syncing, false);
+				assert_eq!(nft.state.is_secret_syncing, false);
 				assert_eq!(shards, None);
 
 				// Events checks.

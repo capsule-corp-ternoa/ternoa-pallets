@@ -214,7 +214,7 @@ benchmarks! {
 		assert_eq!(NFT::<T>::collections(benchmark_data.collection_id).unwrap().nfts.contains(&nft_id), true);
 		assert_eq!(nft.collection_id, Some(benchmark_data.collection_id));
 		assert_eq!(nft.state.is_secret, true);
-		assert_eq!(nft.state.is_syncing, true);
+		assert_eq!(nft.state.is_secret_syncing, true);
 		assert!(secret_offchain_data.is_some());
 	}
 
@@ -228,7 +228,7 @@ benchmarks! {
 		let nft = NFT::<T>::nfts(benchmark_data.nft_id).unwrap();
 		let secret_offchain_data = NFT::<T>::secret_nfts_offchain_data(benchmark_data.nft_id);
 		assert_eq!(nft.state.is_secret, true);
-		assert_eq!(nft.state.is_syncing, true);
+		assert_eq!(nft.state.is_secret_syncing, true);
 		assert!(secret_offchain_data.is_some());
 	}
 
@@ -245,7 +245,7 @@ benchmarks! {
 		let shards = NFT::<T>::secret_nfts_shards_count(benchmark_data.nft_id).unwrap();
 		let alice: T::AccountId = get_account::<T>("ALICE");
 		assert_eq!(nft.state.is_secret, true);
-		assert_eq!(nft.state.is_syncing, true);
+		assert_eq!(nft.state.is_secret_syncing, true);
 		assert_eq!(shards.len(), 1);
 	}
 

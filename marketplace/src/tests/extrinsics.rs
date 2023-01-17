@@ -826,7 +826,7 @@ mod list_nft {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
 
 				// Set capsule to true for Alice's NFT.
-				let nft_state = NFTState::new(true, false, false, false, false, false, false);
+				let nft_state = NFTState::new(true, false, false, false, false, false, false, false, false);
 				NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
 
 				let err = Marketplace::list_nft(alice, ALICE_NFT_ID, ALICE_MARKETPLACE_ID, 10);
@@ -843,7 +843,7 @@ mod list_nft {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
 
 				// Set secret to true for Alice's NFT.
-				let nft_state = NFTState::new(false, false, true, false, false, true, false);
+				let nft_state = NFTState::new(false, false, true, false, false, true, false, false, false);
 				NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
 
 				let err = Marketplace::list_nft(alice, ALICE_NFT_ID, ALICE_MARKETPLACE_ID, 10);
@@ -860,7 +860,7 @@ mod list_nft {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
 
 				// Set delegated to true for Alice's NFT.
-				let nft_state = NFTState::new(false, false, false, true, false, false, false);
+				let nft_state = NFTState::new(false, false, false, true, false, false, false, false, false);
 				NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
 
 				let err = Marketplace::list_nft(alice, ALICE_NFT_ID, ALICE_MARKETPLACE_ID, 10);
@@ -896,7 +896,7 @@ mod list_nft {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
 
 				// Set capsule to true for Alice's NFT.
-				let nft_state = NFTState::new(false, false, false, false, false, false, true);
+				let nft_state = NFTState::new(false, false, false, false, false, false, true, false, false);
 				NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
 
 				let err = Marketplace::list_nft(alice, ALICE_NFT_ID, ALICE_MARKETPLACE_ID, 10);
