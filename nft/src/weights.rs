@@ -35,7 +35,8 @@ pub trait WeightInfo {
 	fn set_secret_nft_mint_fee() -> Weight;
 	fn convert_to_capsule() -> Weight;
 	fn create_capsule(s: u32) -> Weight;
-	fn revert_capsule() -> Weight;
+	// TODO
+	// fn revert_capsule() -> Weight;
 	fn set_capsule_offchaindata() -> Weight;
 	fn set_capsule_mint_fee() -> Weight;
 	fn add_capsule_shard() -> Weight;
@@ -142,13 +143,14 @@ impl<T: frame_system::Config> WeightInfo for TernoaWeight<T> {
 	fn convert_to_capsule() -> Weight {
 		Weight::from_ref_time(10_000_000 as u64)
 	}
-	// Storage: NFT Nfts (r:1 w:1)
-	// Storage: NFT SecretNftMintFee (r:1 w:0)
-	// Storage: System Account (r:1 w:1)
-	// Storage: NFT SecretNftsOffchainData (r:0 w:1)
-	fn revert_capsule() -> Weight {
-		Weight::from_ref_time(10_000_000 as u64)
-	}
+	// TODO
+	// // Storage: NFT Nfts (r:1 w:1)
+	// // Storage: NFT SecretNftMintFee (r:1 w:0)
+	// // Storage: System Account (r:1 w:1)
+	// // Storage: NFT SecretNftsOffchainData (r:0 w:1)
+	// fn revert_capsule() -> Weight {
+	// 	Weight::from_ref_time(10_000_000 as u64)
+	// }
 	// Storage: NFT Nfts (r:1 w:1)
 	// Storage: NFT SecretNftMintFee (r:1 w:0)
 	// Storage: System Account (r:1 w:1)

@@ -297,25 +297,26 @@ benchmarks! {
 		assert!(capsule_offchain_data.is_some());
 	}
 
-	revert_capsule {
-		let benchmark_data = prepare_benchmarks::<T>();
-		let alice_origin = origin::<T>("ALICE");
-		let bob_origin = origin::<T>("BOB");
-		let capsule_offchain_data: BoundedVec<u8, T::NFTOffchainDataLimit> = BoundedVec::try_from(vec![1; T::NFTOffchainDataLimit::get() as usize]).unwrap();
-		NFT::<T>::convert_to_capsule(alice_origin.clone().into(), benchmark_data.nft_id, capsule_offchain_data).unwrap();
-		T::TEEExt::register_and_assign_enclave(get_account::<T>("ALICE"), get_account::<T>("ALICE"), None).unwrap();
-		T::TEEExt::register_and_assign_enclave(get_account::<T>("BOB"), get_account::<T>("BOB"), None).unwrap();
-		NFT::<T>::add_capsule_shard(alice_origin.into(), benchmark_data.nft_id).unwrap();
-		NFT::<T>::add_capsule_shard(bob_origin.into(), benchmark_data.nft_id).unwrap();
-	}: _(origin::<T>("ALICE"), benchmark_data.nft_id)
-	verify {
-		// Get The NFT.
-		let nft = NFT::<T>::nfts(benchmark_data.nft_id).unwrap();
-		let capsule_offchain_data = NFT::<T>::capsule_offchain_data(benchmark_data.nft_id);
-		assert_eq!(nft.state.is_capsule, false);
-		assert_eq!(nft.state.is_syncing_capsule, false);
-		assert!(capsule_offchain_data.is_none());
-	}
+	// TODO
+	// revert_capsule {
+	// 	let benchmark_data = prepare_benchmarks::<T>();
+	// 	let alice_origin = origin::<T>("ALICE");
+	// 	let bob_origin = origin::<T>("BOB");
+	// 	let capsule_offchain_data: BoundedVec<u8, T::NFTOffchainDataLimit> = BoundedVec::try_from(vec![1; T::NFTOffchainDataLimit::get() as usize]).unwrap();
+	// 	NFT::<T>::convert_to_capsule(alice_origin.clone().into(), benchmark_data.nft_id, capsule_offchain_data).unwrap();
+	// 	T::TEEExt::register_and_assign_enclave(get_account::<T>("ALICE"), get_account::<T>("ALICE"), None).unwrap();
+	// 	T::TEEExt::register_and_assign_enclave(get_account::<T>("BOB"), get_account::<T>("BOB"), None).unwrap();
+	// 	NFT::<T>::add_capsule_shard(alice_origin.into(), benchmark_data.nft_id).unwrap();
+	// 	NFT::<T>::add_capsule_shard(bob_origin.into(), benchmark_data.nft_id).unwrap();
+	// }: _(origin::<T>("ALICE"), benchmark_data.nft_id)
+	// verify {
+	// 	// Get The NFT.
+	// 	let nft = NFT::<T>::nfts(benchmark_data.nft_id).unwrap();
+	// 	let capsule_offchain_data = NFT::<T>::capsule_offchain_data(benchmark_data.nft_id);
+	// 	assert_eq!(nft.state.is_capsule, false);
+	// 	assert_eq!(nft.state.is_syncing_capsule, false);
+	// 	assert!(capsule_offchain_data.is_none());
+	// }
 
 	set_capsule_offchaindata {
 		let benchmark_data = prepare_benchmarks::<T>();

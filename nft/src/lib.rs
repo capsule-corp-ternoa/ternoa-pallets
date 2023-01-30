@@ -1205,40 +1205,41 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		/// Revert a capsule to a regular NFT.
-		#[pallet::weight(T::WeightInfo::revert_capsule())]
-		pub fn revert_capsule(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
-			let who = ensure_signed(origin)?;
+		// TODO
+		// /// Revert a capsule to a regular NFT.
+		// #[pallet::weight(T::WeightInfo::revert_capsule())]
+		// pub fn revert_capsule(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
+		// 	let who = ensure_signed(origin)?;
 
-			Nfts::<T>::try_mutate(nft_id, |maybe_nft| -> DispatchResult {
-				let nft = maybe_nft.as_mut().ok_or(Error::<T>::NFTNotFound)?;
+		// 	Nfts::<T>::try_mutate(nft_id, |maybe_nft| -> DispatchResult {
+		// 		let nft = maybe_nft.as_mut().ok_or(Error::<T>::NFTNotFound)?;
 
-				// Checks
-				ensure!(nft.owner == who, Error::<T>::NotTheNFTOwner);
-				ensure!(nft.state.is_capsule, Error::<T>::NFTIsNotCapsule);
-				ensure!(!nft.state.is_listed, Error::<T>::CannotRevertListedNFTs);
-				ensure!(!nft.state.is_rented, Error::<T>::CannotRevertRentedNFTs);
-				ensure!(!nft.state.is_delegated, Error::<T>::CannotRevertDelegatedNFTs);
-				ensure!(!nft.state.is_syncing_secret, Error::<T>::CannotRevertSyncingNFTs);
-				ensure!(!nft.state.is_transmission, Error::<T>::CannotRevertNFTsInTransmission);
+		// 		// Checks
+		// 		ensure!(nft.owner == who, Error::<T>::NotTheNFTOwner);
+		// 		ensure!(nft.state.is_capsule, Error::<T>::NFTIsNotCapsule);
+		// 		ensure!(!nft.state.is_listed, Error::<T>::CannotRevertListedNFTs);
+		// 		ensure!(!nft.state.is_rented, Error::<T>::CannotRevertRentedNFTs);
+		// 		ensure!(!nft.state.is_delegated, Error::<T>::CannotRevertDelegatedNFTs);
+		// 		ensure!(!nft.state.is_syncing_secret, Error::<T>::CannotRevertSyncingNFTs);
+		// 		ensure!(!nft.state.is_transmission, Error::<T>::CannotRevertNFTsInTransmission);
 
-				// Execute
-				if nft.state.is_syncing_capsule {
-					CapsulesShardsCount::<T>::remove(nft_id);
-				}
+		// 		// Execute
+		// 		if nft.state.is_syncing_capsule {
+		// 			CapsulesShardsCount::<T>::remove(nft_id);
+		// 		}
 
-				CapsuleOffchainData::<T>::remove(nft_id);
+		// 		CapsuleOffchainData::<T>::remove(nft_id);
 
-				nft.state.is_capsule = false;
-				nft.state.is_syncing_capsule = false;
+		// 		nft.state.is_capsule = false;
+		// 		nft.state.is_syncing_capsule = false;
 
-				Ok(().into())
-			})?;
+		// 		Ok(().into())
+		// 	})?;
 
-			let event = Event::CapsuleReverted { nft_id };
-			Self::deposit_event(event);
-			Ok(().into())
-		}
+		// 	let event = Event::CapsuleReverted { nft_id };
+		// 	Self::deposit_event(event);
+		// 	Ok(().into())
+		// }
 
 		/// Set the capsule offchain data.
 		#[pallet::weight(T::WeightInfo::set_capsule_offchaindata())]
