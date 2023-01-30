@@ -283,11 +283,7 @@ where
 		block_number: BlockNumber,
 		number: u32,
 	) -> Result<(), ()> {
-		// self.0.try_extend(vec![(nft_id, block_number); number as usize].into_iter())
-		for _n in 0..number {
-			self.0.try_push((nft_id, block_number.clone())).unwrap();
-		}
-		Ok(())
+		self.0.try_extend(vec![(nft_id, block_number); number as usize].into_iter())
 	}
 }
 impl<BlockNumber, Limit> Default for Queue<BlockNumber, Limit>
