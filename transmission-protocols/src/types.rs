@@ -21,7 +21,7 @@ use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use primitives::nfts::NFTId;
 use scale_info::TypeInfo;
 use sp_arithmetic::traits::AtLeast32BitUnsigned;
-use sp_std::{fmt::Debug, vec};
+use sp_std::{fmt::Debug, vec, cmp};
 
 pub type ConsentList<AccountId, MaxConsentListSize> = BoundedVec<AccountId, MaxConsentListSize>;
 
@@ -287,7 +287,7 @@ where
 			BoundedVec::with_bounded_capacity(Limit::get() as usize);
 		let chunk_size = 100_000;
 		for i in (0..number).step_by(chunk_size as usize) {
-			let end = std::cmp::min(i + chunk_size, number);
+			let end = cmp::min(i + chunk_size, number);
 			let chunk = vec![(nft_id, block_number.clone()); (end - i) as usize];
 			vector.try_extend(chunk.into_iter()).unwrap();
 		}
