@@ -283,7 +283,17 @@ where
 		block_number: BlockNumber,
 		number: u32,
 	) -> Result<(), ()> {
-		self.0.try_extend(vec![(nft_id, block_number); number as usize].into_iter())
+		let mut vector: BoundedVec<(NFTId, BlockNumber), Limit> =
+			BoundedVec::with_bounded_capacity(Limit::get() as usize);
+		let chunk_size = 100_000;
+		for i in (0..number).step_by(chunk_size as usize) {
+			let end = std::cmp::min(i + chunk_size, number);
+			let chunk = vec![(nft_id, block_number.clone()); (end - i) as usize];
+			vector.try_extend(chunk.into_iter()).unwrap();
+		}
+		self.0 = vector;
+		Ok(())
+		// self.0.try_extend(vec![(nft_id, block_number); number as usize].into_iter())
 	}
 }
 impl<BlockNumber, Limit> Default for Queue<BlockNumber, Limit>

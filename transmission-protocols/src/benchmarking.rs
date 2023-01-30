@@ -88,8 +88,8 @@ benchmarks! {
 			ConsentList<T::AccountId, T::MaxConsentListSize>,
 		> = TransmissionProtocol::AtBlock(10u32.into());
 		let cancellation = CancellationPeriod::UntilBlock(20u32.into());
-		TransmissionProtocols::<T>::set_transmission_protocol(alice_origin.clone().into(), benchmark_data.alice_nft_id, bob, protocol, cancellation).unwrap();
 		TransmissionProtocols::<T>::fill_queue(s, benchmark_data.bob_nft_id, 100u32.into()).unwrap();
+		TransmissionProtocols::<T>::set_transmission_protocol(alice_origin.clone().into(), benchmark_data.alice_nft_id, bob, protocol, cancellation).unwrap();
 	}: _(alice_origin, benchmark_data.alice_nft_id)
 	verify {
 		let nft = T::NFTExt::get_nft(benchmark_data.alice_nft_id).unwrap();
@@ -108,8 +108,8 @@ benchmarks! {
 			ConsentList<T::AccountId, T::MaxConsentListSize>,
 		> = TransmissionProtocol::AtBlockWithReset(10u32.into());
 		let cancellation = CancellationPeriod::None;
-		TransmissionProtocols::<T>::set_transmission_protocol(alice_origin.clone().into(), benchmark_data.alice_nft_id, bob, protocol, cancellation).unwrap();
 		TransmissionProtocols::<T>::fill_queue(s, benchmark_data.bob_nft_id, 100u32.into()).unwrap();
+		TransmissionProtocols::<T>::set_transmission_protocol(alice_origin.clone().into(), benchmark_data.alice_nft_id, bob, protocol, cancellation).unwrap();
 	}: _(alice_origin, benchmark_data.alice_nft_id, 200u32.into())
 	verify {
 		let nft = T::NFTExt::get_nft(benchmark_data.alice_nft_id).unwrap();
@@ -135,8 +135,8 @@ benchmarks! {
 			block: 10u32.into(),
 		};
 		let cancellation = CancellationPeriod::None;
-		TransmissionProtocols::<T>::set_transmission_protocol(alice_origin.clone().into(), benchmark_data.alice_nft_id, bob.clone(), protocol, cancellation).unwrap();
 		TransmissionProtocols::<T>::fill_queue(s, benchmark_data.bob_nft_id, 100u32.into()).unwrap();
+		TransmissionProtocols::<T>::set_transmission_protocol(alice_origin.clone().into(), benchmark_data.alice_nft_id, bob.clone(), protocol, cancellation).unwrap();
 		TransmissionProtocols::<T>::fill_consent_list(1, benchmark_data.alice_nft_id, bob).unwrap();
 	}: _(alice_origin, benchmark_data.alice_nft_id)
 	verify {
