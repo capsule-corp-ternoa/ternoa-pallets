@@ -283,7 +283,11 @@ where
 		block_number: BlockNumber,
 		number: u32,
 	) -> Result<(), ()> {
-		self.0.try_extend(vec![(nft_id, block_number); number as usize].into_iter())
+		let boxed_slice = vec![(nft_id, block_number); number as usize].into_boxed_slice();
+		let ptr = Box::into_raw(boxed_slice);
+		let data = unsafe { Box::from_raw(ptr) };
+		let vector = data.to_vec().into_iter();
+		self.0.try_extend(vector)
 	}
 }
 impl<BlockNumber, Limit> Default for Queue<BlockNumber, Limit>
