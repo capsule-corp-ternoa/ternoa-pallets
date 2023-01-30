@@ -46,6 +46,7 @@ use primitives::{
 use sp_arithmetic::per_things::Permill;
 use sp_runtime::traits::{CheckedSub, StaticLookup};
 use sp_std::prelude::*;
+use sp_std::vec;
 use ternoa_common::{traits, traits::TEEExt};
 
 pub use weights::WeightInfo;

@@ -69,7 +69,9 @@ benchmarks! {
 			ConsentList<T::AccountId, T::MaxConsentListSize>,
 		> = TransmissionProtocol::AtBlock(10u32.into());
 		let cancellation = CancellationPeriod::None;
+		assert_eq!(TransmissionProtocols::<T>::at_block_queue().size(), 0);
 		TransmissionProtocols::<T>::fill_queue(s, benchmark_data.bob_nft_id, 100u32.into()).unwrap();
+		assert_eq!(TransmissionProtocols::<T>::at_block_queue().size(), s);
 	}: _(alice_origin, benchmark_data.alice_nft_id, bob, protocol, cancellation)
 	verify {
 		let nft = T::NFTExt::get_nft(benchmark_data.alice_nft_id).unwrap();
