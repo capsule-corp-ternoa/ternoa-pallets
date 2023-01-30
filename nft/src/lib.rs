@@ -1208,8 +1208,8 @@ pub mod pallet {
 		// TODO
 		// /// Revert a capsule to a regular NFT.
 		// #[pallet::weight(T::WeightInfo::revert_capsule())]
-		// pub fn revert_capsule(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
-		// 	let who = ensure_signed(origin)?;
+		// pub fn revert_capsule(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo
+		// { 	let who = ensure_signed(origin)?;
 
 		// 	Nfts::<T>::try_mutate(nft_id, |maybe_nft| -> DispatchResult {
 		// 		let nft = maybe_nft.as_mut().ok_or(Error::<T>::NFTNotFound)?;
