@@ -21,7 +21,7 @@ use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use primitives::nfts::NFTId;
 use scale_info::TypeInfo;
 use sp_arithmetic::traits::AtLeast32BitUnsigned;
-use sp_std::fmt::Debug;
+use sp_std::{fmt::Debug, vec};
 
 pub type ConsentList<AccountId, MaxConsentListSize> = BoundedVec<AccountId, MaxConsentListSize>;
 
