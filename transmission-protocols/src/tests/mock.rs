@@ -1,4 +1,4 @@
-// Copyright 2022 Capsule Corp (France) SAS.
+// Copyright 2023 Capsule Corp (France) SAS.
 // This file is part of Ternoa.
 
 // Ternoa is free software: you can redistribute it and/or modify
@@ -16,8 +16,7 @@
 
 use frame_support::{
 	parameter_types,
-	traits::{ConstU32, Contains, GenesisBuild},
-	PalletId,
+	traits::{ConstU32, Contains, Currency, OnFinalize, OnInitialize},
 };
 use sp_core::H256;
 use sp_runtime::{
@@ -25,12 +24,24 @@ use sp_runtime::{
 	traits::{BlakeTwo256, IdentityLookup},
 };
 
-use crate::{self as ternoa_capsule, Config};
+use crate::{self as ternoa_transmission_protocol, Config, NegativeImbalanceOf};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
-type AccountId = u64;
+pub const ALICE: u64 = 1;
+pub const BOB: u64 = 2;
+pub const CHARLIE: u64 = 3;
+pub const DAVE: u64 = 4;
+pub const COLLECTOR: u64 = 99;
+pub const NFT_MINT_FEE: Balance = 10;
+pub const SECRET_NFT_MINT_FEE: Balance = 75;
+pub const MARKETPLACE_MINT_FEE: Balance = 100;
+pub const CAPSULE_MINT_FEE: Balance = 100;
+pub const PROTOCOL_FEE: Balance = 5;
+pub const MAX_BLOCK_DURATION: u32 = 1000;
+pub const MAX_CONSENT_LIST_SIZE: u32 = 10;
+pub const MAX_SIMULTANEOUS_TRANSMISSIONS: u32 = 100;
 
 frame_support::construct_runtime!(
 	pub enum Test where
@@ -41,8 +52,8 @@ frame_support::construct_runtime!(
 		System: frame_system,
 		Balances: pallet_balances,
 		NFT: ternoa_nft,
-		Capsule: ternoa_capsule,
 		TEE: ternoa_tee,
+		TransmissionProtocols: ternoa_transmission_protocol,
 	}
 );
 
@@ -60,6 +71,8 @@ impl Contains<RuntimeCall> for TestBaseCallFilter {
 	}
 }
 
+pub type Balance = u64;
+
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
 	pub BlockWeights: frame_system::limits::BlockWeights =
@@ -76,14 +89,14 @@ impl frame_system::Config for Test {
 	type RuntimeCall = RuntimeCall;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
-	type AccountId = AccountId;
+	type AccountId = u64;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
 	type RuntimeEvent = RuntimeEvent;
 	type BlockHashCount = BlockHashCount;
 	type Version = ();
 	type PalletInfo = PalletInfo;
-	type AccountData = pallet_balances::AccountData<u128>;
+	type AccountData = pallet_balances::AccountData<u64>;
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
@@ -93,21 +106,21 @@ impl frame_system::Config for Test {
 }
 
 parameter_types! {
-	pub const ExistentialDeposit: u128 = 1;
+	pub const ExistentialDeposit: Balance = 1;
 	pub const MaxLocks: u32 = 50;
 	pub const MaxReserves: u32 = 50;
 }
 
 impl pallet_balances::Config for Test {
-	type MaxLocks = MaxLocks;
+	type Balance = u64;
 	type MaxReserves = MaxReserves;
 	type ReserveIdentifier = [u8; 8];
-	type Balance = u128;
 	type DustRemoval = ();
 	type RuntimeEvent = RuntimeEvent;
 	type ExistentialDeposit = ExistentialDeposit;
 	type AccountStore = System;
 	type WeightInfo = ();
+	type MaxLocks = MaxLocks;
 }
 
 parameter_types! {
@@ -120,16 +133,20 @@ impl ternoa_tee::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = ();
 	type Currency = Balances;
-	type FeesCollector = ();
 	type ClusterSize = ClusterSize;
 	type MaxUriLen = MaxUriLen;
 	type ListSizeLimit = ListSizeLimit;
 }
 
 parameter_types! {
-	pub const IPFSLengthLimit: u32 = 5;
-	pub const CapsuleCountLimit: u32 = 2;
-	pub const CapsulePalletId: PalletId = PalletId(*b"mockcaps");
+	pub const NFTInitialMintFee: Balance = NFT_MINT_FEE;
+	pub const MarketplaceInitialMintFee: Balance = MARKETPLACE_MINT_FEE;
+	pub const NFTOffchainDataLimit: u32 = 10;
+	pub const CollectionOffchainDataLimit: u32 = 10;
+	pub const CollectionSizeLimit: u32 = 10;
+	pub const InitialSecretMintFee: Balance = SECRET_NFT_MINT_FEE;
+	pub const ShardsNumber: u32 = 5;
+	pub const InitialCapsuleMintFee: Balance = CAPSULE_MINT_FEE;
 }
 
 impl ternoa_nft::Config for Test {
@@ -137,58 +154,73 @@ impl ternoa_nft::Config for Test {
 	type WeightInfo = ternoa_nft::weights::TernoaWeight<Test>;
 	type Currency = Balances;
 	type FeesCollector = ();
-	type IPFSLengthLimit = IPFSLengthLimit;
+	type InitialMintFee = NFTInitialMintFee;
+	type NFTOffchainDataLimit = NFTOffchainDataLimit;
+	type CollectionOffchainDataLimit = CollectionOffchainDataLimit;
+	type CollectionSizeLimit = CollectionSizeLimit;
+	type InitialSecretMintFee = InitialSecretMintFee;
+	type ShardsNumber = ShardsNumber;
 	type TEEExt = TEE;
+	type InitialCapsuleMintFee = InitialCapsuleMintFee;
+}
+
+parameter_types! {
+	pub const AtBlockFee: Balance = PROTOCOL_FEE;
+	pub const AtBlockWithResetFee: Balance = 2*PROTOCOL_FEE;
+	pub const OnConsentFee: Balance = 3*PROTOCOL_FEE;
+	pub const OnConsentAtBlockFee: Balance = 4*PROTOCOL_FEE;
+	pub const MaxBlockDuration: u32 = MAX_BLOCK_DURATION;
+	pub const MaxConsentListSize: u32 = MAX_CONSENT_LIST_SIZE;
+	pub const SimultaneousTransmissionLimit: u32 = MAX_SIMULTANEOUS_TRANSMISSIONS;
+	pub const ActionsInBlockLimit: u32 = 10;
 }
 
 impl Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = ();
 	type Currency = Balances;
+	type FeesCollector = ();
 	type NFTExt = NFT;
-	type PalletId = CapsulePalletId;
-	type CapsuleCountLimit = CapsuleCountLimit;
+	type InitialAtBlockFee = AtBlockFee;
+	type InitialAtBlockWithResetFee = AtBlockWithResetFee;
+	type InitialOnConsentFee = OnConsentFee;
+	type InitialOnConsentAtBlockFee = OnConsentAtBlockFee;
+	type MaxBlockDuration = MaxBlockDuration;
+	type MaxConsentListSize = MaxConsentListSize;
+	type SimultaneousTransmissionLimit = SimultaneousTransmissionLimit;
+	type ActionsInBlockLimit = ActionsInBlockLimit;
 }
 
-// Do not use the `0` account id since this would be the default value
-// for our account id. This would mess with some tests.
-pub const ALICE: u64 = 1;
-pub const BOB: u64 = 2;
+pub struct MockFeeCollector;
+impl frame_support::traits::OnUnbalanced<NegativeImbalanceOf<Test>> for MockFeeCollector {
+	fn on_nonzero_unbalanced(amount: NegativeImbalanceOf<Test>) {
+		Balances::resolve_creating(&COLLECTOR, amount);
+	}
+}
 
 pub struct ExtBuilder {
-	endowed_accounts: Vec<(u64, u128)>,
+	balances: Vec<(u64, Balance)>,
 }
 
 impl Default for ExtBuilder {
 	fn default() -> Self {
-		ExtBuilder { endowed_accounts: Vec::new() }
+		Self { balances: Vec::new() }
 	}
 }
 
 impl ExtBuilder {
-	pub fn caps(mut self, accounts: Vec<(u64, u128)>) -> Self {
-		for account in accounts {
-			self.endowed_accounts.push(account);
-		}
-		self
+	pub fn new(balances: Vec<(u64, Balance)>) -> Self {
+		Self { balances }
+	}
+
+	pub fn new_build(balances: Vec<(u64, Balance)>) -> sp_io::TestExternalities {
+		Self::new(balances).build()
 	}
 
 	pub fn build(self) -> sp_io::TestExternalities {
 		let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
-		pallet_balances::GenesisConfig::<Test> { balances: self.endowed_accounts }
-			.assimilate_storage(&mut t)
-			.unwrap();
-
-		ternoa_nft::GenesisConfig::<Test> {
-			nfts: Default::default(),
-			series: Default::default(),
-			nft_mint_fee: 10,
-		}
-		.assimilate_storage(&mut t)
-		.unwrap();
-
-		ternoa_capsule::GenesisConfig::<Test> { capsule_mint_fee: 1000, ..Default::default() }
+		pallet_balances::GenesisConfig::<Test> { balances: self.balances }
 			.assimilate_storage(&mut t)
 			.unwrap();
 
@@ -198,33 +230,21 @@ impl ExtBuilder {
 	}
 }
 
-pub mod help {
-	use super::*;
-	use frame_support::{assert_ok, bounded_vec, BoundedVec};
-	use primitives::nfts::{NFTId, NFTSeriesId};
-
-	pub fn create_capsule_fast(owner: Origin) -> NFTId {
-		let nft_id = create_nft(owner.clone(), bounded_vec![50], None);
-		assert_ok!(Capsule::create_from_nft(owner, nft_id, bounded_vec![60]));
-		nft_id
-	}
-
-	pub fn create_nft_fast(owner: Origin) -> NFTId {
-		create_nft(owner, bounded_vec![50], None)
-	}
-
-	pub fn create_nft(
-		owner: Origin,
-		ipfs_reference: BoundedVec<u8, IPFSLengthLimit>,
-		series_id: Option<NFTSeriesId>,
-	) -> NFTId {
-		assert_ok!(NFT::create(owner, ipfs_reference, series_id));
-		NFT::nft_id_generator() - 1
-	}
-}
-
 #[allow(dead_code)]
 pub fn new_test_ext() -> sp_io::TestExternalities {
 	let t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+
 	t.into()
+}
+
+pub fn run_to_block(n: u64) {
+	while System::block_number() < n {
+		TransmissionProtocols::on_finalize(System::block_number());
+		Balances::on_finalize(System::block_number());
+		System::on_finalize(System::block_number());
+		System::set_block_number(System::block_number() + 1);
+		System::on_initialize(System::block_number());
+		Balances::on_initialize(System::block_number());
+		TransmissionProtocols::on_initialize(System::block_number());
+	}
 }

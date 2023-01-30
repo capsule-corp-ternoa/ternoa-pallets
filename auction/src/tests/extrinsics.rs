@@ -1,4 +1,4 @@
-// Copyright 2022 Capsule Corp (France) SAS.
+// Copyright 2023 Capsule Corp (France) SAS.
 // This file is part of Ternoa.
 
 // Ternoa is free software: you can redistribute it and/or modify
@@ -268,21 +268,6 @@ pub mod create_auction {
 	}
 
 	#[test]
-	fn cannot_list_capsules_nfts() {
-		ExtBuilder::new_build(None).execute_with(|| {
-			prepare_tests();
-
-			// Set capsule.
-			let mut nft = NFT::get_nft(ALICE_NFT_ID_0).unwrap();
-			nft.state.is_capsule = true;
-			NFT::set_nft(ALICE_NFT_ID_0, nft).unwrap();
-
-			let ok = AuctionBuilder::new().nft_id(ALICE_NFT_ID_0).execute();
-			assert_noop!(ok, Error::<Test>::CannotListCapsulesNFTs);
-		})
-	}
-
-	#[test]
 	fn cannot_list_not_synced_secret_nfts() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
@@ -290,7 +275,7 @@ pub mod create_auction {
 			// Set secret.
 			let mut nft = NFT::get_nft(ALICE_NFT_ID_0).unwrap();
 			nft.state.is_secret = true;
-			nft.state.is_secret_syncing = true;
+			nft.state.is_syncing_secret = true;
 			NFT::set_nft(ALICE_NFT_ID_0, nft).unwrap();
 
 			let ok = AuctionBuilder::new().nft_id(ALICE_NFT_ID_0).execute();
@@ -341,6 +326,37 @@ pub mod create_auction {
 
 			let ok = AuctionBuilder::new().nft_id(ALICE_NFT_ID_0).execute();
 			assert_noop!(ok, Error::<Test>::CannotListRentedNFTs);
+		})
+	}
+
+	#[test]
+	fn cannot_list_not_synced_capsules() {
+		ExtBuilder::new_build(None).execute_with(|| {
+			prepare_tests();
+
+			// Set capsule and capsule syncing.
+			let mut nft = NFT::get_nft(ALICE_NFT_ID_0).unwrap();
+			nft.state.is_capsule = true;
+			nft.state.is_syncing_capsule = true;
+			NFT::set_nft(ALICE_NFT_ID_0, nft).unwrap();
+
+			let err = AuctionBuilder::new().nft_id(ALICE_NFT_ID_0).execute();
+			assert_noop!(err, Error::<Test>::CannotListNotSyncedCapsules);
+		})
+	}
+
+	#[test]
+	fn cannot_list_nfts_in_transmission() {
+		ExtBuilder::new_build(None).execute_with(|| {
+			prepare_tests();
+
+			// Set transmission.
+			let mut nft = NFT::get_nft(ALICE_NFT_ID_0).unwrap();
+			nft.state.is_transmission = true;
+			NFT::set_nft(ALICE_NFT_ID_0, nft).unwrap();
+
+			let err = AuctionBuilder::new().nft_id(ALICE_NFT_ID_0).execute();
+			assert_noop!(err, Error::<Test>::CannotListNFTsInTransmission);
 		})
 	}
 

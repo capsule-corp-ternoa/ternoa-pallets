@@ -1,4 +1,4 @@
-// Copyright 2022 Capsule Corp (France) SAS.
+// Copyright 2023 Capsule Corp (France) SAS.
 // This file is part of Ternoa.
 
 // Ternoa is free software: you can redistribute it and/or modify
@@ -33,6 +33,7 @@ pub use pallet::*;
 pub use types::*;
 
 use frame_support::traits::StorageVersion;
+use sp_std::vec;
 
 use primitives::tee::ClusterId;
 use ternoa_common::traits;
@@ -111,7 +112,6 @@ pub mod pallet {
 	/// Mapping of operator addresses to their enclave data
 	#[pallet::storage]
 	#[pallet::getter(fn enclaves)]
-	#[pallet::unbounded]
 	pub type EnclaveData<T: Config> = StorageMap<
 		_,
 		Blake2_128Concat,
@@ -129,7 +129,6 @@ pub mod pallet {
 	/// Map stores Cluster information
 	#[pallet::storage]
 	#[pallet::getter(fn clusters)]
-	#[pallet::unbounded]
 	pub type ClusterData<T: Config> = StorageMap<
 		_,
 		Blake2_128Concat,
@@ -308,7 +307,8 @@ pub mod pallet {
 				Error::<T>::OperatorAndEnclaveAreSame
 			);
 
-			let enclave = EnclaveData::<T>::get(&who).ok_or(Error::<T>::UpdateProhibitedForUnassignedEnclave)?;
+			let enclave = EnclaveData::<T>::get(&who)
+				.ok_or(Error::<T>::UpdateProhibitedForUnassignedEnclave)?;
 			ensure!(
 				EnclaveUpdates::<T>::get(&who).is_none(),
 				Error::<T>::UpdateRequestAlreadyExists

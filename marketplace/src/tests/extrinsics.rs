@@ -1,4 +1,4 @@
-// Copyright 2022 Capsule Corp (France) SAS.
+// Copyright 2023 Capsule Corp (France) SAS.
 // This file is part of Ternoa.
 
 // Ternoa is free software: you can redistribute it and/or modify
@@ -819,23 +819,6 @@ mod list_nft {
 	}
 
 	#[test]
-	fn cannot_list_capsule_nfts() {
-		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
-			|| {
-				prepare_tests();
-				let alice: mock::RuntimeOrigin = origin(ALICE);
-
-				// Set capsule to true for Alice's NFT.
-				let nft_state = NFTState::new(true, false, false, false, false, false, false, false, false);
-				NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
-
-				let err = Marketplace::list_nft(alice, ALICE_NFT_ID, ALICE_MARKETPLACE_ID, 10);
-				assert_noop!(err, Error::<Test>::CannotListCapsuleNFTs);
-			},
-		)
-	}
-
-	#[test]
 	fn cannot_list_not_synced_secret_nfts() {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
 			|| {
@@ -843,7 +826,8 @@ mod list_nft {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
 
 				// Set secret to true for Alice's NFT.
-				let nft_state = NFTState::new(false, false, true, false, false, true, false, false, false);
+				let nft_state =
+					NFTState::new(false, false, true, false, false, true, false, false, false);
 				NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
 
 				let err = Marketplace::list_nft(alice, ALICE_NFT_ID, ALICE_MARKETPLACE_ID, 10);
@@ -860,7 +844,8 @@ mod list_nft {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
 
 				// Set delegated to true for Alice's NFT.
-				let nft_state = NFTState::new(false, false, false, true, false, false, false, false, false);
+				let nft_state =
+					NFTState::new(false, false, false, true, false, false, false, false, false);
 				NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
 
 				let err = Marketplace::list_nft(alice, ALICE_NFT_ID, ALICE_MARKETPLACE_ID, 10);
@@ -896,11 +881,48 @@ mod list_nft {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
 
 				// Set capsule to true for Alice's NFT.
-				let nft_state = NFTState::new(false, false, false, false, false, false, true, false, false);
+				let nft_state =
+					NFTState::new(false, false, false, false, false, false, true, false, false);
 				NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
 
 				let err = Marketplace::list_nft(alice, ALICE_NFT_ID, ALICE_MARKETPLACE_ID, 10);
 				assert_noop!(err, Error::<Test>::CannotListRentedNFTs);
+			},
+		)
+	}
+
+	#[test]
+	fn cannot_list_not_synced_capsules() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
+			|| {
+				prepare_tests();
+				let alice: mock::RuntimeOrigin = origin(ALICE);
+
+				// Set capsule and capsule syncing to true for Alice's NFT.
+				let nft_state =
+					NFTState::new(true, false, false, false, false, false, false, true, false);
+				NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
+
+				let err = Marketplace::list_nft(alice, ALICE_NFT_ID, ALICE_MARKETPLACE_ID, 10);
+				assert_noop!(err, Error::<Test>::CannotListNotSyncedCapsules);
+			},
+		)
+	}
+
+	#[test]
+	fn cannot_list_nfts_in_transmission() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
+			|| {
+				prepare_tests();
+				let alice: mock::RuntimeOrigin = origin(ALICE);
+
+				// Set is_transmission to true for Alice's NFT.
+				let nft_state =
+					NFTState::new(false, false, false, false, false, false, false, false, true);
+				NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
+
+				let err = Marketplace::list_nft(alice, ALICE_NFT_ID, ALICE_MARKETPLACE_ID, 10);
+				assert_noop!(err, Error::<Test>::CannotListNFTsInTransmission);
 			},
 		)
 	}

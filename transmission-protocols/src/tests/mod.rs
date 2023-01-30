@@ -1,4 +1,4 @@
-// Copyright 2022 Capsule Corp (France) SAS.
+// Copyright 2023 Capsule Corp (France) SAS.
 // This file is part of Ternoa.
 
 // Ternoa is free software: you can redistribute it and/or modify
@@ -13,9 +13,9 @@
 
 // You should have received a copy of the GNU General Public License
 // along with Ternoa.  If not, see <http://www.gnu.org/licenses/>.
-
+// mod extrinsics;
+// mod traits;
 mod extrinsics;
-mod genesis;
-mod migration;
+mod hooks;
 
 pub mod mock;

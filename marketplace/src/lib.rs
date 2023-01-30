@@ -1,4 +1,4 @@
-// Copyright 2022 Capsule Corp (France) SAS.
+// Copyright 2023 Capsule Corp (France) SAS.
 // This file is part of Ternoa.
 
 // Ternoa is free software: you can redistribute it and/or modify
@@ -187,8 +187,6 @@ pub mod pallet {
 		NotAllowedToList,
 		/// Cannot list delegated NFTs.
 		CannotListDelegatedNFTs,
-		/// Cannot list capsule NFTs.
-		CannotListCapsuleNFTs,
 		/// Cannot list soulbound NFTs that was not created from owner.
 		CannotListNotCreatedSoulboundNFTs,
 		/// Cannot buy owned NFT
@@ -219,6 +217,10 @@ pub mod pallet {
 		CannotListNotSyncedSecretNFTs,
 		/// Cannot list rented NFTs.
 		CannotListRentedNFTs,
+		/// Cannot list because the capsule is not synced.
+		CannotListNotSyncedCapsules,
+		/// Cannot list capsule in transmission.
+		CannotListNFTsInTransmission,
 	}
 
 	#[pallet::call]
@@ -372,14 +374,15 @@ pub mod pallet {
 			let mut nft = T::NFTExt::get_nft(nft_id).ok_or(Error::<T>::NFTNotFound)?;
 			ensure!(nft.owner == who, Error::<T>::NotTheNFTOwner);
 			ensure!(!nft.state.is_listed, Error::<T>::CannotListAlreadytListedNFTs);
-			ensure!(!nft.state.is_capsule, Error::<T>::CannotListCapsuleNFTs);
 			ensure!(!nft.state.is_delegated, Error::<T>::CannotListDelegatedNFTs);
 			ensure!(
 				!(nft.state.is_soulbound && nft.creator != nft.owner),
 				Error::<T>::CannotListNotCreatedSoulboundNFTs
 			);
-			ensure!(!nft.state.is_secret_syncing, Error::<T>::CannotListNotSyncedSecretNFTs);
+			ensure!(!nft.state.is_syncing_secret, Error::<T>::CannotListNotSyncedSecretNFTs);
 			ensure!(!nft.state.is_rented, Error::<T>::CannotListRentedNFTs);
+			ensure!(!nft.state.is_syncing_capsule, Error::<T>::CannotListNotSyncedCapsules);
+			ensure!(!nft.state.is_transmission, Error::<T>::CannotListNFTsInTransmission);
 
 			let marketplace =
 				Marketplaces::<T>::get(marketplace_id).ok_or(Error::<T>::MarketplaceNotFound)?;

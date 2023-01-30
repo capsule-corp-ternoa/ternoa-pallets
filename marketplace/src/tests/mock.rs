@@ -1,4 +1,4 @@
-// Copyright 2022 Capsule Corp (France) SAS.
+// Copyright 2023 Capsule Corp (France) SAS.
 // This file is part of Ternoa.
 
 // Ternoa is free software: you can redistribute it and/or modify
@@ -37,6 +37,7 @@ pub const COLLECTOR: u64 = 99;
 pub const NFT_MINT_FEE: Balance = 10;
 pub const SECRET_NFT_MINT_FEE: Balance = 75;
 pub const MARKETPLACE_MINT_FEE: Balance = 100;
+pub const CAPSULE_MINT_FEE: Balance = 100;
 
 frame_support::construct_runtime!(
 	pub enum Test where
@@ -136,17 +137,17 @@ impl ternoa_tee::Config for Test {
 parameter_types! {
 	// NFT parameter types
 	pub const NFTInitialMintFee: Balance = NFT_MINT_FEE;
-	pub const MarketplaceInitialMintFee: Balance = MARKETPLACE_MINT_FEE;
 	pub const NFTOffchainDataLimit: u32 = 10;
 	pub const CollectionOffchainDataLimit: u32 = 10;
 	pub const CollectionSizeLimit: u32 = 10;
 	pub const InitialSecretMintFee: Balance = SECRET_NFT_MINT_FEE;
 	pub const ShardsNumber: u32 = 5;
+	pub const InitialCapsuleMintFee: Balance = CAPSULE_MINT_FEE;
 	// Marketplace parameter types
+	pub const MarketplaceInitialMintFee: Balance = MARKETPLACE_MINT_FEE;
 	pub const OffchainDataLimit: u32 = 150;
 	pub const AccountSizeLimit: u32 = 100;
 	pub const CollectionListSizeLimit: u32 = 100;
-
 }
 
 impl ternoa_nft::Config for Test {
@@ -161,6 +162,7 @@ impl ternoa_nft::Config for Test {
 	type InitialSecretMintFee = InitialSecretMintFee;
 	type ShardsNumber = ShardsNumber;
 	type TEEExt = TEE;
+	type InitialCapsuleMintFee = InitialCapsuleMintFee;
 }
 
 impl Config for Test {
