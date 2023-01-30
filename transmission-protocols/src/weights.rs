@@ -14,20 +14,31 @@
 // You should have received a copy of the GNU General Public License
 // along with Ternoa.  If not, see <http://www.gnu.org/licenses/>.
 
-use crate::{Call, Config, Pallet};
-use frame_benchmarking::{benchmarks, impl_benchmark_test_suite};
-use frame_system::RawOrigin;
-use sp_runtime::traits::Saturating;
-use sp_std::prelude::*;
+use frame_support::weights::Weight;
 
-benchmarks! {
-	set_session_extra_reward_payout {
-		let mut expected_value = Pallet::<T>::session_era_payout();
-		expected_value.session_extra_reward_payout = expected_value.session_extra_reward_payout.saturating_add(10000u32.into());
-	}: _(RawOrigin::Root, expected_value.session_extra_reward_payout.clone())
-	verify {
-		assert_eq!(Pallet::<T>::session_era_payout(), expected_value.clone());
-	}
+// TODO: REAL VALUES
+pub trait WeightInfo {
+	fn set_transmission_protocol() -> Weight;
+	fn remove_transmission_protocol() -> Weight;
+	fn reset_timer() -> Weight;
+	fn add_consent() -> Weight;
+	fn set_protocol_fee() -> Weight;
 }
 
-impl_benchmark_test_suite!(Pallet, crate::tests::mock::new_test_ext(), crate::tests::mock::Test);
+impl WeightInfo for () {
+	fn set_transmission_protocol() -> Weight {
+		Weight::from_ref_time(10_000_000 as u64)
+	}
+	fn remove_transmission_protocol() -> Weight {
+		Weight::from_ref_time(10_000_000 as u64)
+	}
+	fn reset_timer() -> Weight {
+		Weight::from_ref_time(10_000_000 as u64)
+	}
+	fn add_consent() -> Weight {
+		Weight::from_ref_time(10_000_000 as u64)
+	}
+	fn set_protocol_fee() -> Weight {
+		Weight::from_ref_time(10_000_000 as u64)
+	}
+}

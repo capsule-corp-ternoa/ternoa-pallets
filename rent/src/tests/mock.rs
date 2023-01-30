@@ -1,4 +1,4 @@
-// Copyright 2022 Capsule Corp (France) SAS.
+// Copyright 2023 Capsule Corp (France) SAS.
 // This file is part of Ternoa.
 
 // Ternoa is free software: you can redistribute it and/or modify
@@ -36,6 +36,7 @@ pub const CHARLIE: u64 = 3;
 pub const COLLECTOR: u64 = 99;
 pub const NFT_MINT_FEE: Balance = 10;
 pub const SECRET_NFT_MINT_FEE: Balance = 75;
+pub const CAPSULE_MINT_FEE: Balance = 100;
 
 frame_support::construct_runtime!(
 	pub enum Test where
@@ -140,6 +141,7 @@ parameter_types! {
 	pub const CollectionSizeLimit: u32 = 10;
 	pub const InitialSecretMintFee: Balance = SECRET_NFT_MINT_FEE;
 	pub const ShardsNumber: u32 = 5;
+	pub const InitialCapsuleMintFee: Balance = CAPSULE_MINT_FEE;
 	// Rent parameter types
 	pub const RentPalletId: PalletId = PalletId(*b"ter/rent");
 	pub const RentAccountSizeLimit: u32 = 3;
@@ -161,6 +163,7 @@ impl ternoa_nft::Config for Test {
 	type InitialSecretMintFee = InitialSecretMintFee;
 	type ShardsNumber = ShardsNumber;
 	type TEEExt = TEE;
+	type InitialCapsuleMintFee = InitialCapsuleMintFee;
 }
 
 impl Config for Test {

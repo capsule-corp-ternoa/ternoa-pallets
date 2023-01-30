@@ -1,4 +1,4 @@
-// Copyright 2022 Capsule Corp (France) SAS.
+// Copyright 2023 Capsule Corp (France) SAS.
 // This file is part of Ternoa.
 
 // Ternoa is free software: you can redistribute it and/or modify
@@ -33,6 +33,13 @@ pub trait WeightInfo {
 	fn add_secret() -> Weight;
 	fn add_secret_shard() -> Weight;
 	fn set_secret_nft_mint_fee() -> Weight;
+	fn convert_to_capsule() -> Weight;
+	fn create_capsule(s: u32) -> Weight;
+	fn revert_capsule() -> Weight;
+	fn set_capsule_offchaindata() -> Weight;
+	fn set_capsule_mint_fee() -> Weight;
+	fn add_capsule_shard() -> Weight;
+	fn notify_enclave_key_update() -> Weight;
 }
 
 /// Weight functions for `ternoa_nft`.
@@ -114,6 +121,51 @@ impl<T: frame_system::Config> WeightInfo for TernoaWeight<T> {
 	}
 	// Storage: NFT SecretNftMintFee (r:0 w:1)
 	fn set_secret_nft_mint_fee() -> Weight {
+		Weight::from_ref_time(10_000_000 as u64)
+	}
+
+	// TODO: REAL VALUES
+	// Storage: NFT NftMintFee (r:1 w:0)
+	// Storage: NFT SecretNftMintFee (r:1 w:0)
+	// Storage: System Account (r:1 w:1)
+	// Storage: NFT Collections (r:1 w:1)
+	// Storage: NFT NextNFTId (r:1 w:1)
+	// Storage: NFT SecretNftsOffchainData (r:0 w:1)
+	// Storage: NFT Nfts (r:0 w:1)
+	fn create_capsule(_s: u32) -> Weight {
+		Weight::from_ref_time(10_000_000 as u64)
+	}
+	// Storage: NFT Nfts (r:1 w:1)
+	// Storage: NFT SecretNftMintFee (r:1 w:0)
+	// Storage: System Account (r:1 w:1)
+	// Storage: NFT SecretNftsOffchainData (r:0 w:1)
+	fn convert_to_capsule() -> Weight {
+		Weight::from_ref_time(10_000_000 as u64)
+	}
+	// Storage: NFT Nfts (r:1 w:1)
+	// Storage: NFT SecretNftMintFee (r:1 w:0)
+	// Storage: System Account (r:1 w:1)
+	// Storage: NFT SecretNftsOffchainData (r:0 w:1)
+	fn revert_capsule() -> Weight {
+		Weight::from_ref_time(10_000_000 as u64)
+	}
+	// Storage: NFT Nfts (r:1 w:1)
+	// Storage: NFT SecretNftMintFee (r:1 w:0)
+	// Storage: System Account (r:1 w:1)
+	// Storage: NFT SecretNftsOffchainData (r:0 w:1)
+	fn set_capsule_offchaindata() -> Weight {
+		Weight::from_ref_time(10_000_000 as u64)
+	}
+	// Storage: NFT CapsuleMintFee (r:0 w:1)
+	fn set_capsule_mint_fee() -> Weight {
+		Weight::from_ref_time(10_000_000 as u64)
+	}
+	// Storage: NFT CapsuleMintFee (r:0 w:1)
+	fn add_capsule_shard() -> Weight {
+		Weight::from_ref_time(10_000_000 as u64)
+	}
+	// Storage: NFT CapsuleMintFee (r:0 w:1)
+	fn notify_enclave_key_update() -> Weight {
 		Weight::from_ref_time(10_000_000 as u64)
 	}
 }

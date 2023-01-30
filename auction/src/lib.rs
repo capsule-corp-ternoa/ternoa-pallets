@@ -1,4 +1,4 @@
-// Copyright 2022 Capsule Corp (France) SAS.
+// Copyright 2023 Capsule Corp (France) SAS.
 // This file is part of Ternoa.
 
 // Ternoa is free software: you can redistribute it and/or modify
@@ -285,8 +285,6 @@ pub mod pallet {
 		CannotEndAuctionThatWasNotExtended,
 		/// Cannot auction NFTs that are listed for sale.
 		CannotListListedNFTs,
-		/// Cannot auction capsules.
-		CannotListCapsulesNFTs,
 		/// Cannot auction NFTs that are not owned by the caller.
 		CannotListNotOwnedNFTs,
 		/// Cannot auction delegated NFTs.
@@ -317,6 +315,10 @@ pub mod pallet {
 		CannotListNotSyncedSecretNFTs,
 		/// Amount too low (lower than existential deposit).
 		AmountTooLow,
+		/// Cannot list because the capsule is not synced.
+		CannotListNotSyncedCapsules,
+		/// Cannot list nfts with transmission protocol.
+		CannotListNFTsInTransmission,
 	}
 
 	#[pallet::call]
@@ -358,14 +360,15 @@ pub mod pallet {
 			let mut nft = T::NFTExt::get_nft(nft_id).ok_or(Error::<T>::NFTNotFound)?;
 			ensure!(nft.owner == who, Error::<T>::CannotListNotOwnedNFTs);
 			ensure!(!nft.state.is_listed, Error::<T>::CannotListListedNFTs);
-			ensure!(!nft.state.is_capsule, Error::<T>::CannotListCapsulesNFTs);
 			ensure!(!nft.state.is_delegated, Error::<T>::CannotListDelegatedNFTs);
 			ensure!(
 				!(nft.state.is_soulbound && nft.creator != nft.owner),
 				Error::<T>::CannotListNotCreatedSoulboundNFTs
 			);
-			ensure!(!nft.state.is_syncing, Error::<T>::CannotListNotSyncedSecretNFTs);
+			ensure!(!nft.state.is_syncing_secret, Error::<T>::CannotListNotSyncedSecretNFTs);
 			ensure!(!nft.state.is_rented, Error::<T>::CannotListRentedNFTs);
+			ensure!(!nft.state.is_syncing_capsule, Error::<T>::CannotListNotSyncedCapsules);
+			ensure!(!nft.state.is_transmission, Error::<T>::CannotListNFTsInTransmission);
 
 			let marketplace = T::MarketplaceExt::get_marketplace(marketplace_id)
 				.ok_or(Error::<T>::MarketplaceNotFound)?;
@@ -698,7 +701,7 @@ impl<T: Config> Pallet<T> {
 		block_number: T::BlockNumber,
 	) -> Result<(), DispatchError> {
 		Deadlines::<T>::try_mutate(|x| -> DispatchResult {
-			x.benchmark_bulk_insert(nft_id, block_number, number)
+			x.bulk_insert(nft_id, block_number, number)
 				.map_err(|_| Error::<T>::MaximumAuctionsLimitReached)?;
 			Ok(())
 		})?;

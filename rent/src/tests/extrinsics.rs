@@ -1,4 +1,4 @@
-// Copyright 2022 Capsule Corp (France) SAS.
+// Copyright 2023 Capsule Corp (France) SAS.
 // This file is part of Ternoa.
 
 // Ternoa is free software: you can redistribute it and/or modify
@@ -333,7 +333,8 @@ mod create_contract {
 			let alice: mock::RuntimeOrigin = origin(ALICE);
 
 			// Set to capsule.
-			let nft_state = NFTState::new(true, false, false, false, false, false, false);
+			let nft_state =
+				NFTState::new(false, false, false, false, false, false, false, true, false);
 			NFT::set_nft_state(ALICE_NFT_ID_6, nft_state).unwrap();
 			// Try to create a contract with an NFT in invalid state.
 			let err = Rent::create_contract(
@@ -349,7 +350,8 @@ mod create_contract {
 			assert_noop!(err, Error::<Test>::ContractNFTNotInAValidState);
 
 			// Set to listed.
-			let nft_state = NFTState::new(false, true, false, false, false, false, false);
+			let nft_state =
+				NFTState::new(false, true, false, false, false, false, false, false, false);
 			NFT::set_nft_state(ALICE_NFT_ID_6, nft_state).unwrap();
 			// Try to create a contract with an NFT in invalid state.
 			let err = Rent::create_contract(
@@ -365,7 +367,8 @@ mod create_contract {
 			assert_noop!(err, Error::<Test>::ContractNFTNotInAValidState);
 
 			// Set to delegated.
-			let nft_state = NFTState::new(false, false, false, true, false, false, false);
+			let nft_state =
+				NFTState::new(false, false, false, true, false, false, false, false, false);
 			NFT::set_nft_state(ALICE_NFT_ID_6, nft_state).unwrap();
 			// Try to create a contract with an NFT in invalid state.
 			let err = Rent::create_contract(
@@ -381,7 +384,8 @@ mod create_contract {
 			assert_noop!(err, Error::<Test>::ContractNFTNotInAValidState);
 
 			// Set to soulbound.
-			let nft_state = NFTState::new(false, false, false, false, true, false, false);
+			let nft_state =
+				NFTState::new(false, false, false, false, true, false, false, false, false);
 			NFT::set_nft_state(ALICE_NFT_ID_6, nft_state).unwrap();
 			// Try to create a contract with an NFT in invalid state.
 			let err = Rent::create_contract(
@@ -397,7 +401,8 @@ mod create_contract {
 			assert_noop!(err, Error::<Test>::ContractNFTNotInAValidState);
 
 			// Set to rented.
-			let nft_state = NFTState::new(false, false, false, false, false, false, true);
+			let nft_state =
+				NFTState::new(false, false, false, false, false, false, true, false, false);
 			NFT::set_nft_state(ALICE_NFT_ID_6, nft_state).unwrap();
 			// Try to create a contract with an NFT in invalid state.
 			let err = Rent::create_contract(
@@ -730,7 +735,8 @@ mod create_contract {
 			let alice: mock::RuntimeOrigin = origin(ALICE);
 
 			// Set cancellation fee NFT to capsule.
-			let nft_state = NFTState::new(true, false, false, false, false, false, false);
+			let nft_state =
+				NFTState::new(false, false, false, false, false, false, false, false, true);
 			NFT::set_nft_state(ALICE_NFT_ID_7, nft_state).unwrap();
 
 			// Try to create a contract with invalid state cancellation fee NFT.

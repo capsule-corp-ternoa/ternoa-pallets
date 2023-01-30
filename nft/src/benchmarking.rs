@@ -1,4 +1,4 @@
-// Copyright 2022 Capsule Corp (France) SAS.
+// Copyright 2023 Capsule Corp (France) SAS.
 // This file is part of Ternoa.
 
 // Ternoa is free software: you can redistribute it and/or modify
@@ -21,6 +21,7 @@ use crate::Pallet as NFT;
 use frame_benchmarking::{account as benchmark_account, benchmarks, impl_benchmark_test_suite};
 use frame_support::{assert_ok, traits::Currency, BoundedVec};
 use frame_system::RawOrigin;
+use primitives::nfts::NFTState;
 use sp_arithmetic::per_things::Permill;
 use sp_runtime::traits::{Bounded, StaticLookup};
 use sp_std::prelude::*;
@@ -214,7 +215,7 @@ benchmarks! {
 		assert_eq!(NFT::<T>::collections(benchmark_data.collection_id).unwrap().nfts.contains(&nft_id), true);
 		assert_eq!(nft.collection_id, Some(benchmark_data.collection_id));
 		assert_eq!(nft.state.is_secret, true);
-		assert_eq!(nft.state.is_syncing, true);
+		assert_eq!(nft.state.is_syncing_secret, true);
 		assert!(secret_offchain_data.is_some());
 	}
 
@@ -228,7 +229,7 @@ benchmarks! {
 		let nft = NFT::<T>::nfts(benchmark_data.nft_id).unwrap();
 		let secret_offchain_data = NFT::<T>::secret_nfts_offchain_data(benchmark_data.nft_id);
 		assert_eq!(nft.state.is_secret, true);
-		assert_eq!(nft.state.is_syncing, true);
+		assert_eq!(nft.state.is_syncing_secret, true);
 		assert!(secret_offchain_data.is_some());
 	}
 
@@ -245,7 +246,7 @@ benchmarks! {
 		let shards = NFT::<T>::secret_nfts_shards_count(benchmark_data.nft_id).unwrap();
 		let alice: T::AccountId = get_account::<T>("ALICE");
 		assert_eq!(nft.state.is_secret, true);
-		assert_eq!(nft.state.is_syncing, true);
+		assert_eq!(nft.state.is_syncing_secret, true);
 		assert_eq!(shards.len(), 1);
 	}
 
@@ -256,6 +257,122 @@ benchmarks! {
 	verify {
 		assert_ne!(old_mint_fee, new_mint_fee.clone().into());
 		assert_eq!(NFT::<T>::secret_nft_mint_fee(), new_mint_fee.into());
+	}
+
+	convert_to_capsule {
+		let benchmark_data = prepare_benchmarks::<T>();
+		let alice: T::AccountId = get_account::<T>("ALICE");
+		let capsule_offchain_data: BoundedVec<u8, T::NFTOffchainDataLimit> = BoundedVec::try_from(vec![1; T::NFTOffchainDataLimit::get() as usize]).unwrap();
+	}: _(origin::<T>("ALICE"), benchmark_data.nft_id, capsule_offchain_data)
+	verify {
+		// Get The NFT.
+		let nft = NFT::<T>::nfts(benchmark_data.nft_id).unwrap();
+		let capsule_offchain_data = NFT::<T>::capsule_offchain_data(benchmark_data.nft_id);
+		assert_eq!(nft.state.is_capsule, true);
+		assert_eq!(nft.state.is_syncing_capsule, true);
+		assert!(capsule_offchain_data.is_some());
+	}
+
+	create_capsule {
+		let s in 0 .. T::CollectionSizeLimit::get() - 1;
+		let benchmark_data = prepare_benchmarks::<T>();
+		let alice: T::AccountId = get_account::<T>("ALICE");
+		let nft_offchain_data: BoundedVec<u8, T::NFTOffchainDataLimit> = BoundedVec::try_from(vec![1; T::NFTOffchainDataLimit::get() as usize]).unwrap();
+		let capsule_offchain_data: BoundedVec<u8, T::NFTOffchainDataLimit> = BoundedVec::try_from(vec![1; T::NFTOffchainDataLimit::get() as usize]).unwrap();
+		// Fill the collection.
+		NFT::<T>::create_filled_collection(alice.clone(), benchmark_data.collection_id, 0, s).unwrap();
+	}: _(origin::<T>("ALICE"), nft_offchain_data, capsule_offchain_data, PERCENT_100, Some(benchmark_data.collection_id), false)
+	verify {
+		// Get The NFT id.
+		let nft_id = NFT::<T>::next_nft_id() - 1;
+		// Get The NFT.
+		let nft = NFT::<T>::nfts(nft_id).unwrap();
+		// Get the capsule offchain_data
+		let capsule_offchain_data = NFT::<T>::capsule_offchain_data(nft_id);
+		assert_eq!(nft.owner, alice);
+		assert_eq!(NFT::<T>::collections(benchmark_data.collection_id).unwrap().nfts.contains(&nft_id), true);
+		assert_eq!(nft.collection_id, Some(benchmark_data.collection_id));
+		assert_eq!(nft.state.is_capsule, true);
+		assert_eq!(nft.state.is_syncing_capsule, true);
+		assert!(capsule_offchain_data.is_some());
+	}
+
+	revert_capsule {
+		let benchmark_data = prepare_benchmarks::<T>();
+		let alice_origin = origin::<T>("ALICE");
+		let bob_origin = origin::<T>("BOB");
+		let capsule_offchain_data: BoundedVec<u8, T::NFTOffchainDataLimit> = BoundedVec::try_from(vec![1; T::NFTOffchainDataLimit::get() as usize]).unwrap();
+		NFT::<T>::convert_to_capsule(alice_origin.clone().into(), benchmark_data.nft_id, capsule_offchain_data).unwrap();
+		T::TEEExt::register_and_assign_enclave(get_account::<T>("ALICE"), get_account::<T>("ALICE"), None).unwrap();
+		T::TEEExt::register_and_assign_enclave(get_account::<T>("BOB"), get_account::<T>("BOB"), None).unwrap();
+		NFT::<T>::add_capsule_shard(alice_origin.into(), benchmark_data.nft_id).unwrap();
+		NFT::<T>::add_capsule_shard(bob_origin.into(), benchmark_data.nft_id).unwrap();
+	}: _(origin::<T>("ALICE"), benchmark_data.nft_id)
+	verify {
+		// Get The NFT.
+		let nft = NFT::<T>::nfts(benchmark_data.nft_id).unwrap();
+		let capsule_offchain_data = NFT::<T>::capsule_offchain_data(benchmark_data.nft_id);
+		assert_eq!(nft.state.is_capsule, false);
+		assert_eq!(nft.state.is_syncing_capsule, false);
+		assert!(capsule_offchain_data.is_none());
+	}
+
+	set_capsule_offchaindata {
+		let benchmark_data = prepare_benchmarks::<T>();
+		let alice_origin = origin::<T>("ALICE");
+		let capsule_offchain_data: BoundedVec<u8, T::NFTOffchainDataLimit> = BoundedVec::try_from(vec![1; T::NFTOffchainDataLimit::get() as usize]).unwrap();
+		NFT::<T>::convert_to_capsule(alice_origin.into(), benchmark_data.nft_id, capsule_offchain_data.clone()).unwrap();
+		let state = NFTState::new(true, false, false, false, false, false, false, false, false);
+		NFT::<T>::set_nft_state(benchmark_data.nft_id, state).unwrap();
+	}: _(origin::<T>("ALICE"), benchmark_data.nft_id, capsule_offchain_data)
+	verify {
+		// Get The NFT.
+		let nft = NFT::<T>::nfts(benchmark_data.nft_id).unwrap();
+		let capsule_offchain_data = NFT::<T>::capsule_offchain_data(benchmark_data.nft_id);
+		assert_eq!(nft.state.is_capsule, true);
+		assert_eq!(nft.state.is_syncing_capsule, false);
+		assert!(capsule_offchain_data.is_some());
+	}
+
+	set_capsule_mint_fee {
+		let old_mint_fee = NFT::<T>::capsule_mint_fee();
+		let new_mint_fee = 150u32;
+	}: _(RawOrigin::Root, new_mint_fee.clone().into())
+	verify {
+		assert_ne!(old_mint_fee, new_mint_fee.clone().into());
+		assert_eq!(NFT::<T>::capsule_mint_fee(), new_mint_fee.into());
+	}
+
+	add_capsule_shard {
+		let benchmark_data = prepare_benchmarks::<T>();
+		let alice = origin::<T>("ALICE");
+		let capsule_offchain_data: BoundedVec<u8, T::NFTOffchainDataLimit> = BoundedVec::try_from(vec![1; T::NFTOffchainDataLimit::get() as usize]).unwrap();
+		NFT::<T>::convert_to_capsule(alice.clone().into(), benchmark_data.nft_id, capsule_offchain_data).unwrap();
+		T::TEEExt::register_and_assign_enclave(get_account::<T>("ALICE"), get_account::<T>("ALICE"), None).unwrap();
+	}: _(origin::<T>("ALICE"), benchmark_data.nft_id)
+	verify {
+		// Get The NFT.
+		let nft = NFT::<T>::nfts(benchmark_data.nft_id).unwrap();
+		let shards = NFT::<T>::capsules_shards_count(benchmark_data.nft_id).unwrap();
+		let alice: T::AccountId = get_account::<T>("ALICE");
+		assert_eq!(nft.state.is_capsule, true);
+		assert_eq!(nft.state.is_syncing_capsule, true);
+		assert_eq!(shards.len(), 1);
+	}
+
+	notify_enclave_key_update {
+		let benchmark_data = prepare_benchmarks::<T>();
+		let alice_origin = origin::<T>("ALICE");
+		let capsule_offchain_data: BoundedVec<u8, T::NFTOffchainDataLimit> = BoundedVec::try_from(vec![1; T::NFTOffchainDataLimit::get() as usize]).unwrap();
+		NFT::<T>::convert_to_capsule(alice_origin.into(), benchmark_data.nft_id, capsule_offchain_data).unwrap();
+		let state = NFTState::new(true, false, false, false, false, false, false, false, false);
+		NFT::<T>::set_nft_state(benchmark_data.nft_id, state).unwrap();
+	}: _(origin::<T>("ALICE"), benchmark_data.nft_id)
+	verify {
+		// Get The NFT.
+		let nft = NFT::<T>::nfts(benchmark_data.nft_id).unwrap();
+		assert_eq!(nft.state.is_capsule, true);
+		assert_eq!(nft.state.is_syncing_capsule, true);
 	}
 }
 

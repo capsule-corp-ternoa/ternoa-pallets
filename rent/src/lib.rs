@@ -1,4 +1,4 @@
-// Copyright 2022 Capsule Corp (France) SAS.
+// Copyright 2023 Capsule Corp (France) SAS.
 // This file is part of Ternoa.
 
 // Ternoa is free software: you can redistribute it and/or modify
@@ -1015,7 +1015,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	pub fn invalid_state() -> Vec<NFTStateModifiers> {
-		vec![Capsule, IsListed, Delegated, Soulbound, SecretSyncing, Rented]
+		vec![IsListed, Delegated, Soulbound, SecretSyncing, Rented, CapsuleSyncing, IsTransmission]
 	}
 }
 
@@ -1026,7 +1026,7 @@ impl<T: Config> Pallet<T> {
 		block_numer: T::BlockNumber,
 	) -> Result<(), DispatchError> {
 		Queues::<T>::try_mutate(|x| -> DispatchResult {
-			x.benchmark_bulk_insert(999, block_numer, QueueKind::Available, number)
+			x.bulk_insert(999, block_numer, QueueKind::Available, number)
 				.map_err(|_| Error::<T>::MaxSimultaneousContractReached)?;
 			Ok(())
 		})?;

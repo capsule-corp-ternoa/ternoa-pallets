@@ -1,4 +1,4 @@
-// Copyright 2022 Capsule Corp (France) SAS.
+// Copyright 2023 Capsule Corp (France) SAS.
 // This file is part of Ternoa.
 
 // Ternoa is free software: you can redistribute it and/or modify
@@ -31,7 +31,7 @@ fn set_nft_state() {
 		let alice: RuntimeOrigin = RawOrigin::Signed(ALICE).into();
 		NFT::create_nft(alice, BoundedVec::default(), PERCENT_0, None, false).unwrap();
 		let nft_id = mock::NFT::get_next_nft_id() - 1;
-		let nft_state = NFTState::new(true, true, true, true, true, true, false);
+		let nft_state = NFTState::new(true, true, true, true, true, true, false, false, false);
 		<NFT as NFTExt>::set_nft_state(nft_id, nft_state.clone()).unwrap();
 		let nft = NFT::nfts(nft_id).unwrap();
 		assert_eq!(nft.state, nft_state);

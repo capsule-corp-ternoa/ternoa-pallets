@@ -1,4 +1,4 @@
-// Copyright 2022 Capsule Corp (France) SAS.
+// Copyright 2023 Capsule Corp (France) SAS.
 // This file is part of Ternoa.
 
 // Ternoa is free software: you can redistribute it and/or modify
@@ -67,7 +67,7 @@ impl WeightInfo for () {
 		Weight::from_ref_time(10_000_000 as u64)
 	}
 
-	// TODO: Add number of storage reads when running benchmarks
+	// TODO: REAL VALUES
 	fn force_update_enclave() -> Weight {
 		Weight::from_ref_time(10_000_000 as u64)
 	}
