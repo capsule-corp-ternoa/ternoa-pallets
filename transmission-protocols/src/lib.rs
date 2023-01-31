@@ -291,7 +291,7 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		/// Set a transmission protocol for the specified NFT
-		#[pallet::weight(T::WeightInfo::set_transmission_protocol())]
+		#[pallet::weight(T::WeightInfo::set_transmission_protocol(AtBlockQueue::<T>::get().size() as u32))]
 		pub fn set_transmission_protocol(
 			origin: OriginFor<T>,
 			nft_id: NFTId,
@@ -388,7 +388,7 @@ pub mod pallet {
 		}
 
 		/// Remove a transmission protocol for the specified NFT
-		#[pallet::weight(T::WeightInfo::remove_transmission_protocol())]
+		#[pallet::weight(T::WeightInfo::remove_transmission_protocol(AtBlockQueue::<T>::get().size() as u32))]
 		pub fn remove_transmission_protocol(
 			origin: OriginFor<T>,
 			nft_id: NFTId,
@@ -427,7 +427,7 @@ pub mod pallet {
 		}
 
 		/// Reset the timer of the specified NFT transmission
-		#[pallet::weight(T::WeightInfo::reset_timer())]
+		#[pallet::weight(T::WeightInfo::reset_timer(AtBlockQueue::<T>::get().size() as u32))]
 		pub fn reset_timer(
 			origin: OriginFor<T>,
 			nft_id: NFTId,
@@ -471,7 +471,7 @@ pub mod pallet {
 		}
 
 		/// Add the caller consent to trigger nft's transmission
-		#[pallet::weight(T::WeightInfo::add_consent())]
+		#[pallet::weight(T::WeightInfo::add_consent(AtBlockQueue::<T>::get().size() as u32))]
 		pub fn add_consent(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 			let now = frame_system::Pallet::<T>::block_number();

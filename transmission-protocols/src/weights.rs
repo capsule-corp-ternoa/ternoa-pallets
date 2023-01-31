@@ -17,24 +17,24 @@
 use frame_support::weights::Weight;
 
 pub trait WeightInfo {
-	fn set_transmission_protocol() -> Weight;
-	fn remove_transmission_protocol() -> Weight;
-	fn reset_timer() -> Weight;
-	fn add_consent() -> Weight;
+	fn set_transmission_protocol(s: u32) -> Weight;
+	fn remove_transmission_protocol(s: u32) -> Weight;
+	fn reset_timer(s: u32) -> Weight;
+	fn add_consent(s: u32) -> Weight;
 	fn set_protocol_fee() -> Weight;
 }
 
 impl WeightInfo for () {
-	fn set_transmission_protocol() -> Weight {
+	fn set_transmission_protocol(_s: u32) -> Weight {
 		Weight::from_ref_time(10_000_000 as u64)
 	}
-	fn remove_transmission_protocol() -> Weight {
+	fn remove_transmission_protocol(_s: u32) -> Weight {
 		Weight::from_ref_time(10_000_000 as u64)
 	}
-	fn reset_timer() -> Weight {
+	fn reset_timer(_s: u32) -> Weight {
 		Weight::from_ref_time(10_000_000 as u64)
 	}
-	fn add_consent() -> Weight {
+	fn add_consent(_s: u32) -> Weight {
 		Weight::from_ref_time(10_000_000 as u64)
 	}
 	fn set_protocol_fee() -> Weight {
