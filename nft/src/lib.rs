@@ -45,8 +45,7 @@ use primitives::{
 };
 use sp_arithmetic::per_things::Permill;
 use sp_runtime::traits::{CheckedSub, StaticLookup};
-use sp_std::prelude::*;
-use sp_std::vec;
+use sp_std::{prelude::*, vec};
 use ternoa_common::{traits, traits::TEEExt};
 
 pub use weights::WeightInfo;
@@ -1206,7 +1205,7 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		// TODO
+		// TODO: add back when we can revert capsule
 		// /// Revert a capsule to a regular NFT.
 		// #[pallet::weight(T::WeightInfo::revert_capsule())]
 		// pub fn revert_capsule(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo

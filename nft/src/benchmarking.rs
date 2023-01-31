@@ -297,7 +297,7 @@ benchmarks! {
 		assert!(capsule_offchain_data.is_some());
 	}
 
-	// TODO
+	// TODO: add back when we can revert capsule
 	// revert_capsule {
 	// 	let benchmark_data = prepare_benchmarks::<T>();
 	// 	let alice_origin = origin::<T>("ALICE");

@@ -28,54 +28,24 @@ pub trait WeightInfo {
 
 /// Weight functions for `ternoa_auctions`.
 impl WeightInfo for () {
-	// Storage: NFT Nfts (r:1 w:1)
-	// Storage: Marketplace Marketplaces (r:1 w:0)
-	// Storage: Auction Deadlines (r:1 w:1)
-	// Storage: Auction Auctions (r:0 w:1)
-	/// The range of component `s` is `[0, 98]`.
 	fn create_auction(_s: u32) -> Weight {
 		Weight::from_ref_time(10_000_000 as u64)
 	}
-	// Storage: Auction Auctions (r:1 w:1)
-	// Storage: NFT Nfts (r:1 w:1)
-	// Storage: Auction Deadlines (r:1 w:1)
-	/// The range of component `s` is `[0, 99]`.
 	fn cancel_auction(_s: u32) -> Weight {
 		Weight::from_ref_time(10_000_000 as u64)
 	}
-	// Storage: Auction Auctions (r:1 w:1)
-	// Storage: Marketplace Marketplaces (r:1 w:0)
-	// Storage: NFT Nfts (r:1 w:1)
-	// Storage: System Account (r:3 w:3)
-	// Storage: Auction Deadlines (r:1 w:1)
-	// Storage: Auction Claims (r:1 w:1)
-	/// The range of component `s` is `[0, 99]`.
 	fn end_auction(_s: u32) -> Weight {
 		Weight::from_ref_time(10_000_000 as u64)
 	}
-	// Storage: Auction Auctions (r:1 w:1)
-	// Storage: System Account (r:2 w:2)
-	/// The range of component `s` is `[0, 9]`.
 	fn add_bid(_s: u32) -> Weight {
 		Weight::from_ref_time(10_000_000 as u64)
 	}
-	// Storage: Auction Auctions (r:1 w:1)
-	// Storage: System Account (r:2 w:2)
-	/// The range of component `s` is `[0, 9]`.
 	fn remove_bid(_s: u32) -> Weight {
 		Weight::from_ref_time(10_000_000 as u64)
 	}
-	// Storage: Auction Auctions (r:1 w:1)
-	// Storage: Marketplace Marketplaces (r:1 w:0)
-	// Storage: NFT Nfts (r:1 w:1)
-	// Storage: System Account (r:3 w:3)
-	// Storage: Auction Deadlines (r:1 w:1)
-	/// The range of component `s` is `[0, 99]`.
 	fn buy_it_now(_s: u32) -> Weight {
 		Weight::from_ref_time(10_000_000 as u64)
 	}
-	// Storage: Auction Claims (r:1 w:1)
-	// Storage: System Account (r:2 w:2)
 	fn claim() -> Weight {
 		Weight::from_ref_time(10_000_000 as u64)
 	}

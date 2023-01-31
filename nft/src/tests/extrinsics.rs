@@ -2259,7 +2259,7 @@ mod create_capsule {
 	}
 }
 
-// TODO
+// TODO: add back when we can revert capsule
 // mod revert_capsule {
 // 	use super::*;
 

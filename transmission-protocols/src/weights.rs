@@ -16,7 +16,6 @@
 
 use frame_support::weights::Weight;
 
-// TODO: REAL VALUES
 pub trait WeightInfo {
 	fn set_transmission_protocol() -> Weight;
 	fn remove_transmission_protocol() -> Weight;
