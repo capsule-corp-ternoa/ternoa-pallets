@@ -284,6 +284,8 @@ pub mod pallet {
 		ThresholdTooLow,
 		/// The consent list and thresold are invalid or incompatible
 		InvalidConsentList,
+		/// The consent list has duplicate values
+		DuplicatesInConsentList,
 		/// The consent is not allowed from this account
 		ConsentNotAllowed,
 	}
@@ -339,6 +341,13 @@ pub mod pallet {
 			}
 
 			if let Some((consent_list, threshold)) = protocol.get_consent_data() {
+				let mut unique_consent_list: BoundedVec<T::AccountId, T::MaxConsentListSize> = BoundedVec::default();
+				for account in consent_list {
+					if !unique_consent_list.contains(&account){
+						unique_consent_list.try_push(account.clone()).map_err(|_| Error::<T>::ConsentListFull)?;
+					}
+				}
+				ensure!(consent_list.len() == unique_consent_list.len(), Error::<T>::DuplicatesInConsentList);
 				ensure!(threshold > 0u8, Error::<T>::ThresholdTooLow);
 				ensure!(
 					(threshold as u32) <= T::MaxConsentListSize::get(),

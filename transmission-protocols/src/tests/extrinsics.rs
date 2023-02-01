@@ -593,6 +593,28 @@ mod set_transmission_protocol {
 	}
 
 	#[test]
+	fn duplicate_in_consent_list() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
+			prepare_tests();
+			let alice: mock::RuntimeOrigin = origin(ALICE);
+			let threshold = 2u32;
+			let protocol = TransmissionProtocol::OnConsent {
+				consent_list: BoundedVec::try_from(vec![ALICE, ALICE]).unwrap(),
+				threshold: threshold.try_into().unwrap(),
+			};
+			let cancellation = CancellationPeriod::None;
+			let err = TransmissionProtocols::set_transmission_protocol(
+				alice,
+				ALICE_NFT_ID,
+				BOB,
+				protocol,
+				cancellation,
+			);
+			assert_noop!(err, Error::<Test>::DuplicatesInConsentList);
+		})
+	}
+
+	#[test]
 	fn simultaneous_transmission_limit_reached() {
 		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
 			prepare_tests();
