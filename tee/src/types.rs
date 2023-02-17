@@ -1,4 +1,4 @@
-// Copyright 2022 Capsule Corp (France) SAS.
+// Copyright 2023 Capsule Corp (France) SAS.
 // This file is part of Ternoa.
 
 // Ternoa is free software: you can redistribute it and/or modify
@@ -16,36 +16,52 @@
 
 use frame_support::{traits::Get, BoundedVec, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
-use primitives::nfts::{IPFSReference, NFTId};
 use scale_info::TypeInfo;
 use sp_std::fmt::Debug;
 
 #[derive(
 	Encode, Decode, CloneNoBound, PartialEqNoBound, Eq, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen,
 )]
+#[scale_info(skip_type_params(MaxUriLen))]
 #[codec(mel_bound(AccountId: MaxEncodedLen))]
-#[scale_info(skip_type_params(IPFSLengthLimit))]
-pub struct CapsuleData<AccountId, IPFSLengthLimit>
+pub struct Enclave<AccountId, MaxUriLen>
 where
 	AccountId: Clone + PartialEq + Debug,
-	IPFSLengthLimit: Get<u32>,
+	MaxUriLen: Get<u32>,
 {
-	pub owner: AccountId,
-	pub ipfs_reference: IPFSReference<IPFSLengthLimit>,
+	pub enclave_address: AccountId,
+	pub api_uri: BoundedVec<u8, MaxUriLen>,
 }
 
-impl<AccountId, IPFSLengthLimit> CapsuleData<AccountId, IPFSLengthLimit>
+impl<AccountId, MaxUriLen> Enclave<AccountId, MaxUriLen>
 where
 	AccountId: Clone + PartialEq + Debug,
-	IPFSLengthLimit: Get<u32>,
+	MaxUriLen: Get<u32>,
 {
-	pub fn new(
-		owner: AccountId,
-		ipfs_reference: IPFSReference<IPFSLengthLimit>,
-	) -> CapsuleData<AccountId, IPFSLengthLimit> {
-		Self { owner, ipfs_reference }
+	pub fn new(enclave_address: AccountId, api_uri: BoundedVec<u8, MaxUriLen>) -> Self {
+		Self { enclave_address, api_uri }
 	}
 }
 
-pub type CapsuleLedger<Balance, CapsuleCountLimit> =
-	BoundedVec<(NFTId, Balance), CapsuleCountLimit>;
+#[derive(
+	Encode, Decode, CloneNoBound, PartialEqNoBound, Eq, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen,
+)]
+#[scale_info(skip_type_params(ClusterSize))]
+#[codec(mel_bound(AccountId: MaxEncodedLen))]
+pub struct Cluster<AccountId, ClusterSize>
+where
+	AccountId: Clone + PartialEq + Debug,
+	ClusterSize: Get<u32>,
+{
+	pub enclaves: BoundedVec<AccountId, ClusterSize>,
+}
+
+impl<AccountId, ClusterSize> Cluster<AccountId, ClusterSize>
+where
+	AccountId: Clone + PartialEq + Debug,
+	ClusterSize: Get<u32>,
+{
+	pub fn new(enclaves: BoundedVec<AccountId, ClusterSize>) -> Self {
+		Self { enclaves }
+	}
+}

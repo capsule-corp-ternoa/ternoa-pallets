@@ -1,4 +1,4 @@
-// Copyright 2022 Capsule Corp (France) SAS.
+// Copyright 2023 Capsule Corp (France) SAS.
 // This file is part of Ternoa.
 
 // Ternoa is free software: you can redistribute it and/or modify
@@ -48,6 +48,7 @@ pub const AUCTION_ENDING_PERIOD: u64 = 10;
 pub const NFT_MINT_FEE: Balance = 10;
 pub const SECRET_NFT_MINT_FEE: Balance = 75;
 pub const MARKETPLACE_MINT_FEE: Balance = 100;
+pub const CAPSULE_MINT_FEE: Balance = 100;
 
 frame_support::construct_runtime!(
 	pub enum Test where
@@ -60,6 +61,7 @@ frame_support::construct_runtime!(
 		NFT: ternoa_nft,
 		Auction: ternoa_auction,
 		Marketplace: ternoa_marketplace,
+		TEE: ternoa_tee,
 	}
 );
 
@@ -110,7 +112,7 @@ impl frame_system::Config for Test {
 }
 
 parameter_types! {
-	pub const ExistentialDeposit: u64 = 0;
+	pub const ExistentialDeposit: u64 = 1;
 	pub const MaxLocks: u32 = 50;
 	pub const MaxReserves: u32 = 50;
 }
@@ -128,6 +130,21 @@ impl pallet_balances::Config for Test {
 }
 
 parameter_types! {
+	pub const ClusterSize: u32 = 5;
+	pub const MaxUriLen: u32 = 12;
+	pub const ListSizeLimit: u32 = 10;
+}
+
+impl ternoa_tee::Config for Test {
+	type RuntimeEvent = RuntimeEvent;
+	type WeightInfo = ();
+	type Currency = Balances;
+	type ClusterSize = ClusterSize;
+	type MaxUriLen = MaxUriLen;
+	type ListSizeLimit = ListSizeLimit;
+}
+
+parameter_types! {
 	// NFT parameter types
 	pub const NFTInitialMintFee: Balance = NFT_MINT_FEE;
 	pub const NFTOffchainDataLimit: u32 = 10;
@@ -135,6 +152,7 @@ parameter_types! {
 	pub const CollectionSizeLimit: u32 = 10;
 	pub const InitialSecretMintFee: Balance = SECRET_NFT_MINT_FEE;
 	pub const ShardsNumber: u32 = 5;
+	pub const InitialCapsuleMintFee: Balance = CAPSULE_MINT_FEE;
 	// Marketplace parameter types
 	pub const MarketplaceInitialMintFee: Balance = MARKETPLACE_MINT_FEE;
 	pub const OffchainDataLimit: u32 = 150;
@@ -154,6 +172,8 @@ impl ternoa_nft::Config for Test {
 	type CollectionSizeLimit = CollectionSizeLimit;
 	type InitialSecretMintFee = InitialSecretMintFee;
 	type ShardsNumber = ShardsNumber;
+	type TEEExt = TEE;
+	type InitialCapsuleMintFee = InitialCapsuleMintFee;
 }
 
 impl ternoa_marketplace::Config for Test {
@@ -195,6 +215,7 @@ impl Config for Test {
 	type BidderListLengthLimit = BidderListLengthLimit;
 	type ParallelAuctionLimit = ParallelAuctionLimit;
 	type ActionsInBlockLimit = ActionsInBlockLimit;
+	type ExistentialDeposit = ExistentialDeposit;
 }
 
 pub struct ExtBuilder {

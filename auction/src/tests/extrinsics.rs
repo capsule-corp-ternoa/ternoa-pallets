@@ -1,4 +1,4 @@
-// Copyright 2022 Capsule Corp (France) SAS.
+// Copyright 2023 Capsule Corp (France) SAS.
 // This file is part of Ternoa.
 
 // Ternoa is free software: you can redistribute it and/or modify
@@ -131,7 +131,7 @@ pub mod create_auction {
 			};
 
 			let _ = deadlines.insert(ALICE_NFT_ID_0, auction.end_block);
-			let state = NFTState::new(false, true, false, false, false, false, false);
+			let state = NFTState::new(false, true, false, false, false, false, false, false, false);
 
 			// Execution
 			let ok = Auction::create_auction(
@@ -268,21 +268,6 @@ pub mod create_auction {
 	}
 
 	#[test]
-	fn cannot_list_capsules_nfts() {
-		ExtBuilder::new_build(None).execute_with(|| {
-			prepare_tests();
-
-			// Set capsule.
-			let mut nft = NFT::get_nft(ALICE_NFT_ID_0).unwrap();
-			nft.state.is_capsule = true;
-			NFT::set_nft(ALICE_NFT_ID_0, nft).unwrap();
-
-			let ok = AuctionBuilder::new().nft_id(ALICE_NFT_ID_0).execute();
-			assert_noop!(ok, Error::<Test>::CannotListCapsulesNFTs);
-		})
-	}
-
-	#[test]
 	fn cannot_list_not_synced_secret_nfts() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
@@ -290,7 +275,7 @@ pub mod create_auction {
 			// Set secret.
 			let mut nft = NFT::get_nft(ALICE_NFT_ID_0).unwrap();
 			nft.state.is_secret = true;
-			nft.state.is_syncing = true;
+			nft.state.is_syncing_secret = true;
 			NFT::set_nft(ALICE_NFT_ID_0, nft).unwrap();
 
 			let ok = AuctionBuilder::new().nft_id(ALICE_NFT_ID_0).execute();
@@ -341,6 +326,37 @@ pub mod create_auction {
 
 			let ok = AuctionBuilder::new().nft_id(ALICE_NFT_ID_0).execute();
 			assert_noop!(ok, Error::<Test>::CannotListRentedNFTs);
+		})
+	}
+
+	#[test]
+	fn cannot_list_not_synced_capsules() {
+		ExtBuilder::new_build(None).execute_with(|| {
+			prepare_tests();
+
+			// Set capsule and capsule syncing.
+			let mut nft = NFT::get_nft(ALICE_NFT_ID_0).unwrap();
+			nft.state.is_capsule = true;
+			nft.state.is_syncing_capsule = true;
+			NFT::set_nft(ALICE_NFT_ID_0, nft).unwrap();
+
+			let err = AuctionBuilder::new().nft_id(ALICE_NFT_ID_0).execute();
+			assert_noop!(err, Error::<Test>::CannotListNotSyncedCapsules);
+		})
+	}
+
+	#[test]
+	fn cannot_list_nfts_in_transmission() {
+		ExtBuilder::new_build(None).execute_with(|| {
+			prepare_tests();
+
+			// Set transmission.
+			let mut nft = NFT::get_nft(ALICE_NFT_ID_0).unwrap();
+			nft.state.is_transmission = true;
+			NFT::set_nft(ALICE_NFT_ID_0, nft).unwrap();
+
+			let err = AuctionBuilder::new().nft_id(ALICE_NFT_ID_0).execute();
+			assert_noop!(err, Error::<Test>::CannotListNFTsInTransmission);
 		})
 	}
 
@@ -922,6 +938,36 @@ pub mod add_bid {
 	}
 
 	#[test]
+	fn amount_too_low() {
+		ExtBuilder::new_build(None).execute_with(|| {
+			prepare_tests();
+			let alice: mock::RuntimeOrigin = origin(ALICE);
+
+			// Cancel auction
+			Auction::cancel_auction(alice.clone(), ALICE_NFT_ID_1).unwrap();
+
+			//Create auction.
+			Auction::create_auction(
+				alice,
+				ALICE_NFT_ID_1,
+				ALICE_MARKETPLACE_ID,
+				DEFAULT_STARTBLOCK,
+				DEFAULT_ENDBLOCK,
+				0u128,
+				Some(DEFAULT_PRICE + 10),
+			)
+			.unwrap();
+
+			run_to_block(DEFAULT_STARTBLOCK);
+
+			let auction = Auctions::<Test>::get(ALICE_NFT_ID_1).unwrap();
+			let bob_bid = auction.start_price + 1;
+			let err = Auction::add_bid(origin(BOB), ALICE_NFT_ID_1, bob_bid);
+			assert_noop!(err, Error::<Test>::AmountTooLow);
+		})
+	}
+
+	#[test]
 	fn cannot_bid_less_than_the_highest_bid() {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
@@ -975,7 +1021,7 @@ pub mod add_bid {
 
 			let auction = Auctions::<Test>::get(ALICE_NFT_ID_1).unwrap();
 
-			let bid = Balances::free_balance(BOB);
+			let bid = Balances::free_balance(BOB) - 1u128;
 			assert!(bid > auction.start_price);
 
 			assert_ok!(Auction::add_bid(origin(BOB), ALICE_NFT_ID_1, bid));

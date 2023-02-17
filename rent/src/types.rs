@@ -1,4 +1,4 @@
-// Copyright 2022 Capsule Corp (France) SAS.
+// Copyright 2023 Capsule Corp (France) SAS.
 // This file is part of Ternoa.
 
 // Ternoa is free software: you can redistribute it and/or modify
@@ -470,8 +470,8 @@ where
 		};
 	}
 
-	/// Benchmark bulk insert
-	pub fn benchmark_bulk_insert(
+	/// Benchmark / tests only
+	pub fn bulk_insert(
 		&mut self,
 		nft_id: NFTId,
 		block_number: BlockNumber,

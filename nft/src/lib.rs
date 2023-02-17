@@ -1,4 +1,4 @@
-// Copyright 2022 Capsule Corp (France) SAS.
+// Copyright 2023 Capsule Corp (France) SAS.
 // This file is part of Ternoa.
 
 // Ternoa is free software: you can redistribute it and/or modify
@@ -22,6 +22,8 @@ mod tests;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
+mod migrations;
+
 pub mod weights;
 
 pub use pallet::*;
@@ -30,20 +32,21 @@ use frame_support::{
 	dispatch::DispatchResult,
 	ensure,
 	traits::{
-		Currency, ExistenceRequirement::KeepAlive, Get, OnUnbalanced, StorageVersion,
-		WithdrawReasons,
+		Currency, ExistenceRequirement::KeepAlive, Get, OnRuntimeUpgrade, OnUnbalanced,
+		StorageVersion, WithdrawReasons,
 	},
 	BoundedVec,
 };
 use frame_system::pallet_prelude::*;
 use primitives::{
 	nfts::{Collection, CollectionId, NFTData, NFTId, NFTState},
+	tee::ClusterId,
 	U8BoundedVec,
 };
 use sp_arithmetic::per_things::Permill;
 use sp_runtime::traits::{CheckedSub, StaticLookup};
-use sp_std::prelude::*;
-use ternoa_common::traits;
+use sp_std::{prelude::*, vec};
+use ternoa_common::{traits, traits::TEEExt};
 
 pub use weights::WeightInfo;
 
@@ -53,7 +56,7 @@ pub type NegativeImbalanceOf<T> = <<T as Config>::Currency as Currency<
 	<T as frame_system::Config>::AccountId,
 >>::NegativeImbalance;
 
-const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
+const STORAGE_VERSION: StorageVersion = StorageVersion::new(3);
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -79,6 +82,9 @@ pub mod pallet {
 		/// What we do with additional fees.
 		type FeesCollector: OnUnbalanced<NegativeImbalanceOf<Self>>;
 
+		/// Link to the TEE pallet.
+		type TEEExt: TEEExt<AccountId = Self::AccountId>;
+
 		// Constants
 		/// Default fee for minting NFTs.
 		#[pallet::constant]
@@ -103,6 +109,10 @@ pub mod pallet {
 		/// The number of necessary shards to consider the Secret NFT valid.
 		#[pallet::constant]
 		type ShardsNumber: Get<u32>;
+
+		/// Default fee for minting secret NFTs.
+		#[pallet::constant]
+		type InitialCapsuleMintFee: Get<BalanceOf<Self>>;
 	}
 
 	/// How much does it cost to mint a NFT (extra fee on top of the tx fees).
@@ -169,7 +179,31 @@ pub mod pallet {
 		_,
 		Blake2_128Concat,
 		NFTId,
-		BoundedVec<T::AccountId, T::ShardsNumber>,
+		BoundedVec<(ClusterId, T::AccountId), T::ShardsNumber>,
+		OptionQuery,
+	>;
+
+	/// How much does it cost to mint a capsule (extra fee on top of the tx fees and basic NFT
+	/// fee).
+	#[pallet::storage]
+	#[pallet::getter(fn capsule_mint_fee)]
+	pub(super) type CapsuleMintFee<T: Config> =
+		StorageValue<_, BalanceOf<T>, ValueQuery, T::InitialCapsuleMintFee>;
+
+	/// Host a map of capsules and their capsule_offchain_data.
+	#[pallet::storage]
+	#[pallet::getter(fn capsule_offchain_data)]
+	pub type CapsuleOffchainData<T: Config> =
+		StorageMap<_, Blake2_128Concat, NFTId, U8BoundedVec<T::NFTOffchainDataLimit>, OptionQuery>;
+
+	/// Host a map of capsules and a vector of enclave addresses that sent a shard.
+	#[pallet::storage]
+	#[pallet::getter(fn capsules_shards_count)]
+	pub type CapsulesShardsCount<T: Config> = StorageMap<
+		_,
+		Blake2_128Concat,
+		NFTId,
+		BoundedVec<(ClusterId, T::AccountId), T::ShardsNumber>,
 		OptionQuery,
 	>;
 
@@ -219,6 +253,26 @@ pub mod pallet {
 		SecretNFTSynced { nft_id: NFTId },
 		/// Secret NFT mint fee changed.
 		SecretNFTMintFeeSet { fee: BalanceOf<T> },
+		/// An NFT was converted to a capsule.
+		NFTConvertedToCapsule {
+			nft_id: NFTId,
+			offchain_data: U8BoundedVec<T::NFTOffchainDataLimit>,
+		},
+		/// A capsule offchain data was updated.
+		CapsuleOffchainDataSet {
+			nft_id: NFTId,
+			offchain_data: U8BoundedVec<T::NFTOffchainDataLimit>,
+		},
+		/// A shard was added for a capsule
+		CapsuleShardAdded { nft_id: NFTId, enclave: T::AccountId },
+		/// A capsule has finished syncing shards
+		CapsuleSynced { nft_id: NFTId },
+		/// A capsule was reverted to a regular NFT
+		CapsuleReverted { nft_id: NFTId },
+		/// Capsule mint fee has changed
+		CapsuleMintFeeSet { fee: BalanceOf<T> },
+		/// A user signified that a enclave key update was in progress
+		CapsuleKeyUpdateNotified { nft_id: NFTId },
 	}
 
 	#[pallet::error]
@@ -239,16 +293,8 @@ pub mod pallet {
 		CannotBurnDelegatedNFTs,
 		/// Operation is not allowed because the NFT is delegated.
 		CannotSetRoyaltyForDelegatedNFTs,
-		/// Operation is not allowed because the NFT is a capsule.
-		CannotTransferCapsuleNFTs,
-		/// Operation is not allowed because the NFT is a capsule.
-		CannotBurnCapsuleNFTs,
-		/// Operation is not allowed because the NFT is a capsule.
-		CannotDelegateCapsuleNFTs,
 		/// Operation is not allowed because the NFT is  and signer is not the creator.
 		CannotTransferNotCreatedSoulboundNFTs,
-		/// Operation is not allowed because the NFT is a capsule.
-		CannotSetRoyaltyForCapsuleNFTs,
 		/// Operation is not allowed because the NFT is owned by the caller.
 		CannotTransferNFTsToYourself,
 		/// Operation is not allowed because the NFT is rented
@@ -257,8 +303,12 @@ pub mod pallet {
 		CannotBurnRentedNFTs,
 		/// Operation is not allowed because the NFT is rented
 		CannotSetRoyaltyForRentedNFTs,
+		/// Operation is not allowed because the NFT is secret and syncing
+		CannotSetRoyaltyForSyncingNFTs,
 		/// Operation is not allowed because the NFT is rented
 		CannotDelegateRentedNFTs,
+		/// Operation is not allowed because the NFT is secret and syncing
+		CannotDelegateSyncingNFTs,
 		/// Operation is not allowed because the collection limit is too low.
 		CollectionLimitExceededMaximumAllowed,
 		/// No NFT was found with that NFT id.
@@ -302,12 +352,115 @@ pub mod pallet {
 		InsufficientBalance,
 		/// Operation is not permitted because the NFT is listed.
 		CannotAddSecretToListedNFTs,
-		/// Operation is not permitted because the NFT is a capsule.
-		CannotAddSecretToCapsuleNFTs,
 		/// Operation is not permitted because the NFT is already a secret.
 		CannotAddSecretToSecretNFTs,
-		/// Feature is not available yet
-		ComingSoon,
+		/// Operation is not permitted because the NFT is rented.
+		CannotAddSecretToRentedNFTs,
+		/// Operation is not permitted because the NFT is delegated.
+		CannotAddSecretToDelegatedNFTs,
+		/// Enclave which posted the shard for the NFT does not belongs to the
+		/// same cluster of the first posted shard.
+		ShareNotFromValidCluster,
+		/// Cannot burn capsule in a transmission protocol.
+		CannotBurnNFTsInTransmission,
+		/// Cannot transfer not synced capsules.
+		CannotTransferNotSyncedCapsules,
+		/// Cannot transfer capsule with transmission protocol.
+		CannotTransferNFTsInTransmission,
+		/// Cannot delegate syncing capsules.
+		CannotDelegateSyncingCapsules,
+		/// Cannot delegate capsules with transmission protocol.
+		CannotDelegateNFTsInTransmission,
+		/// Cannot set royalty for syncing capsules.
+		CannotSetRoyaltyForSyncingCapsules,
+		/// Cannot set royalty for nft in tranmission.
+		CannotSetRoyaltyForNFTsInTransmission,
+		/// Cannot add secret to a syncing capsule.
+		CannotAddSecretToSyncingCapsules,
+		/// Cannot add secret to nfts in transmission
+		CannotAddSecretToNFTsInTransmission,
+		/// Cannot convert a listed NFT to capsule
+		CannotConvertListedNFTs,
+		/// Cannot convert a listed NFT to capsule
+		CannotConvertCapsules,
+		/// Cannot convert a capsule to capsule
+		CannotConvertRentedNFTs,
+		/// Cannot convert a delegated NFT to capsule
+		CannotConvertDelegatedNFTs,
+		/// Cannot convert a syncing secret NFT to capsule
+		CannotConvertSyncingNFTs,
+		/// Cannot convert an NFT in transmission to capsule
+		CannotConvertNFTsInTransmission,
+		/// Operation is not permitted because NFT is not a capsule
+		NFTIsNotCapsule,
+		/// Operation is not permitted because NFT is listed
+		CannotRevertListedNFTs,
+		/// Operation is not permitted because NFT is rented
+		CannotRevertRentedNFTs,
+		/// Operation is not permitted because NFT is delegated
+		CannotRevertDelegatedNFTs,
+		/// Operation is not permitted because NFT secret is syncing
+		CannotRevertSyncingNFTs,
+		/// Operation is not permitted because NFT is in transmission
+		CannotRevertNFTsInTransmission,
+		/// Operation is not permitted because the NFT is listed
+		CannotSetOffchainDataForListedNFTs,
+		/// Operation is not permitted because the NFT is rented
+		CannotSetOffchainDataForRentedNFTs,
+		/// Operation is not permitted because the NFT is delegated
+		CannotSetOffchainDataForDelegatedNFTs,
+		/// Operation is not permitted because the NFT secret is syncing
+		CannotSetOffchainDataForSyncingNFTs,
+		/// Operation is not permitted because the NFT capsule is syncing
+		CannotSetOffchainDataForSyncingCapsules,
+		/// Operation is not permitted because the NFT capsule is in transmission
+		CannotSetOffchainDataForNFTsInTransmission,
+		/// Operation is not permitted because capsule has already received all shards.
+		CapsuleHasReceivedAllShards,
+		/// Operation is not permitted because the NFT is listed
+		CannotChangeKeyForListedNFTs,
+		/// Operation is not permitted because the NFT is rented
+		CannotChangeKeyForRentedNFTs,
+		/// Operation is not permitted because the NFT is delegated
+		CannotChangeKeyForDelegatedNFTs,
+		/// Operation is not permitted because the NFT secret is syncing
+		CannotChangeKeyForSyncingNFTs,
+		/// Operation is not permitted because the NFT capsule is syncing
+		CannotChangeKeyForSyncingCapsules,
+		/// Operation is not permitted because the NFT is in transmission
+		CannotChangeKeyForNFTsInTransmission,
+	}
+
+	#[pallet::hooks]
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+		#[cfg(feature = "try-runtime")]
+		fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
+			<migrations::v3::MigrationV3<T> as OnRuntimeUpgrade>::pre_upgrade()
+		}
+
+		// This function is called when a runtime upgrade is called. We need to make sure that
+		// what ever we do here won't brick the chain or leave the data in a invalid state.
+		fn on_runtime_upgrade() -> frame_support::weights::Weight {
+			let mut weight = Weight::zero();
+
+			let version = StorageVersion::get::<Pallet<T>>();
+			if version == StorageVersion::new(2) {
+				weight = <migrations::v3::MigrationV3<T> as OnRuntimeUpgrade>::on_runtime_upgrade();
+
+				// Update the storage version.
+				StorageVersion::put::<Pallet<T>>(&StorageVersion::new(3));
+			}
+
+			weight
+		}
+
+		// This function is called after a runtime upgrade is executed. Here we can
+		// test if the new state of blockchain data is valid. It's important to say that
+		// post_upgrade won't be called when a real runtime upgrade is executed.
+		#[cfg(feature = "try-runtime")]
+		fn post_upgrade(v: Vec<u8>) -> Result<(), &'static str> {
+			<migrations::v3::MigrationV3<T> as OnRuntimeUpgrade>::post_upgrade(v)
+		}
 	}
 
 	#[pallet::call]
@@ -425,9 +578,9 @@ pub mod pallet {
 			// Checks
 			ensure!(nft.owner == who, Error::<T>::NotTheNFTOwner);
 			ensure!(!nft.state.is_listed, Error::<T>::CannotBurnListedNFTs);
-			ensure!(!nft.state.is_capsule, Error::<T>::CannotBurnCapsuleNFTs);
 			ensure!(!nft.state.is_delegated, Error::<T>::CannotBurnDelegatedNFTs);
 			ensure!(!nft.state.is_rented, Error::<T>::CannotBurnRentedNFTs);
+			ensure!(!nft.state.is_transmission, Error::<T>::CannotBurnNFTsInTransmission);
 
 			// Check for collection to remove nft.
 			if let Some(collection_id) = &nft.collection_id {
@@ -447,8 +600,16 @@ pub mod pallet {
 			// Check for secret nft to remove secret offchain data and shards count.
 			if nft.state.is_secret {
 				SecretNftsOffchainData::<T>::remove(nft_id);
-				if nft.state.is_syncing {
+				if nft.state.is_syncing_secret {
 					SecretNftsShardsCount::<T>::remove(nft_id);
+				}
+			}
+
+			// Check for capsule to remove capsule offchain data and capsule shards count.
+			if nft.state.is_capsule {
+				CapsuleOffchainData::<T>::remove(nft_id);
+				if nft.state.is_syncing_capsule {
+					CapsulesShardsCount::<T>::remove(nft_id);
 				}
 			}
 
@@ -477,14 +638,18 @@ pub mod pallet {
 				ensure!(nft.owner == who, Error::<T>::NotTheNFTOwner);
 				ensure!(nft.owner != recipient, Error::<T>::CannotTransferNFTsToYourself);
 				ensure!(!nft.state.is_listed, Error::<T>::CannotTransferListedNFTs);
-				ensure!(!nft.state.is_capsule, Error::<T>::CannotTransferCapsuleNFTs);
 				ensure!(!nft.state.is_delegated, Error::<T>::CannotTransferDelegatedNFTs);
 				ensure!(
 					!(nft.state.is_soulbound && nft.creator != nft.owner),
 					Error::<T>::CannotTransferNotCreatedSoulboundNFTs
 				);
-				ensure!(!nft.state.is_syncing, Error::<T>::CannotTransferNotSyncedSecretNFTs);
+				ensure!(
+					!nft.state.is_syncing_secret,
+					Error::<T>::CannotTransferNotSyncedSecretNFTs
+				);
 				ensure!(!nft.state.is_rented, Error::<T>::CannotTransferRentedNFTs);
+				ensure!(!nft.state.is_syncing_capsule, Error::<T>::CannotTransferNotSyncedCapsules);
+				ensure!(!nft.state.is_transmission, Error::<T>::CannotTransferNFTsInTransmission);
 
 				// Execute
 				nft.owner = recipient.clone();
@@ -520,8 +685,10 @@ pub mod pallet {
 				// Checks
 				ensure!(nft.owner == who, Error::<T>::NotTheNFTOwner);
 				ensure!(!nft.state.is_listed, Error::<T>::CannotDelegateListedNFTs);
-				ensure!(!nft.state.is_capsule, Error::<T>::CannotDelegateCapsuleNFTs);
 				ensure!(!nft.state.is_rented, Error::<T>::CannotDelegateRentedNFTs);
+				ensure!(!nft.state.is_syncing_secret, Error::<T>::CannotDelegateSyncingNFTs);
+				ensure!(!nft.state.is_syncing_capsule, Error::<T>::CannotDelegateSyncingCapsules);
+				ensure!(!nft.state.is_transmission, Error::<T>::CannotDelegateNFTsInTransmission);
 
 				// Execute
 				nft.state.is_delegated = is_delegated;
@@ -559,9 +726,17 @@ pub mod pallet {
 				ensure!(nft.owner == who, Error::<T>::NotTheNFTOwner);
 				ensure!(nft.creator == who, Error::<T>::NotTheNFTCreator);
 				ensure!(!nft.state.is_listed, Error::<T>::CannotSetRoyaltyForListedNFTs);
-				ensure!(!nft.state.is_capsule, Error::<T>::CannotSetRoyaltyForCapsuleNFTs);
 				ensure!(!nft.state.is_delegated, Error::<T>::CannotSetRoyaltyForDelegatedNFTs);
 				ensure!(!nft.state.is_rented, Error::<T>::CannotSetRoyaltyForRentedNFTs);
+				ensure!(!nft.state.is_syncing_secret, Error::<T>::CannotSetRoyaltyForSyncingNFTs);
+				ensure!(
+					!nft.state.is_syncing_capsule,
+					Error::<T>::CannotSetRoyaltyForSyncingCapsules
+				);
+				ensure!(
+					!nft.state.is_transmission,
+					Error::<T>::CannotSetRoyaltyForNFTsInTransmission
+				);
 
 				// Execute
 				nft.royalty = royalty;
@@ -774,7 +949,6 @@ pub mod pallet {
 			nft_id: NFTId,
 			offchain_data: U8BoundedVec<T::NFTOffchainDataLimit>,
 		) -> DispatchResultWithPostInfo {
-			ensure!(false, Error::<T>::ComingSoon);
 			let who = ensure_signed(origin)?;
 
 			Nfts::<T>::try_mutate(nft_id, |maybe_nft| -> DispatchResult {
@@ -783,8 +957,17 @@ pub mod pallet {
 				// Checks
 				ensure!(nft.owner == who, Error::<T>::NotTheNFTOwner);
 				ensure!(!nft.state.is_listed, Error::<T>::CannotAddSecretToListedNFTs);
-				ensure!(!nft.state.is_capsule, Error::<T>::CannotAddSecretToCapsuleNFTs);
 				ensure!(!nft.state.is_secret, Error::<T>::CannotAddSecretToSecretNFTs);
+				ensure!(!nft.state.is_rented, Error::<T>::CannotAddSecretToRentedNFTs);
+				ensure!(!nft.state.is_delegated, Error::<T>::CannotAddSecretToDelegatedNFTs);
+				ensure!(
+					!nft.state.is_syncing_capsule,
+					Error::<T>::CannotAddSecretToSyncingCapsules
+				);
+				ensure!(
+					!nft.state.is_transmission,
+					Error::<T>::CannotAddSecretToNFTsInTransmission
+				);
 
 				// The Caller needs to pay the Secret NFT Mint fee.
 				let secret_nft_mint_fee = SecretNftMintFee::<T>::get();
@@ -795,7 +978,7 @@ pub mod pallet {
 
 				// Execute
 				nft.state.is_secret = true;
-				nft.state.is_syncing = true;
+				nft.state.is_syncing_secret = true;
 
 				SecretNftsOffchainData::<T>::insert(nft_id, offchain_data.clone());
 
@@ -834,7 +1017,6 @@ pub mod pallet {
 			collection_id: Option<CollectionId>,
 			is_soulbound: bool,
 		) -> DispatchResultWithPostInfo {
-			ensure!(false, Error::<T>::ComingSoon);
 			let who = ensure_signed(origin.clone())?;
 
 			// Check balance
@@ -857,12 +1039,11 @@ pub mod pallet {
 		/// Must be called by registered enclaves.
 		#[pallet::weight(T::WeightInfo::add_secret_shard())]
 		pub fn add_secret_shard(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
-			ensure!(false, Error::<T>::ComingSoon);
 			let who = ensure_signed(origin)?;
-			ensure!(
-				/* TODO is_registered_enclave(who) */ true,
-				Error::<T>::NotARegisteredEnclave
-			);
+
+			let (cluster_id, operator_address) =
+				T::TEEExt::ensure_enclave(who.clone()).ok_or(Error::<T>::NotARegisteredEnclave)?;
+
 			let mut has_finished_sync = false;
 
 			Nfts::<T>::try_mutate(nft_id, |maybe_nft| -> DispatchResult {
@@ -870,40 +1051,44 @@ pub mod pallet {
 
 				// Checks
 				ensure!(nft.state.is_secret, Error::<T>::NFTIsNotSecret);
-				ensure!(nft.state.is_syncing, Error::<T>::NFTAlreadySynced);
+				ensure!(nft.state.is_syncing_secret, Error::<T>::NFTAlreadySynced);
 
 				SecretNftsShardsCount::<T>::try_mutate(nft_id, |maybe_shards| -> DispatchResult {
 					if let Some(shards) = maybe_shards {
+						ensure!(cluster_id == shards[0].0, Error::<T>::ShareNotFromValidCluster);
 						ensure!(
 							shards.len() < T::ShardsNumber::get() as usize,
 							Error::<T>::NFTHasReceivedAllShards
 						);
-						ensure!(!shards.contains(&who), Error::<T>::EnclaveAlreadyAddedShard);
+						ensure!(
+							!shards.contains(&(cluster_id, operator_address.clone())),
+							Error::<T>::EnclaveAlreadyAddedShard
+						);
 						shards
-							.try_push(who.clone())
+							.try_push((cluster_id, operator_address))
 							.map_err(|_| Error::<T>::NFTHasReceivedAllShards)?;
 						if shards.len() == T::ShardsNumber::get() as usize {
 							has_finished_sync = true;
 							*maybe_shards = None;
 						}
 					} else {
-						let mut shards: BoundedVec<T::AccountId, T::ShardsNumber> =
+						let mut shards: BoundedVec<(ClusterId, T::AccountId), T::ShardsNumber> =
 							BoundedVec::default();
 						shards
-							.try_push(who.clone())
+							.try_push((cluster_id, operator_address))
 							.map_err(|_| Error::<T>::NFTHasReceivedAllShards)?;
+
 						if shards.len() == T::ShardsNumber::get() as usize {
 							has_finished_sync = true;
 						} else {
 							*maybe_shards = Some(shards);
 						}
 					}
-
 					Ok(().into())
 				})?;
 
 				if has_finished_sync {
-					nft.state.is_syncing = false;
+					nft.state.is_syncing_secret = false;
 				}
 
 				Ok(().into())
@@ -917,7 +1102,7 @@ pub mod pallet {
 				Self::deposit_event(event);
 			}
 
-			Ok(().into())
+			Ok(Pays::No.into())
 		}
 
 		/// Set the fee for minting a secret NFT if the caller is root.
@@ -926,12 +1111,300 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			fee: BalanceOf<T>,
 		) -> DispatchResultWithPostInfo {
-			ensure!(false, Error::<T>::ComingSoon);
 			ensure_root(origin)?;
 			SecretNftMintFee::<T>::put(fee);
 			let event = Event::SecretNFTMintFeeSet { fee };
 			Self::deposit_event(event);
 
+			Ok(().into())
+		}
+
+		/// Convert an NFT to a capsule.
+		#[pallet::weight(T::WeightInfo::convert_to_capsule())]
+		pub fn convert_to_capsule(
+			origin: OriginFor<T>,
+			nft_id: NFTId,
+			offchain_data: U8BoundedVec<T::NFTOffchainDataLimit>,
+		) -> DispatchResultWithPostInfo {
+			let who = ensure_signed(origin)?;
+
+			Nfts::<T>::try_mutate(nft_id, |maybe_nft| -> DispatchResult {
+				let nft = maybe_nft.as_mut().ok_or(Error::<T>::NFTNotFound)?;
+
+				// Checks
+				ensure!(nft.owner == who, Error::<T>::NotTheNFTOwner);
+				ensure!(!nft.state.is_listed, Error::<T>::CannotConvertListedNFTs);
+				ensure!(!nft.state.is_capsule, Error::<T>::CannotConvertCapsules);
+				ensure!(!nft.state.is_rented, Error::<T>::CannotConvertRentedNFTs);
+				ensure!(!nft.state.is_delegated, Error::<T>::CannotConvertDelegatedNFTs);
+				ensure!(!nft.state.is_syncing_secret, Error::<T>::CannotConvertSyncingNFTs);
+				ensure!(!nft.state.is_transmission, Error::<T>::CannotConvertNFTsInTransmission);
+
+				// The Caller needs to pay the Secret NFT Mint fee.
+				let capsule_mint_fee = CapsuleMintFee::<T>::get();
+				let reason = WithdrawReasons::FEE;
+				let imbalance = T::Currency::withdraw(&who, capsule_mint_fee, reason, KeepAlive)?;
+				T::FeesCollector::on_unbalanced(imbalance);
+
+				// Execute
+				nft.state.is_capsule = true;
+				nft.state.is_syncing_capsule = true;
+
+				CapsuleOffchainData::<T>::insert(nft_id, offchain_data.clone());
+
+				Ok(().into())
+			})?;
+
+			let event = Event::NFTConvertedToCapsule { nft_id, offchain_data };
+			Self::deposit_event(event);
+			Ok(().into())
+		}
+
+		/// Create a new capsule with the provided details. An ID will be auto
+		/// generated and logged as an event, The caller of this function
+		/// will become the owner of the new NFT.
+		#[pallet::weight((
+            {
+				if let Some(collection_id) = &collection_id {
+					let collection = Collections::<T>::get(collection_id).ok_or(Error::<T>::CollectionNotFound);
+					if let Ok(collection) = collection {
+						let s = collection.nfts.len();
+						T::WeightInfo::create_capsule(s as u32)
+					} else {
+						T::WeightInfo::create_capsule(1)
+					}
+				} else {
+					T::WeightInfo::create_capsule(1)
+				}
+            },
+			DispatchClass::Normal
+        ))]
+		pub fn create_capsule(
+			origin: OriginFor<T>,
+			offchain_data: U8BoundedVec<T::NFTOffchainDataLimit>,
+			capsule_offchain_data: U8BoundedVec<T::NFTOffchainDataLimit>,
+			royalty: Permill,
+			collection_id: Option<CollectionId>,
+			is_soulbound: bool,
+		) -> DispatchResultWithPostInfo {
+			let who = ensure_signed(origin.clone())?;
+
+			// Check balance
+			ensure!(
+				Self::balance_check(&who, NftMintFee::<T>::get() + CapsuleMintFee::<T>::get()),
+				Error::<T>::InsufficientBalance
+			);
+
+			// Create NFT
+			Self::create_nft(origin.clone(), offchain_data, royalty, collection_id, is_soulbound)?;
+			let nft_id = NextNFTId::<T>::get() - 1;
+
+			// Add a secret to the NFT
+			Self::convert_to_capsule(origin.clone(), nft_id, capsule_offchain_data)?;
+
+			Ok(().into())
+		}
+
+		// TODO: add back when we can revert capsule
+		// /// Revert a capsule to a regular NFT.
+		// #[pallet::weight(T::WeightInfo::revert_capsule())]
+		// pub fn revert_capsule(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo
+		// { 	let who = ensure_signed(origin)?;
+
+		// 	Nfts::<T>::try_mutate(nft_id, |maybe_nft| -> DispatchResult {
+		// 		let nft = maybe_nft.as_mut().ok_or(Error::<T>::NFTNotFound)?;
+
+		// 		// Checks
+		// 		ensure!(nft.owner == who, Error::<T>::NotTheNFTOwner);
+		// 		ensure!(nft.state.is_capsule, Error::<T>::NFTIsNotCapsule);
+		// 		ensure!(!nft.state.is_listed, Error::<T>::CannotRevertListedNFTs);
+		// 		ensure!(!nft.state.is_rented, Error::<T>::CannotRevertRentedNFTs);
+		// 		ensure!(!nft.state.is_delegated, Error::<T>::CannotRevertDelegatedNFTs);
+		// 		ensure!(!nft.state.is_syncing_secret, Error::<T>::CannotRevertSyncingNFTs);
+		// 		ensure!(!nft.state.is_transmission, Error::<T>::CannotRevertNFTsInTransmission);
+
+		// 		// Execute
+		// 		if nft.state.is_syncing_capsule {
+		// 			CapsulesShardsCount::<T>::remove(nft_id);
+		// 		}
+
+		// 		CapsuleOffchainData::<T>::remove(nft_id);
+
+		// 		nft.state.is_capsule = false;
+		// 		nft.state.is_syncing_capsule = false;
+
+		// 		Ok(().into())
+		// 	})?;
+
+		// 	let event = Event::CapsuleReverted { nft_id };
+		// 	Self::deposit_event(event);
+		// 	Ok(().into())
+		// }
+
+		/// Set the capsule offchain data.
+		#[pallet::weight(T::WeightInfo::set_capsule_offchaindata())]
+		pub fn set_capsule_offchaindata(
+			origin: OriginFor<T>,
+			nft_id: NFTId,
+			offchain_data: U8BoundedVec<T::NFTOffchainDataLimit>,
+		) -> DispatchResultWithPostInfo {
+			let who = ensure_signed(origin)?;
+
+			Nfts::<T>::try_mutate(nft_id, |maybe_nft| -> DispatchResult {
+				let nft = maybe_nft.as_mut().ok_or(Error::<T>::NFTNotFound)?;
+
+				// Checks
+				ensure!(nft.owner == who, Error::<T>::NotTheNFTOwner);
+				ensure!(nft.state.is_capsule, Error::<T>::NFTIsNotCapsule);
+				ensure!(!nft.state.is_listed, Error::<T>::CannotSetOffchainDataForListedNFTs);
+				ensure!(!nft.state.is_rented, Error::<T>::CannotSetOffchainDataForRentedNFTs);
+				ensure!(!nft.state.is_delegated, Error::<T>::CannotSetOffchainDataForDelegatedNFTs);
+				ensure!(
+					!nft.state.is_syncing_secret,
+					Error::<T>::CannotSetOffchainDataForSyncingNFTs
+				);
+				ensure!(
+					!nft.state.is_syncing_capsule,
+					Error::<T>::CannotSetOffchainDataForSyncingCapsules
+				);
+				ensure!(
+					!nft.state.is_transmission,
+					Error::<T>::CannotSetOffchainDataForNFTsInTransmission
+				);
+
+				// Execute
+				CapsuleOffchainData::<T>::insert(nft_id, offchain_data.clone());
+
+				Ok(().into())
+			})?;
+
+			let event = Event::CapsuleOffchainDataSet { nft_id, offchain_data };
+			Self::deposit_event(event);
+			Ok(().into())
+		}
+
+		/// Set the fee for minting a capsule if the caller is root.
+		#[pallet::weight(T::WeightInfo::set_capsule_mint_fee())]
+		pub fn set_capsule_mint_fee(
+			origin: OriginFor<T>,
+			fee: BalanceOf<T>,
+		) -> DispatchResultWithPostInfo {
+			ensure_root(origin)?;
+			CapsuleMintFee::<T>::put(fee);
+			let event = Event::CapsuleMintFeeSet { fee };
+			Self::deposit_event(event);
+
+			Ok(().into())
+		}
+
+		/// Extrinsic called by TEE enclaves to indicate that a shard was received for a capsule.
+		/// Must be called by registered enclaves.
+		#[pallet::weight(T::WeightInfo::add_capsule_shard())]
+		pub fn add_capsule_shard(
+			origin: OriginFor<T>,
+			nft_id: NFTId,
+		) -> DispatchResultWithPostInfo {
+			let who = ensure_signed(origin)?;
+
+			let (cluster_id, operator_address) =
+				T::TEEExt::ensure_enclave(who.clone()).ok_or(Error::<T>::NotARegisteredEnclave)?;
+
+			let mut has_finished_sync = false;
+
+			Nfts::<T>::try_mutate(nft_id, |maybe_nft| -> DispatchResult {
+				let nft = maybe_nft.as_mut().ok_or(Error::<T>::NFTNotFound)?;
+
+				// Checks
+				ensure!(nft.state.is_capsule, Error::<T>::NFTIsNotCapsule);
+				ensure!(nft.state.is_syncing_capsule, Error::<T>::NFTAlreadySynced);
+
+				CapsulesShardsCount::<T>::try_mutate(nft_id, |maybe_shards| -> DispatchResult {
+					if let Some(shards) = maybe_shards {
+						ensure!(cluster_id == shards[0].0, Error::<T>::ShareNotFromValidCluster);
+						ensure!(
+							shards.len() < T::ShardsNumber::get() as usize,
+							Error::<T>::CapsuleHasReceivedAllShards
+						);
+						ensure!(
+							!shards.contains(&(cluster_id, operator_address.clone())),
+							Error::<T>::EnclaveAlreadyAddedShard
+						);
+						shards
+							.try_push((cluster_id, operator_address))
+							.map_err(|_| Error::<T>::CapsuleHasReceivedAllShards)?;
+						if shards.len() == T::ShardsNumber::get() as usize {
+							has_finished_sync = true;
+							*maybe_shards = None;
+						}
+					} else {
+						let mut shards: BoundedVec<(ClusterId, T::AccountId), T::ShardsNumber> =
+							BoundedVec::default();
+						shards
+							.try_push((cluster_id, operator_address))
+							.map_err(|_| Error::<T>::CapsuleHasReceivedAllShards)?;
+
+						if shards.len() == T::ShardsNumber::get() as usize {
+							has_finished_sync = true;
+						} else {
+							*maybe_shards = Some(shards);
+						}
+					}
+					Ok(().into())
+				})?;
+
+				if has_finished_sync {
+					nft.state.is_syncing_capsule = false;
+				}
+
+				Ok(().into())
+			})?;
+
+			let event = Event::CapsuleShardAdded { nft_id, enclave: who };
+			Self::deposit_event(event);
+
+			if has_finished_sync {
+				let event = Event::CapsuleSynced { nft_id };
+				Self::deposit_event(event);
+			}
+
+			Ok(Pays::No.into())
+		}
+
+		/// Extrinsic called by capsule owner to signify that new keys will be provided to enclaves.
+		#[pallet::weight(T::WeightInfo::notify_enclave_key_update())]
+		pub fn notify_enclave_key_update(
+			origin: OriginFor<T>,
+			nft_id: NFTId,
+		) -> DispatchResultWithPostInfo {
+			let who = ensure_signed(origin)?;
+
+			Nfts::<T>::try_mutate(nft_id, |maybe_nft| -> DispatchResult {
+				let nft = maybe_nft.as_mut().ok_or(Error::<T>::NFTNotFound)?;
+
+				// Checks
+				ensure!(nft.owner == who, Error::<T>::NotTheNFTOwner);
+				ensure!(nft.state.is_capsule, Error::<T>::NFTIsNotCapsule);
+				ensure!(!nft.state.is_listed, Error::<T>::CannotChangeKeyForListedNFTs);
+				ensure!(!nft.state.is_rented, Error::<T>::CannotChangeKeyForRentedNFTs);
+				ensure!(!nft.state.is_delegated, Error::<T>::CannotChangeKeyForDelegatedNFTs);
+				ensure!(!nft.state.is_syncing_secret, Error::<T>::CannotChangeKeyForSyncingNFTs);
+				ensure!(
+					!nft.state.is_syncing_capsule,
+					Error::<T>::CannotChangeKeyForSyncingCapsules
+				);
+				ensure!(
+					!nft.state.is_transmission,
+					Error::<T>::CannotChangeKeyForNFTsInTransmission
+				);
+
+				// Execute
+				nft.state.is_syncing_capsule = true;
+
+				Ok(().into())
+			})?;
+
+			let event = Event::CapsuleKeyUpdateNotified { nft_id };
+			Self::deposit_event(event);
 			Ok(().into())
 		}
 	}
@@ -1007,7 +1480,8 @@ impl<T: Config> traits::NFTExt for Pallet<T> {
 		collection_id: Option<CollectionId>,
 		is_soulbound: bool,
 	) -> Result<NFTId, DispatchResult> {
-		let nft_state = NFTState::new(false, false, false, false, is_soulbound, false, false);
+		let nft_state =
+			NFTState::new(false, false, false, false, is_soulbound, false, false, false, false);
 		let nft = NFTData::new(
 			owner.clone(),
 			owner.clone(),

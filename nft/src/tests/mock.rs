@@ -1,4 +1,4 @@
-// Copyright 2022 Capsule Corp (France) SAS.
+// Copyright 2023 Capsule Corp (France) SAS.
 // This file is part of Ternoa.
 
 // Ternoa is free software: you can redistribute it and/or modify
@@ -33,9 +33,14 @@ type Block = frame_system::mocking::MockBlock<Test>;
 // for our account id. This would mess with some tests.
 pub const ALICE: u64 = 1;
 pub const BOB: u64 = 2;
+pub const CHARLIE: u64 = 3;
+pub const ALICE_ENCLAVE: u64 = 4;
+pub const BOB_ENCLAVE: u64 = 5;
+pub const CHARLIE_ENCLAVE: u64 = 6;
 pub const COLLECTOR: u64 = 99;
 pub const NFT_MINT_FEE: Balance = 10;
 pub const SECRET_NFT_MINT_FEE: Balance = 75;
+pub const CAPSULE_MINT_FEE: Balance = 100;
 
 frame_support::construct_runtime!(
 	pub enum Test where
@@ -46,6 +51,7 @@ frame_support::construct_runtime!(
 		System: frame_system,
 		Balances: pallet_balances,
 		NFT: ternoa_nft,
+		TEE: ternoa_tee,
 	}
 );
 
@@ -116,12 +122,28 @@ impl pallet_balances::Config for Test {
 }
 
 parameter_types! {
+	pub const ClusterSize: u32 = 2;
+	pub const MaxUriLen: u32 = 12;
+	pub const ListSizeLimit: u32 = 10;
+}
+
+impl ternoa_tee::Config for Test {
+	type RuntimeEvent = RuntimeEvent;
+	type WeightInfo = ();
+	type Currency = Balances;
+	type ClusterSize = ClusterSize;
+	type MaxUriLen = MaxUriLen;
+	type ListSizeLimit = ListSizeLimit;
+}
+
+parameter_types! {
 	pub const InitialMintFee: Balance = NFT_MINT_FEE;
 	pub const NFTOffchainDataLimit: u32 = 10;
 	pub const CollectionOffchainDataLimit: u32 = 10;
 	pub const CollectionSizeLimit: u32 = 10;
 	pub const InitialSecretMintFee: Balance = SECRET_NFT_MINT_FEE;
-	pub const ShardsNumber: u32 = 5;
+	pub const ShardsNumber: u32 = 2;
+	pub const InitialCapsuleMintFee: Balance = CAPSULE_MINT_FEE;
 }
 
 impl Config for Test {
@@ -135,6 +157,8 @@ impl Config for Test {
 	type CollectionSizeLimit = CollectionSizeLimit;
 	type InitialSecretMintFee = InitialSecretMintFee;
 	type ShardsNumber = ShardsNumber;
+	type TEEExt = TEE;
+	type InitialCapsuleMintFee = InitialCapsuleMintFee;
 }
 
 pub struct MockFeeCollector;

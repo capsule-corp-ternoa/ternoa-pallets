@@ -1,4 +1,4 @@
-// Copyright 2022 Capsule Corp (France) SAS.
+// Copyright 2023 Capsule Corp (France) SAS.
 // This file is part of Ternoa.
 
 // Ternoa is free software: you can redistribute it and/or modify
@@ -28,44 +28,27 @@ pub trait WeightInfo {
 }
 
 impl WeightInfo for () {
-	// Storage: Marketplace MarketplaceMintFee (r:1 w:0)
-	// Storage: System Account (r:1 w:1)
-	// Storage: Marketplace NextMarketplaceId (r:1 w:1)
-	// Storage: Marketplace Marketplaces (r:0 w:1)
 	fn create_marketplace() -> Weight {
 		Weight::from_ref_time(10_000_000 as u64)
 	}
-	// Storage: Marketplace Marketplaces (r:1 w:1)
 	fn set_marketplace_owner() -> Weight {
 		Weight::from_ref_time(10_000_000 as u64)
 	}
-	// Storage: Marketplace Marketplaces (r:1 w:1)
 	fn set_marketplace_kind() -> Weight {
 		Weight::from_ref_time(10_000_000 as u64)
 	}
-	// Storage: Marketplace Marketplaces (r:1 w:1)
 	fn set_marketplace_configuration() -> Weight {
 		Weight::from_ref_time(10_000_000 as u64)
 	}
-	// Storage: Marketplace MarketplaceMintFee (r:0 w:1)
 	fn set_marketplace_mint_fee() -> Weight {
 		Weight::from_ref_time(10_000_000 as u64)
 	}
-	// Storage: NFT Nfts (r:1 w:1)
-	// Storage: Marketplace Marketplaces (r:1 w:0)
-	// Storage: Marketplace ListedNfts (r:0 w:1)
 	fn list_nft() -> Weight {
 		Weight::from_ref_time(10_000_000 as u64)
 	}
-	// Storage: NFT Nfts (r:1 w:1)
-	// Storage: Marketplace ListedNfts (r:1 w:1)
 	fn unlist_nft() -> Weight {
 		Weight::from_ref_time(10_000_000 as u64)
 	}
-	// Storage: NFT Nfts (r:1 w:1)
-	// Storage: Marketplace ListedNfts (r:1 w:1)
-	// Storage: Marketplace Marketplaces (r:1 w:0)
-	// Storage: System Account (r:2 w:2)
 	fn buy_nft() -> Weight {
 		Weight::from_ref_time(10_000_000 as u64)
 	}

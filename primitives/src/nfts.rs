@@ -1,4 +1,4 @@
-// Copyright 2022 Capsule Corp (France) SAS.
+// Copyright 2023 Capsule Corp (France) SAS.
 // This file is part of Ternoa.
 
 // Ternoa is free software: you can redistribute it and/or modify
@@ -42,6 +42,8 @@ pub enum NFTStateModifiers {
 	Soulbound = 0x05,
 	SecretSyncing = 0x06,
 	Rented = 0x07,
+	CapsuleSyncing = 0x08,
+	IsTransmission = 0x09,
 }
 
 /// Data related to an NFT state, such as if it is listed for sale.
@@ -58,9 +60,13 @@ pub struct NFTState {
 	/// Is NFT soulbound.
 	pub is_soulbound: bool,
 	/// Is NFT Secret syncing
-	pub is_syncing: bool,
+	pub is_syncing_secret: bool,
 	/// Is NFT Rented or available for rent.
 	pub is_rented: bool,
+	/// Is Capsule syncing.
+	pub is_syncing_capsule: bool,
+	/// Is Transmission.
+	pub is_transmission: bool,
 }
 
 impl NFTState {
@@ -70,14 +76,26 @@ impl NFTState {
 		is_secret: bool,
 		is_delegated: bool,
 		is_soulbound: bool,
-		is_syncing: bool,
+		is_syncing_secret: bool,
 		is_rented: bool,
+		is_syncing_capsule: bool,
+		is_transmission: bool,
 	) -> Self {
-		Self { is_capsule, is_listed, is_secret, is_delegated, is_soulbound, is_syncing, is_rented }
+		Self {
+			is_capsule,
+			is_listed,
+			is_secret,
+			is_delegated,
+			is_soulbound,
+			is_syncing_secret,
+			is_rented,
+			is_syncing_capsule,
+			is_transmission,
+		}
 	}
 
 	pub fn new_default(is_soulbound: bool) -> Self {
-		Self::new(false, false, false, false, is_soulbound, false, false)
+		Self::new(false, false, false, false, is_soulbound, false, false, false, false)
 	}
 }
 
@@ -155,8 +173,10 @@ where
 				NFTStateModifiers::Secret => self.state.is_secret == true,
 				NFTStateModifiers::Delegated => self.state.is_delegated == true,
 				NFTStateModifiers::Soulbound => self.state.is_soulbound == true,
-				NFTStateModifiers::SecretSyncing => self.state.is_syncing == true,
+				NFTStateModifiers::SecretSyncing => self.state.is_syncing_secret == true,
 				NFTStateModifiers::Rented => self.state.is_rented == true,
+				NFTStateModifiers::CapsuleSyncing => self.state.is_syncing_capsule == true,
+				NFTStateModifiers::IsTransmission => self.state.is_transmission == true,
 			};
 			if in_state {
 				return Err(*modifier)
@@ -173,8 +193,10 @@ where
 			NFTStateModifiers::Secret => self.state.is_secret == active,
 			NFTStateModifiers::Delegated => self.state.is_delegated == active,
 			NFTStateModifiers::Soulbound => self.state.is_soulbound == active,
-			NFTStateModifiers::SecretSyncing => self.state.is_syncing == active,
+			NFTStateModifiers::SecretSyncing => self.state.is_syncing_secret == active,
 			NFTStateModifiers::Rented => self.state.is_rented == active,
+			NFTStateModifiers::CapsuleSyncing => self.state.is_syncing_capsule == active,
+			NFTStateModifiers::IsTransmission => self.state.is_transmission == active,
 		};
 		if is_already_in_state {
 			return None
@@ -186,8 +208,10 @@ where
 			NFTStateModifiers::Secret => self.state.is_secret = active,
 			NFTStateModifiers::Delegated => self.state.is_delegated = active,
 			NFTStateModifiers::Soulbound => self.state.is_soulbound = active,
-			NFTStateModifiers::SecretSyncing => self.state.is_syncing = active,
+			NFTStateModifiers::SecretSyncing => self.state.is_syncing_secret = active,
 			NFTStateModifiers::Rented => self.state.is_rented = active,
+			NFTStateModifiers::CapsuleSyncing => self.state.is_syncing_capsule = active,
+			NFTStateModifiers::IsTransmission => self.state.is_transmission = active,
 		};
 
 		Some(())

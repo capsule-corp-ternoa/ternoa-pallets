@@ -1,4 +1,4 @@
-// Copyright 2022 Capsule Corp (France) SAS.
+// Copyright 2023 Capsule Corp (France) SAS.
 // This file is part of Ternoa.
 
 // Ternoa is free software: you can redistribute it and/or modify
@@ -27,7 +27,7 @@ use sp_runtime::{
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
-use crate::{self as ternoa_sgx, Config};
+use crate::{self as tee, Config};
 
 frame_support::construct_runtime!(
 	pub enum Test where
@@ -37,7 +37,7 @@ frame_support::construct_runtime!(
 	{
 		System: frame_system,
 		Balances: pallet_balances,
-		Sgx: ternoa_sgx,
+		TEE: tee,
 	}
 );
 
@@ -58,7 +58,7 @@ impl Contains<RuntimeCall> for TestBaseCallFilter {
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
 	pub BlockWeights: frame_system::limits::BlockWeights =
-		frame_system::limits::BlockWeights::simple_max(1024);
+		frame_system::limits::BlockWeights::simple_max(frame_support::weights::Weight::from_ref_time(1024));
 }
 impl frame_system::Config for Test {
 	type BaseCallFilter = TestBaseCallFilter;
@@ -88,7 +88,7 @@ impl frame_system::Config for Test {
 }
 
 parameter_types! {
-	pub const ExistentialDeposit: u64 = 0;
+	pub const ExistentialDeposit: u64 = 1;
 	pub const MaxLocks: u32 = 50;
 	pub const MaxReserves: u32 = 50;
 }
@@ -106,28 +106,30 @@ impl pallet_balances::Config for Test {
 }
 
 parameter_types! {
-	pub const EnclaveFee: u64 = 5;
 	pub const ClusterSize: u32 = 2;
-	pub const MinUriLen: u16 = 1;
-	pub const MaxUriLen: u16 = 5;
+	pub const MaxUriLen: u32 = 12;
+	pub const ListSizeLimit: u32 = 10;
 }
 
 impl Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = ();
-	type FeesCollector = ();
 	type Currency = Balances;
-	type EnclaveFee = EnclaveFee;
 	type ClusterSize = ClusterSize;
-	type MinUriLen = MinUriLen;
 	type MaxUriLen = MaxUriLen;
+	type ListSizeLimit = ListSizeLimit;
 }
 
 // Do not use the `0` account id since this would be the default value
 // for our account id. This would mess with some tests.
 pub const ALICE: u64 = 1;
 pub const BOB: u64 = 2;
-pub const DAVE: u64 = 3;
+pub const CHARLIE: u64 = 3;
+pub const DAVE: u64 = 4;
+pub const ALICE_ENCLAVE: u64 = 5;
+pub const BOB_ENCLAVE: u64 = 6;
+pub const CHARLIE_ENCLAVE: u64 = 7;
+pub const EVE: u64 = 8;
 
 pub struct ExtBuilder {
 	endowed_accounts: Vec<(u64, u64)>,

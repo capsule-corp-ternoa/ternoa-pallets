@@ -2647,7 +2647,7 @@ dependencies = [
 
 [[package]]
 name = "ternoa-auction"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -2665,6 +2665,7 @@ dependencies = [
  "ternoa-marketplace",
  "ternoa-nft",
  "ternoa-pallets-primitives",
+ "ternoa-tee",
 ]
 
 [[package]]
@@ -2709,7 +2710,7 @@ dependencies = [
 
 [[package]]
 name = "ternoa-marketplace"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -2726,11 +2727,12 @@ dependencies = [
  "ternoa-common",
  "ternoa-nft",
  "ternoa-pallets-primitives",
+ "ternoa-tee",
 ]
 
 [[package]]
 name = "ternoa-nft"
-version = "1.0.2"
+version = "1.0.4"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -2746,6 +2748,7 @@ dependencies = [
  "sp-std",
  "ternoa-common",
  "ternoa-pallets-primitives",
+ "ternoa-tee",
 ]
 
 [[package]]
@@ -2762,7 +2765,7 @@ dependencies = [
 
 [[package]]
 name = "ternoa-rent"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -2779,6 +2782,7 @@ dependencies = [
  "ternoa-common",
  "ternoa-nft",
  "ternoa-pallets-primitives",
+ "ternoa-tee",
 ]
 
 [[package]]
@@ -2798,6 +2802,48 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+]
+
+[[package]]
+name = "ternoa-tee"
+version = "1.0.0"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "log",
+ "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "ternoa-common",
+ "ternoa-nft",
+ "ternoa-pallets-primitives",
+]
+
+[[package]]
+name = "ternoa-transmission-protocols"
+version = "1.0.0"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "log",
+ "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "ternoa-common",
+ "ternoa-nft",
+ "ternoa-pallets-primitives",
+ "ternoa-tee",
 ]
 
 [[package]]

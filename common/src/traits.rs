@@ -1,4 +1,4 @@
-// Copyright 2022 Capsule Corp (France) SAS.
+// Copyright 2023 Capsule Corp (France) SAS.
 // This file is part of Ternoa.
 
 // Ternoa is free software: you can redistribute it and/or modify
@@ -20,6 +20,7 @@ use frame_support::{dispatch::DispatchResult, traits::Get, BoundedVec};
 use primitives::{
 	marketplace::{MarketplaceData, MarketplaceId},
 	nfts::{CollectionId, NFTData, NFTId, NFTState},
+	tee::ClusterId,
 };
 use sp_runtime::Permill;
 use sp_std::fmt::Debug;
@@ -103,4 +104,20 @@ pub trait MarketplaceExt {
 			Self::CollectionSizeLimit,
 		>,
 	) -> DispatchResult;
+}
+
+pub trait TEEExt {
+	type AccountId: Clone + PartialEq + Debug;
+	type MaxUriLen: Get<u32>;
+	/// Returns operator address and cluster id for a given enclave address
+	fn ensure_enclave(account: Self::AccountId) -> Option<(ClusterId, Self::AccountId)>;
+
+	/// Register and assign an enclave
+	fn register_and_assign_enclave(
+		operator_address: Self::AccountId,
+		enclave_address: Self::AccountId,
+		cluster_id: Option<ClusterId>,
+	) -> DispatchResult;
+
+	fn fill_unregistration_list(address: Self::AccountId, number: u8) -> DispatchResult;
 }

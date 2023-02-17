@@ -1,4 +1,5 @@
 [workspace]
+
 members = [
     'common',
     'nft',
@@ -9,4 +10,6 @@ members = [
     'marketplace',
     'auction',
     'rent',
+    'tee',
+    'transmission-protocols'
 ]
