@@ -13,12 +13,12 @@ targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
 # Frame
-frame-support = { git = "https://github.com/paritytech/substrate", branch = "master", default-features = false }
+frame-support = { workspace = true, default-features = false }
 
 # Sp
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "master", default-features = false }
-sp-std = { git = "https://github.com/paritytech/substrate", branch = "master", default-features = false }
-sp-arithmetic = { git = "https://github.com/paritytech/substrate", branch = "master", default-features = false }
+sp-runtime = { workspace = true, default-features = false }
+sp-std = { workspace = true, default-features = false }
+sp-arithmetic = { workspace = true, default-features = false }
 
 # Ternoa
 primitives = { package = "ternoa-pallets-primitives", default-features = false, path = "../primitives" }

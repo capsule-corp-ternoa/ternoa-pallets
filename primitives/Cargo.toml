@@ -15,16 +15,16 @@ targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
 # Substrate Frame Pallets
-frame-support = { git = "https://github.com/paritytech/substrate", branch = "master", default-features = false }
+frame-support = { workspace = true, default-features = false }
 
 # Substrate Primitives
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "master", default-features = false }
-sp-std = { git = "https://github.com/paritytech/substrate", branch = "master", default-features = false }
-sp-arithmetic = { git = "https://github.com/paritytech/substrate", branch = "master", default-features = false }
+sp-runtime = { workspace = true, default-features = false }
+sp-std = { workspace = true, default-features = false }
+sp-arithmetic = { workspace = true, default-features = false }
 
 # Rest
-parity-scale-codec = { default-features = false, features = ["derive", "max-encoded-len"], version = "3.1.5" }
-scale-info = { version = "2.1.2", default-features = false, features = ["derive"] }
+parity-scale-codec = { default-features = false, features = ["derive", "max-encoded-len"], workspace = true }
+scale-info = { workspace = true, default-features = false, features = ["derive"] }
 
 [features]
 default = ["std"]
