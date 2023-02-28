@@ -468,6 +468,7 @@ pub mod pallet {
 		/// Create a new NFT with the provided details. An ID will be auto
 		/// generated and logged as an event, The caller of this function
 		/// will become the owner of the new NFT.
+		#[pallet::call_index(0)]
 		#[pallet::weight((
             {
 				if let Some(collection_id) = &collection_id {
@@ -550,6 +551,7 @@ pub mod pallet {
 		/// once the NFT is removed (burned) from the storage there is no way to
 		/// get it back.
 		/// Must be called by the owner of the NFT.
+		#[pallet::call_index(1)]
 		#[pallet::weight((
             {
 				let nft = Nfts::<T>::get(nft_id).ok_or(Error::<T>::NFTNotFound);
@@ -622,6 +624,7 @@ pub mod pallet {
 
 		/// Transfer an NFT from an account to another one. Must be called by the
 		/// owner of the NFT.
+		#[pallet::call_index(2)]
 		#[pallet::weight(T::WeightInfo::transfer_nft())]
 		pub fn transfer_nft(
 			origin: OriginFor<T>,
@@ -665,6 +668,7 @@ pub mod pallet {
 
 		/// Delegate an NFT to a recipient, does not change ownership.
 		/// Must be called by NFT owner.
+		#[pallet::call_index(3)]
 		#[pallet::weight(T::WeightInfo::delegate_nft())]
 		pub fn delegate_nft(
 			origin: OriginFor<T>,
@@ -711,6 +715,7 @@ pub mod pallet {
 
 		/// Set the royalty of an NFT.
 		/// Can only be called if the NFT is owned and has been created by the caller.
+		#[pallet::call_index(4)]
 		#[pallet::weight(T::WeightInfo::set_royalty())]
 		pub fn set_royalty(
 			origin: OriginFor<T>,
@@ -751,6 +756,7 @@ pub mod pallet {
 		}
 
 		/// Set the fee for minting an NFT if the caller is root.
+		#[pallet::call_index(5)]
 		#[pallet::weight(T::WeightInfo::set_nft_mint_fee())]
 		pub fn set_nft_mint_fee(
 			origin: OriginFor<T>,
@@ -767,6 +773,7 @@ pub mod pallet {
 		/// Create a new collection with the provided details. An ID will be auto
 		/// generated and logged as an event, the caller of this function
 		/// will become the owner of the new collection.
+		#[pallet::call_index(6)]
 		#[pallet::weight(T::WeightInfo::create_collection())]
 		pub fn create_collection(
 			origin: OriginFor<T>,
@@ -800,6 +807,7 @@ pub mod pallet {
 		/// once the collection is removed (burned) from the storage there is no way to
 		/// get it back.
 		/// Must be called by the owner of the collection and collection must be empty.
+		#[pallet::call_index(7)]
 		#[pallet::weight(T::WeightInfo::burn_collection())]
 		pub fn burn_collection(
 			origin: OriginFor<T>,
@@ -824,6 +832,7 @@ pub mod pallet {
 		/// Makes the collection closed. This means that it is not anymore
 		/// possible to add new NFTs to the collection.
 		/// Can only be called by owner of the collection.
+		#[pallet::call_index(8)]
 		#[pallet::weight(T::WeightInfo::close_collection())]
 		pub fn close_collection(
 			origin: OriginFor<T>,
@@ -847,6 +856,7 @@ pub mod pallet {
 		/// Set the maximum amount of nfts in the collection.
 		/// Caller must be owner of collection, nfts in that collection must be lower or equal to
 		/// new limit.
+		#[pallet::call_index(9)]
 		#[pallet::weight(T::WeightInfo::limit_collection())]
 		pub fn limit_collection(
 			origin: OriginFor<T>,
@@ -885,6 +895,7 @@ pub mod pallet {
 		/// Add an NFT to a collection.
 		/// Can only be called by owner of the collection, NFT
 		/// must not be in collection and collection must not be closed or has reached limit.
+		#[pallet::call_index(10)]
 		#[pallet::weight((
             {
 				let collection = Collections::<T>::get(collection_id).ok_or(Error::<T>::CollectionNotFound);
@@ -943,6 +954,7 @@ pub mod pallet {
 
 		/// Add a secret to a basic NFT.
 		/// Must be called by NFT owner.
+		#[pallet::call_index(11)]
 		#[pallet::weight(T::WeightInfo::add_secret())]
 		pub fn add_secret(
 			origin: OriginFor<T>,
@@ -993,6 +1005,7 @@ pub mod pallet {
 		/// Create a new secret NFT with the provided details. An ID will be auto
 		/// generated and logged as an event, The caller of this function
 		/// will become the owner of the new NFT.
+		#[pallet::call_index(12)]
 		#[pallet::weight((
             {
 				if let Some(collection_id) = &collection_id {
@@ -1037,6 +1050,7 @@ pub mod pallet {
 
 		/// Extrinsic called by TEE enclaves to indicate that a shard was received.
 		/// Must be called by registered enclaves.
+		#[pallet::call_index(13)]
 		#[pallet::weight(T::WeightInfo::add_secret_shard())]
 		pub fn add_secret_shard(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
@@ -1106,6 +1120,7 @@ pub mod pallet {
 		}
 
 		/// Set the fee for minting a secret NFT if the caller is root.
+		#[pallet::call_index(14)]
 		#[pallet::weight(T::WeightInfo::set_secret_nft_mint_fee())]
 		pub fn set_secret_nft_mint_fee(
 			origin: OriginFor<T>,
@@ -1120,6 +1135,7 @@ pub mod pallet {
 		}
 
 		/// Convert an NFT to a capsule.
+		#[pallet::call_index(15)]
 		#[pallet::weight(T::WeightInfo::convert_to_capsule())]
 		pub fn convert_to_capsule(
 			origin: OriginFor<T>,
@@ -1163,6 +1179,7 @@ pub mod pallet {
 		/// Create a new capsule with the provided details. An ID will be auto
 		/// generated and logged as an event, The caller of this function
 		/// will become the owner of the new NFT.
+		#[pallet::call_index(16)]
 		#[pallet::weight((
             {
 				if let Some(collection_id) = &collection_id {
@@ -1242,6 +1259,7 @@ pub mod pallet {
 		// }
 
 		/// Set the capsule offchain data.
+		#[pallet::call_index(17)]
 		#[pallet::weight(T::WeightInfo::set_capsule_offchaindata())]
 		pub fn set_capsule_offchaindata(
 			origin: OriginFor<T>,
@@ -1284,6 +1302,7 @@ pub mod pallet {
 		}
 
 		/// Set the fee for minting a capsule if the caller is root.
+		#[pallet::call_index(18)]
 		#[pallet::weight(T::WeightInfo::set_capsule_mint_fee())]
 		pub fn set_capsule_mint_fee(
 			origin: OriginFor<T>,
@@ -1299,6 +1318,7 @@ pub mod pallet {
 
 		/// Extrinsic called by TEE enclaves to indicate that a shard was received for a capsule.
 		/// Must be called by registered enclaves.
+		#[pallet::call_index(19)]
 		#[pallet::weight(T::WeightInfo::add_capsule_shard())]
 		pub fn add_capsule_shard(
 			origin: OriginFor<T>,
@@ -1371,6 +1391,7 @@ pub mod pallet {
 		}
 
 		/// Extrinsic called by capsule owner to signify that new keys will be provided to enclaves.
+		#[pallet::call_index(20)]
 		#[pallet::weight(T::WeightInfo::notify_enclave_key_update())]
 		pub fn notify_enclave_key_update(
 			origin: OriginFor<T>,

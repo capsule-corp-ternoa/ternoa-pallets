@@ -85,6 +85,7 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+		#[pallet::call_index(0)]
 		#[pallet::weight(T::WeightInfo::set_session_extra_reward_payout())]
 		pub fn set_session_extra_reward_payout(
 			origin: OriginFor<T>,

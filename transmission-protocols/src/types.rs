@@ -215,7 +215,7 @@ where
 	}
 
 	/// Inserts a value in the queue in the correct position depending on the block number.
-	pub fn insert(&mut self, nft_id: NFTId, block_number: BlockNumber) -> Result<(), ()> {
+	pub fn insert(&mut self, nft_id: NFTId, block_number: BlockNumber) -> Result<(), (NFTId, BlockNumber)> {
 		let index = self.0.iter().position(|x| x.1 > block_number);
 		let index = index.unwrap_or_else(|| self.0.len());
 

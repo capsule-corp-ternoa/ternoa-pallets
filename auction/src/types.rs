@@ -251,7 +251,7 @@ where
 	BlockNumber: Clone + PartialEq + Debug + sp_std::cmp::PartialOrd,
 	ParallelAuctionLimit: Get<u32>,
 {
-	pub fn insert(&mut self, nft_id: NFTId, block_number: BlockNumber) -> Result<(), ()> {
+	pub fn insert(&mut self, nft_id: NFTId, block_number: BlockNumber) -> Result<(), (NFTId, BlockNumber)> {
 		let index = self.0.iter().position(|x| x.1 > block_number);
 		let index = index.unwrap_or_else(|| self.0.len());
 

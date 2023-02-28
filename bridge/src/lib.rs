@@ -204,6 +204,7 @@ pub mod pallet {
 		///
 		/// This threshold is used to determine how many votes are required
 		/// before a proposal is executed.
+		#[pallet::call_index(0)]
 		#[pallet::weight(<T as pallet::Config>::WeightInfo::set_threshold())]
 		pub fn set_threshold(origin: OriginFor<T>, threshold: u32) -> DispatchResultWithPostInfo {
 			T::ExternalOrigin::ensure_origin(origin)?;
@@ -216,6 +217,7 @@ pub mod pallet {
 		}
 
 		/// Enables a chain ID as a source or destination for a bridge deposit.
+		#[pallet::call_index(1)]
 		#[pallet::weight(<T as pallet::Config>::WeightInfo::add_chain())]
 		pub fn add_chain(origin: OriginFor<T>, chain_id: ChainId) -> DispatchResultWithPostInfo {
 			T::ExternalOrigin::ensure_origin(origin)?;
@@ -230,6 +232,7 @@ pub mod pallet {
 		}
 
 		/// Update the set of relayers.
+		#[pallet::call_index(2)]
 		#[pallet::weight(<T as pallet::Config>::WeightInfo::set_relayers())]
 		pub fn set_relayers(
 			origin: OriginFor<T>,
@@ -244,6 +247,7 @@ pub mod pallet {
 		}
 
 		/// Update the set of relayers.
+		#[pallet::call_index(3)]
 		#[pallet::weight(<T as pallet::Config>::WeightInfo::set_relayers())]
 		pub fn set_deposit_nonce(
 			origin: OriginFor<T>,
@@ -269,6 +273,7 @@ pub mod pallet {
 		///
 		/// If a proposal with the given nonce and source chain ID does not already exist, it will
 		/// be created with an initial vote in favour from the caller.
+		#[pallet::call_index(4)]
 		#[pallet::weight(<T as pallet::Config>::WeightInfo::vote_for_proposal())]
 		pub fn vote_for_proposal(
 			origin: OriginFor<T>,
@@ -331,8 +336,10 @@ pub mod pallet {
 			Ok(().into())
 		}
 
+
 		/// Deposit some amount of the native token to some recipient on a (whitelisted)
 		/// destination chain.
+		#[pallet::call_index(5)]
 		#[pallet::weight(<T as pallet::Config>::WeightInfo::deposit())]
 		pub fn deposit(
 			origin: OriginFor<T>,
@@ -364,6 +371,7 @@ pub mod pallet {
 		}
 
 		/// Update the bridge fee value
+		#[pallet::call_index(6)]
 		#[pallet::weight(<T as pallet::Config>::WeightInfo::set_bridge_fee())]
 		pub fn set_bridge_fee(
 			origin: OriginFor<T>,
