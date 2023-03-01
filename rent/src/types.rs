@@ -349,7 +349,7 @@ where
 		self.0.len() as u32
 	}
 
-	pub fn insert(&mut self, nft_id: NFTId, block_number: BlockNumber) -> Result<(), (NFTId, BlockNumber)> {
+	pub fn insert(&mut self, nft_id: NFTId, block_number: BlockNumber) -> Result<(), ()> {
 		let index = self.0.iter().position(|x| x.1 > block_number);
 		let index = index.unwrap_or_else(|| self.0.len());
 
@@ -453,7 +453,7 @@ where
 		nft_id: NFTId,
 		block_number: BlockNumber,
 		kind: QueueKind,
-	) -> Result<(), (NFTId, BlockNumber)> {
+	) -> Result<(), ()> {
 		match kind {
 			QueueKind::Fixed => self.fixed_queue.insert(nft_id, block_number),
 			QueueKind::Subscription => self.subscription_queue.insert(nft_id, block_number),

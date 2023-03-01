@@ -323,7 +323,6 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		#[pallet::call_index(0)]
 		#[pallet::weight(T::WeightInfo::create_auction(Deadlines::<T>::get().len() as u32))]
 		pub fn create_auction(
 			origin: OriginFor<T>,
@@ -427,7 +426,6 @@ pub mod pallet {
 
 			Ok(().into())
 		}
-		#[pallet::call_index(1)]
 		#[pallet::weight(T::WeightInfo::cancel_auction(Deadlines::<T>::get().len() as u32))]
 		pub fn cancel_auction(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
@@ -452,7 +450,6 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		#[pallet::call_index(2)]
 		#[pallet::weight(T::WeightInfo::end_auction(Deadlines::<T>::get().len() as u32))]
 		pub fn end_auction(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
@@ -482,7 +479,6 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		#[pallet::call_index(3)]
 		#[pallet::weight((
             {
 				let s = Auctions::<T>::get(nft_id).map_or_else(|| 0, |x| x.get_bidders().len());
@@ -546,7 +542,6 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		#[pallet::call_index(4)]
 		#[pallet::weight((
             {
 				let s = Auctions::<T>::get(nft_id).map_or_else(|| 0, |x| x.get_bidders().len());
@@ -582,7 +577,6 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		#[pallet::call_index(5)]
 		#[pallet::weight(T::WeightInfo::buy_it_now(Deadlines::<T>::get().len() as u32))]
 		pub fn buy_it_now(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
@@ -616,7 +610,6 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		#[pallet::call_index(6)]
 		#[pallet::weight(T::WeightInfo::claim())]
 		pub fn claim(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;

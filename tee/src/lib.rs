@@ -229,7 +229,6 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		/// Ask for an enclave registration
-		#[pallet::call_index(0)]
 		#[pallet::weight(T::WeightInfo::register_enclave())]
 		pub fn register_enclave(
 			origin: OriginFor<T>,
@@ -262,7 +261,6 @@ pub mod pallet {
 
 		/// Ask for an enclave to be removed.
 		/// No need for approval if the enclave registration was not approved yet.
-		#[pallet::call_index(1)]
 		#[pallet::weight(T::WeightInfo::unregister_enclave())]
 		pub fn unregister_enclave(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
@@ -296,7 +294,6 @@ pub mod pallet {
 		}
 
 		/// Ask for enclave update
-		#[pallet::call_index(2)]
 		#[pallet::weight(T::WeightInfo::update_enclave())]
 		pub fn update_enclave(
 			origin: OriginFor<T>,
@@ -335,7 +332,6 @@ pub mod pallet {
 		}
 
 		/// Remove the operator update request
-		#[pallet::call_index(3)]
 		#[pallet::weight(T::WeightInfo::cancel_update())]
 		pub fn cancel_update(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
@@ -351,7 +347,6 @@ pub mod pallet {
 		}
 
 		/// Assign an enclave to a cluster
-		#[pallet::call_index(4)]
 		#[pallet::weight(T::WeightInfo::assign_enclave())]
 		pub fn assign_enclave(
 			origin: OriginFor<T>,
@@ -414,7 +409,6 @@ pub mod pallet {
 		}
 
 		/// Remove a registration from storage
-		#[pallet::call_index(5)]
 		#[pallet::weight(T::WeightInfo::remove_registration())]
 		pub fn remove_registration(
 			origin: OriginFor<T>,
@@ -437,7 +431,6 @@ pub mod pallet {
 		}
 
 		/// Remove an enclave update request from storage
-		#[pallet::call_index(6)]
 		#[pallet::weight(T::WeightInfo::remove_update())]
 		pub fn remove_update(
 			origin: OriginFor<T>,
@@ -457,7 +450,6 @@ pub mod pallet {
 		}
 
 		/// Unassign an enclave from a cluster and remove all information
-		#[pallet::call_index(7)]
 		#[pallet::weight(T::WeightInfo::remove_enclave())]
 		pub fn remove_enclave(
 			origin: OriginFor<T>,
@@ -523,7 +515,6 @@ pub mod pallet {
 		}
 
 		/// Update an enclave and clean the enclaves to update if needed
-		#[pallet::call_index(8)]
 		#[pallet::weight(T::WeightInfo::force_update_enclave())]
 		pub fn force_update_enclave(
 			origin: OriginFor<T>,
@@ -572,7 +563,6 @@ pub mod pallet {
 		}
 
 		// Creates an empty Cluster
-		#[pallet::call_index(9)]
 		#[pallet::weight(T::WeightInfo::create_cluster())]
 		pub fn create_cluster(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
@@ -584,7 +574,6 @@ pub mod pallet {
 		}
 
 		/// Removes an empty cluster
-		#[pallet::call_index(10)]
 		#[pallet::weight(T::WeightInfo::remove_cluster())]
 		pub fn remove_cluster(
 			origin: OriginFor<T>,
