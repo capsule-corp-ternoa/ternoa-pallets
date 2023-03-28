@@ -63,6 +63,10 @@ pub mod v2 {
 			let now = System::<T>::block_number();
 			let mut read = 0u64;
     		let mut write = 0u64;
+
+			log::info!("Starting migration for RentContractData");
+			log::info!("Now : {:?}", now);
+
 			Contracts::<T>::translate(
 				|_id,
 				 old: OldRentContractData<
@@ -71,6 +75,7 @@ pub mod v2 {
 					BalanceOf<T>,
 					T::AccountSizeLimit,
 				>| {
+					log::info!("Migrating contract with renter: {:?}", old.renter);
 					let new_rent_contract_data = RentContractData::new(
 						old.start_block,
 						old.renter,
@@ -86,8 +91,19 @@ pub mod v2 {
 					read += 1;
             		write += 1;
 
+					log::info!(
+						"Finished migration for contract with renter: {:?}",
+						new_rent_contract_data.renter
+					);
+
 					Some(new_rent_contract_data)
 				},
+			);
+
+			log::info!(
+				"Finished migration for RentContractData. Read: {}, Write: {}",
+				read,
+				write
 			);
 
 			T::DbWeight::get().reads_writes(read, write)
