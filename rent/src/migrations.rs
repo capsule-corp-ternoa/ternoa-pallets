@@ -61,6 +61,8 @@ pub mod v2 {
 
 		fn on_runtime_upgrade() -> frame_support::weights::Weight {
 			let now = System::<T>::block_number();
+			let mut read = 0u64;
+    		let mut write = 0u64;
 			Contracts::<T>::translate(
 				|_id,
 				 old: OldRentContractData<
@@ -81,12 +83,14 @@ pub mod v2 {
 						old.rentee_cancellation_fee,
 						now,
 					);
+					read += 1;
+            		write += 1;
 
 					Some(new_rent_contract_data)
 				},
 			);
 
-			frame_support::weights::Weight::MAX
+			T::DbWeight::get().reads_writes(read_ops, write_ops)
 		}
 
 		#[cfg(feature = "try-runtime")]
