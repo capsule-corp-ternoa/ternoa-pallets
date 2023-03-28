@@ -90,7 +90,7 @@ pub mod v2 {
 				},
 			);
 
-			T::DbWeight::get().reads_writes(read_ops, write_ops)
+			T::DbWeight::get().reads_writes(read, write)
 		}
 
 		#[cfg(feature = "try-runtime")]
