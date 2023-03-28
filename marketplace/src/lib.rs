@@ -221,6 +221,8 @@ pub mod pallet {
 		CannotListNotSyncedCapsules,
 		/// Cannot list capsule in transmission.
 		CannotListNFTsInTransmission,
+		/// The provided price does not match the real price
+		PriceDoesNotMatch,
 	}
 
 	#[pallet::call]
@@ -439,7 +441,11 @@ pub mod pallet {
 
 		/// Buy a listed nft
 		#[pallet::weight(T::WeightInfo::buy_nft())]
-		pub fn buy_nft(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
+		pub fn buy_nft(
+			origin: OriginFor<T>,
+			nft_id: NFTId,
+			signed_price: BalanceOf<T>,
+		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 			let mut nft = T::NFTExt::get_nft(nft_id).ok_or(Error::<T>::NFTNotFound)?;
 			let sale = ListedNfts::<T>::get(nft_id).ok_or(Error::<T>::NFTNotForSale)?;
@@ -449,6 +455,7 @@ pub mod pallet {
 
 			// Checks
 			ensure!(sale.account_id != who, Error::<T>::CannotBuyOwnedNFT);
+			ensure!(sale.price == signed_price, Error::<T>::PriceDoesNotMatch);
 			ensure!(T::Currency::free_balance(&who) >= price, Error::<T>::NotEnoughBalanceToBuy);
 
 			// Caller pays for commission fee, the price is updated.

@@ -37,7 +37,7 @@ fn end_contract_fixed() {
 		prepare_tests();
 		let bob: mock::RuntimeOrigin = origin(BOB);
 
-		Rent::rent(bob, FIXED_AUTO_REV_NFT_TOKENS_TOKENS).unwrap();
+		Rent::rent(bob, FIXED_AUTO_REV_NFT_TOKENS_TOKENS, CREATION_BLOCK).unwrap();
 
 		run_to_block(BLOCK_DURATION + 1);
 
@@ -64,7 +64,7 @@ fn end_contract_subscription() {
 		let alice_balance = Balances::free_balance(ALICE);
 		let bob_balance = Balances::free_balance(BOB);
 
-		Rent::make_rent_offer(bob, SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK).unwrap();
+		Rent::make_rent_offer(bob, SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK, CREATION_BLOCK).unwrap();
 		Rent::accept_rent_offer(alice, SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK, BOB).unwrap();
 
 		run_to_block(BLOCK_MAX_DURATION + 1);
@@ -100,7 +100,7 @@ fn end_contract_renter() {
 		let alice_balance = Balances::free_balance(ALICE);
 		let bob_balance = Balances::free_balance(BOB);
 
-		Rent::make_rent_offer(bob, SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK).unwrap();
+		Rent::make_rent_offer(bob, SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK, CREATION_BLOCK).unwrap();
 		Rent::accept_rent_offer(alice.clone(), SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK, BOB)
 			.unwrap();
 		Rent::change_subscription_terms(
@@ -139,7 +139,7 @@ fn end_contract_rentee() {
 		let bob: mock::RuntimeOrigin = origin(BOB);
 		let alice_balance = Balances::free_balance(ALICE);
 
-		Rent::make_rent_offer(bob, SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK).unwrap();
+		Rent::make_rent_offer(bob, SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK, CREATION_BLOCK).unwrap();
 		Rent::accept_rent_offer(alice, SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK, BOB).unwrap();
 		Balances::set_balance(root(), BOB, 0, 0).unwrap();
 
@@ -168,7 +168,7 @@ fn renew_contract() {
 		let alice: mock::RuntimeOrigin = origin(ALICE);
 		let bob: mock::RuntimeOrigin = origin(BOB);
 
-		Rent::make_rent_offer(bob, SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK).unwrap();
+		Rent::make_rent_offer(bob, SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK, CREATION_BLOCK).unwrap();
 		Rent::accept_rent_offer(alice, SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK, BOB).unwrap();
 
 		// Check subscription queue

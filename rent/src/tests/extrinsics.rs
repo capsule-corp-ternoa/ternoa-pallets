@@ -30,6 +30,7 @@ pub const BLOCK_DURATION: u64 = 10;
 pub const BLOCK_MAX_DURATION: u64 = 100;
 pub const TOKENS: Balance = 100;
 pub const LESS_TOKENS: Balance = 10;
+pub const CREATION_BLOCK: BlockNumber = 1;
 
 pub const ALICE_NFT_ID_0: NFTId = 0;
 pub const ALICE_NFT_ID_1: NFTId = 1;
@@ -203,6 +204,7 @@ mod create_contract {
 					RentFee::Tokens(TOKENS),
 					CancellationFee::None,
 					CancellationFee::None,
+					System::block_number(),
 				);
 
 			// Create basic contract.
@@ -812,7 +814,7 @@ mod cancel_contract {
 			let bob: mock::RuntimeOrigin = origin(BOB);
 
 			// Start the contract.
-			Rent::rent(bob, FIXED_AUTO_REV_TOK_FLEXTOK_FLEXTOK).unwrap();
+			Rent::rent(bob, FIXED_AUTO_REV_TOK_FLEXTOK_FLEXTOK, CREATION_BLOCK).unwrap();
 
 			// Try to cancel contract.
 			let err = Rent::cancel_contract(alice, FIXED_AUTO_REV_TOK_FLEXTOK_FLEXTOK);
@@ -831,7 +833,7 @@ mod revoke_contract {
 			let alice: mock::RuntimeOrigin = origin(ALICE);
 			let bob: mock::RuntimeOrigin = origin(BOB);
 
-			Rent::rent(bob, FIXED_AUTO_REV_NFT_TOKENS_TOKENS).unwrap();
+			Rent::rent(bob, FIXED_AUTO_REV_NFT_TOKENS_TOKENS, CREATION_BLOCK).unwrap();
 
 			let alice_balance = Balances::free_balance(ALICE);
 			let bob_balance = Balances::free_balance(BOB);
@@ -862,7 +864,7 @@ mod revoke_contract {
 			prepare_tests();
 			let bob: mock::RuntimeOrigin = origin(BOB);
 
-			Rent::rent(bob.clone(), FIXED_AUTO_REV_NFT_TOKENS_TOKENS).unwrap();
+			Rent::rent(bob.clone(), FIXED_AUTO_REV_NFT_TOKENS_TOKENS, CREATION_BLOCK).unwrap();
 
 			let alice_balance = Balances::free_balance(ALICE);
 			let bob_balance = Balances::free_balance(BOB);
@@ -894,7 +896,7 @@ mod revoke_contract {
 			let alice: mock::RuntimeOrigin = origin(ALICE);
 			let bob: mock::RuntimeOrigin = origin(BOB);
 
-			Rent::make_rent_offer(bob, FIXED_MANU_REV_NFT_NFT_NFT).unwrap();
+			Rent::make_rent_offer(bob, FIXED_MANU_REV_NFT_NFT_NFT, CREATION_BLOCK).unwrap();
 			Rent::accept_rent_offer(alice.clone(), FIXED_MANU_REV_NFT_NFT_NFT, BOB).unwrap();
 
 			// Revoke.
@@ -926,7 +928,7 @@ mod revoke_contract {
 			let alice: mock::RuntimeOrigin = origin(ALICE);
 			let bob: mock::RuntimeOrigin = origin(BOB);
 
-			Rent::make_rent_offer(bob.clone(), FIXED_MANU_REV_NFT_NFT_NFT).unwrap();
+			Rent::make_rent_offer(bob.clone(), FIXED_MANU_REV_NFT_NFT_NFT, CREATION_BLOCK).unwrap();
 			Rent::accept_rent_offer(alice, FIXED_MANU_REV_NFT_NFT_NFT, BOB).unwrap();
 
 			// Revoke.
@@ -956,7 +958,7 @@ mod revoke_contract {
 			let alice: mock::RuntimeOrigin = origin(ALICE);
 			let bob: mock::RuntimeOrigin = origin(BOB);
 
-			Rent::rent(bob, FIXED_AUTO_REV_TOK_FLEXTOK_FLEXTOK).unwrap();
+			Rent::rent(bob, FIXED_AUTO_REV_TOK_FLEXTOK_FLEXTOK, CREATION_BLOCK).unwrap();
 
 			let alice_balance = Balances::free_balance(ALICE);
 			let bob_balance = Balances::free_balance(BOB);
@@ -994,7 +996,7 @@ mod revoke_contract {
 			prepare_tests();
 			let bob: mock::RuntimeOrigin = origin(BOB);
 
-			Rent::rent(bob.clone(), FIXED_AUTO_REV_TOK_FLEXTOK_FLEXTOK).unwrap();
+			Rent::rent(bob.clone(), FIXED_AUTO_REV_TOK_FLEXTOK_FLEXTOK, CREATION_BLOCK).unwrap();
 
 			let alice_balance = Balances::free_balance(ALICE);
 			let bob_balance = Balances::free_balance(BOB);
@@ -1059,7 +1061,7 @@ mod revoke_contract {
 			let bob: mock::RuntimeOrigin = origin(BOB);
 			let charlie: mock::RuntimeOrigin = origin(CHARLIE);
 
-			Rent::rent(bob, FIXED_AUTO_REV_NFT_TOKENS_TOKENS).unwrap();
+			Rent::rent(bob, FIXED_AUTO_REV_NFT_TOKENS_TOKENS, CREATION_BLOCK).unwrap();
 
 			// Try to revoke with unowned contract.
 			let err = Rent::revoke_contract(charlie, FIXED_AUTO_REV_NFT_TOKENS_TOKENS);
@@ -1075,7 +1077,12 @@ mod revoke_contract {
 			let alice: mock::RuntimeOrigin = origin(ALICE);
 			let bob: mock::RuntimeOrigin = origin(BOB);
 
-			Rent::rent(bob.clone(), SUBSC_AUTO_NOREV_NOT_CHANGEABLE_TOK_NONE_FIXTOK).unwrap();
+			Rent::rent(
+				bob.clone(),
+				SUBSC_AUTO_NOREV_NOT_CHANGEABLE_TOK_NONE_FIXTOK,
+				CREATION_BLOCK,
+			)
+			.unwrap();
 
 			// Try to revoke with unowned contract.
 			let err = Rent::revoke_contract(alice, SUBSC_AUTO_NOREV_NOT_CHANGEABLE_TOK_NONE_FIXTOK);
@@ -1095,7 +1102,7 @@ mod rent {
 			let bob: mock::RuntimeOrigin = origin(BOB);
 
 			// Rent contract.
-			Rent::rent(bob, FIXED_AUTO_REV_NFT_TOKENS_TOKENS).unwrap();
+			Rent::rent(bob, FIXED_AUTO_REV_NFT_TOKENS_TOKENS, CREATION_BLOCK).unwrap();
 
 			// State check.
 			let nft = NFT::nfts(FIXED_AUTO_REV_NFT_TOKENS_TOKENS).unwrap();
@@ -1123,8 +1130,23 @@ mod rent {
 			let alice: mock::RuntimeOrigin = origin(ALICE);
 
 			// Try to rent invalid contract.
-			let err = Rent::rent(alice, INVALID_NFT);
+			let err = Rent::rent(alice, INVALID_NFT, CREATION_BLOCK);
 			assert_noop!(err, Error::<Test>::ContractNotFound);
+		})
+	}
+
+	#[test]
+	fn cannot_rent_started_contract() {
+		ExtBuilder::new_build(None).execute_with(|| {
+			prepare_tests();
+			let bob: mock::RuntimeOrigin = origin(BOB);
+			let charlie: mock::RuntimeOrigin = origin(CHARLIE);
+
+			Rent::rent(bob, FIXED_AUTO_REV_NFT_TOKENS_TOKENS, CREATION_BLOCK).unwrap();
+
+			// Try to rent started contract.
+			let err = Rent::rent(charlie, FIXED_AUTO_REV_NFT_TOKENS_TOKENS, CREATION_BLOCK);
+			assert_noop!(err, Error::<Test>::CannotRentStartedContract);
 		})
 	}
 
@@ -1135,7 +1157,7 @@ mod rent {
 			let alice: mock::RuntimeOrigin = origin(ALICE);
 
 			// Try to rent owned contract.
-			let err = Rent::rent(alice, FIXED_AUTO_REV_NFT_TOKENS_TOKENS);
+			let err = Rent::rent(alice, FIXED_AUTO_REV_NFT_TOKENS_TOKENS, CREATION_BLOCK);
 			assert_noop!(err, Error::<Test>::CannotRentOwnContract);
 		})
 	}
@@ -1147,7 +1169,7 @@ mod rent {
 			let bob: mock::RuntimeOrigin = origin(BOB);
 
 			// Try to rent owned contract.
-			let err = Rent::rent(bob, FIXED_MANU_REV_NFT_NFT_NFT);
+			let err = Rent::rent(bob, FIXED_MANU_REV_NFT_NFT_NFT, CREATION_BLOCK);
 			assert_noop!(err, Error::<Test>::ContractDoesNotSupportAutomaticRent);
 		})
 	}
@@ -1159,7 +1181,11 @@ mod rent {
 			let charlie: mock::RuntimeOrigin = origin(CHARLIE);
 
 			// Try to rent without being authorized auto acceptance.
-			let err = Rent::rent(charlie, SUBSC_AUTO_NOREV_NOT_CHANGEABLE_TOK_NONE_FIXTOK);
+			let err = Rent::rent(
+				charlie,
+				SUBSC_AUTO_NOREV_NOT_CHANGEABLE_TOK_NONE_FIXTOK,
+				CREATION_BLOCK,
+			);
 			assert_noop!(err, Error::<Test>::NotWhitelisted);
 		})
 	}
@@ -1173,7 +1199,8 @@ mod rent {
 			Balances::set_balance(root(), BOB, TOKENS - 1, 0).unwrap();
 
 			// Try to rent without enough tokens for rent fee.
-			let err = Rent::rent(bob, SUBSC_AUTO_NOREV_NOT_CHANGEABLE_TOK_NONE_FIXTOK);
+			let err =
+				Rent::rent(bob, SUBSC_AUTO_NOREV_NOT_CHANGEABLE_TOK_NONE_FIXTOK, CREATION_BLOCK);
 			assert_noop!(err, Error::<Test>::NotEnoughFundsForRentFee);
 		})
 	}
@@ -1187,7 +1214,7 @@ mod rent {
 			Balances::set_balance(root(), BOB, TOKENS + LESS_TOKENS - 1, 0).unwrap();
 
 			// Try to rent without enough balance for cancellation fee.
-			let err = Rent::rent(bob, FIXED_AUTO_REV_TOK_FLEXTOK_FLEXTOK);
+			let err = Rent::rent(bob, FIXED_AUTO_REV_TOK_FLEXTOK_FLEXTOK, CREATION_BLOCK);
 			assert_noop!(err, Error::<Test>::NotEnoughFundsForCancellationFee);
 		})
 	}
@@ -1204,7 +1231,7 @@ mod rent {
 			NFT::set_nft(BOB_NFT_ID_0, nft).unwrap();
 
 			// Try to rent without enough tokens for rent fee.
-			let err = Rent::rent(bob, FIXED_AUTO_REV_NFT_TOKENS_TOKENS);
+			let err = Rent::rent(bob, FIXED_AUTO_REV_NFT_TOKENS_TOKENS, CREATION_BLOCK);
 			assert_noop!(err, Error::<Test>::RenteeDoesNotOwnTheRentNFT);
 		})
 	}
@@ -1221,8 +1248,20 @@ mod rent {
 			NFT::set_nft(BOB_NFT_ID_0, nft).unwrap();
 
 			// Try to rent without nft for cancellation fee.
-			let err = Rent::rent(bob, FIXED_AUTO_REV_NFT_NFT_NFT);
+			let err = Rent::rent(bob, FIXED_AUTO_REV_NFT_NFT_NFT, CREATION_BLOCK);
 			assert_noop!(err, Error::<Test>::RenteeDoesNotOwnTheCancellationNFT);
+		})
+	}
+
+	#[test]
+	fn contract_does_not_match() {
+		ExtBuilder::new_build(None).execute_with(|| {
+			prepare_tests();
+			let bob: mock::RuntimeOrigin = origin(BOB);
+
+			// Try to rent owned contract.
+			let err = Rent::rent(bob, FIXED_AUTO_REV_NFT_TOKENS_TOKENS, CREATION_BLOCK + 1);
+			assert_noop!(err, Error::<Test>::ContractDoesNotMatch);
 		})
 	}
 }
@@ -1236,7 +1275,8 @@ mod make_rent_offer {
 			prepare_tests();
 			let bob: mock::RuntimeOrigin = origin(BOB);
 
-			Rent::make_rent_offer(bob, SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK).unwrap();
+			Rent::make_rent_offer(bob, SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK, CREATION_BLOCK)
+				.unwrap();
 
 			// State check.
 			assert!(Rent::offers(SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK)
@@ -1263,7 +1303,7 @@ mod make_rent_offer {
 			prepare_tests();
 			let bob: mock::RuntimeOrigin = origin(BOB);
 
-			let err = Rent::make_rent_offer(bob, INVALID_NFT);
+			let err = Rent::make_rent_offer(bob, INVALID_NFT, CREATION_BLOCK);
 			assert_noop!(err, Error::<Test>::ContractNotFound);
 		})
 	}
@@ -1274,7 +1314,7 @@ mod make_rent_offer {
 			prepare_tests();
 			let alice: mock::RuntimeOrigin = origin(ALICE);
 
-			let err = Rent::make_rent_offer(alice, FIXED_MANU_REV_NFT_NFT_NFT);
+			let err = Rent::make_rent_offer(alice, FIXED_MANU_REV_NFT_NFT_NFT, CREATION_BLOCK);
 			assert_noop!(err, Error::<Test>::CannotRentOwnContract);
 		})
 	}
@@ -1285,7 +1325,7 @@ mod make_rent_offer {
 			prepare_tests();
 			let bob: mock::RuntimeOrigin = origin(BOB);
 
-			let err = Rent::make_rent_offer(bob, FIXED_AUTO_REV_NFT_NFT_NFT);
+			let err = Rent::make_rent_offer(bob, FIXED_AUTO_REV_NFT_NFT_NFT, CREATION_BLOCK);
 			assert_noop!(err, Error::<Test>::ContractDoesNotSupportOffers);
 		})
 	}
@@ -1296,7 +1336,7 @@ mod make_rent_offer {
 			prepare_tests();
 			let charlie: mock::RuntimeOrigin = origin(CHARLIE);
 
-			let err = Rent::make_rent_offer(charlie, FIXED_MANU_REV_NFT_NFT_NFT);
+			let err = Rent::make_rent_offer(charlie, FIXED_MANU_REV_NFT_NFT_NFT, CREATION_BLOCK);
 			assert_noop!(err, Error::<Test>::NotWhitelisted);
 		})
 	}
@@ -1325,7 +1365,7 @@ mod make_rent_offer {
 
 			Balances::set_balance(root(), BOB, TOKENS - 1, 0).unwrap();
 
-			let err = Rent::make_rent_offer(bob, nft_id);
+			let err = Rent::make_rent_offer(bob, nft_id, CREATION_BLOCK);
 			assert_noop!(err, Error::<Test>::NotEnoughFundsForRentFee);
 		})
 	}
@@ -1354,7 +1394,7 @@ mod make_rent_offer {
 
 			Balances::set_balance(root(), BOB, LESS_TOKENS, 0).unwrap();
 
-			let err = Rent::make_rent_offer(bob, nft_id);
+			let err = Rent::make_rent_offer(bob, nft_id, CREATION_BLOCK);
 			assert_noop!(err, Error::<Test>::NotEnoughFundsForCancellationFee);
 		})
 	}
@@ -1383,7 +1423,7 @@ mod make_rent_offer {
 
 			Balances::set_balance(root(), BOB, TOKENS, 0).unwrap();
 
-			let err = Rent::make_rent_offer(bob, nft_id);
+			let err = Rent::make_rent_offer(bob, nft_id, CREATION_BLOCK);
 			assert_noop!(err, Error::<Test>::NotEnoughFundsForFees);
 		})
 	}
@@ -1398,7 +1438,7 @@ mod make_rent_offer {
 			nft.owner = ALICE;
 			NFT::set_nft(BOB_NFT_ID_1, nft).unwrap();
 
-			let err = Rent::make_rent_offer(bob, FIXED_MANU_REV_NFT_NFT_NFT);
+			let err = Rent::make_rent_offer(bob, FIXED_MANU_REV_NFT_NFT_NFT, CREATION_BLOCK);
 			assert_noop!(err, Error::<Test>::CallerDoesNotOwnRentNFT);
 		})
 	}
@@ -1413,7 +1453,7 @@ mod make_rent_offer {
 			nft.state.is_listed = true;
 			NFT::set_nft(BOB_NFT_ID_1, nft).unwrap();
 
-			let err = Rent::make_rent_offer(bob, FIXED_MANU_REV_NFT_NFT_NFT);
+			let err = Rent::make_rent_offer(bob, FIXED_MANU_REV_NFT_NFT_NFT, CREATION_BLOCK);
 			assert_noop!(err, Error::<Test>::RentNFTNotInValidState);
 		})
 	}
@@ -1428,7 +1468,7 @@ mod make_rent_offer {
 			nft.owner = ALICE;
 			NFT::set_nft(BOB_NFT_ID_0, nft).unwrap();
 
-			let err = Rent::make_rent_offer(bob, FIXED_MANU_REV_NFT_NFT_NFT);
+			let err = Rent::make_rent_offer(bob, FIXED_MANU_REV_NFT_NFT_NFT, CREATION_BLOCK);
 			assert_noop!(err, Error::<Test>::CallerDoesNotOwnCancellationNFT);
 		})
 	}
@@ -1443,8 +1483,24 @@ mod make_rent_offer {
 			nft.state.is_listed = true;
 			NFT::set_nft(BOB_NFT_ID_0, nft).unwrap();
 
-			let err = Rent::make_rent_offer(bob, FIXED_MANU_REV_NFT_NFT_NFT);
+			let err = Rent::make_rent_offer(bob, FIXED_MANU_REV_NFT_NFT_NFT, CREATION_BLOCK);
 			assert_noop!(err, Error::<Test>::CancellationNFTNotInValidState);
+		})
+	}
+
+	#[test]
+	fn contract_does_not_match() {
+		ExtBuilder::new_build(None).execute_with(|| {
+			prepare_tests();
+			let bob: mock::RuntimeOrigin = origin(BOB);
+
+			// Try to rent owned contract.
+			let err = Rent::make_rent_offer(
+				bob,
+				SUBSC_AUTO_NOREV_NOT_CHANGEABLE_TOK_NONE_FIXTOK,
+				CREATION_BLOCK + 1,
+			);
+			assert_noop!(err, Error::<Test>::ContractDoesNotMatch);
 		})
 	}
 }
@@ -1460,7 +1516,8 @@ mod accept_rent_offer {
 			let bob: mock::RuntimeOrigin = origin(BOB);
 
 			// Make rent offer.
-			Rent::make_rent_offer(bob, SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK).unwrap();
+			Rent::make_rent_offer(bob, SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK, CREATION_BLOCK)
+				.unwrap();
 
 			let alice_balance = Balances::free_balance(ALICE);
 			let bob_balance = Balances::free_balance(BOB);
@@ -1526,7 +1583,8 @@ mod accept_rent_offer {
 			let alice: mock::RuntimeOrigin = origin(ALICE);
 			let bob: mock::RuntimeOrigin = origin(BOB);
 
-			Rent::make_rent_offer(bob, SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK).unwrap();
+			Rent::make_rent_offer(bob, SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK, CREATION_BLOCK)
+				.unwrap();
 
 			Balances::set_balance(root(), BOB, 0, 0).unwrap();
 
@@ -1544,7 +1602,8 @@ mod accept_rent_offer {
 			let alice: mock::RuntimeOrigin = origin(ALICE);
 			let bob: mock::RuntimeOrigin = origin(BOB);
 
-			Rent::make_rent_offer(bob, SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK).unwrap();
+			Rent::make_rent_offer(bob, SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK, CREATION_BLOCK)
+				.unwrap();
 
 			Balances::set_balance(root(), BOB, TOKENS + 1, 0).unwrap();
 
@@ -1562,7 +1621,7 @@ mod accept_rent_offer {
 			let alice: mock::RuntimeOrigin = origin(ALICE);
 			let bob: mock::RuntimeOrigin = origin(BOB);
 
-			Rent::make_rent_offer(bob, FIXED_MANU_REV_NFT_NFT_NFT).unwrap();
+			Rent::make_rent_offer(bob, FIXED_MANU_REV_NFT_NFT_NFT, CREATION_BLOCK).unwrap();
 
 			let mut nft = NFT::get_nft(BOB_NFT_ID_1).unwrap();
 			nft.owner = ALICE;
@@ -1581,7 +1640,7 @@ mod accept_rent_offer {
 			let alice: mock::RuntimeOrigin = origin(ALICE);
 			let bob: mock::RuntimeOrigin = origin(BOB);
 
-			Rent::make_rent_offer(bob, FIXED_MANU_REV_NFT_NFT_NFT).unwrap();
+			Rent::make_rent_offer(bob, FIXED_MANU_REV_NFT_NFT_NFT, CREATION_BLOCK).unwrap();
 
 			let mut nft = NFT::get_nft(BOB_NFT_ID_1).unwrap();
 			nft.state.is_listed = true;
@@ -1600,7 +1659,7 @@ mod accept_rent_offer {
 			let alice: mock::RuntimeOrigin = origin(ALICE);
 			let bob: mock::RuntimeOrigin = origin(BOB);
 
-			Rent::make_rent_offer(bob, FIXED_MANU_REV_NFT_NFT_NFT).unwrap();
+			Rent::make_rent_offer(bob, FIXED_MANU_REV_NFT_NFT_NFT, CREATION_BLOCK).unwrap();
 
 			let mut nft = NFT::get_nft(BOB_NFT_ID_0).unwrap();
 			nft.owner = ALICE;
@@ -1619,7 +1678,7 @@ mod accept_rent_offer {
 			let alice: mock::RuntimeOrigin = origin(ALICE);
 			let bob: mock::RuntimeOrigin = origin(BOB);
 
-			Rent::make_rent_offer(bob, FIXED_MANU_REV_NFT_NFT_NFT).unwrap();
+			Rent::make_rent_offer(bob, FIXED_MANU_REV_NFT_NFT_NFT, CREATION_BLOCK).unwrap();
 
 			let mut nft = NFT::get_nft(BOB_NFT_ID_0).unwrap();
 			nft.state.is_listed = true;
@@ -1641,7 +1700,7 @@ mod retract_rent_offer {
 			prepare_tests();
 			let bob: mock::RuntimeOrigin = origin(BOB);
 
-			Rent::make_rent_offer(bob.clone(), FIXED_MANU_REV_NFT_NFT_NFT).unwrap();
+			Rent::make_rent_offer(bob.clone(), FIXED_MANU_REV_NFT_NFT_NFT, CREATION_BLOCK).unwrap();
 			let offers = Rent::offers(FIXED_MANU_REV_NFT_NFT_NFT).unwrap();
 			assert!(offers.contains(&BOB));
 
@@ -1679,7 +1738,7 @@ mod retract_rent_offer {
 			let bob: mock::RuntimeOrigin = origin(BOB);
 			let charlie: mock::RuntimeOrigin = origin(CHARLIE);
 
-			Rent::make_rent_offer(bob, FIXED_MANU_REV_NFT_NFT_NFT).unwrap();
+			Rent::make_rent_offer(bob, FIXED_MANU_REV_NFT_NFT_NFT, CREATION_BLOCK).unwrap();
 			let offers = Rent::offers(FIXED_MANU_REV_NFT_NFT_NFT).unwrap();
 			assert!(offers.contains(&BOB));
 
@@ -1700,7 +1759,8 @@ mod change_subscription_terms {
 			let alice: mock::RuntimeOrigin = origin(ALICE);
 			let bob: mock::RuntimeOrigin = origin(BOB);
 
-			Rent::make_rent_offer(bob, SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK).unwrap();
+			Rent::make_rent_offer(bob, SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK, CREATION_BLOCK)
+				.unwrap();
 			Rent::accept_rent_offer(
 				alice.clone(),
 				SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK,
@@ -1854,8 +1914,12 @@ mod accept_subscription_terms {
 			let alice: mock::RuntimeOrigin = origin(ALICE);
 			let bob: mock::RuntimeOrigin = origin(BOB);
 
-			Rent::make_rent_offer(bob.clone(), SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK)
-				.unwrap();
+			Rent::make_rent_offer(
+				bob.clone(),
+				SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK,
+				CREATION_BLOCK,
+			)
+			.unwrap();
 			Rent::accept_rent_offer(
 				alice.clone(),
 				SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK,
@@ -1875,8 +1939,15 @@ mod accept_subscription_terms {
 			.unwrap();
 
 			// Accept new subscription terms
-			Rent::accept_subscription_terms(bob, SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK)
-				.unwrap();
+			Rent::accept_subscription_terms(
+				bob,
+				SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK,
+				TOKENS + 1,
+				2 * BLOCK_DURATION,
+				Some(4 * BLOCK_DURATION),
+				true,
+			)
+			.unwrap();
 
 			// State check.
 			let contract = Rent::contracts(SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK).unwrap();
@@ -1898,7 +1969,14 @@ mod accept_subscription_terms {
 			let bob: mock::RuntimeOrigin = origin(BOB);
 
 			// Try to accept new subscription terms for invalid contract.
-			let err = Rent::accept_subscription_terms(bob, INVALID_NFT);
+			let err = Rent::accept_subscription_terms(
+				bob,
+				INVALID_NFT,
+				TOKENS + 1,
+				2 * BLOCK_DURATION,
+				Some(4 * BLOCK_DURATION),
+				true,
+			);
 			assert_noop!(err, Error::<Test>::ContractNotFound);
 		})
 	}
@@ -1911,8 +1989,12 @@ mod accept_subscription_terms {
 			let bob: mock::RuntimeOrigin = origin(BOB);
 			let charlie: mock::RuntimeOrigin = origin(CHARLIE);
 
-			Rent::make_rent_offer(bob.clone(), SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK)
-				.unwrap();
+			Rent::make_rent_offer(
+				bob.clone(),
+				SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK,
+				CREATION_BLOCK,
+			)
+			.unwrap();
 			Rent::accept_rent_offer(
 				alice.clone(),
 				SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK,
@@ -1935,6 +2017,10 @@ mod accept_subscription_terms {
 			let err = Rent::accept_subscription_terms(
 				charlie,
 				SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK,
+				TOKENS + 1,
+				2 * BLOCK_DURATION,
+				Some(4 * BLOCK_DURATION),
+				true,
 			);
 			assert_noop!(err, Error::<Test>::NotTheContractRentee);
 		})
@@ -1947,15 +2033,102 @@ mod accept_subscription_terms {
 			let alice: mock::RuntimeOrigin = origin(ALICE);
 			let bob: mock::RuntimeOrigin = origin(BOB);
 
-			Rent::make_rent_offer(bob.clone(), SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK)
-				.unwrap();
+			Rent::make_rent_offer(
+				bob.clone(),
+				SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK,
+				CREATION_BLOCK,
+			)
+			.unwrap();
 			Rent::accept_rent_offer(alice, SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK, BOB)
 				.unwrap();
 
 			// Try to accept subscription terms already accepted
-			let err =
-				Rent::accept_subscription_terms(bob, SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK);
+			let err = Rent::accept_subscription_terms(
+				bob,
+				SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK,
+				TOKENS + 1,
+				2 * BLOCK_DURATION,
+				Some(4 * BLOCK_DURATION),
+				true,
+			);
 			assert_noop!(err, Error::<Test>::ContractTermsAlreadyAccepted);
+		})
+	}
+
+	#[test]
+	fn contract_terms_do_not_match() {
+		ExtBuilder::new_build(None).execute_with(|| {
+			prepare_tests();
+			let alice: mock::RuntimeOrigin = origin(ALICE);
+			let bob: mock::RuntimeOrigin = origin(BOB);
+
+			Rent::make_rent_offer(
+				bob.clone(),
+				SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK,
+				CREATION_BLOCK,
+			)
+			.unwrap();
+			Rent::accept_rent_offer(
+				alice.clone(),
+				SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK,
+				BOB,
+			)
+			.unwrap();
+
+			// Change subscription terms.
+			Rent::change_subscription_terms(
+				alice,
+				SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK,
+				TOKENS + 1,
+				2 * BLOCK_DURATION,
+				Some(4 * BLOCK_DURATION),
+				true,
+			)
+			.unwrap();
+
+			// Try to accept new subscription with wrong terms
+			let err = Rent::accept_subscription_terms(
+				bob.clone(),
+				SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK,
+				TOKENS + 2,
+				2 * BLOCK_DURATION,
+				Some(4 * BLOCK_DURATION),
+				true,
+			);
+			assert_noop!(err, Error::<Test>::ContractTermsDoNotMatch);
+
+			// Try to accept new subscription with wrong terms
+			let err = Rent::accept_subscription_terms(
+				bob.clone(),
+				SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK,
+				TOKENS + 1,
+				3 * BLOCK_DURATION,
+				Some(4 * BLOCK_DURATION),
+				true,
+			);
+			assert_noop!(err, Error::<Test>::ContractTermsDoNotMatch);
+
+			// Try to accept new subscription with wrong terms
+			let err = Rent::accept_subscription_terms(
+				bob.clone(),
+				SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK,
+				TOKENS + 1,
+				2 * BLOCK_DURATION,
+				Some(3 * BLOCK_DURATION),
+				true,
+			);
+			assert_noop!(err, Error::<Test>::ContractTermsDoNotMatch);
+
+			// Try to accept new subscription with wrong terms
+			let err = Rent::accept_subscription_terms(
+				bob.clone(),
+				SUBSC_MANU_REV_CHANGEABLE_TOK_FIXTOK_FIXTOK,
+				TOKENS + 1,
+				2 * BLOCK_DURATION,
+				Some(4 * BLOCK_DURATION),
+				false,
+			);
+			assert_noop!(err, Error::<Test>::ContractTermsDoNotMatch);
 		})
 	}
 }

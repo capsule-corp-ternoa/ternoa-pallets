@@ -3020,3 +3020,60 @@ mod notify_enclave_key_update {
 		)
 	}
 }
+
+mod set_collection_offchaindata {
+	use primitives::U8BoundedVec;
+
+	use super::*;
+
+	#[test]
+	fn set_collection_offchaindata() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
+			prepare_tests();
+			let alice: mock::RuntimeOrigin = origin(ALICE);
+			let offchain_data: U8BoundedVec<CollectionOffchainDataLimit> =
+				BoundedVec::try_from(vec![1]).unwrap().into();
+			let ok =
+				NFT::set_collection_offchaindata(alice, ALICE_COLLECTION_ID, offchain_data.clone());
+			assert_ok!(ok);
+
+			// Final state checks.
+			let collection = NFT::collections(ALICE_COLLECTION_ID).unwrap();
+			assert_eq!(collection.offchain_data, offchain_data.clone());
+
+			// Events checks.
+			let event = NFTsEvent::CollectionOffchainDataSet {
+				collection_id: ALICE_COLLECTION_ID,
+				offchain_data,
+			};
+			let event = RuntimeEvent::NFT(event);
+			System::assert_last_event(event);
+		})
+	}
+
+	#[test]
+	fn collection_not_found() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
+			prepare_tests();
+			let alice: mock::RuntimeOrigin = origin(ALICE);
+			let offchain_data: U8BoundedVec<CollectionOffchainDataLimit> =
+				BoundedVec::try_from(vec![1]).unwrap().into();
+			let err = NFT::set_collection_offchaindata(alice, INVALID_ID, offchain_data);
+			// Should fail because collection does not exist.
+			assert_noop!(err, Error::<Test>::CollectionNotFound);
+		})
+	}
+
+	#[test]
+	fn not_the_collection_owner() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
+			prepare_tests();
+			let alice: mock::RuntimeOrigin = origin(ALICE);
+			let offchain_data: U8BoundedVec<CollectionOffchainDataLimit> =
+				BoundedVec::try_from(vec![1]).unwrap().into();
+			let err = NFT::set_collection_offchaindata(alice, BOB_COLLECTION_ID, offchain_data);
+			// Should fail because alice is not owner of the collection.
+			assert_noop!(err, Error::<Test>::NotTheCollectionOwner);
+		})
+	}
+}

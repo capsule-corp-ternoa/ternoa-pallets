@@ -21,6 +21,7 @@ mod benchmarking;
 mod tests;
 mod types;
 mod weights;
+mod migrations;
 
 pub use pallet::*;
 pub use types::*;
@@ -34,7 +35,7 @@ use frame_support::{
 	traits::{
 		Currency,
 		ExistenceRequirement::{AllowDeath, KeepAlive},
-		Get, StorageVersion, WithdrawReasons,
+		Get, OnRuntimeUpgrade, StorageVersion, WithdrawReasons,
 	},
 	BoundedVec, PalletId,
 };
@@ -62,7 +63,7 @@ pub type RentContractDataOf<T> = RentContractData<
 	<T as Config>::AccountSizeLimit,
 >;
 
-const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
+const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -240,6 +241,8 @@ pub mod pallet {
 		MaxSimultaneousContractReached,
 		/// The contract was not found.
 		ContractNotFound,
+		/// Cannot rent a contract that already started.
+		CannotRentStartedContract,
 		/// Cannot Rent your own contract.
 		CannotRentOwnContract,
 		/// The contract cannot accept new offers. Maximum limit reached.
@@ -264,10 +267,47 @@ pub mod pallet {
 		DurationInvalid,
 		/// Amount too low (lower than existential deposit).
 		AmountTooLow,
+		/// The signed block does not match the contract creation block.
+		ContractDoesNotMatch,
+		/// The duration was not parsable to subscription (should not happen).
+		SubscriptionDataNotFound,
+		/// The provided new terms does not match the contract new terms
+		ContractTermsDoNotMatch,
 	}
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+		// Migration
+		#[cfg(feature = "try-runtime")]
+		fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
+			<migrations::v2::MigrationV2<T> as OnRuntimeUpgrade>::pre_upgrade()
+		}
+
+		// This function is called when a runtime upgrade is called. We need to make sure that
+		// what ever we do here won't brick the chain or leave the data in a invalid state.
+		fn on_runtime_upgrade() -> frame_support::weights::Weight {
+			let mut weight = Weight::zero();
+
+			let version = StorageVersion::get::<Pallet<T>>();
+			if version == StorageVersion::new(2) {
+				weight = <migrations::v2::MigrationV2<T> as OnRuntimeUpgrade>::on_runtime_upgrade();
+
+				// Update the storage version.
+				StorageVersion::put::<Pallet<T>>(&StorageVersion::new(3));
+			}
+
+			weight
+		}
+
+		// This function is called after a runtime upgrade is executed. Here we can
+		// test if the new state of blockchain data is valid. It's important to say that
+		// post_upgrade won't be called when a real runtime upgrade is executed.
+		#[cfg(feature = "try-runtime")]
+		fn post_upgrade(v: Vec<u8>) -> Result<(), &'static str> {
+			<migrations::v2::MigrationV2<T> as OnRuntimeUpgrade>::post_upgrade(v)
+		}
+
+		// Basic hooks
 		/// Weight: see `begin_block`
 		fn on_initialize(now: T::BlockNumber) -> Weight {
 			let mut read = 1u64;
@@ -442,6 +482,7 @@ pub mod pallet {
 				rent_fee.clone(),
 				renter_cancellation_fee.clone(),
 				rentee_cancellation_fee.clone(),
+				now,
 			);
 			Contracts::<T>::insert(nft_id, contract);
 
@@ -554,7 +595,11 @@ pub mod pallet {
 
 		/// Rent an NFT.
 		#[pallet::weight(T::WeightInfo::rent(Queues::<T>::get().size() as u32))]
-		pub fn rent(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
+		pub fn rent(
+			origin: OriginFor<T>,
+			nft_id: NFTId,
+			signed_creation_block: T::BlockNumber,
+		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 			let pallet = Self::account_id();
 			let now = frame_system::Pallet::<T>::block_number();
@@ -563,6 +608,11 @@ pub mod pallet {
 				let contract = x.as_mut().ok_or(Error::<T>::ContractNotFound)?;
 
 				// Checks ✅
+				ensure!(
+					contract.creation_block == signed_creation_block,
+					Error::<T>::ContractDoesNotMatch
+				);
+				ensure!(contract.rentee == None, Error::<T>::CannotRentStartedContract);
 				ensure!(contract.renter != who, Error::<T>::CannotRentOwnContract);
 				ensure!(
 					!contract.is_manual_acceptance(),
@@ -607,13 +657,21 @@ pub mod pallet {
 
 		/// Make a offer.
 		#[pallet::weight(T::WeightInfo::make_rent_offer(Queues::<T>::get().size() as u32))]
-		pub fn make_rent_offer(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
+		pub fn make_rent_offer(
+			origin: OriginFor<T>,
+			nft_id: NFTId,
+			signed_creation_block: T::BlockNumber,
+		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 			let contract = Contracts::<T>::get(nft_id).ok_or(Error::<T>::ContractNotFound)?;
 			let rent_fee = &contract.rent_fee;
 			let cancellation_fee = &contract.rentee_cancellation_fee;
 
 			// Checks ✅
+			ensure!(
+				contract.creation_block == signed_creation_block,
+				Error::<T>::ContractDoesNotMatch
+			);
 			ensure!(contract.renter != who, Error::<T>::CannotRentOwnContract);
 			ensure!(contract.is_manual_acceptance(), Error::<T>::ContractDoesNotSupportOffers);
 			if let Some(list) = contract.acceptance_type.get_allow_list() {
@@ -814,17 +872,32 @@ pub mod pallet {
 		pub fn accept_subscription_terms(
 			origin: OriginFor<T>,
 			nft_id: NFTId,
+			rent_fee: BalanceOf<T>,
+			period: T::BlockNumber,
+			max_duration: Option<T::BlockNumber>,
+			is_changeable: bool,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
 			Contracts::<T>::try_mutate(nft_id, |x| -> DispatchResult {
 				let contract = x.as_mut().ok_or(Error::<T>::ContractNotFound)?;
+				let duration = contract
+					.duration
+					.as_subscription()
+					.ok_or(Error::<T>::SubscriptionDataNotFound)?;
 
 				// Checks ✅
 				ensure!(Some(who) == contract.rentee, Error::<T>::NotTheContractRentee);
 				ensure!(
 					contract.duration.terms_changed(),
 					Error::<T>::ContractTermsAlreadyAccepted
+				);
+				ensure!(
+					contract.rent_fee == RentFee::Tokens(rent_fee) &&
+						duration.period_length == period &&
+						(max_duration == None || Some(duration.max_duration) == max_duration) &&
+						duration.is_changeable == is_changeable,
+					Error::<T>::ContractTermsDoNotMatch
 				);
 
 				// Storage Activity 📦

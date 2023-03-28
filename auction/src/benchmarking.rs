@@ -225,8 +225,10 @@ benchmarks! {
 		Auction::<T>::fill_deadline_queue(s, 99u32.into(), 10u32.into()).unwrap();
 		let charlie: T::AccountId = get_account::<T>("CHARLIE");
 		let nft_id = bench_data.bob_nft_id;
+		let start_price = BalanceOf::<T>::max_value() / 1000u32.into();
+		let buy_it_price = start_price.saturating_mul(2u16.into());
 
-	}: _(RawOrigin::Signed(charlie.clone()), nft_id)
+	}: _(RawOrigin::Signed(charlie.clone()), nft_id, buy_it_price)
 	verify {
 		let nft = T::NFTExt::get_nft(nft_id).unwrap();
 		assert_eq!(nft.state.is_listed, false);

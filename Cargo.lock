@@ -2659,7 +2659,7 @@ dependencies = [
 
 [[package]]
 name = "ternoa-auction"
-version = "1.0.1"
+version = "1.0.2"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -2722,7 +2722,7 @@ dependencies = [
 
 [[package]]
 name = "ternoa-marketplace"
-version = "1.0.3"
+version = "1.0.4"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -2744,7 +2744,7 @@ dependencies = [
 
 [[package]]
 name = "ternoa-nft"
-version = "1.0.4"
+version = "1.0.5"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -2777,7 +2777,7 @@ dependencies = [
 
 [[package]]
 name = "ternoa-rent"
-version = "1.0.1"
+version = "1.0.2"
 dependencies = [
  "frame-benchmarking",
  "frame-support",

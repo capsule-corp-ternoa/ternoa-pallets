@@ -244,6 +244,8 @@ where
 	pub renter_cancellation_fee: CancellationFee<Balance>,
 	/// Optional cancellation fee for rentee.
 	pub rentee_cancellation_fee: CancellationFee<Balance>,
+	/// creation block of the contract.
+	pub creation_block: BlockNumber,
 }
 
 impl<AccountId, BlockNumber, Balance, AccountSizeLimit>
@@ -264,6 +266,7 @@ where
 		rent_fee: RentFee<Balance>,
 		renter_cancellation_fee: CancellationFee<Balance>,
 		rentee_cancellation_fee: CancellationFee<Balance>,
+		creation_block: BlockNumber,
 	) -> RentContractData<AccountId, BlockNumber, Balance, AccountSizeLimit> {
 		Self {
 			start_block,
@@ -275,6 +278,7 @@ where
 			rent_fee,
 			renter_cancellation_fee,
 			rentee_cancellation_fee,
+			creation_block,
 		}
 	}
 
