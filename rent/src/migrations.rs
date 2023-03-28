@@ -5,11 +5,11 @@ pub mod v2 {
 	use frame_support::{
 		traits::OnRuntimeUpgrade, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound,
 	};
+	use frame_system::Pallet as System;
 	use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 	use scale_info::TypeInfo;
+	use sp_arithmetic::traits::AtLeast32BitUnsigned;
 	use sp_std::fmt::Debug;
-    use sp_arithmetic::traits::AtLeast32BitUnsigned;
-    use frame_system::Pallet as System;
 
 	#[derive(
 		Encode,
@@ -48,7 +48,7 @@ pub mod v2 {
 		/// Optional cancellation fee for renter.
 		pub renter_cancellation_fee: CancellationFee<Balance>,
 		/// Optional cancellation fee for rentee.
-		pub rentee_cancellation_fee: CancellationFee<Balance>
+		pub rentee_cancellation_fee: CancellationFee<Balance>,
 	}
 
 	pub struct MigrationV2<T>(sp_std::marker::PhantomData<T>);
@@ -60,12 +60,12 @@ pub mod v2 {
 		}
 
 		fn on_runtime_upgrade() -> frame_support::weights::Weight {
-            let now = System::<T>::block_number();
+			let now = System::<T>::block_number();
 			Contracts::<T>::translate(
 				|_id,
 				 old: OldRentContractData<
 					T::AccountId,
-                    T::BlockNumber,
+					T::BlockNumber,
 					BalanceOf<T>,
 					T::AccountSizeLimit,
 				>| {
@@ -77,9 +77,9 @@ pub mod v2 {
 						old.acceptance_type,
 						old.renter_can_revoke,
 						old.rent_fee,
-                        old.renter_cancellation_fee,
-                        old.rentee_cancellation_fee,
-                        now,
+						old.renter_cancellation_fee,
+						old.rentee_cancellation_fee,
+						now,
 					);
 
 					Some(new_rent_contract_data)
