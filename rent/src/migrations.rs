@@ -76,6 +76,9 @@ pub mod v2 {
 					T::AccountSizeLimit,
 				>| {
 					log::info!("Migrating contract with renter: {:?}", old.renter);
+					log::info!("Migrating contract with duration: {:?}", old.duration);
+					log::info!("Migrating contract with acceptance_type: {:?}", old.acceptance_type);
+					log::info!("Migrating contract with rent_fee: {:?}", old.rent_fee);
 					let new_rent_contract_data = RentContractData::new(
 						old.start_block,
 						old.renter,
@@ -94,6 +97,14 @@ pub mod v2 {
 					log::info!(
 						"Finished migration for contract with renter: {:?}",
 						new_rent_contract_data.renter
+					);
+					log::info!(
+						"Finished migration for contract with duration: {:?}",
+						new_rent_contract_data.duration
+					);
+					log::info!(
+						"Finished migration for contract with creationblock: {:?}",
+						new_rent_contract_data.creation_block
 					);
 
 					Some(new_rent_contract_data)
