@@ -31,23 +31,14 @@ pub mod v2 {
 			Clone + PartialEq + Debug + sp_std::cmp::PartialOrd + AtLeast32BitUnsigned + Copy,
 		AccountSizeLimit: Get<u32>,
 	{
-		/// Start block of the contract.
 		pub start_block: Option<BlockNumber>,
-		/// Renter of the NFT.
 		pub renter: AccountId,
-		/// Rentee of the NFT.
 		pub rentee: Option<AccountId>,
-		/// Duration of the renting contract.
 		pub duration: Duration<BlockNumber>,
-		/// Acceptance type of the renting contract.
 		pub acceptance_type: AcceptanceType<AccountList<AccountId, AccountSizeLimit>>,
-		/// Renter can cancel.
 		pub renter_can_revoke: bool,
-		/// Rent fee paid by rentee.
 		pub rent_fee: RentFee<Balance>,
-		/// Optional cancellation fee for renter.
 		pub renter_cancellation_fee: CancellationFee<Balance>,
-		/// Optional cancellation fee for rentee.
 		pub rentee_cancellation_fee: CancellationFee<Balance>,
 	}
 
@@ -62,10 +53,7 @@ pub mod v2 {
 		fn on_runtime_upgrade() -> frame_support::weights::Weight {
 			let now = System::<T>::block_number();
 			let mut read = 0u64;
-    		let mut write = 0u64;
-
-			log::info!("Starting migration for RentContractData");
-			log::info!("Now : {:?}", now);
+			let mut write = 0u64;
 
 			Contracts::<T>::translate(
 				|_id,
@@ -75,10 +63,6 @@ pub mod v2 {
 					BalanceOf<T>,
 					T::AccountSizeLimit,
 				>| {
-					log::info!("Migrating contract with renter: {:?}", old.renter);
-					log::info!("Migrating contract with duration: {:?}", old.duration);
-					log::info!("Migrating contract with acceptance_type: {:?}", old.acceptance_type);
-					log::info!("Migrating contract with rent_fee: {:?}", old.rent_fee);
 					let new_rent_contract_data = RentContractData::new(
 						old.start_block,
 						old.renter,
@@ -92,29 +76,10 @@ pub mod v2 {
 						now,
 					);
 					read += 1;
-            		write += 1;
-
-					log::info!(
-						"Finished migration for contract with renter: {:?}",
-						new_rent_contract_data.renter
-					);
-					log::info!(
-						"Finished migration for contract with duration: {:?}",
-						new_rent_contract_data.duration
-					);
-					log::info!(
-						"Finished migration for contract with creationblock: {:?}",
-						new_rent_contract_data.creation_block
-					);
+					write += 1;
 
 					Some(new_rent_contract_data)
 				},
-			);
-
-			log::info!(
-				"Finished migration for RentContractData. Read: {}, Write: {}",
-				read,
-				write
 			);
 
 			T::DbWeight::get().reads_writes(read, write)
