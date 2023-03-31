@@ -2578,23 +2578,6 @@ mod set_capsule_offchaindata {
 			assert_noop!(err, Error::<Test>::CannotSetOffchainDataForSyncingCapsules);
 		})
 	}
-
-	#[test]
-	fn cannot_set_offchain_data_for_nfts_in_transmission() {
-		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
-			prepare_tests();
-			let alice: mock::RuntimeOrigin = origin(ALICE);
-
-			// Change NFT State
-			let nft_state =
-				NFTState::new(true, false, false, false, false, false, false, false, true);
-			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
-
-			// Set capsule offchain data.
-			let err = NFT::set_capsule_offchaindata(alice, ALICE_NFT_ID, BoundedVec::default());
-			assert_noop!(err, Error::<Test>::CannotSetOffchainDataForNFTsInTransmission);
-		})
-	}
 }
 
 mod set_capsule_mint_fee {

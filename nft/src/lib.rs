@@ -418,8 +418,6 @@ pub mod pallet {
 		CannotSetOffchainDataForSyncingNFTs,
 		/// Operation is not permitted because the NFT capsule is syncing
 		CannotSetOffchainDataForSyncingCapsules,
-		/// Operation is not permitted because the NFT capsule is in transmission
-		CannotSetOffchainDataForNFTsInTransmission,
 		/// Operation is not permitted because capsule has already received all shards.
 		CapsuleHasReceivedAllShards,
 		/// Operation is not permitted because the NFT is listed
@@ -1242,10 +1240,6 @@ pub mod pallet {
 				ensure!(
 					!nft.state.is_syncing_capsule,
 					Error::<T>::CannotSetOffchainDataForSyncingCapsules
-				);
-				ensure!(
-					!nft.state.is_transmission,
-					Error::<T>::CannotSetOffchainDataForNFTsInTransmission
 				);
 
 				// Execute
