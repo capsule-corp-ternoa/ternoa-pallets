@@ -375,6 +375,16 @@ benchmarks! {
 		assert_eq!(nft.state.is_capsule, true);
 		assert_eq!(nft.state.is_syncing_capsule, true);
 	}
+
+	set_collection_offchaindata {
+		let benchmark_data = prepare_benchmarks::<T>();
+		let alice_origin = origin::<T>("ALICE");
+		let collection_offchain_data: BoundedVec<u8, T::CollectionOffchainDataLimit> = BoundedVec::try_from(vec![1; T::CollectionOffchainDataLimit::get() as usize]).unwrap();
+	}: _(origin::<T>("ALICE"), benchmark_data.collection_id, collection_offchain_data.clone())
+	verify {
+		let collection = NFT::<T>::collections(benchmark_data.collection_id).unwrap();
+		assert_eq!(collection.offchain_data, collection_offchain_data);
+	}
 }
 
 impl_benchmark_test_suite!(NFT, crate::tests::mock::new_test_ext(), crate::tests::mock::Test);
