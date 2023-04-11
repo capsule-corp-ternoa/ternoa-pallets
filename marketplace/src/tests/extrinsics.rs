@@ -1157,7 +1157,7 @@ mod buy_nft {
 				Marketplace::list_nft(alice, ALICE_NFT_ID, ALICE_MARKETPLACE_ID, 10).unwrap();
 
 				// Buy NFT.
-				Marketplace::buy_nft(bob, ALICE_NFT_ID).unwrap();
+				Marketplace::buy_nft(bob, ALICE_NFT_ID, 10).unwrap();
 
 				// Final state checks.
 				let nft = NFT::nfts(ALICE_NFT_ID).unwrap();
@@ -1210,7 +1210,7 @@ mod buy_nft {
 				Marketplace::list_nft(alice, ALICE_NFT_ID, CHARLIE_MARKETPLACE_ID, 10).unwrap();
 
 				// Buy NFT.
-				Marketplace::buy_nft(bob, ALICE_NFT_ID).unwrap();
+				Marketplace::buy_nft(bob, ALICE_NFT_ID, 10).unwrap();
 
 				// Final state checks.
 				let nft = NFT::nfts(ALICE_NFT_ID).unwrap();
@@ -1267,7 +1267,7 @@ mod buy_nft {
 				Marketplace::list_nft(alice, ALICE_NFT_ID, CHARLIE_MARKETPLACE_ID, 10).unwrap();
 
 				// Buy NFT.
-				Marketplace::buy_nft(bob, ALICE_NFT_ID).unwrap();
+				Marketplace::buy_nft(bob, ALICE_NFT_ID, 10).unwrap();
 
 				// Final state checks.
 				let nft = NFT::nfts(ALICE_NFT_ID).unwrap();
@@ -1318,7 +1318,7 @@ mod buy_nft {
 				Marketplace::list_nft(charlie, ALICE_NFT_ID, BOB_MARKETPLACE_ID, 10).unwrap();
 
 				// Buy NFT.
-				Marketplace::buy_nft(bob, ALICE_NFT_ID).unwrap();
+				Marketplace::buy_nft(bob, ALICE_NFT_ID, 10).unwrap();
 
 				// Final state checks.
 				let nft = NFT::nfts(ALICE_NFT_ID).unwrap();
@@ -1383,7 +1383,7 @@ mod buy_nft {
 				Marketplace::list_nft(dave, ALICE_NFT_ID, CHARLIE_MARKETPLACE_ID, 100).unwrap();
 
 				// Buy NFT
-				Marketplace::buy_nft(bob, ALICE_NFT_ID).unwrap();
+				Marketplace::buy_nft(bob, ALICE_NFT_ID, 100).unwrap();
 
 				// Final state checks.
 				let nft = NFT::nfts(ALICE_NFT_ID).unwrap();
@@ -1450,7 +1450,7 @@ mod buy_nft {
 				Marketplace::list_nft(dave, ALICE_NFT_ID, CHARLIE_MARKETPLACE_ID, 100).unwrap();
 
 				// Buy NFT.
-				Marketplace::buy_nft(bob, ALICE_NFT_ID).unwrap();
+				Marketplace::buy_nft(bob, ALICE_NFT_ID, 100).unwrap();
 
 				// Final state checks.
 				let nft = NFT::nfts(ALICE_NFT_ID).unwrap();
@@ -1495,7 +1495,7 @@ mod buy_nft {
 					.unwrap();
 
 				// Buy NFT.
-				let err = Marketplace::buy_nft(bob, ALICE_NFT_ID);
+				let err = Marketplace::buy_nft(bob, ALICE_NFT_ID, bob_balance);
 
 				// Nothing should have changed.
 				let nft = NFT::nfts(ALICE_NFT_ID).unwrap();
@@ -1516,7 +1516,7 @@ mod buy_nft {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
 
 				// Buy invalid NFT.
-				let err = Marketplace::buy_nft(alice, INVALID_NFT_ID);
+				let err = Marketplace::buy_nft(alice, INVALID_NFT_ID, 10);
 				assert_noop!(err, Error::<Test>::NFTNotFound);
 			},
 		)
@@ -1530,7 +1530,7 @@ mod buy_nft {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
 
 				// Buy non listed NFT.
-				let err = Marketplace::buy_nft(alice, BOB_NFT_ID);
+				let err = Marketplace::buy_nft(alice, BOB_NFT_ID, 10);
 				assert_noop!(err, Error::<Test>::NFTNotForSale);
 			},
 		)
@@ -1548,7 +1548,7 @@ mod buy_nft {
 					.unwrap();
 
 				// Buy owned NFT.
-				let err = Marketplace::buy_nft(alice, ALICE_NFT_ID);
+				let err = Marketplace::buy_nft(alice, ALICE_NFT_ID, 10);
 				assert_noop!(err, Error::<Test>::CannotBuyOwnedNFT);
 			},
 		)
@@ -1566,8 +1566,26 @@ mod buy_nft {
 				Marketplace::list_nft(alice, ALICE_NFT_ID, ALICE_MARKETPLACE_ID, 10_000).unwrap();
 
 				// Buy owned NFT.
-				let err = Marketplace::buy_nft(bob, ALICE_NFT_ID);
+				let err = Marketplace::buy_nft(bob, ALICE_NFT_ID, 10_000);
 				assert_noop!(err, Error::<Test>::NotEnoughBalanceToBuy);
+			},
+		)
+	}
+
+	#[test]
+	fn price_does_not_match() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
+			|| {
+				prepare_tests();
+				let alice: mock::RuntimeOrigin = origin(ALICE);
+				let bob: mock::RuntimeOrigin = origin(BOB);
+
+				// List NFT.
+				Marketplace::list_nft(alice, ALICE_NFT_ID, ALICE_MARKETPLACE_ID, 10_000).unwrap();
+
+				// Buy owned NFT.
+				let err = Marketplace::buy_nft(bob, ALICE_NFT_ID, 8_000);
+				assert_noop!(err, Error::<Test>::PriceDoesNotMatch);
 			},
 		)
 	}

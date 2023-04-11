@@ -32,8 +32,8 @@ use frame_support::{
 	dispatch::DispatchResult,
 	ensure,
 	traits::{
-		Currency, ExistenceRequirement::KeepAlive, Get, OnRuntimeUpgrade, OnUnbalanced,
-		StorageVersion, WithdrawReasons,
+		Currency, ExistenceRequirement::KeepAlive, Get, OnUnbalanced, StorageVersion,
+		WithdrawReasons,
 	},
 	BoundedVec,
 };
@@ -273,6 +273,11 @@ pub mod pallet {
 		CapsuleMintFeeSet { fee: BalanceOf<T> },
 		/// A user signified that a enclave key update was in progress
 		CapsuleKeyUpdateNotified { nft_id: NFTId },
+		/// A collection offchain data was updated
+		CollectionOffchainDataSet {
+			collection_id: CollectionId,
+			offchain_data: U8BoundedVec<T::CollectionOffchainDataLimit>,
+		},
 	}
 
 	#[pallet::error]
@@ -413,8 +418,6 @@ pub mod pallet {
 		CannotSetOffchainDataForSyncingNFTs,
 		/// Operation is not permitted because the NFT capsule is syncing
 		CannotSetOffchainDataForSyncingCapsules,
-		/// Operation is not permitted because the NFT capsule is in transmission
-		CannotSetOffchainDataForNFTsInTransmission,
 		/// Operation is not permitted because capsule has already received all shards.
 		CapsuleHasReceivedAllShards,
 		/// Operation is not permitted because the NFT is listed
@@ -432,36 +435,7 @@ pub mod pallet {
 	}
 
 	#[pallet::hooks]
-	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-		#[cfg(feature = "try-runtime")]
-		fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
-			<migrations::v3::MigrationV3<T> as OnRuntimeUpgrade>::pre_upgrade()
-		}
-
-		// This function is called when a runtime upgrade is called. We need to make sure that
-		// what ever we do here won't brick the chain or leave the data in a invalid state.
-		fn on_runtime_upgrade() -> frame_support::weights::Weight {
-			let mut weight = Weight::zero();
-
-			let version = StorageVersion::get::<Pallet<T>>();
-			if version == StorageVersion::new(2) {
-				weight = <migrations::v3::MigrationV3<T> as OnRuntimeUpgrade>::on_runtime_upgrade();
-
-				// Update the storage version.
-				StorageVersion::put::<Pallet<T>>(&StorageVersion::new(3));
-			}
-
-			weight
-		}
-
-		// This function is called after a runtime upgrade is executed. Here we can
-		// test if the new state of blockchain data is valid. It's important to say that
-		// post_upgrade won't be called when a real runtime upgrade is executed.
-		#[cfg(feature = "try-runtime")]
-		fn post_upgrade(v: Vec<u8>) -> Result<(), &'static str> {
-			<migrations::v3::MigrationV3<T> as OnRuntimeUpgrade>::post_upgrade(v)
-		}
-	}
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
@@ -1267,10 +1241,6 @@ pub mod pallet {
 					!nft.state.is_syncing_capsule,
 					Error::<T>::CannotSetOffchainDataForSyncingCapsules
 				);
-				ensure!(
-					!nft.state.is_transmission,
-					Error::<T>::CannotSetOffchainDataForNFTsInTransmission
-				);
 
 				// Execute
 				CapsuleOffchainData::<T>::insert(nft_id, offchain_data.clone());
@@ -1404,6 +1374,32 @@ pub mod pallet {
 			})?;
 
 			let event = Event::CapsuleKeyUpdateNotified { nft_id };
+			Self::deposit_event(event);
+			Ok(().into())
+		}
+
+		/// Set the capsule offchain data.
+		#[pallet::weight(T::WeightInfo::set_collection_offchaindata())]
+		pub fn set_collection_offchaindata(
+			origin: OriginFor<T>,
+			collection_id: NFTId,
+			offchain_data: U8BoundedVec<T::CollectionOffchainDataLimit>,
+		) -> DispatchResultWithPostInfo {
+			let who = ensure_signed(origin)?;
+
+			Collections::<T>::try_mutate(collection_id, |maybe_collection| -> DispatchResult {
+				let collection = maybe_collection.as_mut().ok_or(Error::<T>::CollectionNotFound)?;
+
+				// Checks
+				ensure!(collection.owner == who, Error::<T>::NotTheCollectionOwner);
+
+				// Execute
+				collection.offchain_data = offchain_data.clone();
+
+				Ok(().into())
+			})?;
+
+			let event = Event::CollectionOffchainDataSet { collection_id, offchain_data };
 			Self::deposit_event(event);
 			Ok(().into())
 		}

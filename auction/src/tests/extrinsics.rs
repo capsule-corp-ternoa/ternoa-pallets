@@ -1154,7 +1154,7 @@ pub mod buy_it_now {
 			Auction::add_bid(dave, nft_id, loser_bid).unwrap();
 
 			// Execute buy it now
-			assert_ok!(Auction::buy_it_now(origin(CHARLIE), nft_id));
+			assert_ok!(Auction::buy_it_now(origin(CHARLIE), nft_id, DEFAULT_PRICE + 100));
 
 			// Balances after transfer
 			let mp_owner_new_balance = Balances::free_balance(ALICE);
@@ -1209,7 +1209,7 @@ pub mod buy_it_now {
 	#[test]
 	fn nft_not_found() {
 		ExtBuilder::new_build(None).execute_with(|| {
-			let ok = Auction::buy_it_now(origin(BOB), INVALID_NFT_ID);
+			let ok = Auction::buy_it_now(origin(BOB), INVALID_NFT_ID, DEFAULT_PRICE);
 			assert_noop!(ok, Error::<Test>::NFTNotFound);
 		})
 	}
@@ -1220,7 +1220,7 @@ pub mod buy_it_now {
 			NFT::create_nft(origin(ALICE), BoundedVec::default(), PERCENT_0, None, false).unwrap();
 			let nft_id = NFT::next_nft_id() - 1;
 
-			let ok = Auction::buy_it_now(origin(BOB), nft_id);
+			let ok = Auction::buy_it_now(origin(BOB), nft_id, DEFAULT_PRICE);
 			assert_noop!(ok, Error::<Test>::AuctionDoesNotExist);
 		})
 	}
@@ -1236,7 +1236,7 @@ pub mod buy_it_now {
 				x.buy_it_price = None;
 			});
 
-			let ok = Auction::buy_it_now(origin(BOB), nft_id);
+			let ok = Auction::buy_it_now(origin(BOB), nft_id, DEFAULT_PRICE);
 			assert_noop!(ok, Error::<Test>::AuctionDoesNotSupportBuyItNow);
 		})
 	}
@@ -1247,7 +1247,7 @@ pub mod buy_it_now {
 			prepare_tests();
 			run_to_block(DEFAULT_STARTBLOCK);
 
-			let ok = Auction::buy_it_now(origin(ALICE), ALICE_NFT_ID_1);
+			let ok = Auction::buy_it_now(origin(ALICE), ALICE_NFT_ID_1, DEFAULT_PRICE + 10);
 			assert_noop!(ok, Error::<Test>::CannotBuyItNowToYourOwnAuctions);
 		})
 	}
@@ -1257,7 +1257,7 @@ pub mod buy_it_now {
 		ExtBuilder::new_build(None).execute_with(|| {
 			prepare_tests();
 
-			let ok = Auction::buy_it_now(origin(BOB), ALICE_NFT_ID_1);
+			let ok = Auction::buy_it_now(origin(BOB), ALICE_NFT_ID_1, DEFAULT_PRICE + 10);
 			assert_noop!(ok, Error::<Test>::AuctionNotStarted);
 		})
 	}
@@ -1274,8 +1274,23 @@ pub mod buy_it_now {
 			let price = auction.buy_it_price.unwrap();
 			assert_ok!(Auction::add_bid(origin(CHARLIE), nft_id, price));
 
-			let ok = Auction::buy_it_now(origin(BOB), nft_id);
+			let ok = Auction::buy_it_now(origin(BOB), nft_id, price);
 			assert_noop!(ok, Error::<Test>::CannotBuyItWhenABidIsHigherThanBuyItPrice);
+		})
+	}
+
+	#[test]
+	fn price_does_not_match() {
+		ExtBuilder::new_build(None).execute_with(|| {
+			prepare_tests();
+			run_to_block(DEFAULT_STARTBLOCK);
+
+			let nft_id = ALICE_NFT_ID_1;
+			let auction = Auctions::<Test>::get(nft_id).unwrap();
+			let price = auction.buy_it_price.unwrap();
+
+			let ok = Auction::buy_it_now(origin(BOB), nft_id, price + 10);
+			assert_noop!(ok, Error::<Test>::PriceDoesNotMatch);
 		})
 	}
 }

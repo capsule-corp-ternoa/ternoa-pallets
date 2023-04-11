@@ -39,6 +39,7 @@ pub trait WeightInfo {
 	fn set_capsule_mint_fee() -> Weight;
 	fn add_capsule_shard() -> Weight;
 	fn notify_enclave_key_update() -> Weight;
+	fn set_collection_offchaindata() -> Weight;
 }
 
 /// Weight functions for `ternoa_nft`.
@@ -105,6 +106,9 @@ impl<T: frame_system::Config> WeightInfo for TernoaWeight<T> {
 		Weight::from_ref_time(10_000_000 as u64)
 	}
 	fn notify_enclave_key_update() -> Weight {
+		Weight::from_ref_time(10_000_000 as u64)
+	}
+	fn set_collection_offchaindata() -> Weight {
 		Weight::from_ref_time(10_000_000 as u64)
 	}
 }

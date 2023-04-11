@@ -319,6 +319,8 @@ pub mod pallet {
 		CannotListNotSyncedCapsules,
 		/// Cannot list nfts with transmission protocol.
 		CannotListNFTsInTransmission,
+		/// The provided buy it now price does not match the real one.
+		PriceDoesNotMatch,
 	}
 
 	#[pallet::call]
@@ -578,7 +580,11 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(T::WeightInfo::buy_it_now(Deadlines::<T>::get().len() as u32))]
-		pub fn buy_it_now(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
+		pub fn buy_it_now(
+			origin: OriginFor<T>,
+			nft_id: NFTId,
+			signed_price: BalanceOf<T>,
+		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 			let now = frame_system::Pallet::<T>::block_number();
 
@@ -587,6 +593,7 @@ pub mod pallet {
 			let paid_amount =
 				auction.buy_it_price.ok_or(Error::<T>::AuctionDoesNotSupportBuyItNow)?;
 
+			ensure!(paid_amount == signed_price, Error::<T>::PriceDoesNotMatch);
 			ensure!(!auction.is_creator(&who), Error::<T>::CannotBuyItNowToYourOwnAuctions);
 			ensure!(auction.has_started(now), Error::<T>::AuctionNotStarted);
 			if let Some(bid) = auction.get_highest_bid() {

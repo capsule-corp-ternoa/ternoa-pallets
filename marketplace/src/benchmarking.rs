@@ -162,7 +162,7 @@ benchmarks! {
 		).unwrap();
 		let nft_id = T::NFTExt::create_nft(alice, BoundedVec::default(), PERCENT_50, None, false).unwrap();
 		Marketplace::<T>::list_nft(origin::<T>("ALICE").into(), benchmark_data.nft_id, benchmark_data.marketplace_id, 10u32.into()).unwrap();
-	}: _(bob_origin, benchmark_data.nft_id)
+	}: _(bob_origin, benchmark_data.nft_id, 10u32.into())
 	verify {
 		assert!(Marketplace::<T>::listed_nfts(benchmark_data.nft_id).is_none());
 		assert_eq!(T::NFTExt::get_nft(benchmark_data.nft_id).unwrap().owner, bob);

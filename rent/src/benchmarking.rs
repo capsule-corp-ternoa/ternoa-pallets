@@ -115,7 +115,7 @@ benchmarks! {
 		let org = origin::<T>("ALICE");
 		Rent::<T>::benchmark_fill_available_queue(new_contracts_amount, 100u32.into()).unwrap();
 
-		Rent::<T>::rent(origin::<T>("BOB").into(), NFT_ID_0).unwrap();
+		Rent::<T>::rent(origin::<T>("BOB").into(), NFT_ID_0, 0u32.into()).unwrap();
 	}: _(org, NFT_ID_0)
 	verify {
 		// Get The contract.
@@ -157,7 +157,7 @@ benchmarks! {
 		let org = origin::<T>("ALICE");
 
 		Rent::<T>::benchmark_fill_available_queue(new_contracts_amount, 100u32.into()).unwrap();
-	}: _(origin::<T>("BOB"), NFT_ID_0)
+	}: _(origin::<T>("BOB"), NFT_ID_0, 0u32.into())
 	verify {
 		// Get The contract.
 		let contract = Rent::<T>::contracts(NFT_ID_0).unwrap();
@@ -191,7 +191,7 @@ benchmarks! {
 		assert_ok!(ok);
 
 		Rent::<T>::benchmark_fill_available_queue(new_contracts_amount, 100u32.into()).unwrap();
-	}: _(origin::<T>("BOB"), NFT_ID_1)
+	}: _(origin::<T>("BOB"), NFT_ID_1, 0u32.into())
 	verify {
 		// Get The offer.
 		let offers = Rent::<T>::offers(NFT_ID_1).unwrap();
@@ -224,7 +224,7 @@ benchmarks! {
 		assert_ok!(ok);
 
 		Rent::<T>::benchmark_fill_available_queue(new_contracts_amount, 100u32.into()).unwrap();
-		Rent::<T>::make_rent_offer(origin::<T>("BOB").into(), NFT_ID_1).unwrap();
+		Rent::<T>::make_rent_offer(origin::<T>("BOB").into(), NFT_ID_1, 0u32.into()).unwrap();
 	}: _(origin::<T>("ALICE"), NFT_ID_1, bob.clone())
 	verify {
 		let contract = Rent::<T>::contracts(NFT_ID_1).unwrap();
@@ -257,7 +257,7 @@ benchmarks! {
 		assert_ok!(ok);
 
 		Rent::<T>::benchmark_fill_offers(new_offer_amount, NFT_ID_1, alice.clone()).unwrap();
-		Rent::<T>::make_rent_offer(origin::<T>("BOB").into(), NFT_ID_1).unwrap();
+		Rent::<T>::make_rent_offer(origin::<T>("BOB").into(), NFT_ID_1, 0u32.into()).unwrap();
 
 	}: _(origin::<T>("BOB"), NFT_ID_1)
 	verify {
@@ -299,9 +299,9 @@ benchmarks! {
 		let org = origin::<T>("ALICE");
 
 		Rent::<T>::benchmark_fill_available_queue(new_contracts_amount, 100u32.into()).unwrap();
-		Rent::<T>::rent(origin::<T>("BOB").into(), NFT_ID_0).unwrap();
+		Rent::<T>::rent(origin::<T>("BOB").into(), NFT_ID_0, 0u32.into()).unwrap();
 		Rent::<T>::change_subscription_terms(origin::<T>("ALICE").into(), NFT_ID_0, 2u32.into(), 10u32.into(), None, true).unwrap();
-	}: _(origin::<T>("BOB"), NFT_ID_0)
+	}: _(origin::<T>("BOB"), NFT_ID_0, 2u32.into(), 10u32.into(), None, true)
 	verify {
 		let contract = Rent::<T>::contracts(NFT_ID_0).unwrap();
 		let sub = contract.duration.as_subscription().unwrap();

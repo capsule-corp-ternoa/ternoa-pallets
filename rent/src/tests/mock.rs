@@ -67,6 +67,7 @@ impl Contains<RuntimeCall> for TestBaseCallFilter {
 }
 
 pub type Balance = u64;
+pub type BlockNumber = u64;
 
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
