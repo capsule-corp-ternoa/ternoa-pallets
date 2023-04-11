@@ -2578,23 +2578,6 @@ mod set_capsule_offchaindata {
 			assert_noop!(err, Error::<Test>::CannotSetOffchainDataForSyncingCapsules);
 		})
 	}
-
-	#[test]
-	fn cannot_set_offchain_data_for_nfts_in_transmission() {
-		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
-			prepare_tests();
-			let alice: mock::RuntimeOrigin = origin(ALICE);
-
-			// Change NFT State
-			let nft_state =
-				NFTState::new(true, false, false, false, false, false, false, false, true);
-			NFT::set_nft_state(ALICE_NFT_ID, nft_state).unwrap();
-
-			// Set capsule offchain data.
-			let err = NFT::set_capsule_offchaindata(alice, ALICE_NFT_ID, BoundedVec::default());
-			assert_noop!(err, Error::<Test>::CannotSetOffchainDataForNFTsInTransmission);
-		})
-	}
 }
 
 mod set_capsule_mint_fee {
@@ -3018,5 +3001,62 @@ mod notify_enclave_key_update {
 				assert_noop!(err, Error::<Test>::CannotChangeKeyForNFTsInTransmission);
 			},
 		)
+	}
+}
+
+mod set_collection_offchaindata {
+	use primitives::U8BoundedVec;
+
+	use super::*;
+
+	#[test]
+	fn set_collection_offchaindata() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
+			prepare_tests();
+			let alice: mock::RuntimeOrigin = origin(ALICE);
+			let offchain_data: U8BoundedVec<CollectionOffchainDataLimit> =
+				BoundedVec::try_from(vec![1]).unwrap().into();
+			let ok =
+				NFT::set_collection_offchaindata(alice, ALICE_COLLECTION_ID, offchain_data.clone());
+			assert_ok!(ok);
+
+			// Final state checks.
+			let collection = NFT::collections(ALICE_COLLECTION_ID).unwrap();
+			assert_eq!(collection.offchain_data, offchain_data.clone());
+
+			// Events checks.
+			let event = NFTsEvent::CollectionOffchainDataSet {
+				collection_id: ALICE_COLLECTION_ID,
+				offchain_data,
+			};
+			let event = RuntimeEvent::NFT(event);
+			System::assert_last_event(event);
+		})
+	}
+
+	#[test]
+	fn collection_not_found() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
+			prepare_tests();
+			let alice: mock::RuntimeOrigin = origin(ALICE);
+			let offchain_data: U8BoundedVec<CollectionOffchainDataLimit> =
+				BoundedVec::try_from(vec![1]).unwrap().into();
+			let err = NFT::set_collection_offchaindata(alice, INVALID_ID, offchain_data);
+			// Should fail because collection does not exist.
+			assert_noop!(err, Error::<Test>::CollectionNotFound);
+		})
+	}
+
+	#[test]
+	fn not_the_collection_owner() {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
+			prepare_tests();
+			let alice: mock::RuntimeOrigin = origin(ALICE);
+			let offchain_data: U8BoundedVec<CollectionOffchainDataLimit> =
+				BoundedVec::try_from(vec![1]).unwrap().into();
+			let err = NFT::set_collection_offchaindata(alice, BOB_COLLECTION_ID, offchain_data);
+			// Should fail because alice is not owner of the collection.
+			assert_noop!(err, Error::<Test>::NotTheCollectionOwner);
+		})
 	}
 }

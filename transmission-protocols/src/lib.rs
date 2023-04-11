@@ -156,7 +156,7 @@ pub mod pallet {
 		OptionQuery,
 	>;
 
-	/// Data related to tranmission queues.
+	/// Data related to transmission queues.
 	#[pallet::storage]
 	#[pallet::getter(fn at_block_queue)]
 	pub type AtBlockQueue<T: Config> =
@@ -262,7 +262,7 @@ pub mod pallet {
 		CannotSetTransmissionInThePast,
 		/// Transmission duration is too long
 		TransmissionIsInTooMuchTime,
-		/// The maximum number of simultaneous tranmission has been reached
+		/// The maximum number of simultaneous transmission has been reached
 		SimultaneousTransmissionLimitReached,
 		/// Operation is not permitted because the NFT is not in transmission.
 		NFTIsNotInTransmission,
@@ -341,13 +341,19 @@ pub mod pallet {
 			}
 
 			if let Some((consent_list, threshold)) = protocol.get_consent_data() {
-				let mut unique_consent_list: BoundedVec<T::AccountId, T::MaxConsentListSize> = BoundedVec::default();
+				let mut unique_consent_list: BoundedVec<T::AccountId, T::MaxConsentListSize> =
+					BoundedVec::default();
 				for account in consent_list {
-					if !unique_consent_list.contains(&account){
-						unique_consent_list.try_push(account.clone()).map_err(|_| Error::<T>::ConsentListFull)?;
+					if !unique_consent_list.contains(&account) {
+						unique_consent_list
+							.try_push(account.clone())
+							.map_err(|_| Error::<T>::ConsentListFull)?;
 					}
 				}
-				ensure!(consent_list.len() == unique_consent_list.len(), Error::<T>::DuplicatesInConsentList);
+				ensure!(
+					consent_list.len() == unique_consent_list.len(),
+					Error::<T>::DuplicatesInConsentList
+				);
 				ensure!(threshold > 0u8, Error::<T>::ThresholdTooLow);
 				ensure!(
 					(threshold as u32) <= T::MaxConsentListSize::get(),
@@ -596,7 +602,7 @@ pub mod pallet {
 // Helper Methods for Storage
 impl<T: Config> Pallet<T> {
 	/// Transmit the nft from owner to recipient of protocol when it's due
-	/// Cleans the tranmissions mapping and set nft state to not in transmission
+	/// Cleans the transmissions mapping and set nft state to not in transmission
 	fn transmit_nft(nft_id: NFTId) -> DispatchResult {
 		let transmission_data =
 			Transmissions::<T>::get(nft_id).ok_or(Error::<T>::TransmissionNotFound)?;
