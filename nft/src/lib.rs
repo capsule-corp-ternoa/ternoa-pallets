@@ -466,56 +466,8 @@ pub mod pallet {
 			is_soulbound: bool,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
-			let mut next_nft_id = None;
 
-			// Checks
-			// The Caller needs to pay the NFT mint fee.
-			let mint_fee = NftMintFee::<T>::get();
-			let reason = WithdrawReasons::FEE;
-			let imbalance = T::Currency::withdraw(&who, mint_fee, reason, KeepAlive)?;
-			T::FeesCollector::on_unbalanced(imbalance);
-
-			// Throws an error if specified collection does not exist, signer is not owner,
-			// collection is close, collection has reached limit.
-			if let Some(collection_id) = &collection_id {
-				Collections::<T>::try_mutate(collection_id, |x| -> DispatchResult {
-					let collection = x.as_mut().ok_or(Error::<T>::CollectionNotFound)?;
-					let limit =
-						collection.limit.unwrap_or_else(|| T::CollectionSizeLimit::get()) as usize;
-					ensure!(collection.owner == who, Error::<T>::NotTheCollectionOwner);
-					ensure!(!collection.is_closed, Error::<T>::CollectionIsClosed);
-					ensure!(collection.nfts.len() < limit, Error::<T>::CollectionHasReachedLimit);
-
-					let tmp_nft_id = Self::get_next_nft_id();
-					collection
-						.nfts
-						.try_push(tmp_nft_id)
-						.map_err(|_| Error::<T>::CannotAddMoreNFTsToCollection)?;
-					next_nft_id = Some(tmp_nft_id);
-					Ok(().into())
-				})?;
-			}
-
-			let nft_id = next_nft_id.unwrap_or_else(|| Self::get_next_nft_id());
-			let nft = NFTData::new_default(
-				who.clone(),
-				offchain_data.clone(),
-				royalty,
-				collection_id.clone(),
-				is_soulbound,
-			);
-			// Execute
-			Nfts::<T>::insert(nft_id, nft);
-			let event = Event::NFTCreated {
-				nft_id,
-				owner: who,
-				offchain_data,
-				royalty,
-				collection_id,
-				is_soulbound,
-				mint_fee,
-			};
-			Self::deposit_event(event);
+			Self::create_nft_helper(who, offchain_data, royalty, collection_id, is_soulbound)?;
 
 			Ok(().into())
 		}
@@ -925,42 +877,8 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			Nfts::<T>::try_mutate(nft_id, |maybe_nft| -> DispatchResult {
-				let nft = maybe_nft.as_mut().ok_or(Error::<T>::NFTNotFound)?;
+			Self::add_secret_helper(who, nft_id, offchain_data)?;
 
-				// Checks
-				ensure!(nft.owner == who, Error::<T>::NotTheNFTOwner);
-				ensure!(!nft.state.is_listed, Error::<T>::CannotAddSecretToListedNFTs);
-				ensure!(!nft.state.is_secret, Error::<T>::CannotAddSecretToSecretNFTs);
-				ensure!(!nft.state.is_rented, Error::<T>::CannotAddSecretToRentedNFTs);
-				ensure!(!nft.state.is_delegated, Error::<T>::CannotAddSecretToDelegatedNFTs);
-				ensure!(
-					!nft.state.is_syncing_capsule,
-					Error::<T>::CannotAddSecretToSyncingCapsules
-				);
-				ensure!(
-					!nft.state.is_transmission,
-					Error::<T>::CannotAddSecretToNFTsInTransmission
-				);
-
-				// The Caller needs to pay the Secret NFT Mint fee.
-				let secret_nft_mint_fee = SecretNftMintFee::<T>::get();
-				let reason = WithdrawReasons::FEE;
-				let imbalance =
-					T::Currency::withdraw(&who, secret_nft_mint_fee, reason, KeepAlive)?;
-				T::FeesCollector::on_unbalanced(imbalance);
-
-				// Execute
-				nft.state.is_secret = true;
-				nft.state.is_syncing_secret = true;
-
-				SecretNftsOffchainData::<T>::insert(nft_id, offchain_data.clone());
-
-				Ok(().into())
-			})?;
-
-			let event = Event::SecretAddedToNFT { nft_id, offchain_data };
-			Self::deposit_event(event);
 			Ok(().into())
 		}
 
@@ -1000,11 +918,17 @@ pub mod pallet {
 			);
 
 			// Create NFT
-			Self::create_nft(origin.clone(), offchain_data, royalty, collection_id, is_soulbound)?;
+			Self::create_nft_helper(
+				who.clone(),
+				offchain_data,
+				royalty,
+				collection_id,
+				is_soulbound,
+			)?;
 			let nft_id = NextNFTId::<T>::get() - 1;
 
 			// Add a secret to the NFT
-			Self::add_secret(origin.clone(), nft_id, secret_offchain_data)?;
+			Self::add_secret_helper(who, nft_id, secret_offchain_data)?;
 
 			Ok(().into())
 		}
@@ -1102,35 +1026,8 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			Nfts::<T>::try_mutate(nft_id, |maybe_nft| -> DispatchResult {
-				let nft = maybe_nft.as_mut().ok_or(Error::<T>::NFTNotFound)?;
+			Self::convert_to_capsule_helper(who, nft_id, offchain_data)?;
 
-				// Checks
-				ensure!(nft.owner == who, Error::<T>::NotTheNFTOwner);
-				ensure!(!nft.state.is_listed, Error::<T>::CannotConvertListedNFTs);
-				ensure!(!nft.state.is_capsule, Error::<T>::CannotConvertCapsules);
-				ensure!(!nft.state.is_rented, Error::<T>::CannotConvertRentedNFTs);
-				ensure!(!nft.state.is_delegated, Error::<T>::CannotConvertDelegatedNFTs);
-				ensure!(!nft.state.is_syncing_secret, Error::<T>::CannotConvertSyncingNFTs);
-				ensure!(!nft.state.is_transmission, Error::<T>::CannotConvertNFTsInTransmission);
-
-				// The Caller needs to pay the Secret NFT Mint fee.
-				let capsule_mint_fee = CapsuleMintFee::<T>::get();
-				let reason = WithdrawReasons::FEE;
-				let imbalance = T::Currency::withdraw(&who, capsule_mint_fee, reason, KeepAlive)?;
-				T::FeesCollector::on_unbalanced(imbalance);
-
-				// Execute
-				nft.state.is_capsule = true;
-				nft.state.is_syncing_capsule = true;
-
-				CapsuleOffchainData::<T>::insert(nft_id, offchain_data.clone());
-
-				Ok(().into())
-			})?;
-
-			let event = Event::NFTConvertedToCapsule { nft_id, offchain_data };
-			Self::deposit_event(event);
 			Ok(().into())
 		}
 
@@ -1170,11 +1067,17 @@ pub mod pallet {
 			);
 
 			// Create NFT
-			Self::create_nft(origin.clone(), offchain_data, royalty, collection_id, is_soulbound)?;
+			Self::create_nft_helper(
+				who.clone(),
+				offchain_data,
+				royalty,
+				collection_id,
+				is_soulbound,
+			)?;
 			let nft_id = NextNFTId::<T>::get() - 1;
 
 			// Add a secret to the NFT
-			Self::convert_to_capsule(origin.clone(), nft_id, capsule_offchain_data)?;
+			Self::convert_to_capsule_helper(who, nft_id, capsule_offchain_data)?;
 
 			Ok(().into())
 		}
@@ -1538,5 +1441,140 @@ impl<T: Config> Pallet<T> {
 		} else {
 			false
 		}
+	}
+
+	pub fn add_secret_helper(
+		who: T::AccountId,
+		nft_id: NFTId,
+		offchain_data: U8BoundedVec<T::NFTOffchainDataLimit>,
+	) -> DispatchResult {
+		Nfts::<T>::try_mutate(nft_id, |maybe_nft| -> DispatchResult {
+			let nft = maybe_nft.as_mut().ok_or(Error::<T>::NFTNotFound)?;
+
+			// Checks
+			ensure!(nft.owner == who, Error::<T>::NotTheNFTOwner);
+			ensure!(!nft.state.is_listed, Error::<T>::CannotAddSecretToListedNFTs);
+			ensure!(!nft.state.is_secret, Error::<T>::CannotAddSecretToSecretNFTs);
+			ensure!(!nft.state.is_rented, Error::<T>::CannotAddSecretToRentedNFTs);
+			ensure!(!nft.state.is_delegated, Error::<T>::CannotAddSecretToDelegatedNFTs);
+			ensure!(!nft.state.is_syncing_capsule, Error::<T>::CannotAddSecretToSyncingCapsules);
+			ensure!(!nft.state.is_transmission, Error::<T>::CannotAddSecretToNFTsInTransmission);
+
+			// The Caller needs to pay the Secret NFT Mint fee.
+			let secret_nft_mint_fee = SecretNftMintFee::<T>::get();
+			let reason = WithdrawReasons::FEE;
+			let imbalance = T::Currency::withdraw(&who, secret_nft_mint_fee, reason, KeepAlive)?;
+			T::FeesCollector::on_unbalanced(imbalance);
+
+			// Execute
+			nft.state.is_secret = true;
+			nft.state.is_syncing_secret = true;
+
+			SecretNftsOffchainData::<T>::insert(nft_id, offchain_data.clone());
+
+			Ok(().into())
+		})?;
+
+		let event = Event::SecretAddedToNFT { nft_id, offchain_data };
+		Self::deposit_event(event);
+
+		Ok(().into())
+	}
+
+	pub fn create_nft_helper(
+		who: T::AccountId,
+		offchain_data: U8BoundedVec<T::NFTOffchainDataLimit>,
+		royalty: Permill,
+		collection_id: Option<CollectionId>,
+		is_soulbound: bool,
+	) -> DispatchResult {
+		let mut next_nft_id = None;
+
+		// Checks
+		// The Caller needs to pay the NFT mint fee.
+		let mint_fee = NftMintFee::<T>::get();
+		let reason = WithdrawReasons::FEE;
+		let imbalance = T::Currency::withdraw(&who, mint_fee, reason, KeepAlive)?;
+		T::FeesCollector::on_unbalanced(imbalance);
+
+		// Throws an error if specified collection does not exist, signer is not owner,
+		// collection is close, collection has reached limit.
+		if let Some(collection_id) = &collection_id {
+			Collections::<T>::try_mutate(collection_id, |x| -> DispatchResult {
+				let collection = x.as_mut().ok_or(Error::<T>::CollectionNotFound)?;
+				let limit =
+					collection.limit.unwrap_or_else(|| T::CollectionSizeLimit::get()) as usize;
+				ensure!(collection.owner == who, Error::<T>::NotTheCollectionOwner);
+				ensure!(!collection.is_closed, Error::<T>::CollectionIsClosed);
+				ensure!(collection.nfts.len() < limit, Error::<T>::CollectionHasReachedLimit);
+
+				let tmp_nft_id = Self::get_next_nft_id();
+				collection
+					.nfts
+					.try_push(tmp_nft_id)
+					.map_err(|_| Error::<T>::CannotAddMoreNFTsToCollection)?;
+				next_nft_id = Some(tmp_nft_id);
+				Ok(().into())
+			})?;
+		}
+
+		let nft_id = next_nft_id.unwrap_or_else(|| Self::get_next_nft_id());
+		let nft = NFTData::new_default(
+			who.clone(),
+			offchain_data.clone(),
+			royalty,
+			collection_id.clone(),
+			is_soulbound,
+		);
+		// Execute
+		Nfts::<T>::insert(nft_id, nft);
+		let event = Event::NFTCreated {
+			nft_id,
+			owner: who,
+			offchain_data,
+			royalty,
+			collection_id,
+			is_soulbound,
+			mint_fee,
+		};
+		Self::deposit_event(event);
+		Ok(().into())
+	}
+
+	pub fn convert_to_capsule_helper(
+		who: T::AccountId,
+		nft_id: NFTId,
+		offchain_data: U8BoundedVec<T::NFTOffchainDataLimit>,
+	) -> DispatchResult {
+		Nfts::<T>::try_mutate(nft_id, |maybe_nft| -> DispatchResult {
+			let nft = maybe_nft.as_mut().ok_or(Error::<T>::NFTNotFound)?;
+
+			// Checks
+			ensure!(nft.owner == who, Error::<T>::NotTheNFTOwner);
+			ensure!(!nft.state.is_listed, Error::<T>::CannotConvertListedNFTs);
+			ensure!(!nft.state.is_capsule, Error::<T>::CannotConvertCapsules);
+			ensure!(!nft.state.is_rented, Error::<T>::CannotConvertRentedNFTs);
+			ensure!(!nft.state.is_delegated, Error::<T>::CannotConvertDelegatedNFTs);
+			ensure!(!nft.state.is_syncing_secret, Error::<T>::CannotConvertSyncingNFTs);
+			ensure!(!nft.state.is_transmission, Error::<T>::CannotConvertNFTsInTransmission);
+
+			// The Caller needs to pay the Secret NFT Mint fee.
+			let capsule_mint_fee = CapsuleMintFee::<T>::get();
+			let reason = WithdrawReasons::FEE;
+			let imbalance = T::Currency::withdraw(&who, capsule_mint_fee, reason, KeepAlive)?;
+			T::FeesCollector::on_unbalanced(imbalance);
+
+			// Execute
+			nft.state.is_capsule = true;
+			nft.state.is_syncing_capsule = true;
+
+			CapsuleOffchainData::<T>::insert(nft_id, offchain_data.clone());
+
+			Ok(().into())
+		})?;
+
+		let event = Event::NFTConvertedToCapsule { nft_id, offchain_data };
+		Self::deposit_event(event);
+		Ok(().into())
 	}
 }
