@@ -344,7 +344,7 @@ pub mod pallet {
 				let mut unique_consent_list: BoundedVec<T::AccountId, T::MaxConsentListSize> =
 					BoundedVec::default();
 				for account in consent_list {
-					if !unique_consent_list.contains(&account) {
+					if !unique_consent_list.contains(account) {
 						unique_consent_list
 							.try_push(account.clone())
 							.map_err(|_| Error::<T>::ConsentListFull)?;
@@ -428,12 +428,24 @@ pub mod pallet {
 			nft.state.is_transmission = false;
 			T::NFTExt::set_nft(nft_id, nft)?;
 
-			AtBlockQueue::<T>::mutate(|x| {
-				x.remove(nft_id);
-			});
-
+			let protocol_kind = transmission_data.protocol.to_kind();
+			match protocol_kind {
+					TransmissionProtocolKind::AtBlock | TransmissionProtocolKind::AtBlockWithReset => {
+							AtBlockQueue::<T>::mutate(|x| {
+									x.remove(nft_id);
+							});
+					}
+					TransmissionProtocolKind::OnConsent => {
+							OnConsentData::<T>::remove(nft_id);
+					}
+					TransmissionProtocolKind::OnConsentAtBlock => {
+							AtBlockQueue::<T>::mutate(|x| {
+									x.remove(nft_id);
+							});
+							OnConsentData::<T>::remove(nft_id);
+					}
+			}
 			Transmissions::<T>::remove(nft_id);
-			OnConsentData::<T>::remove(nft_id);
 
 			let event = Event::ProtocolRemoved { nft_id };
 			Self::deposit_event(event);
@@ -585,7 +597,7 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
 
-			match protocol_kind.clone() {
+			match protocol_kind {
 				TransmissionProtocolKind::AtBlock => AtBlockFee::<T>::put(fee),
 				TransmissionProtocolKind::AtBlockWithReset => AtBlockWithResetFee::<T>::put(fee),
 				TransmissionProtocolKind::OnConsent => OnConsentFee::<T>::put(fee),
@@ -646,7 +658,7 @@ impl<T: Config> Pallet<T> {
 		nft_id: NFTId,
 		account: T::AccountId,
 	) -> Result<(), DispatchError> {
-		let accounts = BoundedVec::try_from(vec![account.clone(); number as usize])
+		let accounts = BoundedVec::try_from(vec![account; number as usize])
 			.map_err(|_| Error::<T>::SimultaneousTransmissionLimitReached)?;
 		OnConsentData::<T>::insert(nft_id, accounts);
 		Ok(())

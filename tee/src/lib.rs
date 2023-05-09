@@ -237,7 +237,7 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			ensure!(who.clone() != enclave_address.clone(), Error::<T>::OperatorAndEnclaveAreSame);
+			ensure!(who != enclave_address, Error::<T>::OperatorAndEnclaveAreSame);
 			ensure!(
 				EnclaveRegistrations::<T>::get(&who).is_none(),
 				Error::<T>::RegistrationAlreadyExists
@@ -303,7 +303,7 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 
 			ensure!(
-				who.clone() != new_enclave_address.clone(),
+				who != new_enclave_address,
 				Error::<T>::OperatorAndEnclaveAreSame
 			);
 
@@ -419,7 +419,7 @@ pub mod pallet {
 			EnclaveRegistrations::<T>::try_mutate(
 				&operator_address,
 				|maybe_registration| -> DispatchResult {
-					if let Some(_) = maybe_registration {
+					if maybe_registration.is_some() {
 						*maybe_registration = None;
 					}
 					Ok(())
@@ -439,7 +439,7 @@ pub mod pallet {
 			ensure_root(origin)?;
 
 			EnclaveUpdates::<T>::try_mutate(&operator_address, |maybe_update| -> DispatchResult {
-				if let Some(_) = maybe_update {
+				if maybe_update.is_some() {
 					*maybe_update = None;
 				}
 				Ok(())
@@ -482,7 +482,7 @@ pub mod pallet {
 					EnclaveUpdates::<T>::try_mutate(
 						&operator_address,
 						|maybe_update| -> DispatchResult {
-							if let Some(_) = maybe_update {
+							if maybe_update.is_some() {
 								*maybe_update = None;
 							}
 							Ok(())
@@ -525,7 +525,7 @@ pub mod pallet {
 			ensure_root(origin)?;
 
 			ensure!(
-				operator_address.clone() != new_enclave_address.clone(),
+				operator_address != new_enclave_address,
 				Error::<T>::OperatorAndEnclaveAreSame
 			);
 
@@ -548,7 +548,7 @@ pub mod pallet {
 				Ok(())
 			})?;
 			EnclaveUpdates::<T>::try_mutate(&operator_address, |maybe_update| -> DispatchResult {
-				if let Some(_) = maybe_update {
+				if maybe_update.is_some() {
 					*maybe_update = None;
 				}
 				Ok(())
