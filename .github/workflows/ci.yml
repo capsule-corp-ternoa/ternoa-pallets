@@ -9,7 +9,7 @@ on:
 jobs:
   build-image:
     # The type of runner that the job will run on
-    runs-on: ubuntu-21.04
+    runs-on: ubuntu-latest
 
     # cancel concurrent builds on the same branch
     concurrency:
