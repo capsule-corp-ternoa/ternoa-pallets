@@ -57,6 +57,4 @@ jobs:
         run: cargo test --release
 
       - name: Benchmarking
-        run: >
-          pushd node &&
-          cargo check --features=runtime-benchmarks --release
+        run: cargo test --features runtime-benchmarks
