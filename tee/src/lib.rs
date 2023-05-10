@@ -302,10 +302,7 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			ensure!(
-				who != new_enclave_address,
-				Error::<T>::OperatorAndEnclaveAreSame
-			);
+			ensure!(who != new_enclave_address, Error::<T>::OperatorAndEnclaveAreSame);
 
 			let enclave = EnclaveData::<T>::get(&who)
 				.ok_or(Error::<T>::UpdateProhibitedForUnassignedEnclave)?;
@@ -419,9 +416,8 @@ pub mod pallet {
 			EnclaveRegistrations::<T>::try_mutate(
 				&operator_address,
 				|maybe_registration| -> DispatchResult {
-					if maybe_registration.is_some() {
-						*maybe_registration = None;
-					}
+					let _ = maybe_registration.as_mut().ok_or(Error::<T>::RegistrationNotFound)?;
+					*maybe_registration = None;
 					Ok(())
 				},
 			)?;
@@ -439,9 +435,8 @@ pub mod pallet {
 			ensure_root(origin)?;
 
 			EnclaveUpdates::<T>::try_mutate(&operator_address, |maybe_update| -> DispatchResult {
-				if maybe_update.is_some() {
-					*maybe_update = None;
-				}
+				let _ = maybe_update.as_mut().ok_or(Error::<T>::UpdateRequestNotFound)?;
+				*maybe_update = None;
 				Ok(())
 			})?;
 
@@ -524,10 +519,7 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
 
-			ensure!(
-				operator_address != new_enclave_address,
-				Error::<T>::OperatorAndEnclaveAreSame
-			);
+			ensure!(operator_address != new_enclave_address, Error::<T>::OperatorAndEnclaveAreSame);
 
 			EnclaveData::<T>::try_mutate(&operator_address, |maybe_enclave| -> DispatchResult {
 				let enclave = maybe_enclave.as_mut().ok_or(Error::<T>::EnclaveNotFound)?;

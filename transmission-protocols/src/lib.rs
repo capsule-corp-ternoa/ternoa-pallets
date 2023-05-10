@@ -166,7 +166,7 @@ pub mod pallet {
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
 		/// Weight: see `begin_block`
 		fn on_initialize(now: T::BlockNumber) -> Weight {
-			let mut read = 1u64;
+			let mut read = 2u64;
 			let mut write = 0u64;
 			let mut current_actions = 0;
 			let max_actions = T::ActionsInBlockLimit::get();
@@ -174,16 +174,20 @@ pub mod pallet {
 			let mut queue = AtBlockQueue::<T>::get();
 
 			while let Some(nft_id) = queue.pop_next(now) {
-				// Transmit the NFT
-				_ = Self::transmit_nft(nft_id);
+				match Self::transmit_nft(nft_id) {
+					Ok(_) => {
+						// Deposit event.
+						let event = Event::Transmitted { nft_id };
+						Self::deposit_event(event);
 
-				// Deposit event.
-				let event = Event::Transmitted { nft_id };
-				Self::deposit_event(event);
-
-				read += 2;
-				write += 2;
-				current_actions += 1;
+						read += 2;
+						write += 2;
+						current_actions += 1;
+					},
+					Err(error) => {
+						sp_runtime::print(error);
+					},
+				}
 				if current_actions >= max_actions {
 					break
 				}
@@ -244,6 +248,8 @@ pub mod pallet {
 		NotTheNFTOwner,
 		/// Operation is not permitted because the recipient is the caller
 		InvalidRecipient,
+		/// Operation is not permitted because the block number is in the past.
+		CannotCancelTransmissionInThePast,
 		/// Operation is not permitted because the NFT is listed.
 		CannotSetTransmissionForListedNFTs,
 		/// Operation is not permitted because the NFT is delegated.
@@ -307,6 +313,12 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 
 			// Checks
+			// Ensure that the block number on cancellation UntilBlock is not in the past
+			if let CancellationPeriod::UntilBlock(block_number) = cancellation {
+				let now = frame_system::Pallet::<T>::block_number();
+				ensure!(block_number > now, Error::<T>::CannotCancelTransmissionInThePast);
+			}
+
 			let mut nft = T::NFTExt::get_nft(nft_id).ok_or(Error::<T>::NFTNotFound)?;
 			ensure!(nft.owner == who, Error::<T>::NotTheNFTOwner);
 			ensure!(who != recipient, Error::<T>::InvalidRecipient);
