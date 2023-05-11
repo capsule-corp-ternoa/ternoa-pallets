@@ -17,11 +17,10 @@
 use super::{mock, mock::*};
 use crate::{
 	Cluster, ClusterData, Enclave, EnclaveAccountOperator, EnclaveClusterId, EnclaveData,
-	EnclaveRegistrations, EnclaveUnregistrations, EnclaveUpdates, Error, Event as TEEEvent,
+	EnclaveRegistrations, EnclaveUpdates, Error, Event as TEEEvent,
 };
 use frame_support::{assert_noop, assert_ok, error::BadOrigin, BoundedVec};
 use frame_system::RawOrigin;
-use ternoa_common::traits::TEEExt;
 
 fn origin(account: u64) -> mock::RuntimeOrigin {
 	RawOrigin::Signed(account).into()
@@ -138,7 +137,6 @@ mod register_enclave {
 
 mod unregister_enclave {
 	use super::*;
-	use frame_support::traits::Len;
 
 	#[test]
 	fn unregister_enclave() {
@@ -169,8 +167,6 @@ mod unregister_enclave {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
 				let api_uri: BoundedVec<u8, MaxUriLen> = BoundedVec::default();
 
-				TEE::fill_unregistration_list(CHARLIE, 10).unwrap();
-
 				assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, api_uri.clone()));
 				assert_ok!(TEE::create_cluster(root()));
 				assert_ok!(TEE::assign_enclave(root(), ALICE, 0));
@@ -196,7 +192,6 @@ mod unregister_enclave {
 				assert_ok!(TEE::assign_enclave(root(), ALICE.clone(), 0));
 
 				assert_ok!(TEE::unregister_enclave(alice.clone()));
-				assert_eq!(EnclaveUnregistrations::<Test>::get().len(), 1);
 			})
 	}
 
@@ -608,13 +603,11 @@ mod remove_enclave {
 				assert_ok!(TEE::update_enclave(alice.clone(), BOB, new_api_uri.clone()));
 				assert_ok!(TEE::unregister_enclave(alice.clone()));
 
-				assert!(EnclaveUnregistrations::<Test>::get().get(0).is_some());
 				assert!(EnclaveUpdates::<Test>::get(ALICE).is_some());
 				assert!(EnclaveData::<Test>::get(ALICE).is_some());
 
 				assert_ok!(TEE::remove_enclave(root(), ALICE));
 
-				assert!(EnclaveUnregistrations::<Test>::get().get(0).is_none());
 				assert!(EnclaveData::<Test>::get(ALICE).is_none());
 				assert!(EnclaveAccountOperator::<Test>::get(CHARLIE).is_none());
 				assert!(EnclaveClusterId::<Test>::get(ALICE).is_none());

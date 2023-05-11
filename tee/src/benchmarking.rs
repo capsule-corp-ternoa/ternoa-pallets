@@ -68,9 +68,6 @@ benchmarks! {
 		TEE::<T>::register_enclave(origin::<T>("ALICE").into(), enclave_address.clone(), uri.clone()).unwrap();
 		TEE::<T>::assign_enclave(RawOrigin::Root.into(), alice.clone(), cluster_id).unwrap();
 	}: _(origin::<T>("ALICE"))
-	verify {
-		assert_eq!(EnclaveUnregistrations::<T>::get(), vec![alice.clone()]);
-	}
 
 	update_enclave {
 		prepare_benchmarks::<T>();

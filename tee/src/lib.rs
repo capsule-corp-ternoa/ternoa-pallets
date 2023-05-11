@@ -92,12 +92,6 @@ pub mod pallet {
 		OptionQuery,
 	>;
 
-	/// List of registered operator addresses who want to be unregistered
-	#[pallet::storage]
-	#[pallet::getter(fn enclaves_to_unregister)]
-	pub type EnclaveUnregistrations<T: Config> =
-		StorageValue<_, BoundedVec<T::AccountId, T::ListSizeLimit>, ValueQuery>;
-
 	/// Mapping of operator addresses to the new values they want for their enclave.
 	#[pallet::storage]
 	#[pallet::getter(fn enclaves_to_update)]
@@ -265,29 +259,17 @@ pub mod pallet {
 		pub fn unregister_enclave(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			match EnclaveData::<T>::get(&who) {
-				Some(_) => {
-					EnclaveUnregistrations::<T>::try_mutate(|x| -> DispatchResult {
-						ensure!(!x.contains(&who), Error::<T>::UnregistrationAlreadyExists);
-						x.try_push(who.clone())
-							.map_err(|_| Error::<T>::UnregistrationLimitReached)?;
+			if EnclaveData::<T>::get(&who).is_none() {
+				EnclaveRegistrations::<T>::try_mutate(
+					&who,
+					|maybe_registration| -> DispatchResult {
+						let _ =
+							maybe_registration.as_mut().ok_or(Error::<T>::RegistrationNotFound)?;
+						*maybe_registration = None;
 						Ok(())
-					})?;
-					Self::deposit_event(Event::MovedForUnregistration { operator_address: who });
-				},
-				None => {
-					EnclaveRegistrations::<T>::try_mutate(
-						&who,
-						|maybe_registration| -> DispatchResult {
-							let _ = maybe_registration
-								.as_mut()
-								.ok_or(Error::<T>::RegistrationNotFound)?;
-							*maybe_registration = None;
-							Ok(())
-						},
-					)?;
-					Self::deposit_event(Event::RegistrationRemoved { operator_address: who });
-				},
+					},
+				)?;
+				Self::deposit_event(Event::RegistrationRemoved { operator_address: who });
 			}
 
 			Ok(().into())
@@ -466,14 +448,6 @@ pub mod pallet {
 				ClusterData::<T>::try_mutate(cluster_id, |maybe_cluster| -> DispatchResult {
 					let cluster = maybe_cluster.as_mut().ok_or(Error::<T>::ClusterNotFound)?;
 
-					// Remove enclave from unregistration list
-					EnclaveUnregistrations::<T>::try_mutate(|x| -> DispatchResult {
-						if let Some(index) = x.iter().position(|x| *x == operator_address.clone()) {
-							x.swap_remove(index);
-						}
-						Ok(())
-					})?;
-
 					EnclaveUpdates::<T>::try_mutate(
 						&operator_address,
 						|maybe_update| -> DispatchResult {
@@ -623,14 +597,6 @@ impl<T: Config> traits::TEEExt for Pallet<T> {
 	) -> DispatchResult {
 		EnclaveAccountOperator::<T>::insert(enclave_address, operator_address.clone());
 		EnclaveClusterId::<T>::insert(operator_address, cluster_id.unwrap_or(0u32));
-		Ok(())
-	}
-
-	fn fill_unregistration_list(address: Self::AccountId, number: u8) -> DispatchResult {
-		EnclaveUnregistrations::<T>::try_mutate(|x| -> DispatchResult {
-			*x = BoundedVec::try_from(vec![address.clone(); number as usize]).unwrap();
-			Ok(())
-		})?;
 		Ok(())
 	}
 }
