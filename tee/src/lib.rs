@@ -210,6 +210,8 @@ pub mod pallet {
 		ClusterIsNotEmpty,
 		/// Cluster is already full, cannot assign any enclaves
 		ClusterIsFull,
+		/// The given api uri is empty
+		ApiUriIsEmpty,
 		/// The given operator account and enclave account are same
 		OperatorAndEnclaveAreSame,
 		/// The operator already asked for request
@@ -231,6 +233,7 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
+			ensure!(!api_uri.is_empty(), Error::<T>::ApiUriIsEmpty);
 			ensure!(who != enclave_address, Error::<T>::OperatorAndEnclaveAreSame);
 			ensure!(
 				EnclaveRegistrations::<T>::get(&who).is_none(),
@@ -284,6 +287,7 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
+			ensure!(!new_api_uri.is_empty(), Error::<T>::ApiUriIsEmpty);
 			ensure!(who != new_enclave_address, Error::<T>::OperatorAndEnclaveAreSame);
 
 			let enclave = EnclaveData::<T>::get(&who)
@@ -493,6 +497,7 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
 
+			ensure!(!new_api_uri.is_empty(), Error::<T>::ApiUriIsEmpty);
 			ensure!(operator_address != new_enclave_address, Error::<T>::OperatorAndEnclaveAreSame);
 
 			EnclaveData::<T>::try_mutate(&operator_address, |maybe_enclave| -> DispatchResult {
