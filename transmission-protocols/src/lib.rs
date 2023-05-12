@@ -185,7 +185,9 @@ pub mod pallet {
 						current_actions += 1;
 					},
 					Err(error) => {
-						sp_runtime::print(error);
+						let error_event =
+							Event::TransmissionError { nft_id, error: format!("{:?}", error) };
+						Self::deposit_event(error_event);
 					},
 				}
 				if current_actions >= max_actions {
@@ -235,6 +237,11 @@ pub mod pallet {
 		},
 		Transmitted {
 			nft_id: NFTId,
+		},
+		/// A transmission error occurred at the beginning of the block
+		TransmissionError {
+			nft_id: NFTId,
+			error: String,
 		},
 	}
 
