@@ -442,6 +442,11 @@ pub mod pallet {
 		/// Create a new NFT with the provided details. An ID will be auto
 		/// generated and logged as an event, The caller of this function
 		/// will become the owner of the new NFT.
+		/// <HB SBP Milestone Review
+		///
+		/// Why not moving this function to the benchmarking file?
+		///
+		/// >
 		#[pallet::weight((
             {
 				if let Some(collection_id) = &collection_id {
@@ -524,6 +529,12 @@ pub mod pallet {
 		/// once the NFT is removed (burned) from the storage there is no way to
 		/// get it back.
 		/// Must be called by the owner of the NFT.
+		///
+		/// <HB SBP Milestone Review
+		///
+		/// Why not moving this function to the benchmarking file?
+		///
+		/// >
 		#[pallet::weight((
             {
 				let nft = Nfts::<T>::get(nft_id).ok_or(Error::<T>::NFTNotFound);
@@ -859,6 +870,11 @@ pub mod pallet {
 		/// Add an NFT to a collection.
 		/// Can only be called by owner of the collection, NFT
 		/// must not be in collection and collection must not be closed or has reached limit.
+		/// <HB SBP Milestone Review
+		///
+		/// Why not moving this function to the benchmarking file?
+		///
+		/// >
 		#[pallet::weight((
             {
 				let collection = Collections::<T>::get(collection_id).ok_or(Error::<T>::CollectionNotFound);
@@ -1001,6 +1017,11 @@ pub mod pallet {
 
 			// Create NFT
 			Self::create_nft(origin.clone(), offchain_data, royalty, collection_id, is_soulbound)?;
+			/// <HB SBP Milestone Review
+			///
+			/// unsafe operation, very unlikely to fail but still possible.
+			/// I would use saturating_sub() instad.
+			/// >
 			let nft_id = NextNFTId::<T>::get() - 1;
 
 			// Add a secret to the NFT

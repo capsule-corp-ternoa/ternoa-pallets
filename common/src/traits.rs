@@ -110,6 +110,13 @@ pub trait TEEExt {
 	type AccountId: Clone + PartialEq + Debug;
 	type MaxUriLen: Get<u32>;
 	/// Returns operator address and cluster id for a given enclave address
+	///
+	/// <HB SBP Milestone Review
+	///
+	/// This function can receive a reference instead of a value and do not force the caller to
+	/// clone the value passed.
+	///
+	/// >
 	fn ensure_enclave(account: Self::AccountId) -> Option<(ClusterId, Self::AccountId)>;
 
 	/// Register and assign an enclave
