@@ -237,6 +237,12 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
+			/// <HB SBP Review
+			///
+			/// This .clones() can be removed as the ensure! does not take ownership of the
+			/// parameters.
+			///
+			/// >
 			ensure!(who.clone() != enclave_address.clone(), Error::<T>::OperatorAndEnclaveAreSame);
 			ensure!(
 				EnclaveRegistrations::<T>::get(&who).is_none(),
@@ -302,6 +308,12 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
+			/// <HB SBP Review
+			///
+			/// This .clones() can be removed as the ensure! does not take ownership of the
+			/// parameters.
+			///
+			/// >
 			ensure!(
 				who.clone() != new_enclave_address.clone(),
 				Error::<T>::OperatorAndEnclaveAreSame
@@ -523,6 +535,13 @@ pub mod pallet {
 			new_api_uri: BoundedVec<u8, T::MaxUriLen>,
 		) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
+
+			/// <HB SBP Review
+			///
+			/// This .clones() can be removed as the ensure! does not take ownership of the
+			/// parameters.
+			///
+			/// >
 
 			ensure!(
 				operator_address.clone() != new_enclave_address.clone(),
