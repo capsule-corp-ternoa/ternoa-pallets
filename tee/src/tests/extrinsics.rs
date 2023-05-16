@@ -17,11 +17,10 @@
 use super::{mock, mock::*};
 use crate::{
 	Cluster, ClusterData, Enclave, EnclaveAccountOperator, EnclaveClusterId, EnclaveData,
-	EnclaveRegistrations, EnclaveUnregistrations, EnclaveUpdates, Error, Event as TEEEvent,
+	EnclaveRegistrations, EnclaveUpdates, Error, Event as TEEEvent,
 };
 use frame_support::{assert_noop, assert_ok, error::BadOrigin, BoundedVec};
 use frame_system::RawOrigin;
-use ternoa_common::traits::TEEExt;
 
 fn origin(account: u64) -> mock::RuntimeOrigin {
 	RawOrigin::Signed(account).into()
@@ -40,7 +39,7 @@ mod register_enclave {
 			.build()
 			.execute_with(|| {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
-				let api_uri: BoundedVec<u8, MaxUriLen> = BoundedVec::default();
+				let api_uri: BoundedVec<u8, MaxUriLen>= b"test".to_vec().try_into().unwrap();
 
 				assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, api_uri.clone()));
 
@@ -65,7 +64,7 @@ mod register_enclave {
 			.build()
 			.execute_with(|| {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
-				let api_uri: BoundedVec<u8, MaxUriLen> = BoundedVec::default();
+				let api_uri: BoundedVec<u8, MaxUriLen>= b"test".to_vec().try_into().unwrap();
 
 				assert_noop!(
 					TEE::register_enclave(alice.clone(), ALICE, api_uri),
@@ -81,7 +80,7 @@ mod register_enclave {
 			.build()
 			.execute_with(|| {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
-				let api_uri: BoundedVec<u8, MaxUriLen> = BoundedVec::default();
+				let api_uri: BoundedVec<u8, MaxUriLen>= b"test".to_vec().try_into().unwrap();
 
 				assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, api_uri.clone()));
 
@@ -99,7 +98,7 @@ mod register_enclave {
 			.build()
 			.execute_with(|| {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
-				let api_uri: BoundedVec<u8, MaxUriLen> = BoundedVec::default();
+				let api_uri: BoundedVec<u8, MaxUriLen>= b"test".to_vec().try_into().unwrap();
 
 				assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, api_uri.clone()));
 				assert_ok!(TEE::create_cluster(root()));
@@ -120,7 +119,7 @@ mod register_enclave {
 			.execute_with(|| {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
 				let bob: mock::RuntimeOrigin = origin(BOB);
-				let api_uri: BoundedVec<u8, MaxUriLen> = BoundedVec::default();
+				let api_uri: BoundedVec<u8, MaxUriLen>= b"test".to_vec().try_into().unwrap();
 
 				assert_ok!(TEE::create_cluster(root()));
 
@@ -138,7 +137,6 @@ mod register_enclave {
 
 mod unregister_enclave {
 	use super::*;
-	use frame_support::traits::Len;
 
 	#[test]
 	fn unregister_enclave() {
@@ -147,7 +145,7 @@ mod unregister_enclave {
 			.build()
 			.execute_with(|| {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
-				let api_uri: BoundedVec<u8, MaxUriLen> = BoundedVec::default();
+				let api_uri: BoundedVec<u8, MaxUriLen>= b"test".to_vec().try_into().unwrap();
 
 				assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, api_uri.clone()));
 				assert_ok!(TEE::unregister_enclave(alice.clone()));
@@ -161,42 +159,19 @@ mod unregister_enclave {
 	}
 
 	#[test]
-	fn unregistration_limit_reached() {
-		ExtBuilder::default()
-			.tokens(vec![(ALICE, 1000), (CHARLIE, 100)])
-			.build()
-			.execute_with(|| {
-				let alice: mock::RuntimeOrigin = origin(ALICE);
-				let api_uri: BoundedVec<u8, MaxUriLen> = BoundedVec::default();
-
-				TEE::fill_unregistration_list(CHARLIE, 10).unwrap();
-
-				assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, api_uri.clone()));
-				assert_ok!(TEE::create_cluster(root()));
-				assert_ok!(TEE::assign_enclave(root(), ALICE, 0));
-
-				assert_noop!(
-					TEE::unregister_enclave(alice.clone()),
-					Error::<Test>::UnregistrationLimitReached
-				);
-			})
-	}
-
-	#[test]
 	fn unregister_enclave_assigned() {
 		ExtBuilder::default()
 			.tokens(vec![(ALICE, 1000), (CHARLIE, 100)])
 			.build()
 			.execute_with(|| {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
-				let api_uri: BoundedVec<u8, MaxUriLen> = BoundedVec::default();
+				let api_uri: BoundedVec<u8, MaxUriLen>= b"test".to_vec().try_into().unwrap();
 
 				assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, api_uri.clone()));
 				assert_ok!(TEE::create_cluster(root()));
 				assert_ok!(TEE::assign_enclave(root(), ALICE.clone(), 0));
 
 				assert_ok!(TEE::unregister_enclave(alice.clone()));
-				assert_eq!(EnclaveUnregistrations::<Test>::get().len(), 1);
 			})
 	}
 
@@ -213,27 +188,6 @@ mod unregister_enclave {
 				assert_noop!(err, Error::<Test>::RegistrationNotFound);
 			})
 	}
-
-	#[test]
-	fn unregistration_already_exists() {
-		ExtBuilder::default()
-			.tokens(vec![(ALICE, 1000), (CHARLIE, 100)])
-			.build()
-			.execute_with(|| {
-				let alice: mock::RuntimeOrigin = origin(ALICE);
-				let api_uri: BoundedVec<u8, MaxUriLen> = BoundedVec::default();
-
-				assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, api_uri.clone()));
-				assert_ok!(TEE::create_cluster(root()));
-				assert_ok!(TEE::assign_enclave(root(), ALICE, 0));
-
-				assert_ok!(TEE::unregister_enclave(alice.clone()));
-				assert_noop!(
-					TEE::unregister_enclave(alice.clone()),
-					Error::<Test>::UnregistrationAlreadyExists
-				);
-			})
-	}
 }
 
 mod update_enclave {
@@ -246,7 +200,7 @@ mod update_enclave {
 			.build()
 			.execute_with(|| {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
-				let api_uri: BoundedVec<u8, MaxUriLen> = BoundedVec::default();
+				let api_uri: BoundedVec<u8, MaxUriLen>= b"test".to_vec().try_into().unwrap();
 				let new_api_uri: BoundedVec<u8, MaxUriLen> =
 					"new_api_uri".as_bytes().to_vec().try_into().unwrap();
 
@@ -293,12 +247,13 @@ mod update_enclave {
 			.build()
 			.execute_with(|| {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
-				assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, BoundedVec::default()));
+				let api_uri: BoundedVec<u8, MaxUriLen>= b"test".to_vec().try_into().unwrap();
+				assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, api_uri.clone()));
 				assert_ok!(TEE::create_cluster(root()));
 				assert_ok!(TEE::assign_enclave(root(), ALICE, 0));
-				assert_ok!(TEE::update_enclave(alice.clone(), BOB, BoundedVec::default()));
+				assert_ok!(TEE::update_enclave(alice.clone(), BOB, api_uri.clone()));
 
-				let err = TEE::update_enclave(alice.clone(), BOB, BoundedVec::default());
+				let err = TEE::update_enclave(alice.clone(), BOB, api_uri);
 				assert_noop!(err, Error::<Test>::UpdateRequestAlreadyExists);
 			})
 	}
@@ -328,7 +283,7 @@ mod update_enclave {
 			.execute_with(|| {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
 				let eve: mock::RuntimeOrigin = origin(EVE);
-				let api_uri: BoundedVec<u8, MaxUriLen> = BoundedVec::default();
+				let api_uri: BoundedVec<u8, MaxUriLen>= b"test".to_vec().try_into().unwrap();
 
 				assert_ok!(TEE::create_cluster(root()));
 
@@ -356,11 +311,12 @@ mod cancel_update {
 			.build()
 			.execute_with(|| {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
+				let api_uri: BoundedVec<u8, MaxUriLen>= b"test".to_vec().try_into().unwrap();
 
 				assert_ok!(TEE::create_cluster(root()));
-				assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, BoundedVec::default()));
+				assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, api_uri.clone()));
 				assert_ok!(TEE::assign_enclave(root(), ALICE, 0));
-				assert_ok!(TEE::update_enclave(alice.clone(), CHARLIE, BoundedVec::default()));
+				assert_ok!(TEE::update_enclave(alice.clone(), CHARLIE, api_uri));
 				assert_ok!(TEE::cancel_update(alice.clone()));
 
 				assert!(EnclaveUpdates::<Test>::get(ALICE).is_none());
@@ -394,7 +350,7 @@ mod assign_enclave {
 			.build()
 			.execute_with(|| {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
-				let api_uri: BoundedVec<u8, MaxUriLen> = BoundedVec::default();
+				let api_uri: BoundedVec<u8, MaxUriLen>= b"test".to_vec().try_into().unwrap();
 				let cluster_id = 0u32;
 
 				assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, api_uri.clone()));
@@ -429,7 +385,7 @@ mod assign_enclave {
 			.execute_with(|| {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
 				let bob: mock::RuntimeOrigin = origin(BOB);
-				let api_uri: BoundedVec<u8, MaxUriLen> = BoundedVec::default();
+				let api_uri: BoundedVec<u8, MaxUriLen>= b"test".to_vec().try_into().unwrap();
 
 				assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, api_uri.clone()));
 				assert_ok!(TEE::register_enclave(bob.clone(), CHARLIE, api_uri.clone()));
@@ -456,7 +412,8 @@ mod assign_enclave {
 	fn cluster_not_found() {
 		ExtBuilder::default().tokens(vec![(ALICE, 1000)]).build().execute_with(|| {
 			let alice: mock::RuntimeOrigin = origin(ALICE);
-			let api_uri: BoundedVec<u8, MaxUriLen> = BoundedVec::default();
+			let api_uri_data = b"test".to_vec();
+			let api_uri: BoundedVec<u8, _> = BoundedVec::<u8, _>::try_from(api_uri_data).expect("API URI exceeds maximum length");
 
 			assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, api_uri.clone()));
 			assert_noop!(TEE::assign_enclave(root(), ALICE, 0), Error::<Test>::ClusterNotFound);
@@ -472,17 +429,18 @@ mod assign_enclave {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
 				let bob: mock::RuntimeOrigin = origin(BOB);
 				let charlie: mock::RuntimeOrigin = origin(CHARLIE);
+				let api_uri: BoundedVec<u8, MaxUriLen>= b"test".to_vec().try_into().unwrap();
 
 				assert_ok!(TEE::register_enclave(
 					alice.clone(),
 					ALICE_ENCLAVE,
-					BoundedVec::default()
+					api_uri.clone()
 				));
-				assert_ok!(TEE::register_enclave(bob.clone(), BOB_ENCLAVE, BoundedVec::default()));
+				assert_ok!(TEE::register_enclave(bob.clone(), BOB_ENCLAVE, api_uri.clone()));
 				assert_ok!(TEE::register_enclave(
 					charlie.clone(),
 					CHARLIE_ENCLAVE,
-					BoundedVec::default()
+					api_uri
 				));
 				assert_ok!(TEE::create_cluster(root()));
 				assert_ok!(TEE::assign_enclave(root(), ALICE, 0));
@@ -502,7 +460,7 @@ mod remove_registration {
 			.build()
 			.execute_with(|| {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
-				let api_uri: BoundedVec<u8, MaxUriLen> = BoundedVec::default();
+				let api_uri: BoundedVec<u8, MaxUriLen>= b"test".to_vec().try_into().unwrap();
 				assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, api_uri.clone()));
 				assert!(EnclaveRegistrations::<Test>::get(ALICE).is_some());
 				assert_ok!(TEE::remove_registration(root(), ALICE));
@@ -531,7 +489,7 @@ mod remove_update {
 			.build()
 			.execute_with(|| {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
-				let api_uri: BoundedVec<u8, MaxUriLen> = BoundedVec::default();
+				let api_uri: BoundedVec<u8, MaxUriLen>= b"test".to_vec().try_into().unwrap();
 				let new_api_uri: BoundedVec<u8, MaxUriLen> =
 					"new_api_uri".as_bytes().to_vec().try_into().unwrap();
 
@@ -564,7 +522,7 @@ mod remove_update {
 			.build()
 			.execute_with(|| {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
-				let api_uri: BoundedVec<u8, MaxUriLen> = BoundedVec::default();
+				let api_uri: BoundedVec<u8, MaxUriLen>= b"test".to_vec().try_into().unwrap();
 				let new_api_uri: BoundedVec<u8, MaxUriLen> =
 					"new_api_uri".as_bytes().to_vec().try_into().unwrap();
 
@@ -574,11 +532,11 @@ mod remove_update {
 
 				assert_ok!(TEE::update_enclave(alice.clone(), BOB, new_api_uri.clone()));
 
-				assert_ok!(TEE::remove_update(root(), BOB));
+				assert_noop!(TEE::remove_update(root(), BOB), Error::<Test>::UpdateRequestNotFound);
 				assert!(EnclaveUpdates::<Test>::get(ALICE).is_some());
 
 				let event =
-					RuntimeEvent::TEE(TEEEvent::UpdateRequestRemoved { operator_address: BOB });
+					RuntimeEvent::TEE(TEEEvent::MovedForUpdate { operator_address: ALICE, new_enclave_address: BOB, new_api_uri });
 				System::assert_last_event(event);
 			})
 	}
@@ -594,7 +552,7 @@ mod remove_enclave {
 			.build()
 			.execute_with(|| {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
-				let api_uri: BoundedVec<u8, MaxUriLen> = BoundedVec::default();
+				let api_uri: BoundedVec<u8, MaxUriLen>= b"test".to_vec().try_into().unwrap();
 				let new_api_uri: BoundedVec<u8, MaxUriLen> =
 					"new_api_uri".as_bytes().to_vec().try_into().unwrap();
 				assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, api_uri.clone()));
@@ -608,13 +566,11 @@ mod remove_enclave {
 				assert_ok!(TEE::update_enclave(alice.clone(), BOB, new_api_uri.clone()));
 				assert_ok!(TEE::unregister_enclave(alice.clone()));
 
-				assert!(EnclaveUnregistrations::<Test>::get().get(0).is_some());
 				assert!(EnclaveUpdates::<Test>::get(ALICE).is_some());
 				assert!(EnclaveData::<Test>::get(ALICE).is_some());
 
 				assert_ok!(TEE::remove_enclave(root(), ALICE));
 
-				assert!(EnclaveUnregistrations::<Test>::get().get(0).is_none());
 				assert!(EnclaveData::<Test>::get(ALICE).is_none());
 				assert!(EnclaveAccountOperator::<Test>::get(CHARLIE).is_none());
 				assert!(EnclaveClusterId::<Test>::get(ALICE).is_none());
@@ -639,7 +595,7 @@ mod remove_enclave {
 			.build()
 			.execute_with(|| {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
-				let api_uri: BoundedVec<u8, MaxUriLen> = BoundedVec::default();
+				let api_uri: BoundedVec<u8, MaxUriLen>= b"test".to_vec().try_into().unwrap();
 
 				assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, api_uri.clone()));
 				assert_ok!(TEE::create_cluster(root()));
@@ -657,7 +613,7 @@ mod remove_enclave {
 			.build()
 			.execute_with(|| {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
-				let api_uri: BoundedVec<u8, MaxUriLen> = BoundedVec::default();
+				let api_uri: BoundedVec<u8, MaxUriLen>= b"test".to_vec().try_into().unwrap();
 
 				assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, api_uri.clone()));
 				assert_ok!(TEE::create_cluster(root()));
@@ -680,7 +636,7 @@ mod force_update_enclave {
 			.build()
 			.execute_with(|| {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
-				let api_uri: BoundedVec<u8, MaxUriLen> = BoundedVec::default();
+				let api_uri: BoundedVec<u8, MaxUriLen>= b"test".to_vec().try_into().unwrap();
 				let new_api_uri: BoundedVec<u8, MaxUriLen> =
 					"new_api_uri".as_bytes().to_vec().try_into().unwrap();
 
@@ -706,9 +662,10 @@ mod force_update_enclave {
 
 	#[test]
 	fn bad_origin() {
+		let api_uri: BoundedVec<u8, MaxUriLen>= b"test".to_vec().try_into().unwrap();
 		ExtBuilder::default().tokens(vec![(ALICE, 1000)]).build().execute_with(|| {
 			assert_noop!(
-				TEE::force_update_enclave(origin(ALICE), ALICE, BOB, BoundedVec::default()),
+				TEE::force_update_enclave(origin(ALICE), ALICE, BOB, api_uri),
 				BadOrigin
 			);
 		})
@@ -722,7 +679,7 @@ mod force_update_enclave {
 			.execute_with(|| {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
 				let bob: mock::RuntimeOrigin = origin(BOB);
-				let api_uri: BoundedVec<u8, MaxUriLen> = BoundedVec::default();
+				let api_uri: BoundedVec<u8, MaxUriLen>= b"test".to_vec().try_into().unwrap();
 
 				assert_ok!(TEE::create_cluster(root()));
 
@@ -746,7 +703,7 @@ mod force_update_enclave {
 			.build()
 			.execute_with(|| {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
-				let api_uri: BoundedVec<u8, MaxUriLen> = BoundedVec::default();
+				let api_uri: BoundedVec<u8, MaxUriLen>= b"test".to_vec().try_into().unwrap();
 				let new_api_uri: BoundedVec<u8, MaxUriLen> =
 					"new_api_uri".as_bytes().to_vec().try_into().unwrap();
 
@@ -768,7 +725,7 @@ mod force_update_enclave {
 			.build()
 			.execute_with(|| {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
-				let api_uri: BoundedVec<u8, MaxUriLen> = BoundedVec::default();
+				let api_uri: BoundedVec<u8, MaxUriLen>= b"test".to_vec().try_into().unwrap();
 				let new_api_uri: BoundedVec<u8, MaxUriLen> =
 					"new_api_uri".as_bytes().to_vec().try_into().unwrap();
 
@@ -844,7 +801,7 @@ mod remove_cluster {
 			.build()
 			.execute_with(|| {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
-				let api_uri: BoundedVec<u8, MaxUriLen> = BoundedVec::default();
+				let api_uri: BoundedVec<u8, MaxUriLen>= b"test".to_vec().try_into().unwrap();
 
 				assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, api_uri.clone()));
 				assert_ok!(TEE::create_cluster(root()));

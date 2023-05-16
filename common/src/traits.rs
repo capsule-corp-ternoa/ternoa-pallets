@@ -118,6 +118,4 @@ pub trait TEEExt {
 		enclave_address: Self::AccountId,
 		cluster_id: Option<ClusterId>,
 	) -> DispatchResult;
-
-	fn fill_unregistration_list(address: Self::AccountId, number: u8) -> DispatchResult;
 }

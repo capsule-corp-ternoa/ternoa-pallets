@@ -166,7 +166,7 @@ pub mod pallet {
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
 		/// Weight: see `begin_block`
 		fn on_initialize(now: T::BlockNumber) -> Weight {
-			let mut read = 1u64;
+			let mut read = 2u64;
 			let mut write = 0u64;
 			let mut current_actions = 0;
 			let max_actions = T::ActionsInBlockLimit::get();
@@ -174,16 +174,22 @@ pub mod pallet {
 			let mut queue = AtBlockQueue::<T>::get();
 
 			while let Some(nft_id) = queue.pop_next(now) {
-				// Transmit the NFT
-				_ = Self::transmit_nft(nft_id);
+				match Self::transmit_nft(nft_id) {
+					Ok(_) => {
+						// Deposit event.
+						let event = Event::Transmitted { nft_id };
+						Self::deposit_event(event);
 
-				// Deposit event.
-				let event = Event::Transmitted { nft_id };
-				Self::deposit_event(event);
-
-				read += 2;
-				write += 2;
-				current_actions += 1;
+						read += 2;
+						write += 2;
+						current_actions += 1;
+					},
+					Err(error) => {
+						let error_event =
+							Event::TransmissionError { nft_id, error: format!("{:?}", error) };
+						Self::deposit_event(error_event);
+					},
+				}
 				if current_actions >= max_actions {
 					break
 				}
@@ -232,6 +238,11 @@ pub mod pallet {
 		Transmitted {
 			nft_id: NFTId,
 		},
+		/// A transmission error occurred at the beginning of the block
+		TransmissionError {
+			nft_id: NFTId,
+			error: String,
+		},
 	}
 
 	#[pallet::error]
@@ -244,6 +255,8 @@ pub mod pallet {
 		NotTheNFTOwner,
 		/// Operation is not permitted because the recipient is the caller
 		InvalidRecipient,
+		/// Operation is not permitted because the block number is in the past.
+		CannotCancelTransmissionInThePast,
 		/// Operation is not permitted because the NFT is listed.
 		CannotSetTransmissionForListedNFTs,
 		/// Operation is not permitted because the NFT is delegated.
@@ -307,6 +320,12 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 
 			// Checks
+			// Ensure that the block number on cancellation UntilBlock is not in the past
+			if let CancellationPeriod::UntilBlock(block_number) = cancellation {
+				let now = frame_system::Pallet::<T>::block_number();
+				ensure!(block_number > now, Error::<T>::CannotCancelTransmissionInThePast);
+			}
+
 			let mut nft = T::NFTExt::get_nft(nft_id).ok_or(Error::<T>::NFTNotFound)?;
 			ensure!(nft.owner == who, Error::<T>::NotTheNFTOwner);
 			ensure!(who != recipient, Error::<T>::InvalidRecipient);
@@ -344,7 +363,7 @@ pub mod pallet {
 				let mut unique_consent_list: BoundedVec<T::AccountId, T::MaxConsentListSize> =
 					BoundedVec::default();
 				for account in consent_list {
-					if !unique_consent_list.contains(&account) {
+					if !unique_consent_list.contains(account) {
 						unique_consent_list
 							.try_push(account.clone())
 							.map_err(|_| Error::<T>::ConsentListFull)?;
@@ -428,12 +447,24 @@ pub mod pallet {
 			nft.state.is_transmission = false;
 			T::NFTExt::set_nft(nft_id, nft)?;
 
-			AtBlockQueue::<T>::mutate(|x| {
-				x.remove(nft_id);
-			});
-
+			let protocol_kind = transmission_data.protocol.to_kind();
+			match protocol_kind {
+					TransmissionProtocolKind::AtBlock | TransmissionProtocolKind::AtBlockWithReset => {
+							AtBlockQueue::<T>::mutate(|x| {
+									x.remove(nft_id);
+							});
+					}
+					TransmissionProtocolKind::OnConsent => {
+							OnConsentData::<T>::remove(nft_id);
+					}
+					TransmissionProtocolKind::OnConsentAtBlock => {
+							AtBlockQueue::<T>::mutate(|x| {
+									x.remove(nft_id);
+							});
+							OnConsentData::<T>::remove(nft_id);
+					}
+			}
 			Transmissions::<T>::remove(nft_id);
-			OnConsentData::<T>::remove(nft_id);
 
 			let event = Event::ProtocolRemoved { nft_id };
 			Self::deposit_event(event);
@@ -585,7 +616,7 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
 
-			match protocol_kind.clone() {
+			match protocol_kind {
 				TransmissionProtocolKind::AtBlock => AtBlockFee::<T>::put(fee),
 				TransmissionProtocolKind::AtBlockWithReset => AtBlockWithResetFee::<T>::put(fee),
 				TransmissionProtocolKind::OnConsent => OnConsentFee::<T>::put(fee),
@@ -646,7 +677,7 @@ impl<T: Config> Pallet<T> {
 		nft_id: NFTId,
 		account: T::AccountId,
 	) -> Result<(), DispatchError> {
-		let accounts = BoundedVec::try_from(vec![account.clone(); number as usize])
+		let accounts = BoundedVec::try_from(vec![account; number as usize])
 			.map_err(|_| Error::<T>::SimultaneousTransmissionLimitReached)?;
 		OnConsentData::<T>::insert(nft_id, accounts);
 		Ok(())
