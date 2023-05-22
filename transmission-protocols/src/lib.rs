@@ -184,9 +184,9 @@ pub mod pallet {
 						write += 2;
 						current_actions += 1;
 					},
-					Err(error) => {
+					Err(_error) => {
 						let error_event =
-							Event::TransmissionError { nft_id, error: format!("{:?}", error) };
+							Event::TransmissionError { nft_id };
 						Self::deposit_event(error_event);
 					},
 				}
@@ -241,7 +241,6 @@ pub mod pallet {
 		/// A transmission error occurred at the beginning of the block
 		TransmissionError {
 			nft_id: NFTId,
-			error: String,
 		},
 	}
 
