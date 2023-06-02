@@ -137,12 +137,6 @@ pub mod pallet {
 		OptionQuery,
 	>;
 
-	/// List of registered operator addresses who want to be unregistered
-	#[pallet::storage]
-	#[pallet::getter(fn enclaves_to_unregister)]
-	pub type EnclaveUnregistrations<T: Config> =
-		StorageValue<_, BoundedVec<T::AccountId, T::ListSizeLimit>, ValueQuery>;
-
 	/// Mapping of operator addresses to the new values they want for their enclave.
 	#[pallet::storage]
 	#[pallet::getter(fn enclaves_to_update)]
@@ -402,6 +396,8 @@ pub mod pallet {
 		ClusterIsNotEmpty,
 		/// Cluster is already full, cannot assign any enclaves
 		ClusterIsFull,
+		/// The given api uri is empty
+		ApiUriIsEmpty,
 		/// The given operator account and enclave account are same
 		OperatorAndEnclaveAreSame,
 		/// The operator already asked for request
@@ -441,7 +437,8 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			ensure!(who.clone() != enclave_address.clone(), Error::<T>::OperatorAndEnclaveAreSame);
+			ensure!(!api_uri.is_empty(), Error::<T>::ApiUriIsEmpty);
+			ensure!(who != enclave_address, Error::<T>::OperatorAndEnclaveAreSame);
 			ensure!(
 				EnclaveRegistrations::<T>::get(&who).is_none(),
 				Error::<T>::RegistrationAlreadyExists
@@ -539,10 +536,8 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			ensure!(
-				who.clone() != new_enclave_address.clone(),
-				Error::<T>::OperatorAndEnclaveAreSame
-			);
+			ensure!(!new_api_uri.is_empty(), Error::<T>::ApiUriIsEmpty);
+			ensure!(who != new_enclave_address, Error::<T>::OperatorAndEnclaveAreSame);
 
 			let enclave = EnclaveData::<T>::get(&who)
 				.ok_or(Error::<T>::UpdateProhibitedForUnassignedEnclave)?;
@@ -658,9 +653,8 @@ pub mod pallet {
 			EnclaveRegistrations::<T>::try_mutate(
 				&operator_address,
 				|maybe_registration| -> DispatchResult {
-					if let Some(_) = maybe_registration {
-						*maybe_registration = None;
-					}
+					let _ = maybe_registration.as_mut().ok_or(Error::<T>::RegistrationNotFound)?;
+					*maybe_registration = None;
 					Ok(())
 				},
 			)?;
@@ -678,9 +672,8 @@ pub mod pallet {
 			ensure_root(origin)?;
 
 			EnclaveUpdates::<T>::try_mutate(&operator_address, |maybe_update| -> DispatchResult {
-				if let Some(_) = maybe_update {
-					*maybe_update = None;
-				}
+				let _ = maybe_update.as_mut().ok_or(Error::<T>::UpdateRequestNotFound)?;
+				*maybe_update = None;
 				Ok(())
 			})?;
 
@@ -710,18 +703,10 @@ pub mod pallet {
 				ClusterData::<T>::try_mutate(cluster_id, |maybe_cluster| -> DispatchResult {
 					let cluster = maybe_cluster.as_mut().ok_or(Error::<T>::ClusterNotFound)?;
 
-					// Remove enclave from unregistration list
-					EnclaveUnregistrations::<T>::try_mutate(|x| -> DispatchResult {
-						if let Some(index) = x.iter().position(|x| *x == operator_address.clone()) {
-							x.swap_remove(index);
-						}
-						Ok(())
-					})?;
-
 					EnclaveUpdates::<T>::try_mutate(
 						&operator_address,
 						|maybe_update| -> DispatchResult {
-							if let Some(_) = maybe_update {
+							if maybe_update.is_some() {
 								*maybe_update = None;
 							}
 							Ok(())
@@ -765,10 +750,8 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
 
-			ensure!(
-				operator_address.clone() != new_enclave_address.clone(),
-				Error::<T>::OperatorAndEnclaveAreSame
-			);
+			ensure!(!new_api_uri.is_empty(), Error::<T>::ApiUriIsEmpty);
+			ensure!(operator_address != new_enclave_address, Error::<T>::OperatorAndEnclaveAreSame);
 
 			EnclaveData::<T>::try_mutate(&operator_address, |maybe_enclave| -> DispatchResult {
 				let enclave = maybe_enclave.as_mut().ok_or(Error::<T>::EnclaveNotFound)?;
@@ -789,7 +772,7 @@ pub mod pallet {
 				Ok(())
 			})?;
 			EnclaveUpdates::<T>::try_mutate(&operator_address, |maybe_update| -> DispatchResult {
-				if let Some(_) = maybe_update {
+				if maybe_update.is_some() {
 					*maybe_update = None;
 				}
 				Ok(())

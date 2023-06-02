@@ -258,8 +258,7 @@ where
 	pub fn pop_next(&mut self, block_number: BlockNumber) -> Option<NFTId> {
 		let front = self.0.get(0)?;
 		if front.1 <= block_number {
-			let nft_id = front.0;
-			self.remove(nft_id);
+			let (nft_id, _block_number) = self.0.remove(0);
 			Some(nft_id)
 		} else {
 			None

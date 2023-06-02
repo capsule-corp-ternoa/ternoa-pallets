@@ -69,9 +69,11 @@ fn prepare_tee_for_tests() {
 	let bob: mock::RuntimeOrigin = origin(BOB);
 	let charlie: mock::RuntimeOrigin = origin(CHARLIE);
 
-	assert_ok!(TEE::register_enclave(alice.clone(), ALICE_ENCLAVE, BoundedVec::default()));
-	assert_ok!(TEE::register_enclave(bob.clone(), BOB_ENCLAVE, BoundedVec::default()));
-	assert_ok!(TEE::register_enclave(charlie.clone(), CHARLIE_ENCLAVE, BoundedVec::default()));
+	let api_uri: BoundedVec<u8, MaxUriLen>= b"test".to_vec().try_into().unwrap();
+
+	assert_ok!(TEE::register_enclave(alice.clone(), ALICE_ENCLAVE, api_uri.clone()));
+	assert_ok!(TEE::register_enclave(bob.clone(), BOB_ENCLAVE, api_uri.clone()));
+	assert_ok!(TEE::register_enclave(charlie.clone(), CHARLIE_ENCLAVE, api_uri));
 
 	let cluster_id: ClusterId = 0;
 	let second_cluster_id: ClusterId = 1;
