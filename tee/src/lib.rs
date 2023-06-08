@@ -38,6 +38,7 @@ use frame_support::
 	traits::{ StorageVersion, LockIdentifier, OnRuntimeUpgrade, Get }
 };
 use sp_std::vec;
+use sp_std::vec::Vec;
 
 use primitives::tee::ClusterId;
 use sp_runtime::SaturatedConversion;
