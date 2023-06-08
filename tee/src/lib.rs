@@ -209,7 +209,7 @@ pub mod pallet {
 		}
 
 		#[cfg(feature = "try-runtime")]
-		fn post_upgrade(v: Vec<u8>) -> Result<Vec<u8>, &'static str> {
+		fn post_upgrade(v: Vec<u8>) -> Result<(), &'static str> {
 			<migrations::v2::MigrationV2<T> as OnRuntimeUpgrade>::post_upgrade()
 		}
 	}
