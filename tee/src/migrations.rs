@@ -24,11 +24,11 @@ pub mod v2 {
 
 	pub struct MigrationV2<T>(sp_std::marker::PhantomData<T>);
 	impl<T: Config> OnRuntimeUpgrade for MigrationV2<T> {
-		#[cfg(feature = "try-runtime")]
-		fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
-			log::info!("Pre-upgrade inside MigrationV2");
-			Ok(Vec::new())
-		}
+		// #[cfg(feature = "try-runtime")]
+		// fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
+		// 	log::info!("Pre-upgrade inside MigrationV2");
+		// 	Ok(Vec::new())
+		// }
 
 		fn on_runtime_upgrade() -> frame_support::weights::Weight {
 			let mut read = 0u64;
@@ -55,10 +55,10 @@ pub mod v2 {
 			T::DbWeight::get().reads_writes(read, write)
 		}
 
-		#[cfg(feature = "try-runtime")]
-		fn post_upgrade(_: Vec<u8>) -> Result<(), &'static str> {
-			log::info!("Post-upgrade inside MigrationV2");
-			Ok(())
-		}
+		// #[cfg(feature = "try-runtime")]
+		// fn post_upgrade(_: Vec<u8>) -> Result<(), &'static str> {
+		// 	log::info!("Post-upgrade inside MigrationV2");
+		// 	Ok(())
+		// }
 	}
 }

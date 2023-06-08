@@ -190,10 +190,10 @@ pub mod pallet {
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-		#[cfg(feature = "try-runtime")]
-		fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
-			<migrations::v2::MigrationV2<T> as OnRuntimeUpgrade>::pre_upgrade()
-		}
+		// #[cfg(feature = "try-runtime")]
+		// fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
+		// 	<migrations::v2::MigrationV2<T> as OnRuntimeUpgrade>::pre_upgrade()
+		// }
 
 		fn on_runtime_upgrade() -> frame_support::weights::Weight {
 			let mut weight = Weight::zero();
@@ -208,10 +208,10 @@ pub mod pallet {
 			weight
 		}
 
-		#[cfg(feature = "try-runtime")]
-		fn post_upgrade(v: Vec<u8>) -> Result<(), &'static str> {
-			<migrations::v2::MigrationV2<T> as OnRuntimeUpgrade>::post_upgrade(v)
-		}
+		// #[cfg(feature = "try-runtime")]
+		// fn post_upgrade(v: Vec<u8>) -> Result<(), &'static str> {
+		// 	<migrations::v2::MigrationV2<T> as OnRuntimeUpgrade>::post_upgrade(v)
+		// }
 	}
 
 	#[pallet::event]
