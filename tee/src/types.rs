@@ -18,6 +18,7 @@ use frame_support::{traits::Get, BoundedVec, CloneNoBound, PartialEqNoBound, Run
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_std::fmt::Debug;
+use sp_arithmetic::traits::AtLeast32BitUnsigned;
 
 #[derive(
 	Encode, Decode, CloneNoBound, PartialEqNoBound, Eq, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen,
@@ -54,6 +55,8 @@ where
 	ClusterSize: Get<u32>,
 {
 	pub enclaves: BoundedVec<AccountId, ClusterSize>,
+	pub slot_num: u32,
+	pub is_public: bool,
 }
 
 impl<AccountId, ClusterSize> Cluster<AccountId, ClusterSize>
@@ -61,7 +64,42 @@ where
 	AccountId: Clone + PartialEq + Debug,
 	ClusterSize: Get<u32>,
 {
-	pub fn new(enclaves: BoundedVec<AccountId, ClusterSize>) -> Self {
-		Self { enclaves }
+	pub fn new(enclaves: BoundedVec<AccountId, ClusterSize>, slot_num: u32, is_public: bool) -> Self {
+		Self { enclaves, slot_num, is_public }
+	}
+}
+
+
+/// The ledger of a (bonded) operator.
+#[derive(
+	PartialEqNoBound,
+	CloneNoBound,
+	Encode,
+	Decode,
+	RuntimeDebugNoBound,
+	TypeInfo,
+	MaxEncodedLen,
+)]
+#[codec(mel_bound(AccountId: MaxEncodedLen, BlockNumber: MaxEncodedLen))]
+pub struct TeeStakingLedger<AccountId, BlockNumber>
+where
+	AccountId: Clone + PartialEq + Debug,
+	BlockNumber: Clone + PartialEq + Debug + sp_std::cmp::PartialOrd + AtLeast32BitUnsigned + Copy,
+{
+	/// The operator account whose balance is actually locked and at stake.
+	pub operator: AccountId,
+	/// State variable to know whether the staked amount is unbonded
+	pub is_unlocking: bool,
+	/// Block Number of when unbonded happened
+	pub unbonded_at: BlockNumber
+}
+
+impl<AccountId, BlockNumber> TeeStakingLedger<AccountId, BlockNumber>
+where
+	AccountId: Clone + PartialEq + Debug,
+	BlockNumber: Clone + PartialEq + Debug + sp_std::cmp::PartialOrd + AtLeast32BitUnsigned + Copy,
+{
+	pub fn new(operator: AccountId, is_unlocking: bool, unbonded_at: BlockNumber) -> Self {
+		Self { operator, is_unlocking, unbonded_at }
 	}
 }

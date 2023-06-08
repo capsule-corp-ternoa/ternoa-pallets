@@ -1,6 +1,6 @@
 [package]
 name = "ternoa-tee"
-version = "1.0.0"
+version = "1.0.1"
 authors = ["Ternoa"]
 edition = "2021"
 license = "GPL-3.0-only"
@@ -20,6 +20,7 @@ frame-system = { workspace = true, default-features = false }
 # Sp
 sp-runtime = { workspace = true, default-features = false }
 sp-std = { workspace = true, default-features = false }
+sp-arithmetic = { workspace = true, default-features = false }
 
 # Rest
 parity-scale-codec = { default-features = false, features = ["derive", "max-encoded-len"], workspace = true }

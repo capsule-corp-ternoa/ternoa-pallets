@@ -24,6 +24,7 @@ mod tests;
 
 mod types;
 mod weights;
+mod migrations;
 
 use frame_support::{
 	dispatch::{DispatchResult, DispatchResultWithPostInfo},
@@ -32,21 +33,26 @@ use frame_support::{
 pub use pallet::*;
 pub use types::*;
 
-use frame_support::traits::StorageVersion;
+use frame_support::
+{
+	traits::{ StorageVersion, LockIdentifier, OnRuntimeUpgrade, Get }
+};
 use sp_std::vec;
 
 use primitives::tee::ClusterId;
+use sp_runtime::SaturatedConversion;
 use ternoa_common::traits;
 pub use weights::WeightInfo;
 
-const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
+const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
+const TEE_STAKING_ID: LockIdentifier = *b"teestake";
 
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
 	use frame_system::pallet_prelude::*;
 
-	use frame_support::{pallet_prelude::*, traits::Currency};
+	use frame_support::{pallet_prelude::*, traits::{ Currency, WithdrawReasons, LockableCurrency }};
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
@@ -65,8 +71,23 @@ pub mod pallet {
 		type WeightInfo: WeightInfo;
 
 		/// Currency type.
-		type Currency: Currency<Self::AccountId>;
+		type Currency: LockableCurrency<
+			Self::AccountId,
+			Moment = Self::BlockNumber,
+			Balance = Self::CurrencyBalance,
+		>;
 
+		/// Just the `Currency::Balance` type; we have this item to allow us to constrain it to
+		/// `From<u64>`.
+		type CurrencyBalance: sp_runtime::traits::AtLeast32BitUnsigned
+			+ parity_scale_codec::FullCodec
+			+ Copy
+			+ MaybeSerializeDeserialize
+			+ sp_std::fmt::Debug
+			+ Default
+			+ From<u64>
+			+ TypeInfo
+			+ MaxEncodedLen;
 		// Constants
 		/// Size of a cluster
 		#[pallet::constant]
@@ -79,6 +100,14 @@ pub mod pallet {
 		/// Size limit for lists
 		#[pallet::constant]
 		type ListSizeLimit: Get<u32>;
+
+		/// Default staking amount for TEE.
+		#[pallet::constant]
+		type InitialStakingAmount: Get<BalanceOf<Self>>;
+
+		/// Bonding duration in block numbers.
+		#[pallet::constant]
+		type BondingDuration: Get<u32>;
 	}
 
 	/// Mapping of operator addresses who want to be registered as enclaves
@@ -148,8 +177,42 @@ pub mod pallet {
 	pub type EnclaveClusterId<T: Config> =
 		StorageMap<_, Blake2_128Concat, T::AccountId, ClusterId, OptionQuery>;
 
+	/// Staking amount for TEE operator.
+	#[pallet::storage]
+	#[pallet::getter(fn nft_mint_fee)]
+	pub(super) type StakingAmount<T: Config> =
+		StorageValue<_, BalanceOf<T>, ValueQuery, T::InitialStakingAmount>;
+
+
+	#[pallet::storage]
+	#[pallet::getter(fn ledger)]
+	pub type StakingLedger<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, TeeStakingLedger<T::AccountId, T::BlockNumber>, OptionQuery>;
+
 	#[pallet::hooks]
-	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+		#[cfg(feature = "try-runtime")]
+		fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
+			<migrations::v2::MigrationV2<T> as OnRuntimeUpgrade>::pre_upgrade()
+		}
+
+		fn on_runtime_upgrade() -> frame_support::weights::Weight {
+			let mut weight = Weight::zero();
+
+			let version = StorageVersion::get::<Pallet<T>>();
+			if version == StorageVersion::new(0) || version == StorageVersion::new(1) {
+				weight = <migrations::v2::MigrationV2<T> as OnRuntimeUpgrade>::on_runtime_upgrade();
+
+				StorageVersion::put::<Pallet<T>>(&StorageVersion::new(2));
+			}
+
+			weight
+		}
+
+		#[cfg(feature = "try-runtime")]
+		fn post_upgrade(v: Vec<u8>) -> Result<Vec<u8>, &'static str> {
+			<migrations::v2::MigrationV2<T> as OnRuntimeUpgrade>::post_upgrade()
+		}
+	}
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -188,6 +251,14 @@ pub mod pallet {
 		ClusterAdded { cluster_id: ClusterId },
 		/// Cluster got removed
 		ClusterRemoved { cluster_id: ClusterId },
+		/// Staking amount changed.
+		StakingAmountSet { staking_amount: BalanceOf<T> },
+		/// Bonded while enclave registration
+		Bonded { operator_address: T::AccountId, amount: BalanceOf<T> },
+		/// An account has unbonded this amount.
+		Unbonded { operator_address: T::AccountId, amount: BalanceOf<T> },
+		/// Withdrawn the bonded amount
+		Withdrawn { operator_address: T::AccountId, amount: BalanceOf<T> },
 	}
 
 	#[pallet::error]
@@ -224,6 +295,13 @@ pub mod pallet {
 		UpdateRequestNotFound,
 		/// The update is not allowed for unassigned enclave
 		UpdateProhibitedForUnassignedEnclave,
+		/// Staking details not found
+		StakingNotFound,
+		/// Withdraw can not be done without unbonding
+		UnbondingNotStarted,
+		/// Withdraw is not allowed till the unbonding period is done
+		WithdrawProhibited,
+
 	}
 
 	#[pallet::call]
@@ -248,14 +326,21 @@ pub mod pallet {
 				Error::<T>::EnclaveAddressAlreadyExists
 			);
 
+			let default_staking_amount = StakingAmount::<T>::get();
+			let stake_details = TeeStakingLedger::new(who.clone(), false, Default::default());
+			StakingLedger::<T>::insert(who.clone(), stake_details);
+			T::Currency::set_lock(TEE_STAKING_ID, &who, default_staking_amount, WithdrawReasons::all());
+
 			let enclave = Enclave::new(enclave_address.clone(), api_uri.clone());
 			EnclaveRegistrations::<T>::insert(who.clone(), enclave);
 
 			Self::deposit_event(Event::EnclaveAddedForRegistration {
-				operator_address: who,
+				operator_address: who.clone(),
 				enclave_address,
 				api_uri,
 			});
+			Self::deposit_event(Event::Bonded { operator_address: who, amount: default_staking_amount });
+
 			Ok(().into())
 		}
 
@@ -265,6 +350,7 @@ pub mod pallet {
 		pub fn unregister_enclave(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
+			let default_staking_amount = StakingAmount::<T>::get();
 			match EnclaveData::<T>::get(&who) {
 				Some(_) => {
 					EnclaveUnregistrations::<T>::try_mutate(|x| -> DispatchResult {
@@ -273,7 +359,11 @@ pub mod pallet {
 							.map_err(|_| Error::<T>::UnregistrationLimitReached)?;
 						Ok(())
 					})?;
-					Self::deposit_event(Event::MovedForUnregistration { operator_address: who });
+					let now = frame_system::Pallet::<T>::block_number();
+					let stake_details = TeeStakingLedger::new(who.clone(), true, now);
+					StakingLedger::<T>::insert(who.clone(), stake_details);
+					Self::deposit_event(Event::MovedForUnregistration { operator_address: who.clone() });
+					Self::deposit_event(Event::Unbonded { operator_address: who, amount: default_staking_amount });
 				},
 				None => {
 					EnclaveRegistrations::<T>::try_mutate(
@@ -286,7 +376,10 @@ pub mod pallet {
 							Ok(())
 						},
 					)?;
-					Self::deposit_event(Event::RegistrationRemoved { operator_address: who });
+					StakingLedger::<T>::remove(who.clone());
+					T::Currency::remove_lock(TEE_STAKING_ID, &who);
+					Self::deposit_event(Event::RegistrationRemoved { operator_address: who.clone() });
+					Self::deposit_event(Event::Withdrawn { operator_address: who, amount: default_staking_amount });
 				},
 			}
 
@@ -564,10 +657,10 @@ pub mod pallet {
 
 		// Creates an empty Cluster
 		#[pallet::weight(T::WeightInfo::create_cluster())]
-		pub fn create_cluster(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+		pub fn create_cluster(origin: OriginFor<T>, slot_num: u32, is_public: bool) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
 			let id = Self::get_next_cluster_id();
-			let cluster = Cluster::new(Default::default());
+			let cluster = Cluster::new(Default::default(), slot_num, is_public);
 			ClusterData::<T>::insert(id, cluster);
 			Self::deposit_event(Event::ClusterAdded { cluster_id: id });
 			Ok(().into())
@@ -589,6 +682,45 @@ pub mod pallet {
 			})?;
 
 			Self::deposit_event(Event::ClusterRemoved { cluster_id });
+			Ok(().into())
+		}
+
+		/// Ask for an enclave to be removed.
+		/// No need for approval if the enclave registration was not approved yet.
+		#[pallet::weight(T::WeightInfo::unregister_enclave())]
+		pub fn withdraw_unbonded(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+			let who = ensure_signed(origin)?;
+			StakingLedger::<T>::try_mutate(&who, |maybe_staking| -> DispatchResult {
+				let staking_details = maybe_staking.as_mut().ok_or(Error::<T>::StakingNotFound)?;
+				ensure!(staking_details.is_unlocking, Error::<T>::UnbondingNotStarted);
+				let now = frame_system::Pallet::<T>::block_number();
+				let bonding_duration = T::BondingDuration::get();
+				let unbonded_at = staking_details.unbonded_at;
+				let duration: u32 = (now - unbonded_at).saturated_into();
+				ensure!(
+					duration >= bonding_duration,
+					Error::<T>::WithdrawProhibited
+				);
+				T::Currency::remove_lock(TEE_STAKING_ID, &who);
+				// Remove the staking data
+				*maybe_staking = None;
+				Ok(())
+			})?;
+
+			Ok(().into())
+		}
+
+		/// Set the fee for minting a secret NFT if the caller is root.
+		#[pallet::weight(T::WeightInfo::unregister_enclave())]
+		pub fn set_staking_amount(
+			origin: OriginFor<T>,
+			staking_amount: BalanceOf<T>,
+		) -> DispatchResultWithPostInfo {
+			ensure_root(origin)?;
+			StakingAmount::<T>::put(staking_amount);
+			let event = Event::StakingAmountSet { staking_amount };
+			Self::deposit_event(event);
+
 			Ok(().into())
 		}
 	}
