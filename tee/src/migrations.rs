@@ -8,7 +8,6 @@ pub mod v2 {
 	use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 	use scale_info::TypeInfo;
 	use sp_std::fmt::Debug;
-	use sp_std::vec::Vec;
 
 	#[derive(
         Encode, Decode, CloneNoBound, PartialEqNoBound, Eq, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen,

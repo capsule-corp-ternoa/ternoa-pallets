@@ -107,7 +107,7 @@ pub mod pallet {
 
 		/// Bonding duration in block numbers.
 		#[pallet::constant]
-		type BondingDuration: Get<u32>;
+		type TeeBondingDuration: Get<u32>;
 	}
 
 	/// Mapping of operator addresses who want to be registered as enclaves
@@ -694,7 +694,7 @@ pub mod pallet {
 				let staking_details = maybe_staking.as_mut().ok_or(Error::<T>::StakingNotFound)?;
 				ensure!(staking_details.is_unlocking, Error::<T>::UnbondingNotStarted);
 				let now = frame_system::Pallet::<T>::block_number();
-				let bonding_duration = T::BondingDuration::get();
+				let bonding_duration = T::TeeBondingDuration::get();
 				let unbonded_at = staking_details.unbonded_at;
 				let duration: u32 = (now - unbonded_at).saturated_into();
 				ensure!(
