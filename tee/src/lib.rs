@@ -22,9 +22,9 @@ mod benchmarking;
 #[cfg(test)]
 mod tests;
 
+mod migrations;
 mod types;
 mod weights;
-mod migrations;
 
 use frame_support::{
 	dispatch::{DispatchResult, DispatchResultWithPostInfo},
@@ -33,13 +33,10 @@ use frame_support::{
 pub use pallet::*;
 pub use types::*;
 
-use frame_support::
-{
-	traits::{ StorageVersion, LockIdentifier, OnRuntimeUpgrade, Get }
-};
+use frame_support::traits::{Get, LockIdentifier, OnRuntimeUpgrade, StorageVersion};
 use sp_std::vec;
 
-use primitives::tee::ClusterId;
+use primitives::tee::{ClusterId, SlotId};
 use sp_runtime::SaturatedConversion;
 use ternoa_common::traits;
 pub use weights::WeightInfo;
@@ -52,7 +49,10 @@ pub mod pallet {
 	use super::*;
 	use frame_system::pallet_prelude::*;
 
-	use frame_support::{pallet_prelude::*, traits::{ Currency, WithdrawReasons, LockableCurrency }};
+	use frame_support::{
+		pallet_prelude::*,
+		traits::{Currency, LockableCurrency, WithdrawReasons},
+	};
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
@@ -173,9 +173,28 @@ pub mod pallet {
 
 	/// Map stores Enclave operator | ClusterId
 	#[pallet::storage]
-	#[pallet::getter(fn enclave_cluster_id)]
+	#[pallet::getter(fn enclave_slot_id)]
 	pub type EnclaveClusterId<T: Config> =
 		StorageMap<_, Blake2_128Concat, T::AccountId, ClusterId, OptionQuery>;
+
+	/// Map stores Enclave operator | SlotId
+	#[pallet::storage]
+	#[pallet::getter(fn enclave_cluster_id)]
+	pub type EnclaveSlotId<T: Config> =
+		StorageMap<_, Blake2_128Concat, T::AccountId, SlotId, OptionQuery>;
+
+	/// Map stores Enclave operator | SlotId
+	#[pallet::storage]
+	#[pallet::getter(fn cluster_slots)]
+	pub type ClusterSlotsDetail<T: Config> = StorageDoubleMap<
+		_,
+		Blake2_128Concat,
+		ClusterId,
+		Blake2_128Concat,
+		SlotId,
+		ClusterSlots<T::AccountId>,
+		OptionQuery,
+	>;
 
 	/// Staking amount for TEE operator.
 	#[pallet::storage]
@@ -183,17 +202,22 @@ pub mod pallet {
 	pub(super) type StakingAmount<T: Config> =
 		StorageValue<_, BalanceOf<T>, ValueQuery, T::InitialStakingAmount>;
 
-
 	#[pallet::storage]
 	#[pallet::getter(fn ledger)]
-	pub type StakingLedger<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, TeeStakingLedger<T::AccountId, T::BlockNumber>, OptionQuery>;
+	pub type StakingLedger<T: Config> = StorageMap<
+		_,
+		Blake2_128Concat,
+		T::AccountId,
+		TeeStakingLedger<T::AccountId, T::BlockNumber>,
+		OptionQuery,
+	>;
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-		// #[cfg(feature = "try-runtime")]
-		// fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
-		// 	<migrations::v2::MigrationV2<T> as OnRuntimeUpgrade>::pre_upgrade()
-		// }
+		#[cfg(feature = "try-runtime")]
+		fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
+			<migrations::v2::MigrationV2<T> as OnRuntimeUpgrade>::pre_upgrade()
+		}
 
 		fn on_runtime_upgrade() -> frame_support::weights::Weight {
 			let mut weight = Weight::zero();
@@ -208,10 +232,10 @@ pub mod pallet {
 			weight
 		}
 
-		// #[cfg(feature = "try-runtime")]
-		// fn post_upgrade(v: Vec<u8>) -> Result<(), &'static str> {
-		// 	<migrations::v2::MigrationV2<T> as OnRuntimeUpgrade>::post_upgrade(v)
-		// }
+		#[cfg(feature = "try-runtime")]
+		fn post_upgrade(v: Vec<u8>) -> Result<(), &'static str> {
+			<migrations::v2::MigrationV2<T> as OnRuntimeUpgrade>::post_upgrade(v)
+		}
 	}
 
 	#[pallet::event]
@@ -279,6 +303,8 @@ pub mod pallet {
 		RegistrationNotFound,
 		/// Enclave address does not exists
 		EnclaveAddressNotFound,
+		/// Slot id does not exist for this address
+		SlotIdNotFound,
 		/// The cluster does not exists
 		ClusterNotFound,
 		/// Cluster id does not exist for this address
@@ -301,7 +327,10 @@ pub mod pallet {
 		UnbondingNotStarted,
 		/// Withdraw is not allowed till the unbonding period is done
 		WithdrawProhibited,
-
+		/// Slot ID provided is invalid
+		InvalidSlotId,
+		/// Slot ID unavailable in cluster
+		SlotUnavailableInCluster,
 	}
 
 	#[pallet::call]
@@ -329,7 +358,12 @@ pub mod pallet {
 			let default_staking_amount = StakingAmount::<T>::get();
 			let stake_details = TeeStakingLedger::new(who.clone(), false, Default::default());
 			StakingLedger::<T>::insert(who.clone(), stake_details);
-			T::Currency::set_lock(TEE_STAKING_ID, &who, default_staking_amount, WithdrawReasons::all());
+			T::Currency::set_lock(
+				TEE_STAKING_ID,
+				&who,
+				default_staking_amount,
+				WithdrawReasons::all(),
+			);
 
 			let enclave = Enclave::new(enclave_address.clone(), api_uri.clone());
 			EnclaveRegistrations::<T>::insert(who.clone(), enclave);
@@ -339,7 +373,10 @@ pub mod pallet {
 				enclave_address,
 				api_uri,
 			});
-			Self::deposit_event(Event::Bonded { operator_address: who, amount: default_staking_amount });
+			Self::deposit_event(Event::Bonded {
+				operator_address: who,
+				amount: default_staking_amount,
+			});
 
 			Ok(().into())
 		}
@@ -362,8 +399,13 @@ pub mod pallet {
 					let now = frame_system::Pallet::<T>::block_number();
 					let stake_details = TeeStakingLedger::new(who.clone(), true, now);
 					StakingLedger::<T>::insert(who.clone(), stake_details);
-					Self::deposit_event(Event::MovedForUnregistration { operator_address: who.clone() });
-					Self::deposit_event(Event::Unbonded { operator_address: who, amount: default_staking_amount });
+					Self::deposit_event(Event::MovedForUnregistration {
+						operator_address: who.clone(),
+					});
+					Self::deposit_event(Event::Unbonded {
+						operator_address: who,
+						amount: default_staking_amount,
+					});
 				},
 				None => {
 					EnclaveRegistrations::<T>::try_mutate(
@@ -378,8 +420,13 @@ pub mod pallet {
 					)?;
 					StakingLedger::<T>::remove(who.clone());
 					T::Currency::remove_lock(TEE_STAKING_ID, &who);
-					Self::deposit_event(Event::RegistrationRemoved { operator_address: who.clone() });
-					Self::deposit_event(Event::Withdrawn { operator_address: who, amount: default_staking_amount });
+					Self::deposit_event(Event::RegistrationRemoved {
+						operator_address: who.clone(),
+					});
+					Self::deposit_event(Event::Withdrawn {
+						operator_address: who,
+						amount: default_staking_amount,
+					});
 				},
 			}
 
@@ -445,6 +492,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			operator_address: T::AccountId,
 			cluster_id: ClusterId,
+			slot_id: SlotId,
 		) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
 
@@ -456,6 +504,15 @@ pub mod pallet {
 
 					ClusterData::<T>::try_mutate(cluster_id, |maybe_cluster| -> DispatchResult {
 						let cluster = maybe_cluster.as_mut().ok_or(Error::<T>::ClusterNotFound)?;
+
+						let cluster_slot = ClusterSlots::new(
+							cluster_id,
+							slot_id,
+							true,
+							registration.enclave_address.clone(),
+							operator_address.clone(),
+						);
+
 						ensure!(
 							cluster.enclaves.len() < T::ClusterSize::get() as usize,
 							Error::<T>::ClusterIsFull
@@ -471,6 +528,11 @@ pub mod pallet {
 							Error::<T>::OperatorAlreadyExists
 						);
 
+						ensure!(
+							ClusterSlotsDetail::<T>::get(&cluster_id, &slot_id).is_none(),
+							Error::<T>::SlotUnavailableInCluster
+						);
+
 						// Add enclave account to operator
 						EnclaveAccountOperator::<T>::insert(
 							registration.enclave_address.clone(),
@@ -482,6 +544,12 @@ pub mod pallet {
 
 						// Add enclave to cluster id
 						EnclaveClusterId::<T>::insert(operator_address.clone(), cluster_id);
+
+						// Add enclave to slot id
+						EnclaveSlotId::<T>::insert(operator_address.clone(), slot_id);
+
+						// Add cluster details
+						ClusterSlotsDetail::<T>::insert(cluster_id, slot_id, cluster_slot);
 
 						// Add enclave operator to cluster
 						cluster
@@ -554,12 +622,15 @@ pub mod pallet {
 				let enclave = maybe_enclave.as_mut().ok_or(Error::<T>::EnclaveNotFound)?;
 
 				ensure!(
-					EnclaveAccountOperator::<T>::get(&enclave.enclave_address).is_some(),
+					EnclaveAccountOperator::<T>::get(&operator_address).is_some(),
 					Error::<T>::EnclaveAddressNotFound
 				);
 
 				let cluster_id = EnclaveClusterId::<T>::get(&operator_address)
 					.ok_or(Error::<T>::ClusterIdNotFound)?;
+
+				let slot_id =
+					EnclaveSlotId::<T>::get(&operator_address).ok_or(Error::<T>::SlotIdNotFound)?;
 
 				ClusterData::<T>::try_mutate(cluster_id, |maybe_cluster| -> DispatchResult {
 					let cluster = maybe_cluster.as_mut().ok_or(Error::<T>::ClusterNotFound)?;
@@ -591,6 +662,11 @@ pub mod pallet {
 
 					// Remove the mapping between operator to cluster id
 					EnclaveClusterId::<T>::remove(&operator_address);
+
+					// Remove the mapping between operator to slot id
+					EnclaveSlotId::<T>::remove(&operator_address);
+
+					ClusterSlotsDetail::<T>::remove(cluster_id, slot_id);
 
 					// Remove the mapping between enclave address to operator address
 					EnclaveAccountOperator::<T>::remove(&enclave.enclave_address);
@@ -657,10 +733,10 @@ pub mod pallet {
 
 		// Creates an empty Cluster
 		#[pallet::weight(T::WeightInfo::create_cluster())]
-		pub fn create_cluster(origin: OriginFor<T>, slot_num: u32, is_public: bool) -> DispatchResultWithPostInfo {
+		pub fn create_cluster(origin: OriginFor<T>, is_public: bool) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
 			let id = Self::get_next_cluster_id();
-			let cluster = Cluster::new(Default::default(), slot_num, is_public);
+			let cluster = Cluster::new(Default::default(), is_public);
 			ClusterData::<T>::insert(id, cluster);
 			Self::deposit_event(Event::ClusterAdded { cluster_id: id });
 			Ok(().into())
@@ -697,10 +773,7 @@ pub mod pallet {
 				let bonding_duration = T::TeeBondingDuration::get();
 				let unbonded_at = staking_details.unbonded_at;
 				let duration: u32 = (now - unbonded_at).saturated_into();
-				ensure!(
-					duration >= bonding_duration,
-					Error::<T>::WithdrawProhibited
-				);
+				ensure!(duration >= bonding_duration, Error::<T>::WithdrawProhibited);
 				T::Currency::remove_lock(TEE_STAKING_ID, &who);
 				// Remove the staking data
 				*maybe_staking = None;

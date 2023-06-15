@@ -18,3 +18,7 @@
 
 /// ClusterId
 pub type ClusterId = u32;
+
+
+/// ClusterId
+pub type SlotId = u32;

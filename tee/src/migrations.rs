@@ -10,41 +10,40 @@ pub mod v2 {
 	use sp_std::fmt::Debug;
 
 	#[derive(
-        Encode, Decode, CloneNoBound, PartialEqNoBound, Eq, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen,
-    )]
-    #[scale_info(skip_type_params(ClusterSize))]
-    #[codec(mel_bound(AccountId: MaxEncodedLen))]
+		Encode,
+		Decode,
+		CloneNoBound,
+		PartialEqNoBound,
+		Eq,
+		RuntimeDebugNoBound,
+		TypeInfo,
+		MaxEncodedLen,
+	)]
+	#[scale_info(skip_type_params(ClusterSize))]
+	#[codec(mel_bound(AccountId: MaxEncodedLen))]
 	pub struct OldClusterData<AccountId, ClusterSize>
 	where
-        AccountId: Clone + PartialEq + Debug,
-        ClusterSize: Get<u32>,
+		AccountId: Clone + PartialEq + Debug,
+		ClusterSize: Get<u32>,
 	{
-        pub enclaves: BoundedVec<AccountId, ClusterSize>,
+		pub enclaves: BoundedVec<AccountId, ClusterSize>,
 	}
 
 	pub struct MigrationV2<T>(sp_std::marker::PhantomData<T>);
 	impl<T: Config> OnRuntimeUpgrade for MigrationV2<T> {
-		// #[cfg(feature = "try-runtime")]
-		// fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
-		// 	log::info!("Pre-upgrade inside MigrationV2");
-		// 	Ok(Vec::new())
-		// }
+		#[cfg(feature = "try-runtime")]
+		fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
+			log::info!("Pre-upgrade inside MigrationV2");
+			Ok(Vec::new())
+		}
 
 		fn on_runtime_upgrade() -> frame_support::weights::Weight {
 			let mut read = 0u64;
 			let mut write = 0u64;
 
 			ClusterData::<T>::translate(
-				|_id,
-				 old: OldClusterData<
-					T::AccountId,
-					T::ClusterSize,
-				>| {
-					let new_cluster_data = Cluster::new(
-						old.enclaves,
-						0,
-                        true,
-					);
+				|_id, old: OldClusterData<T::AccountId, T::ClusterSize>| {
+					let new_cluster_data = Cluster::new(old.enclaves, true);
 					read += 1;
 					write += 1;
 
@@ -55,10 +54,10 @@ pub mod v2 {
 			T::DbWeight::get().reads_writes(read, write)
 		}
 
-		// #[cfg(feature = "try-runtime")]
-		// fn post_upgrade(_: Vec<u8>) -> Result<(), &'static str> {
-		// 	log::info!("Post-upgrade inside MigrationV2");
-		// 	Ok(())
-		// }
+		#[cfg(feature = "try-runtime")]
+		fn post_upgrade(_: Vec<u8>) -> Result<(), &'static str> {
+			log::info!("Post-upgrade inside MigrationV2");
+			Ok(())
+		}
 	}
 }
