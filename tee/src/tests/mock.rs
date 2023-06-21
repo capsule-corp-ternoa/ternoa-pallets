@@ -16,7 +16,7 @@
 
 use frame_support::{
 	parameter_types,
-	traits::{ConstU32, Contains},
+	traits::{ConstU32, Contains, Currency},
 };
 use sp_core::H256;
 use sp_runtime::{
@@ -104,20 +104,26 @@ impl pallet_balances::Config for Test {
 	type WeightInfo = ();
 	type MaxLocks = MaxLocks;
 }
+pub type Balance = u64;
 
 parameter_types! {
 	pub const ClusterSize: u32 = 2;
 	pub const MaxUriLen: u32 = 12;
 	pub const ListSizeLimit: u32 = 10;
+	pub const TeeBondingDuration: u32 = 10;
+	pub const InitialStakingAmount: Balance = 20;
 }
 
 impl Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = ();
 	type Currency = Balances;
+	type CurrencyBalance = <Self as pallet_balances::Config>::Balance;
 	type ClusterSize = ClusterSize;
 	type MaxUriLen = MaxUriLen;
 	type ListSizeLimit = ListSizeLimit;
+	type TeeBondingDuration = TeeBondingDuration;
+	type InitialStakingAmount = InitialStakingAmount;
 }
 
 // Do not use the `0` account id since this would be the default value

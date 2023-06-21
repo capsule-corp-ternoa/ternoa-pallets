@@ -177,25 +177,6 @@ pub mod pallet {
 	pub type EnclaveClusterId<T: Config> =
 		StorageMap<_, Blake2_128Concat, T::AccountId, ClusterId, OptionQuery>;
 
-	/// Map stores Enclave operator | SlotId
-	#[pallet::storage]
-	#[pallet::getter(fn enclave_cluster_id)]
-	pub type EnclaveSlotId<T: Config> =
-		StorageMap<_, Blake2_128Concat, T::AccountId, SlotId, OptionQuery>;
-
-	/// Map stores Enclave operator | SlotId
-	#[pallet::storage]
-	#[pallet::getter(fn cluster_slots)]
-	pub type ClusterSlotsDetail<T: Config> = StorageDoubleMap<
-		_,
-		Blake2_128Concat,
-		ClusterId,
-		Blake2_128Concat,
-		SlotId,
-		ClusterSlots<T::AccountId>,
-		OptionQuery,
-	>;
-
 	/// Staking amount for TEE operator.
 	#[pallet::storage]
 	#[pallet::getter(fn nft_mint_fee)]
@@ -203,7 +184,7 @@ pub mod pallet {
 		StorageValue<_, BalanceOf<T>, ValueQuery, T::InitialStakingAmount>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn ledger)]
+	#[pallet::getter(fn tee_staking_ledger)]
 	pub type StakingLedger<T: Config> = StorageMap<
 		_,
 		Blake2_128Concat,
@@ -505,14 +486,6 @@ pub mod pallet {
 					ClusterData::<T>::try_mutate(cluster_id, |maybe_cluster| -> DispatchResult {
 						let cluster = maybe_cluster.as_mut().ok_or(Error::<T>::ClusterNotFound)?;
 
-						let cluster_slot = ClusterSlots::new(
-							cluster_id,
-							slot_id,
-							true,
-							registration.enclave_address.clone(),
-							operator_address.clone(),
-						);
-
 						ensure!(
 							cluster.enclaves.len() < T::ClusterSize::get() as usize,
 							Error::<T>::ClusterIsFull
@@ -528,11 +501,6 @@ pub mod pallet {
 							Error::<T>::OperatorAlreadyExists
 						);
 
-						ensure!(
-							ClusterSlotsDetail::<T>::get(&cluster_id, &slot_id).is_none(),
-							Error::<T>::SlotUnavailableInCluster
-						);
-
 						// Add enclave account to operator
 						EnclaveAccountOperator::<T>::insert(
 							registration.enclave_address.clone(),
@@ -545,16 +513,10 @@ pub mod pallet {
 						// Add enclave to cluster id
 						EnclaveClusterId::<T>::insert(operator_address.clone(), cluster_id);
 
-						// Add enclave to slot id
-						EnclaveSlotId::<T>::insert(operator_address.clone(), slot_id);
-
-						// Add cluster details
-						ClusterSlotsDetail::<T>::insert(cluster_id, slot_id, cluster_slot);
-
 						// Add enclave operator to cluster
 						cluster
 							.enclaves
-							.try_push(operator_address.clone())
+							.try_push((operator_address.clone(), slot_id))
 							.map_err(|_| Error::<T>::ClusterIsFull)?;
 
 						Ok(())
@@ -629,9 +591,6 @@ pub mod pallet {
 				let cluster_id = EnclaveClusterId::<T>::get(&operator_address)
 					.ok_or(Error::<T>::ClusterIdNotFound)?;
 
-				let slot_id =
-					EnclaveSlotId::<T>::get(&operator_address).ok_or(Error::<T>::SlotIdNotFound)?;
-
 				ClusterData::<T>::try_mutate(cluster_id, |maybe_cluster| -> DispatchResult {
 					let cluster = maybe_cluster.as_mut().ok_or(Error::<T>::ClusterNotFound)?;
 
@@ -654,19 +613,16 @@ pub mod pallet {
 					)?;
 
 					// Remove the operator from cluster
-					if let Some(index) =
-						cluster.enclaves.iter().position(|x| *x == operator_address.clone())
+					if let Some(index) = cluster
+						.enclaves
+						.iter()
+						.position(|(account_id, _slot_id)| *account_id == operator_address.clone())
 					{
 						cluster.enclaves.swap_remove(index);
 					}
 
 					// Remove the mapping between operator to cluster id
 					EnclaveClusterId::<T>::remove(&operator_address);
-
-					// Remove the mapping between operator to slot id
-					EnclaveSlotId::<T>::remove(&operator_address);
-
-					ClusterSlotsDetail::<T>::remove(cluster_id, slot_id);
 
 					// Remove the mapping between enclave address to operator address
 					EnclaveAccountOperator::<T>::remove(&enclave.enclave_address);

@@ -16,8 +16,9 @@
 
 use super::{mock, mock::*};
 use crate::{
-	Cluster, ClusterData, Enclave, EnclaveAccountOperator, EnclaveClusterId, EnclaveData,
-	EnclaveRegistrations, EnclaveUnregistrations, EnclaveUpdates, Error, Event as TEEEvent,
+	Cluster, ClusterData, ClusterSlots, Enclave, EnclaveAccountOperator, EnclaveClusterId,
+	EnclaveData, EnclaveRegistrations, EnclaveUnregistrations, EnclaveUpdates, Error,
+	Event as TEEEvent, TeeStakingLedger,
 };
 use frame_support::{assert_noop, assert_ok, error::BadOrigin, BoundedVec};
 use frame_system::RawOrigin;
@@ -48,6 +49,11 @@ mod register_enclave {
 				assert_eq!(EnclaveRegistrations::<Test>::get(ALICE), Some(expected));
 				assert!(EnclaveData::<Test>::get(ALICE).is_none());
 				assert!(EnclaveAccountOperator::<Test>::get(ALICE).is_none());
+
+				let expected_stake_details =
+					TeeStakingLedger::new(ALICE, false, Default::default());
+				let actual_stake_details = TEE::tee_staking_ledger(ALICE).unwrap();
+				assert_eq!(expected_stake_details, actual_stake_details);
 
 				let event = RuntimeEvent::TEE(TEEEvent::EnclaveAddedForRegistration {
 					operator_address: ALICE,

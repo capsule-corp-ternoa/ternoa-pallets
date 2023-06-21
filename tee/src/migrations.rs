@@ -27,6 +27,7 @@ pub mod v2 {
 		ClusterSize: Get<u32>,
 	{
 		pub enclaves: BoundedVec<AccountId, ClusterSize>,
+		pub is_public: bool,
 	}
 
 	pub struct MigrationV2<T>(sp_std::marker::PhantomData<T>);
@@ -41,9 +42,29 @@ pub mod v2 {
 			let mut read = 0u64;
 			let mut write = 0u64;
 
+			let mut slot_id_counter = 0;
 			ClusterData::<T>::translate(
 				|_id, old: OldClusterData<T::AccountId, T::ClusterSize>| {
-					let new_cluster_data = Cluster::new(old.enclaves, true);
+					let mut new_enclaves: BoundedVec<(T::AccountId, SlotId), T::ClusterSize> =
+						BoundedVec::default();
+
+					for account_id in old.enclaves.into_iter() {
+						let slot_id: SlotId = slot_id_counter;
+						slot_id_counter += 1;
+
+						let push_result = new_enclaves.try_push((account_id, slot_id));
+						match push_result {
+							Ok(_) => {
+								read += 1;
+								write += 1;
+							},
+							Err(_) => {
+								// Handle the error case if the `BoundedVec` is already full
+								break // Stop adding elements if the desired size is reached
+							},
+						}
+					}
+					let new_cluster_data = Cluster::new(new_enclaves, true);
 					read += 1;
 					write += 1;
 

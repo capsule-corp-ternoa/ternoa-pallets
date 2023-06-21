@@ -16,7 +16,7 @@
 
 use frame_support::{traits::Get, BoundedVec, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
-use primitives::tee::{ClusterId, SlotId};
+use primitives::tee::SlotId;
 use scale_info::TypeInfo;
 use sp_arithmetic::traits::AtLeast32BitUnsigned;
 use sp_std::fmt::Debug;
@@ -55,7 +55,7 @@ where
 	AccountId: Clone + PartialEq + Debug,
 	ClusterSize: Get<u32>,
 {
-	pub enclaves: BoundedVec<AccountId, ClusterSize>,
+	pub enclaves: BoundedVec<(AccountId, SlotId), ClusterSize>,
 	pub is_public: bool,
 }
 
@@ -64,7 +64,7 @@ where
 	AccountId: Clone + PartialEq + Debug,
 	ClusterSize: Get<u32>,
 {
-	pub fn new(enclaves: BoundedVec<AccountId, ClusterSize>, is_public: bool) -> Self {
+	pub fn new(enclaves: BoundedVec<(AccountId, SlotId), ClusterSize>, is_public: bool) -> Self {
 		Self { enclaves, is_public }
 	}
 }
@@ -94,36 +94,5 @@ where
 {
 	pub fn new(operator: AccountId, is_unlocking: bool, unbonded_at: BlockNumber) -> Self {
 		Self { operator, is_unlocking, unbonded_at }
-	}
-}
-
-/// The ledger of a (bonded) operator.
-#[derive(
-	PartialEqNoBound, CloneNoBound, Encode, Decode, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen,
-)]
-#[codec(mel_bound(AccountId: MaxEncodedLen))]
-pub struct ClusterSlots<AccountId>
-where
-	AccountId: Clone + PartialEq + Debug,
-{
-	pub cluster_id: ClusterId,
-	pub slot_id: SlotId,
-	pub is_occupied: bool,
-	pub enclave_address: AccountId,
-	pub operator_address: AccountId,
-}
-
-impl<AccountId> ClusterSlots<AccountId>
-where
-	AccountId: Clone + PartialEq + Debug,
-{
-	pub fn new(
-		cluster_id: ClusterId,
-		slot_id: SlotId,
-		is_occupied: bool,
-		enclave_address: AccountId,
-		operator_address: AccountId,
-	) -> Self {
-		ClusterSlots { cluster_id, slot_id, is_occupied, enclave_address, operator_address }
 	}
 }
