@@ -41,7 +41,7 @@ use sp_runtime::SaturatedConversion;
 use ternoa_common::traits;
 pub use weights::WeightInfo;
 
-const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
+const STORAGE_VERSION: StorageVersion = StorageVersion::new(3);
 const TEE_STAKING_ID: LockIdentifier = *b"teestake";
 
 #[frame_support::pallet]
