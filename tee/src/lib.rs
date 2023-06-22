@@ -745,6 +745,12 @@ pub mod pallet {
 				Ok(())
 			})?;
 
+			let default_staking_amount = StakingAmount::<T>::get();
+			Self::deposit_event(Event::Withdrawn {
+				operator_address: who,
+				amount: default_staking_amount,
+			});
+
 			Ok(().into())
 		}
 
