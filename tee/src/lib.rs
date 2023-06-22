@@ -177,12 +177,19 @@ pub mod pallet {
 	pub type EnclaveClusterId<T: Config> =
 		StorageMap<_, Blake2_128Concat, T::AccountId, ClusterId, OptionQuery>;
 
-	/// Staking amount for TEE operator.
+	/// Metrics Server accounts storage.
 	#[pallet::storage]
 	#[pallet::getter(fn nft_mint_fee)]
+	pub(super) type MetricsServer<T: Config> =
+		StorageValue<_, BoundedVec<T::AccountId, T::ListSizeLimit>, ValueQuery>;
+
+	/// Staking amount for TEE operator.
+	#[pallet::storage]
+	#[pallet::getter(fn staking_amount)]
 	pub(super) type StakingAmount<T: Config> =
 		StorageValue<_, BalanceOf<T>, ValueQuery, T::InitialStakingAmount>;
 
+	/// Tee Staking details mapped to operator address
 	#[pallet::storage]
 	#[pallet::getter(fn tee_staking_ledger)]
 	pub type StakingLedger<T: Config> = StorageMap<
@@ -308,10 +315,10 @@ pub mod pallet {
 		UnbondingNotStarted,
 		/// Withdraw is not allowed till the unbonding period is done
 		WithdrawProhibited,
-		/// Slot ID provided is invalid
-		InvalidSlotId,
-		/// Slot ID unavailable in cluster
-		SlotUnavailableInCluster,
+		/// Metrics server already registered
+		MetricsServerAlreadyExists,
+		/// Metrics server limit reached
+		MetricsServerLimitReached,
 	}
 
 	#[pallet::call]
@@ -739,16 +746,23 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		/// Set the fee for minting a secret NFT if the caller is root.
+		/// Metrics server registration by Technical Committee.
 		#[pallet::weight(T::WeightInfo::unregister_enclave())]
-		pub fn set_staking_amount(
+		pub fn register_metrics_server(
 			origin: OriginFor<T>,
-			staking_amount: BalanceOf<T>,
+			metrics_server_address: T::AccountId,
 		) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
-			StakingAmount::<T>::put(staking_amount);
-			let event = Event::StakingAmountSet { staking_amount };
-			Self::deposit_event(event);
+			MetricsServer::<T>::try_mutate(|metrics_server| -> DispatchResult {
+				ensure!(
+					!metrics_server.contains(&metrics_server_address),
+					Error::<T>::MetricsServerAlreadyExists
+				);
+				metrics_server
+					.try_push(metrics_server_address.clone())
+					.map_err(|_| Error::<T>::MetricsServerLimitReached)?;
+				Ok(())
+			})?;
 
 			Ok(().into())
 		}
