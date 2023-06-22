@@ -271,6 +271,8 @@ pub mod pallet {
 		Unbonded { operator_address: T::AccountId, amount: BalanceOf<T> },
 		/// Withdrawn the bonded amount
 		Withdrawn { operator_address: T::AccountId, amount: BalanceOf<T> },
+		/// New metrics server got added
+		MetricsServerAdded { metrics_server_address: T::AccountId },
 	}
 
 	#[pallet::error]
@@ -763,7 +765,7 @@ pub mod pallet {
 					.map_err(|_| Error::<T>::MetricsServerLimitReached)?;
 				Ok(())
 			})?;
-
+			Self::deposit_event(Event::MetricsServerAdded { metrics_server_address });
 			Ok(().into())
 		}
 	}
