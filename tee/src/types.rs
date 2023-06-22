@@ -55,7 +55,7 @@ where
 	AccountId: Clone + PartialEq + Debug,
 	ClusterSize: Get<u32>,
 {
-	pub enclaves: BoundedVec<(AccountId, SlotId), ClusterSize>,
+	pub enclaves: BoundedVec<AccountId, ClusterSize>,
 	pub is_public: bool,
 }
 
@@ -64,7 +64,7 @@ where
 	AccountId: Clone + PartialEq + Debug,
 	ClusterSize: Get<u32>,
 {
-	pub fn new(enclaves: BoundedVec<(AccountId, SlotId), ClusterSize>, is_public: bool) -> Self {
+	pub fn new(enclaves: BoundedVec<AccountId, ClusterSize>, is_public: bool) -> Self {
 		Self { enclaves, is_public }
 	}
 }
