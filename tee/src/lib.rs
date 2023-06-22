@@ -204,7 +204,7 @@ pub mod pallet {
 			let mut weight = Weight::zero();
 
 			let version = StorageVersion::get::<Pallet<T>>();
-			if version == StorageVersion::new(0) || version == StorageVersion::new(1) {
+			if version == StorageVersion::new(1) || version == StorageVersion::new(2) {
 				weight = <migrations::v2::MigrationV2<T> as OnRuntimeUpgrade>::on_runtime_upgrade();
 
 				StorageVersion::put::<Pallet<T>>(&StorageVersion::new(2));
@@ -516,7 +516,7 @@ pub mod pallet {
 						// Add enclave operator to cluster
 						cluster
 							.enclaves
-							.try_push(operator_address.clone())
+							.try_push((operator_address.clone(), slot_id))
 							.map_err(|_| Error::<T>::ClusterIsFull)?;
 
 						Ok(())
@@ -613,12 +613,13 @@ pub mod pallet {
 					)?;
 
 					// Remove the operator from cluster
-					if let Some(index) =
-						cluster.enclaves.iter().position(|x| *x == operator_address.clone())
+					if let Some(index) = cluster
+						.enclaves
+						.iter()
+						.position(|(account_id, _slot_id)| *account_id == operator_address.clone())
 					{
 						cluster.enclaves.swap_remove(index);
 					}
-
 
 					// Remove the mapping between operator to cluster id
 					EnclaveClusterId::<T>::remove(&operator_address);
