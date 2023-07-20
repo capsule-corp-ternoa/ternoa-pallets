@@ -27,7 +27,6 @@ pub mod v2 {
 		ClusterSize: Get<u32>,
 	{
 		pub enclaves: BoundedVec<AccountId, ClusterSize>,
-		pub is_public: bool,
 	}
 
 	pub struct MigrationV2<T>(sp_std::marker::PhantomData<T>);

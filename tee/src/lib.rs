@@ -41,7 +41,7 @@ use sp_runtime::SaturatedConversion;
 use ternoa_common::traits;
 pub use weights::WeightInfo;
 
-const STORAGE_VERSION: StorageVersion = StorageVersion::new(3);
+const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
 const TEE_STAKING_ID: LockIdentifier = *b"teestake";
 use sp_staking::{EraIndex};
 use pallet_staking::{Pallet as Staking};
@@ -253,7 +253,7 @@ pub mod pallet {
 			let mut weight = Weight::zero();
 
 			let version = StorageVersion::get::<Pallet<T>>();
-			if version == StorageVersion::new(1) || version == StorageVersion::new(2) {
+			if version == StorageVersion::new(1) {
 				weight = <migrations::v2::MigrationV2<T> as OnRuntimeUpgrade>::on_runtime_upgrade();
 
 				StorageVersion::put::<Pallet<T>>(&StorageVersion::new(2));
