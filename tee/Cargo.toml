@@ -16,11 +16,14 @@ targets = ["x86_64-unknown-linux-gnu"]
 frame-benchmarking = { workspace = true, default-features = false, optional = true }
 frame-support = { workspace = true, default-features = false }
 frame-system = { workspace = true, default-features = false }
+pallet-staking = { workspace = true, default-features = false }
 
 # Sp
 sp-runtime = { workspace = true, default-features = false }
 sp-std = { workspace = true, default-features = false }
 sp-arithmetic = { workspace = true, default-features = false }
+sp-staking = { workspace = true, default-features = false }
+
 
 # Rest
 parity-scale-codec = { default-features = false, features = ["derive", "max-encoded-len"], workspace = true }
@@ -50,6 +53,7 @@ std = [
     "ternoa-common/std",
     "primitives/std",
     "scale-info/std",
+    "pallet-staking/std",
 ]
 runtime-benchmarks = [
     "frame-benchmarking",

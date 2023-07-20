@@ -20,6 +20,7 @@ use primitives::tee::SlotId;
 use scale_info::TypeInfo;
 use sp_arithmetic::traits::AtLeast32BitUnsigned;
 use sp_std::fmt::Debug;
+use frame_system::Config;
 
 #[derive(
 	Encode, Decode, CloneNoBound, PartialEqNoBound, Eq, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen,
@@ -94,5 +95,40 @@ where
 {
 	pub fn new(operator: AccountId, is_unlocking: bool, unbonded_at: BlockNumber) -> Self {
 		Self { operator, is_unlocking, unbonded_at }
+	}
+}
+
+/// Report Parameters that metrics servers submits
+#[derive(
+	PartialEqNoBound, CloneNoBound, Encode, Decode, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen,
+)]
+pub struct MetricsServerReport<AccountId>
+where 	AccountId: Clone + PartialEq + Debug,
+
+{
+	pub operator_address: AccountId,
+	pub param_1: u8,
+	pub param_2: u8,
+	pub param_3: u8,
+	pub param_4: u8,
+	pub param_5: u8,
+}
+
+/// Report Parameters weightage
+#[derive(
+	PartialEqNoBound, CloneNoBound, Encode, Decode, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen,
+)]
+pub struct ReportParamsWeightage
+{
+	pub param_1_weightage: u8,
+	pub param_2_weightage: u8,
+	pub param_3_weightage: u8,
+	pub param_4_weightage: u8,
+	pub param_5_weightage: u8,
+}
+
+impl Default for ReportParamsWeightage {
+	fn default() -> Self {
+		Self::default()
 	}
 }

@@ -43,6 +43,8 @@ pub use weights::WeightInfo;
 
 const STORAGE_VERSION: StorageVersion = StorageVersion::new(3);
 const TEE_STAKING_ID: LockIdentifier = *b"teestake";
+use sp_staking::{EraIndex};
+use pallet_staking::{Pallet as Staking};
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -60,34 +62,34 @@ pub mod pallet {
 	pub struct Pallet<T>(_);
 
 	pub type BalanceOf<T> =
-		<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+    <<T as pallet_staking::Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config {
+	pub trait Config: frame_system::Config + pallet_staking::Config	{
 		/// Because this pallet emits events, it depends on the runtime's definition of an event.
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		/// Weight information for pallet.
-		type WeightInfo: WeightInfo;
+		type TeeWeightInfo: WeightInfo;
 
-		/// Currency type.
-		type Currency: LockableCurrency<
-			Self::AccountId,
-			Moment = Self::BlockNumber,
-			Balance = Self::CurrencyBalance,
-		>;
+		// /// Currency type.
+		// type Currency: LockableCurrency<
+		// 	Self::AccountId,
+		// 	Moment = Self::BlockNumber,
+		// 	Balance = Self::CurrencyBalance,
+		// >;
 
-		/// Just the `Currency::Balance` type; we have this item to allow us to constrain it to
-		/// `From<u64>`.
-		type CurrencyBalance: sp_runtime::traits::AtLeast32BitUnsigned
-			+ parity_scale_codec::FullCodec
-			+ Copy
-			+ MaybeSerializeDeserialize
-			+ sp_std::fmt::Debug
-			+ Default
-			+ From<u64>
-			+ TypeInfo
-			+ MaxEncodedLen;
+		// /// Just the `Currency::Balance` type; we have this item to allow us to constrain it to
+		// /// `From<u64>`.
+		// type CurrencyBalance: sp_runtime::traits::AtLeast32BitUnsigned
+		// 	+ parity_scale_codec::FullCodec
+		// 	+ Copy
+		// 	+ MaybeSerializeDeserialize
+		// 	+ sp_std::fmt::Debug
+		// 	+ Default
+		// 	+ From<u64>
+		// 	+ TypeInfo
+		// 	+ MaxEncodedLen;
 		// Constants
 		/// Size of a cluster
 		#[pallet::constant]
@@ -108,6 +110,11 @@ pub mod pallet {
 		/// Bonding duration in block numbers.
 		#[pallet::constant]
 		type TeeBondingDuration: Get<u32>;
+
+		/// Default staking amount for TEE.
+		#[pallet::constant]
+		type InitialDailyRewards: Get<BalanceOf<Self>>;
+
 	}
 
 	/// Mapping of operator addresses who want to be registered as enclaves
@@ -200,12 +207,47 @@ pub mod pallet {
 		OptionQuery,
 	>;
 
+	#[pallet::storage]
+	#[pallet::getter(fn metrics_reports)]
+	pub type MetricsReports<T: Config> = StorageNMap<
+		_,
+		(
+			NMapKey<Blake2_128Concat, EraIndex>,
+			NMapKey<Blake2_128Concat, T::AccountId>,
+			NMapKey<Blake2_128Concat, T::AccountId>,
+		),
+		MetricsServerReport<T::AccountId>,
+	>;
+
+	/// Report params weightage
+	#[pallet::storage]
+	#[pallet::getter(fn report_params_weightages)]
+	pub type ReportParamsWeightages<T: Config> = StorageValue<_, ReportParamsWeightage, ValueQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn rewards)]
+	pub type Rewards<T: Config> = StorageDoubleMap<_, Twox64Concat, EraIndex, Twox64Concat, T::AccountId, u64, OptionQuery>;
+
+
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
 		// #[cfg(feature = "try-runtime")]
 		// fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
 		// 	<migrations::v2::MigrationV2<T> as OnRuntimeUpgrade>::pre_upgrade()
 		// }
+
+		fn on_initialize(now: T::BlockNumber) -> Weight {
+			let sessions_per_era = T::SessionsPerEra::get();
+			let mut weight = Weight::zero();
+
+			let current_session_index = <frame_system::Pallet<T>>::block_number() % sessions_per_era.into();
+
+			// if current_session_index == sessions_per_era - 1 {
+			// 	// Last session of the era
+			// 	// Perform your logic here
+			// }
+			weight
+		}
 
 		fn on_runtime_upgrade() -> frame_support::weights::Weight {
 			let mut weight = Weight::zero();
@@ -273,6 +315,16 @@ pub mod pallet {
 		Withdrawn { operator_address: T::AccountId, amount: BalanceOf<T> },
 		/// New metrics server got added
 		MetricsServerAdded { metrics_server_address: T::AccountId },
+		/// Metrics server report submitted
+		MetricsServerReportSubmitted { era: EraIndex, metrics_server_address: T::AccountId, metrics_server_report: MetricsServerReport<T::AccountId> },
+		/// Report parameters weightage modified
+		ReportParamsWeightageModified {
+			param_1_weightage: u8,
+			param_2_weightage: u8,
+			param_3_weightage: u8,
+			param_4_weightage: u8,
+			param_5_weightage: u8,
+		 },
 	}
 
 	#[pallet::error]
@@ -321,12 +373,17 @@ pub mod pallet {
 		MetricsServerAlreadyExists,
 		/// Metrics server limit reached
 		MetricsServerLimitReached,
+		/// Metrics server address not found
+		MetricsServerAddressNotFound,
+		EnclaveNotFoundForTheOperator,
+		FailedToGetActiveEra,
+		ReportAlreadySubmittedForEra,
 	}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		/// Ask for an enclave registration
-		#[pallet::weight(T::WeightInfo::register_enclave())]
+		#[pallet::weight(T::TeeWeightInfo::register_enclave())]
 		pub fn register_enclave(
 			origin: OriginFor<T>,
 			enclave_address: T::AccountId,
@@ -373,7 +430,7 @@ pub mod pallet {
 
 		/// Ask for an enclave to be removed.
 		/// No need for approval if the enclave registration was not approved yet.
-		#[pallet::weight(T::WeightInfo::unregister_enclave())]
+		#[pallet::weight(T::TeeWeightInfo::unregister_enclave())]
 		pub fn unregister_enclave(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
@@ -424,7 +481,7 @@ pub mod pallet {
 		}
 
 		/// Ask for enclave update
-		#[pallet::weight(T::WeightInfo::update_enclave())]
+		#[pallet::weight(T::TeeWeightInfo::update_enclave())]
 		pub fn update_enclave(
 			origin: OriginFor<T>,
 			new_enclave_address: T::AccountId,
@@ -462,7 +519,7 @@ pub mod pallet {
 		}
 
 		/// Remove the operator update request
-		#[pallet::weight(T::WeightInfo::cancel_update())]
+		#[pallet::weight(T::TeeWeightInfo::cancel_update())]
 		pub fn cancel_update(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
@@ -477,7 +534,7 @@ pub mod pallet {
 		}
 
 		/// Assign an enclave to a cluster
-		#[pallet::weight(T::WeightInfo::assign_enclave())]
+		#[pallet::weight(T::TeeWeightInfo::assign_enclave())]
 		pub fn assign_enclave(
 			origin: OriginFor<T>,
 			operator_address: T::AccountId,
@@ -541,7 +598,7 @@ pub mod pallet {
 		}
 
 		/// Remove a registration from storage
-		#[pallet::weight(T::WeightInfo::remove_registration())]
+		#[pallet::weight(T::TeeWeightInfo::remove_registration())]
 		pub fn remove_registration(
 			origin: OriginFor<T>,
 			operator_address: T::AccountId,
@@ -563,7 +620,7 @@ pub mod pallet {
 		}
 
 		/// Remove an enclave update request from storage
-		#[pallet::weight(T::WeightInfo::remove_update())]
+		#[pallet::weight(T::TeeWeightInfo::remove_update())]
 		pub fn remove_update(
 			origin: OriginFor<T>,
 			operator_address: T::AccountId,
@@ -582,7 +639,7 @@ pub mod pallet {
 		}
 
 		/// Unassign an enclave from a cluster and remove all information
-		#[pallet::weight(T::WeightInfo::remove_enclave())]
+		#[pallet::weight(T::TeeWeightInfo::remove_enclave())]
 		pub fn remove_enclave(
 			origin: OriginFor<T>,
 			operator_address: T::AccountId,
@@ -649,7 +706,7 @@ pub mod pallet {
 		}
 
 		/// Update an enclave and clean the enclaves to update if needed
-		#[pallet::weight(T::WeightInfo::force_update_enclave())]
+		#[pallet::weight(T::TeeWeightInfo::force_update_enclave())]
 		pub fn force_update_enclave(
 			origin: OriginFor<T>,
 			operator_address: T::AccountId,
@@ -697,7 +754,7 @@ pub mod pallet {
 		}
 
 		// Creates an empty Cluster
-		#[pallet::weight(T::WeightInfo::create_cluster())]
+		#[pallet::weight(T::TeeWeightInfo::create_cluster())]
 		pub fn create_cluster(origin: OriginFor<T>, is_public: bool) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
 			let id = Self::get_next_cluster_id();
@@ -708,7 +765,7 @@ pub mod pallet {
 		}
 
 		/// Removes an empty cluster
-		#[pallet::weight(T::WeightInfo::remove_cluster())]
+		#[pallet::weight(T::TeeWeightInfo::remove_cluster())]
 		pub fn remove_cluster(
 			origin: OriginFor<T>,
 			cluster_id: ClusterId,
@@ -728,7 +785,7 @@ pub mod pallet {
 
 		/// Ask for an enclave to be removed.
 		/// No need for approval if the enclave registration was not approved yet.
-		#[pallet::weight(T::WeightInfo::unregister_enclave())]
+		#[pallet::weight(T::TeeWeightInfo::unregister_enclave())]
 		pub fn withdraw_unbonded(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 			StakingLedger::<T>::try_mutate(&who, |maybe_staking| -> DispatchResult {
@@ -755,7 +812,7 @@ pub mod pallet {
 		}
 
 		/// Metrics server registration by Technical Committee.
-		#[pallet::weight(T::WeightInfo::unregister_enclave())]
+		#[pallet::weight(T::TeeWeightInfo::unregister_enclave())]
 		pub fn register_metrics_server(
 			origin: OriginFor<T>,
 			metrics_server_address: T::AccountId,
@@ -772,6 +829,84 @@ pub mod pallet {
 				Ok(())
 			})?;
 			Self::deposit_event(Event::MetricsServerAdded { metrics_server_address });
+			Ok(().into())
+		}
+
+		#[pallet::weight(T::TeeWeightInfo::unregister_enclave())]
+		pub fn submit_metrics_server_report(
+			origin: OriginFor<T>,
+			era_index: Option<EraIndex>,
+			metrics_server_report: MetricsServerReport<T::AccountId>,
+		) -> DispatchResultWithPostInfo {
+			let who = ensure_signed(origin)?;
+	
+			// Check if the account is in the Metrics Server accounts storage
+			if !MetricsServer::<T>::get().contains(&who) {
+				return Err(Error::<T>::MetricsServerAddressNotFound.into());
+			}
+	
+			// Check the validity of the operator address
+			EnclaveData::<T>::get(&who)
+			.ok_or(Error::<T>::EnclaveNotFoundForTheOperator)?;
+
+
+			// Retrieve the era index
+			let era_index = match era_index {
+				Some(era) => era,
+				None => {
+					Staking::<T>::active_era()
+						.map(|e| e.index)
+						.ok_or(Error::<T>::FailedToGetActiveEra)?
+						.saturating_sub(1)
+				}
+			};
+
+			// Check if the report for the era, metrics server address, and operator address already exists
+			let report_exists = MetricsReports::<T>::contains_key(&(era_index, &who, &metrics_server_report.operator_address));
+			if report_exists {
+				return Err(Error::<T>::ReportAlreadySubmittedForEra.into());
+			}
+	
+			 // Store the metrics server report
+			 MetricsReports::<T>::insert(&(era_index, &who, &metrics_server_report.operator_address), metrics_server_report.clone());
+
+			// Emit an event for the successful submission
+			 Self::deposit_event(Event::MetricsServerReportSubmitted {era: era_index, metrics_server_address: who.clone(), metrics_server_report: metrics_server_report});
+
+			Ok(().into())
+
+		}	
+		
+		/// Report parameters weightage modification which can be done by Technical Committee.
+		#[pallet::weight(T::TeeWeightInfo::unregister_enclave())]
+		pub fn set_report_params_weightage(
+			origin: OriginFor<T>,
+			report_params_weightage: ReportParamsWeightage,
+		) -> DispatchResultWithPostInfo {
+			ensure_root(origin)?;
+
+			ReportParamsWeightages::<T>::put(report_params_weightage.clone());
+
+			Self::deposit_event(Event::ReportParamsWeightageModified { 
+				param_1_weightage: report_params_weightage.param_1_weightage,
+				param_2_weightage: report_params_weightage.param_2_weightage,
+				param_3_weightage: report_params_weightage.param_3_weightage,
+				param_4_weightage: report_params_weightage.param_4_weightage,
+				param_5_weightage: report_params_weightage.param_5_weightage,
+			 });
+			Ok(().into())
+		}
+
+		/// Claim rewards by Era
+		#[pallet::weight(T::TeeWeightInfo::unregister_enclave())]
+		pub fn claim_rewards(
+			origin: OriginFor<T>,
+			era: EraIndex,
+		) -> DispatchResultWithPostInfo {
+			let who = ensure_signed(origin)?;
+
+
+			// Self::deposit_event(Event::ReportParamsWeightageModified { report_params_weightage });
 			Ok(().into())
 		}
 	}
