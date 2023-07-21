@@ -237,16 +237,16 @@ pub mod pallet {
 		// }
 
 		fn on_initialize(now: T::BlockNumber) -> Weight {
-			let sessions_per_era = T::SessionsPerEra::get();
-			let mut weight = Weight::zero();
+			// let sessions_per_era = T::SessionsPerEra::get();
+			// let mut weight = Weight::zero();
 
-			let current_session_index = <frame_system::Pallet<T>>::block_number() % sessions_per_era.into();
+			// let current_session_index = <frame_system::Pallet<T>>::block_number() % sessions_per_era.into();
 
-			// if current_session_index == sessions_per_era - 1 {
-			// 	// Last session of the era
-			// 	// Perform your logic here
-			// }
-			weight
+			// // if current_session_index == sessions_per_era - 1 {
+			// // 	// Last session of the era
+			// // 	// Perform your logic here
+			// // }
+			// weight
 		}
 
 		fn on_runtime_upgrade() -> frame_support::weights::Weight {

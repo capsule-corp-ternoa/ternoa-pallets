@@ -20,7 +20,6 @@ use primitives::tee::SlotId;
 use scale_info::TypeInfo;
 use sp_arithmetic::traits::AtLeast32BitUnsigned;
 use sp_std::fmt::Debug;
-use frame_system::Config;
 
 #[derive(
 	Encode, Decode, CloneNoBound, PartialEqNoBound, Eq, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen,
@@ -129,6 +128,12 @@ pub struct ReportParamsWeightage
 
 impl Default for ReportParamsWeightage {
 	fn default() -> Self {
-		Self::default()
+		Self {
+            param_1_weightage: 0, 
+            param_2_weightage: 0, 
+            param_3_weightage: 0, 
+            param_4_weightage: 0, 
+            param_5_weightage: 0, 
+        }
 	}
 }
