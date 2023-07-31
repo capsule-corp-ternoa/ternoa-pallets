@@ -37,6 +37,7 @@ pub use types::*;
 
 use frame_support::traits::{Get, LockIdentifier, OnRuntimeUpgrade, StorageVersion};
 use sp_std::vec;
+use sp_std::vec::Vec;
 
 use primitives::tee::{ClusterId, SlotId};
 use sp_runtime::{
