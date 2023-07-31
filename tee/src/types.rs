@@ -97,28 +97,29 @@ where
 	}
 }
 
-/// Report Parameters that metrics servers submits
 #[derive(
-	PartialEqNoBound, CloneNoBound, Encode, Decode, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen,
+	Encode, Decode, CloneNoBound, PartialEqNoBound, Eq, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen,
 )]
+#[scale_info(skip_type_params(ListSizeLimit))]
+#[codec(mel_bound(AccountId: MaxEncodedLen))]
 pub struct MetricsServerReport<AccountId>
-where 	AccountId: Clone + PartialEq + Debug,
-
+where
+	AccountId: Clone + PartialEq + Debug,
 {
-	pub operator_address: AccountId,
 	pub param_1: u8,
 	pub param_2: u8,
 	pub param_3: u8,
 	pub param_4: u8,
 	pub param_5: u8,
+	pub submitted_by: AccountId,
 }
 
+impl<AccountId> MetricsServerReport<AccountId> where AccountId: Clone + PartialEq + Debug {}
 /// Report Parameters weightage
 #[derive(
 	PartialEqNoBound, CloneNoBound, Encode, Decode, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen,
 )]
-pub struct ReportParamsWeightage
-{
+pub struct ReportParamsWeightage {
 	pub param_1_weightage: u8,
 	pub param_2_weightage: u8,
 	pub param_3_weightage: u8,
@@ -129,11 +130,11 @@ pub struct ReportParamsWeightage
 impl Default for ReportParamsWeightage {
 	fn default() -> Self {
 		Self {
-            param_1_weightage: 0, 
-            param_2_weightage: 0, 
-            param_3_weightage: 0, 
-            param_4_weightage: 0, 
-            param_5_weightage: 0, 
-        }
+			param_1_weightage: 0,
+			param_2_weightage: 0,
+			param_3_weightage: 0,
+			param_4_weightage: 0,
+			param_5_weightage: 0,
+		}
 	}
 }
