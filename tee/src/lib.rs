@@ -354,7 +354,7 @@ pub mod pallet {
 		/// Metrics server report submitted
 		MetricsServerReportSubmitted {
 			era: EraIndex,
-			metrics_server_address: T::AccountId,
+			operator_address: T::AccountId,
 			metrics_server_report: MetricsServerReport<T::AccountId>,
 		},
 		/// Report parameters weightage modified
@@ -922,14 +922,14 @@ pub mod pallet {
 					reports
 						.try_push(metrics_server_report.clone())
 						.map_err(|_| Error::<T>::MetricsReportsLimitReached)?;
-					MetricsReports::<T>::insert(era_index, operator_address, reports);
+					MetricsReports::<T>::insert(era_index, operator_address.clone(), reports);
 				},
 			}
 
 			// Emit an event for the successful submission
 			Self::deposit_event(Event::MetricsServerReportSubmitted {
 				era: era_index,
-				metrics_server_address: who.clone(),
+				operator_address: operator_address,
 				metrics_server_report,
 			});
 
