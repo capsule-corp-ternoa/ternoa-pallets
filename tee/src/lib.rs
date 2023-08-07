@@ -37,12 +37,11 @@ pub use types::*;
 
 use frame_support::traits::{Get, LockIdentifier, OnRuntimeUpgrade, StorageVersion};
 use sp_std::vec;
-use sp_std::vec::Vec;
 
 use primitives::tee::{ClusterId, SlotId};
 use sp_runtime::{
 	traits::{AccountIdConversion, SaturatedConversion},
-	Percent,
+	Perbill, Percent,
 };
 use ternoa_common::traits;
 pub use weights::WeightInfo;
@@ -50,7 +49,7 @@ pub use weights::WeightInfo;
 const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
 const TEE_STAKING_ID: LockIdentifier = *b"teestake";
 use pallet_staking::Pallet as Staking;
-use sp_staking::EraIndex;
+use sp_staking::{EraIndex, SessionIndex};
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -124,7 +123,7 @@ pub mod pallet {
 
 		/// Default staking amount for TEE.
 		#[pallet::constant]
-		type InitalDailyRewardAmountForOperator: Get<BalanceOf<Self>>;
+		type InitalDailyRewardPool: Get<BalanceOf<Self>>;
 	}
 
 	/// Mapping of operator addresses who want to be registered as enclaves
@@ -197,8 +196,8 @@ pub mod pallet {
 	/// Metrics Server accounts storage.
 	#[pallet::storage]
 	#[pallet::getter(fn nft_mint_fee)]
-	pub(super) type MetricsServer<T: Config> =
-		StorageValue<_, BoundedVec<T::AccountId, T::ListSizeLimit>, ValueQuery>;
+	pub(super) type MetricsServers<T: Config> =
+		StorageValue<_, BoundedVec<MetricsServer<T::AccountId>, T::ListSizeLimit>, ValueQuery>;
 
 	/// Staking amount for TEE operator.
 	#[pallet::storage]
@@ -216,18 +215,6 @@ pub mod pallet {
 		TeeStakingLedger<T::AccountId, T::BlockNumber>,
 		OptionQuery,
 	>;
-
-	// #[pallet::storage]
-	// #[pallet::getter(fn metrics_reports)]
-	// pub type MetricsReports<T: Config> = StorageNMap<
-	// 	_,
-	// 	(
-	// 		NMapKey<Blake2_128Concat, EraIndex>,
-	// 		NMapKey<Blake2_128Concat, T::AccountId>,
-	// 		NMapKey<Blake2_128Concat, T::AccountId>,
-	// 	),
-	// 	MetricsServerReport<T::AccountId>,
-	// >;
 
 	#[pallet::storage]
 	#[pallet::getter(fn metrics_reports)]
@@ -248,9 +235,9 @@ pub mod pallet {
 
 	/// Daily reward amount for TEE operator.
 	#[pallet::storage]
-	#[pallet::getter(fn reward_amount_for_operator)]
-	pub(super) type DailyRewardAmountForOperator<T: Config> =
-		StorageValue<_, BalanceOf<T>, ValueQuery, T::InitalDailyRewardAmountForOperator>;
+	#[pallet::getter(fn daily_reward_pool)]
+	pub(super) type DailyRewardPool<T: Config> =
+		StorageValue<_, BalanceOf<T>, ValueQuery, T::InitalDailyRewardPool>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn rewards)]
@@ -278,9 +265,19 @@ pub mod pallet {
 		// 	let current_session_index = <frame_system::Pallet<T>>::block_number() %
 		// sessions_per_era.into();
 
-		// 	if current_session_index == sessions_per_era - 1 {
-		// 		// Last session of the era
-		// 		// Perform your logic here
+		// 	if current_session_index as u32 == sessions_per_era as u32 - 1 {
+		// 		let active_era = Self::get_active_era();
+
+		// 		match active_era {
+		// 			Ok(active_era) => {
+		// 				let era_reports = MetricsReports::<T>::iter_prefix_values(active_era);
+		// 			},
+		// 			Err(err) => {
+		// 				let error_event =
+		// 					Event::FailedToGetActiveEra { current_session_index };
+		// 				Self::deposit_event(error_event);
+		// 			}
+		// 		}
 		// 	}
 		// 	weight
 		// }
@@ -338,7 +335,9 @@ pub mod pallet {
 			new_api_uri: BoundedVec<u8, T::MaxUriLen>,
 		},
 		/// New cluster got added
-		ClusterAdded { cluster_id: ClusterId },
+		ClusterAdded { cluster_id: ClusterId, cluster_type: ClusterType },
+		///Cluster got update
+		ClusterUpdated { cluster_id: ClusterId, cluster_type: ClusterType },
 		/// Cluster got removed
 		ClusterRemoved { cluster_id: ClusterId },
 		/// Staking amount changed.
@@ -350,7 +349,7 @@ pub mod pallet {
 		/// Withdrawn the bonded amount
 		Withdrawn { operator_address: T::AccountId, amount: BalanceOf<T> },
 		/// New metrics server got added
-		MetricsServerAdded { metrics_server_address: T::AccountId },
+		MetricsServerAdded { metrics_server: MetricsServer<T::AccountId> },
 		/// Metrics server report submitted
 		MetricsServerReportSubmitted {
 			era: EraIndex,
@@ -367,6 +366,8 @@ pub mod pallet {
 		},
 		/// Rewards claimed by operator
 		RewardsClaimed { era: EraIndex, operator_address: T::AccountId, amount: BalanceOf<T> },
+		/// Fetching active era during the last session in an era
+		FailedToGetActiveEra { session: SessionIndex },
 	}
 
 	#[pallet::error]
@@ -799,12 +800,32 @@ pub mod pallet {
 
 		// Creates an empty Cluster
 		#[pallet::weight(T::TeeWeightInfo::create_cluster())]
-		pub fn create_cluster(origin: OriginFor<T>, is_public: bool) -> DispatchResultWithPostInfo {
+		pub fn create_cluster(
+			origin: OriginFor<T>,
+			cluster_type: ClusterType,
+		) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
 			let id = Self::get_next_cluster_id();
-			let cluster = Cluster::new(Default::default(), is_public);
+			let cluster = Cluster::new(Default::default(), cluster_type.clone());
 			ClusterData::<T>::insert(id, cluster);
-			Self::deposit_event(Event::ClusterAdded { cluster_id: id });
+			Self::deposit_event(Event::ClusterAdded { cluster_id: id, cluster_type });
+			Ok(().into())
+		}
+
+		// Creates an empty Cluster
+		#[pallet::weight(T::TeeWeightInfo::create_cluster())]
+		pub fn update_cluster(
+			origin: OriginFor<T>,
+			cluster_id: ClusterId,
+			cluster_type: ClusterType,
+		) -> DispatchResultWithPostInfo {
+			ensure_root(origin)?;
+			ClusterData::<T>::try_mutate(cluster_id, |maybe_cluster| -> DispatchResult {
+				let cluster = maybe_cluster.as_mut().ok_or(Error::<T>::ClusterNotFound)?;
+				cluster.cluster_type = cluster_type.clone();
+				Ok(())
+			})?;
+			Self::deposit_event(Event::ClusterUpdated { cluster_id, cluster_type });
 			Ok(().into())
 		}
 
@@ -827,8 +848,7 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		/// Ask for an enclave to be removed.
-		/// No need for approval if the enclave registration was not approved yet.
+		/// Withdraw the unbonded amount
 		#[pallet::weight(T::TeeWeightInfo::unregister_enclave())]
 		pub fn withdraw_unbonded(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
@@ -859,20 +879,21 @@ pub mod pallet {
 		#[pallet::weight(T::TeeWeightInfo::unregister_enclave())]
 		pub fn register_metrics_server(
 			origin: OriginFor<T>,
-			metrics_server_address: T::AccountId,
+			metrics_server: MetricsServer<T::AccountId>,
 		) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
-			MetricsServer::<T>::try_mutate(|metrics_server| -> DispatchResult {
+			MetricsServers::<T>::try_mutate(|metrics_servers| -> DispatchResult {
 				ensure!(
-					!metrics_server.contains(&metrics_server_address),
+					!metrics_servers.iter().any(|server| server.metrics_server_address ==
+						metrics_server.metrics_server_address),
 					Error::<T>::MetricsServerAlreadyExists
 				);
-				metrics_server
-					.try_push(metrics_server_address.clone())
+				metrics_servers
+					.try_push(metrics_server.clone())
 					.map_err(|_| Error::<T>::MetricsServerLimitReached)?;
+				Self::deposit_event(Event::MetricsServerAdded { metrics_server });
 				Ok(())
 			})?;
-			Self::deposit_event(Event::MetricsServerAdded { metrics_server_address });
 			Ok(().into())
 		}
 
@@ -885,7 +906,10 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			if !MetricsServer::<T>::get().contains(&who) {
+			if !MetricsServers::<T>::get()
+				.iter()
+				.any(|server| server.metrics_server_address == who)
+			{
 				return Err(Error::<T>::MetricsServerAddressNotFound.into())
 			}
 
@@ -929,7 +953,7 @@ pub mod pallet {
 			// Emit an event for the successful submission
 			Self::deposit_event(Event::MetricsServerReportSubmitted {
 				era: era_index,
-				operator_address: operator_address,
+				operator_address,
 				metrics_server_report,
 			});
 
@@ -968,16 +992,21 @@ pub mod pallet {
 
 			EnclaveData::<T>::get(&who).ok_or(Error::<T>::EnclaveNotFoundForTheOperator)?;
 
-			let total_reward_amount = Self::reward_amount_for_operator();
+			let total_operators = EnclaveData::<T>::iter_keys().count();
+			let share_percentage = Perbill::from_rational(total_operators as u32, 100);
+			let reward_pool = Self::daily_reward_pool();
+
+			let reward_per_operator: BalanceOf<T> = share_percentage * reward_pool;
+
 			let submitted_metrics_report = MetricsReports::<T>::get(&era, &who);
 
 			if let Some(submitted_metrics_report) = submitted_metrics_report {
-				let variance = Self::calculate_variance(&submitted_metrics_report);
+				let variance = Self::calculate_highest_params(&submitted_metrics_report);
 				let report_params_weightage = Self::report_params_weightages();
 				let weighted_sum =
 					Self::calculate_weighted_sum(&variance, &report_params_weightage);
 				let weighted_reward_amount =
-					Percent::from_percent(weighted_sum) * total_reward_amount;
+					Percent::from_percent(weighted_sum) * reward_per_operator;
 				T::Currency::transfer(
 					&Self::account_id(),
 					&who,
@@ -991,12 +1020,12 @@ pub mod pallet {
 					amount: weighted_reward_amount,
 				});
 			} else {
-				T::Currency::transfer(&Self::account_id(), &who, total_reward_amount, AllowDeath)?;
-				ClaimedRewards::<T>::insert(era, who.clone(), total_reward_amount.clone());
+				T::Currency::transfer(&Self::account_id(), &who, reward_per_operator, AllowDeath)?;
+				ClaimedRewards::<T>::insert(era, who.clone(), reward_per_operator.clone());
 				Self::deposit_event(Event::RewardsClaimed {
 					era,
 					operator_address: who.clone(),
-					amount: total_reward_amount,
+					amount: reward_per_operator,
 				});
 			}
 			Ok(().into())
@@ -1022,45 +1051,48 @@ impl<T: Config> Pallet<T> {
 		T::PalletId::get().into_account_truncating()
 	}
 
-	pub fn calculate_variance(
-		enclave_report: &BoundedVec<MetricsServerReport<T::AccountId>, T::ListSizeLimit>,
-	) -> Vec<u8> {
-		// Helper function to calculate variance for a single parameter
-		fn param_variance(a: u8, b: u8) -> u8 {
-			let diff = (a as i32 - b as i32).abs();
-			if diff > (b as i32 * 50) / 100 {
-				b
-			} else {
-				((a as i32 + b as i32) / 2) as u8
-			}
+	pub fn calculate_highest_params(
+		enclave_reports: &BoundedVec<MetricsServerReport<T::AccountId>, T::ListSizeLimit>,
+	) -> HighestParamsResponse {
+		let mut highest_params =
+			HighestParamsResponse { param_1: 0, param_2: 0, param_3: 0, param_4: 0, param_5: 0 };
+
+		for report in enclave_reports.iter() {
+			highest_params.param_1 = highest_params.param_1.max(report.param_1);
+			highest_params.param_2 = highest_params.param_2.max(report.param_2);
+			highest_params.param_3 = highest_params.param_3.max(report.param_3);
+			highest_params.param_4 = highest_params.param_4.max(report.param_4);
+			highest_params.param_5 = highest_params.param_5.max(report.param_5);
 		}
 
-		// Iterate through the BoundedVec to calculate the variances.
-		let variances: Vec<u8> = enclave_report
-			.iter()
-			.zip(enclave_report.iter().skip(1))
-			.flat_map(|(prev_report, curr_report)| {
-				vec![
-					param_variance(prev_report.param_1, curr_report.param_1),
-					param_variance(prev_report.param_2, curr_report.param_2),
-					param_variance(prev_report.param_3, curr_report.param_3),
-					param_variance(prev_report.param_4, curr_report.param_4),
-					param_variance(prev_report.param_5, curr_report.param_5),
-				]
-			})
-			.collect();
-
-		variances
+		highest_params
 	}
 
-	pub fn calculate_weighted_sum(variances: &[u8], weightages: &ReportParamsWeightage) -> u8 {
+	pub fn calculate_weighted_sum(
+		variances: &HighestParamsResponse,
+		weightages: &ReportParamsWeightage,
+	) -> u8 {
 		// Calculate the weighted sum for each index
-		let weighted_sum: u8 =
-			variances[0].saturating_mul(weightages.param_1_weightage).saturating_div(100) +
-				variances[1].saturating_mul(weightages.param_2_weightage).saturating_div(100) +
-				variances[2].saturating_mul(weightages.param_3_weightage).saturating_div(100) +
-				variances[3].saturating_mul(weightages.param_4_weightage).saturating_div(100) +
-				variances[4].saturating_mul(weightages.param_5_weightage).saturating_div(100);
+		let weighted_sum: u8 = variances
+			.param_1
+			.saturating_mul(weightages.param_1_weightage)
+			.saturating_div(100) +
+			variances
+				.param_2
+				.saturating_mul(weightages.param_2_weightage)
+				.saturating_div(100) +
+			variances
+				.param_3
+				.saturating_mul(weightages.param_3_weightage)
+				.saturating_div(100) +
+			variances
+				.param_4
+				.saturating_mul(weightages.param_4_weightage)
+				.saturating_div(100) +
+			variances
+				.param_5
+				.saturating_mul(weightages.param_5_weightage)
+				.saturating_div(100);
 
 		weighted_sum
 	}

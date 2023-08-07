@@ -60,13 +60,14 @@ benchmarks! {
 		prepare_benchmarks::<T>();
 		let alice: T::AccountId = get_account::<T>("ALICE");
 		let cluster_id: ClusterId = 0;
+		let slot_id: SlotId = 0;
 		let enclave_address: T::AccountId= get_account::<T>("ALICE_ENCLAVE");
 		let uri: BoundedVec<u8, T::MaxUriLen> = BoundedVec::try_from(vec![1; T::MaxUriLen::get() as usize]).unwrap();
 		let enclave = Enclave::new(enclave_address.clone(), uri.clone());
 
-		TEE::<T>::create_cluster(RawOrigin::Root.into()).unwrap();
+		TEE::<T>::create_cluster(RawOrigin::Root.into(), ClusterType::Public).unwrap();
 		TEE::<T>::register_enclave(origin::<T>("ALICE").into(), enclave_address.clone(), uri.clone()).unwrap();
-		TEE::<T>::assign_enclave(RawOrigin::Root.into(), alice.clone(), cluster_id).unwrap();
+		TEE::<T>::assign_enclave(RawOrigin::Root.into(), alice.clone(), cluster_id, slot_id).unwrap();
 	}: _(origin::<T>("ALICE"))
 	verify {
 		assert_eq!(EnclaveUnregistrations::<T>::get(), vec![alice.clone()]);
@@ -76,13 +77,14 @@ benchmarks! {
 		prepare_benchmarks::<T>();
 		let alice: T::AccountId = get_account::<T>("ALICE");
 		let cluster_id: ClusterId = 0;
+		let slot_id: SlotId = 0;
 		let enclave_address: T::AccountId= get_account::<T>("ALICE_ENCLAVE");
 		let uri: BoundedVec<u8, T::MaxUriLen> = BoundedVec::try_from(vec![1; T::MaxUriLen::get() as usize]).unwrap();
 		let enclave = Enclave::new(enclave_address.clone(), uri.clone());
 
-		TEE::<T>::create_cluster(RawOrigin::Root.into()).unwrap();
+		TEE::<T>::create_cluster(RawOrigin::Root.into(), ClusterType::Public).unwrap();
 		TEE::<T>::register_enclave(origin::<T>("ALICE").into(), enclave_address.clone(), uri.clone()).unwrap();
-		TEE::<T>::assign_enclave(RawOrigin::Root.into(), alice.clone(), cluster_id).unwrap();
+		TEE::<T>::assign_enclave(RawOrigin::Root.into(), alice.clone(), cluster_id, slot_id).unwrap();
 
 		let bob: T::AccountId = get_account::<T>("BOB");
 		let new_enclave_address: T::AccountId= get_account::<T>("BOB");
@@ -97,14 +99,15 @@ benchmarks! {
 		prepare_benchmarks::<T>();
 		let alice: T::AccountId = get_account::<T>("ALICE");
 		let cluster_id: ClusterId = 0;
+		let slot_id: SlotId = 0;
 		let enclave_address: T::AccountId= get_account::<T>("ALICE_ENCLAVE");
 		let new_enclave_address: T::AccountId= get_account::<T>("BOB");
 		let uri: BoundedVec<u8, T::MaxUriLen> = BoundedVec::try_from(vec![1; T::MaxUriLen::get() as usize]).unwrap();
 		let enclave = Enclave::new(enclave_address.clone(), uri.clone());
 
-		TEE::<T>::create_cluster(RawOrigin::Root.into()).unwrap();
+		TEE::<T>::create_cluster(RawOrigin::Root.into(), ClusterType::Public).unwrap();
 		TEE::<T>::register_enclave(origin::<T>("ALICE").into(), enclave_address.clone(), uri.clone()).unwrap();
-		TEE::<T>::assign_enclave(RawOrigin::Root.into(), alice.clone(), cluster_id).unwrap();
+		TEE::<T>::assign_enclave(RawOrigin::Root.into(), alice.clone(), cluster_id, slot_id).unwrap();
 		TEE::<T>::update_enclave(origin::<T>("ALICE").into(), new_enclave_address.clone(), uri.clone()).unwrap();
 
 	}: _(origin::<T>("ALICE"))
@@ -116,19 +119,20 @@ benchmarks! {
 		prepare_benchmarks::<T>();
 		let alice: T::AccountId = get_account::<T>("ALICE");
 		let cluster_id: ClusterId = 0;
+		let slot_id: SlotId = 0;
 		let enclave_address: T::AccountId= get_account::<T>("ALICE_ENCLAVE");
 		let uri: BoundedVec<u8, T::MaxUriLen> = BoundedVec::try_from(vec![1; T::MaxUriLen::get() as usize]).unwrap();
 		let enclave = Enclave::new(enclave_address.clone(), uri.clone());
-
-		TEE::<T>::create_cluster(RawOrigin::Root.into()).unwrap();
+		let cluster = Cluster::new(Default::default(), ClusterType::Public);
+		TEE::<T>::create_cluster(RawOrigin::Root.into(), ClusterType::Public).unwrap();
 		TEE::<T>::register_enclave(origin::<T>("ALICE").into(), enclave_address.clone(), uri.clone()).unwrap();
 
-	}: _(RawOrigin::Root, alice.clone(), cluster_id)
+	}: _(RawOrigin::Root, alice.clone(), cluster_id, slot_id)
 	verify {
 		assert_eq!(EnclaveAccountOperator::<T>::get(enclave_address), Some(alice.clone()));
 		assert_eq!(EnclaveData::<T>::get(alice.clone()), Some(enclave));
 		assert_eq!(EnclaveClusterId::<T>::get(alice.clone()), Some(cluster_id));
-		assert_eq!(ClusterData::<T>::get(cluster_id).unwrap().enclaves, vec![alice.clone()]);
+		assert_eq!(ClusterData::<T>::get(cluster_id).unwrap(), cluster);
 		assert_eq!(EnclaveRegistrations::<T>::get(alice), None);
 	}
 
@@ -148,13 +152,14 @@ benchmarks! {
 		prepare_benchmarks::<T>();
 		let alice: T::AccountId = get_account::<T>("ALICE");
 		let cluster_id: ClusterId = 0;
+		let slot_id: SlotId = 0;
 		let enclave_address: T::AccountId= get_account::<T>("ALICE_ENCLAVE");
 		let uri: BoundedVec<u8, T::MaxUriLen> = BoundedVec::try_from(vec![1; T::MaxUriLen::get() as usize]).unwrap();
 		let enclave = Enclave::new(enclave_address.clone(), uri.clone());
 
-		TEE::<T>::create_cluster(RawOrigin::Root.into()).unwrap();
+		TEE::<T>::create_cluster(RawOrigin::Root.into(), ClusterType::Public).unwrap();
 		TEE::<T>::register_enclave(origin::<T>("ALICE").into(), enclave_address.clone(), uri.clone()).unwrap();
-		TEE::<T>::assign_enclave(RawOrigin::Root.into(), alice.clone(), cluster_id).unwrap();
+		TEE::<T>::assign_enclave(RawOrigin::Root.into(), alice.clone(), cluster_id, slot_id).unwrap();
 
 		let bob: T::AccountId = get_account::<T>("BOB");
 		let new_enclave_address: T::AccountId= get_account::<T>("BOB");
@@ -170,13 +175,14 @@ benchmarks! {
 		prepare_benchmarks::<T>();
 		let alice: T::AccountId = get_account::<T>("ALICE");
 		let cluster_id: ClusterId = 0;
+		let slot_id: SlotId = 0;
 		let enclave_address: T::AccountId= get_account::<T>("ALICE_ENCLAVE");
 		let uri: BoundedVec<u8, T::MaxUriLen> = BoundedVec::try_from(vec![1; T::MaxUriLen::get() as usize]).unwrap();
 		let enclave = Enclave::new(enclave_address.clone(), uri.clone());
 
-		TEE::<T>::create_cluster(RawOrigin::Root.into()).unwrap();
+		TEE::<T>::create_cluster(RawOrigin::Root.into(), ClusterType::Public).unwrap();
 		TEE::<T>::register_enclave(origin::<T>("ALICE").into(), enclave_address.clone(), uri.clone()).unwrap();
-		TEE::<T>::assign_enclave(RawOrigin::Root.into(), alice.clone(), cluster_id).unwrap();
+		TEE::<T>::assign_enclave(RawOrigin::Root.into(), alice.clone(), cluster_id, slot_id).unwrap();
 	}: _(RawOrigin::Root, alice.clone())
 	verify {
 		assert_eq!(EnclaveAccountOperator::<T>::get(enclave_address), None);
@@ -190,13 +196,14 @@ benchmarks! {
 		prepare_benchmarks::<T>();
 		let alice: T::AccountId = get_account::<T>("ALICE");
 		let cluster_id: ClusterId = 0;
+		let slot_id: SlotId = 0;
 		let enclave_address: T::AccountId= get_account::<T>("ALICE_ENCLAVE");
 		let uri: BoundedVec<u8, T::MaxUriLen> = BoundedVec::try_from(vec![1; T::MaxUriLen::get() as usize]).unwrap();
 		let enclave = Enclave::new(enclave_address.clone(), uri.clone());
 
-		TEE::<T>::create_cluster(RawOrigin::Root.into()).unwrap();
+		TEE::<T>::create_cluster(RawOrigin::Root.into(), ClusterType::Public).unwrap();
 		TEE::<T>::register_enclave(origin::<T>("ALICE").into(), enclave_address.clone(), uri.clone()).unwrap();
-		TEE::<T>::assign_enclave(RawOrigin::Root.into(), alice.clone(), cluster_id).unwrap();
+		TEE::<T>::assign_enclave(RawOrigin::Root.into(), alice.clone(), cluster_id, slot_id).unwrap();
 
 		let new_enclave_address: T::AccountId= get_account::<T>("BOB");
 		let new_uri: BoundedVec<u8, T::MaxUriLen> = BoundedVec::try_from(vec![1; T::MaxUriLen::get() as usize]).unwrap();
@@ -211,15 +218,15 @@ benchmarks! {
 
 	create_cluster {
 		let cluster_id: ClusterId = 0;
-		let cluster = Cluster::new(Default::default());
-	}: _(RawOrigin::Root)
+		let cluster = Cluster::new(Default::default(), ClusterType::Public);
+	}: _(RawOrigin::Root, ClusterType::Public)
 	verify {
 		assert_eq!(ClusterData::<T>::get(cluster_id), Some(cluster));
 	}
 
 	remove_cluster {
 		let cluster_id: ClusterId = 0;
-		TEE::<T>::create_cluster(RawOrigin::Root.into()).unwrap();
+		TEE::<T>::create_cluster(RawOrigin::Root.into(), ClusterType::Public).unwrap();
 	}: _(RawOrigin::Root, cluster_id)
 	verify {
 		assert_eq!(ClusterData::<T>::get(cluster_id), None);

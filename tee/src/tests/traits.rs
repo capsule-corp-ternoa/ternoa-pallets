@@ -36,11 +36,11 @@ fn ensure_enclave() {
 			let bob: mock::RuntimeOrigin = RawOrigin::Signed(BOB).into();
 			let cluster_id: ClusterId = 0;
 
-			assert_ok!(TEE::create_cluster(root()));
+			assert_ok!(TEE::create_cluster(root(), crate::ClusterType::Public));
 			assert_ok!(TEE::register_enclave(alice.clone(), ALICE_ENCLAVE, BoundedVec::default()));
 			assert_ok!(TEE::register_enclave(bob.clone(), BOB_ENCLAVE, BoundedVec::default()));
-			assert_ok!(TEE::assign_enclave(root(), ALICE, cluster_id));
-			assert_ok!(TEE::assign_enclave(root(), BOB, cluster_id));
+			assert_ok!(TEE::assign_enclave(root(), ALICE, cluster_id, 0));
+			assert_ok!(TEE::assign_enclave(root(), BOB, cluster_id, 1));
 
 			let res = TEE::ensure_enclave(BOB_ENCLAVE);
 			assert!(res.is_some());

@@ -63,7 +63,7 @@ pub mod v2 {
 							},
 						}
 					}
-					let new_cluster_data = Cluster::new(new_enclaves, true);
+					let new_cluster_data = Cluster::new(new_enclaves, ClusterType::Public);
 					read += 1;
 					write += 1;
 

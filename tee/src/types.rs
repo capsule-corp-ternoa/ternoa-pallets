@@ -45,6 +45,15 @@ where
 	}
 }
 
+/// Enumeration of Transmission protocols kind.
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen)]
+pub enum ClusterType {
+	Disabled,
+	Admin,
+	Public,
+	Private,
+}
+
 #[derive(
 	Encode, Decode, CloneNoBound, PartialEqNoBound, Eq, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen,
 )]
@@ -56,7 +65,7 @@ where
 	ClusterSize: Get<u32>,
 {
 	pub enclaves: BoundedVec<(AccountId, SlotId), ClusterSize>,
-	pub is_public: bool,
+	pub cluster_type: ClusterType,
 }
 
 impl<AccountId, ClusterSize> Cluster<AccountId, ClusterSize>
@@ -64,8 +73,11 @@ where
 	AccountId: Clone + PartialEq + Debug,
 	ClusterSize: Get<u32>,
 {
-	pub fn new(enclaves: BoundedVec<(AccountId, SlotId), ClusterSize>, is_public: bool) -> Self {
-		Self { enclaves, is_public }
+	pub fn new(
+		enclaves: BoundedVec<(AccountId, SlotId), ClusterSize>,
+		cluster_type: ClusterType,
+	) -> Self {
+		Self { enclaves, cluster_type }
 	}
 }
 
@@ -96,9 +108,18 @@ where
 		Self { operator, is_unlocking, unbonded_at }
 	}
 }
+// #[derive(Clone, Eq, PartialEq, Encode, Decode, Default, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 
 #[derive(
-	Encode, Decode, CloneNoBound, PartialEqNoBound, Eq, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen,
+	Encode,
+	Decode,
+	CloneNoBound,
+	PartialEqNoBound,
+	Eq,
+	RuntimeDebugNoBound,
+	TypeInfo,
+	MaxEncodedLen,
+	Default,
 )]
 #[scale_info(skip_type_params(ListSizeLimit))]
 #[codec(mel_bound(AccountId: MaxEncodedLen))]
@@ -114,7 +135,6 @@ where
 	pub submitted_by: AccountId,
 }
 
-impl<AccountId> MetricsServerReport<AccountId> where AccountId: Clone + PartialEq + Debug {}
 /// Report Parameters weightage
 #[derive(
 	PartialEqNoBound, CloneNoBound, Encode, Decode, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen,
@@ -136,5 +156,38 @@ impl Default for ReportParamsWeightage {
 			param_4_weightage: 0,
 			param_5_weightage: 0,
 		}
+	}
+}
+
+/// Report Parameters weightage
+#[derive(
+	PartialEqNoBound, CloneNoBound, Encode, Decode, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen,
+)]
+pub struct HighestParamsResponse {
+	pub param_1: u8,
+	pub param_2: u8,
+	pub param_3: u8,
+	pub param_4: u8,
+	pub param_5: u8,
+}
+
+#[derive(
+	Encode, Decode, CloneNoBound, PartialEqNoBound, Eq, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen,
+)]
+#[codec(mel_bound(AccountId: MaxEncodedLen))]
+pub struct MetricsServer<AccountId>
+where
+	AccountId: Clone + PartialEq + Debug,
+{
+	pub metrics_server_address: AccountId,
+	pub supported_cluster_type: ClusterType,
+}
+
+impl<AccountId> MetricsServer<AccountId>
+where
+	AccountId: Clone + PartialEq + Debug,
+{
+	pub fn new(metrics_server_address: AccountId, supported_cluster_type: ClusterType) -> Self {
+		Self { metrics_server_address, supported_cluster_type }
 	}
 }
