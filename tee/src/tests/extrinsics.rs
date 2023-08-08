@@ -813,6 +813,39 @@ mod create_cluster {
 	}
 }
 
+mod update_cluster {
+	use super::*;
+
+	#[test]
+	fn update_cluster() {
+		ExtBuilder::default().build().execute_with(|| {
+			ClusterData::<Test>::insert(0, Cluster::new(Default::default(), ClusterType::Private));
+
+			assert_ok!(TEE::update_cluster(root(), 0, ClusterType::Public));
+			let cluster = Cluster::new(Default::default(), ClusterType::Public);
+			assert_eq!(ClusterData::<Test>::get(0), Some(cluster));
+
+			let event = RuntimeEvent::TEE(TEEEvent::ClusterUpdated { cluster_id: 0, cluster_type: ClusterType::Public });
+			System::assert_last_event(event);
+		})
+	}
+
+	#[test]
+	fn bad_origin() {
+		ExtBuilder::default().build().execute_with(|| {
+			assert_noop!(TEE::update_cluster(origin(ALICE), 0, ClusterType::Public), BadOrigin);
+		})
+	}
+
+	#[test]
+	fn cluster_not_found() {
+		ExtBuilder::default().build().execute_with(|| {
+			assert_noop!(TEE::update_cluster(root(), 0, ClusterType::Public), Error::<Test>::ClusterNotFound);
+		})
+	}
+}
+
+
 mod remove_cluster {
 	use super::*;
 
@@ -860,3 +893,94 @@ mod remove_cluster {
 			})
 	}
 }
+
+// mod withdraw_unbonded {
+//     use super::*;
+
+//     #[test]
+//     fn successful_withdraw() {
+//         ExtBuilder::default().build().execute_with(|| {
+//             let alice: mock::RuntimeOrigin = origin(ALICE);
+//             let staking_amount = 20;
+
+//             StakingLedger::<Test>::insert(
+//                 ALICE,
+//                 StakingDetails {
+//                     unbonded_at: 0,
+//                     staking_amount,
+//                     is_unlocking: true,
+//                 },
+//             );
+
+//             run_to_block(10);
+
+//             assert_ok!(TEE::withdraw_unbonded(alice.clone()));
+
+//             assert_eq!(StakingLedger::<Test>::get(ALICE), None);
+//             assert_eq!(Balances::free_balance(ALICE), staking_amount);
+            
+//             let event = RuntimeEvent::TEE(TEEEvent::Withdrawn {
+//                 operator_address: ALICE,
+//                 amount: staking_amount,
+//             });
+//             System::assert_last_event(event);
+//         });
+//     }
+
+//     #[test]
+//     fn staking_not_found() {
+//         ExtBuilder::default().build().execute_with(|| {
+//             let alice: mock::RuntimeOrigin = origin(ALICE);
+
+//             assert_noop!(
+//                 TEE::withdraw_unbonded(alice.clone()),
+//                 Error::<Test>::StakingNotFound
+//             );
+//         });
+//     }
+
+//     #[test]
+//     fn unbonding_not_started() {
+//         ExtBuilder::default().build().execute_with(|| {
+//             let alice: mock::RuntimeOrigin = origin(ALICE);
+
+//             StakingLedger::<Test>::insert(
+//                 ALICE,
+//                 StakingDetails {
+//                     unbonded_at: 0,
+//                     staking_amount: StakingAmount::<Test>::get(),
+//                     is_unlocking: false,
+//                 },
+//             );
+
+//             assert_noop!(
+//                 TEE::withdraw_unbonded(alice.clone()),
+//                 Error::<Test>::UnbondingNotStarted
+//             );
+//         });
+//     }
+
+//     #[test]
+//     fn withdraw_prohibited() {
+//         ExtBuilder::default().build().execute_with(|| {
+//             let alice: mock::RuntimeOrigin = origin(ALICE);
+//             let staking_amount = StakingAmount::<Test>::get();
+
+//             StakingLedger::<Test>::insert(
+//                 ALICE,
+//                 StakingDetails {
+//                     unbonded_at: 0,
+//                     staking_amount,
+//                     is_unlocking: true,
+//                 },
+//             );
+
+//             run_to_block(5);
+
+//             assert_noop!(
+//                 TEE::withdraw_unbonded(alice.clone()),
+//                 Error::<Test>::WithdrawProhibited
+//             );
+//         });
+//     }
+// }

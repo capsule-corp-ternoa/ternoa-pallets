@@ -195,7 +195,7 @@ pub mod pallet {
 
 	/// Metrics Server accounts storage.
 	#[pallet::storage]
-	#[pallet::getter(fn nft_mint_fee)]
+	#[pallet::getter(fn metrics_servers)]
 	pub(super) type MetricsServers<T: Config> =
 		StorageValue<_, BoundedVec<MetricsServer<T::AccountId>, T::ListSizeLimit>, ValueQuery>;
 
@@ -368,6 +368,9 @@ pub mod pallet {
 		RewardsClaimed { era: EraIndex, operator_address: T::AccountId, amount: BalanceOf<T> },
 		/// Fetching active era during the last session in an era
 		FailedToGetActiveEra { session: SessionIndex },
+		/// Staking amount is set
+		StakingAmountIsSet { amount: BalanceOf<T> },
+
 	}
 
 	#[pallet::error]
@@ -418,6 +421,7 @@ pub mod pallet {
 		MetricsServerLimitReached,
 		/// Metrics server address not found
 		MetricsServerAddressNotFound,
+		MetricsServerUnsupportedClusterType,
 		EnclaveNotFoundForTheOperator,
 		FailedToGetActiveEra,
 		ReportAlreadySubmittedForEra,
@@ -812,8 +816,8 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		// Creates an empty Cluster
-		#[pallet::weight(T::TeeWeightInfo::create_cluster())]
+		// Updates the cluster type
+		#[pallet::weight(T::TeeWeightInfo::update_cluster())]
 		pub fn update_cluster(
 			origin: OriginFor<T>,
 			cluster_id: ClusterId,
@@ -849,7 +853,7 @@ pub mod pallet {
 		}
 
 		/// Withdraw the unbonded amount
-		#[pallet::weight(T::TeeWeightInfo::unregister_enclave())]
+		#[pallet::weight(T::TeeWeightInfo::withdraw_unbonded())]
 		pub fn withdraw_unbonded(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 			StakingLedger::<T>::try_mutate(&who, |maybe_staking| -> DispatchResult {
@@ -876,7 +880,7 @@ pub mod pallet {
 		}
 
 		/// Metrics server registration by Technical Committee.
-		#[pallet::weight(T::TeeWeightInfo::unregister_enclave())]
+		#[pallet::weight(T::TeeWeightInfo::register_metrics_server())]
 		pub fn register_metrics_server(
 			origin: OriginFor<T>,
 			metrics_server: MetricsServer<T::AccountId>,
@@ -897,7 +901,7 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		#[pallet::weight(T::TeeWeightInfo::unregister_enclave())]
+		#[pallet::weight(T::TeeWeightInfo::submit_metrics_server_report())]
 		pub fn submit_metrics_server_report(
 			origin: OriginFor<T>,
 			era_index: Option<EraIndex>,
@@ -906,11 +910,21 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			if !MetricsServers::<T>::get()
-				.iter()
-				.any(|server| server.metrics_server_address == who)
-			{
-				return Err(Error::<T>::MetricsServerAddressNotFound.into())
+			let mut found_server: Option<MetricsServer<T::AccountId>> = None;
+
+			for server in MetricsServers::<T>::get().iter() {
+				if server.metrics_server_address == who {
+					found_server = Some(server.clone());
+					break;
+				}
+			}
+
+			if let Some(server) = found_server {
+				if server.supported_cluster_type != ClusterType::Public {
+					return Err(Error::<T>::MetricsServerUnsupportedClusterType.into());
+				}
+			} else {
+				return Err(Error::<T>::MetricsServerAddressNotFound.into());
 			}
 
 			EnclaveData::<T>::get(&operator_address)
@@ -961,7 +975,7 @@ pub mod pallet {
 		}
 
 		/// Report parameters weightage modification which can be done by Technical Committee.
-		#[pallet::weight(T::TeeWeightInfo::unregister_enclave())]
+		#[pallet::weight(T::TeeWeightInfo::set_report_params_weightage())]
 		pub fn set_report_params_weightage(
 			origin: OriginFor<T>,
 			report_params_weightage: ReportParamsWeightage,
@@ -976,6 +990,22 @@ pub mod pallet {
 				param_3_weightage: report_params_weightage.param_3_weightage,
 				param_4_weightage: report_params_weightage.param_4_weightage,
 				param_5_weightage: report_params_weightage.param_5_weightage,
+			});
+			Ok(().into())
+		}
+
+		/// Set staking amount for operators by Technical Committee
+		#[pallet::weight(T::TeeWeightInfo::unregister_enclave())]
+		pub fn set_staking_amount(
+			origin: OriginFor<T>,
+			staking_amount: BalanceOf<T>,
+		) -> DispatchResultWithPostInfo {
+			ensure_root(origin)?;
+
+			StakingAmount::<T>::put(staking_amount);
+
+			Self::deposit_event(Event::StakingAmountIsSet {
+				amount: staking_amount,
 			});
 			Ok(().into())
 		}

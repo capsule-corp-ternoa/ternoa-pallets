@@ -27,7 +27,13 @@ pub trait WeightInfo {
 	fn remove_update() -> Weight;
 	fn force_update_enclave() -> Weight;
 	fn create_cluster() -> Weight;
+	fn update_cluster() -> Weight;
 	fn remove_cluster() -> Weight;
+	fn withdraw_unbonded() -> Weight;
+	fn register_metrics_server() -> Weight;
+	fn submit_metrics_server_report() -> Weight;
+	fn set_report_params_weightage() -> Weight;
+
 }
 
 impl WeightInfo for () {
@@ -58,10 +64,25 @@ impl WeightInfo for () {
 	fn create_cluster() -> Weight {
 		Weight::from_ref_time(10_000_000 as u64)
 	}
+	fn update_cluster() -> Weight {
+		Weight::from_ref_time(10_000_000 as u64)
+	}
 	fn remove_cluster() -> Weight {
 		Weight::from_ref_time(10_000_000 as u64)
 	}
 	fn remove_update() -> Weight {
+		Weight::from_ref_time(10_000_000 as u64)
+	}
+	fn withdraw_unbonded() -> Weight {
+		Weight::from_ref_time(10_000_000 as u64)
+	}
+	fn register_metrics_server() -> Weight {
+		Weight::from_ref_time(10_000_000 as u64)
+	}
+	fn submit_metrics_server_report() -> Weight {
+		Weight::from_ref_time(10_000_000 as u64)
+	}
+	fn set_report_params_weightage() -> Weight {
 		Weight::from_ref_time(10_000_000 as u64)
 	}
 }

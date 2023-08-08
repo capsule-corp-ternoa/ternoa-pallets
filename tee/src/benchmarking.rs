@@ -123,7 +123,6 @@ benchmarks! {
 		let enclave_address: T::AccountId= get_account::<T>("ALICE_ENCLAVE");
 		let uri: BoundedVec<u8, T::MaxUriLen> = BoundedVec::try_from(vec![1; T::MaxUriLen::get() as usize]).unwrap();
 		let enclave = Enclave::new(enclave_address.clone(), uri.clone());
-		let cluster = Cluster::new(Default::default(), ClusterType::Public);
 		TEE::<T>::create_cluster(RawOrigin::Root.into(), ClusterType::Public).unwrap();
 		TEE::<T>::register_enclave(origin::<T>("ALICE").into(), enclave_address.clone(), uri.clone()).unwrap();
 
@@ -132,7 +131,6 @@ benchmarks! {
 		assert_eq!(EnclaveAccountOperator::<T>::get(enclave_address), Some(alice.clone()));
 		assert_eq!(EnclaveData::<T>::get(alice.clone()), Some(enclave));
 		assert_eq!(EnclaveClusterId::<T>::get(alice.clone()), Some(cluster_id));
-		assert_eq!(ClusterData::<T>::get(cluster_id).unwrap(), cluster);
 		assert_eq!(EnclaveRegistrations::<T>::get(alice), None);
 	}
 
@@ -224,6 +222,16 @@ benchmarks! {
 		assert_eq!(ClusterData::<T>::get(cluster_id), Some(cluster));
 	}
 
+	update_cluster {
+		let cluster_id: ClusterId = 0;
+		let cluster_type: ClusterType = ClusterType::Private;
+		let cluster = Cluster::new(Default::default(), ClusterType::Private);
+		TEE::<T>::create_cluster(RawOrigin::Root.into(), ClusterType::Public).unwrap();
+	}: _(RawOrigin::Root, cluster_id, cluster_type)
+	verify {
+		assert_eq!(ClusterData::<T>::get(cluster_id), Some(cluster));
+	}
+
 	remove_cluster {
 		let cluster_id: ClusterId = 0;
 		TEE::<T>::create_cluster(RawOrigin::Root.into(), ClusterType::Public).unwrap();
@@ -232,6 +240,75 @@ benchmarks! {
 		assert_eq!(ClusterData::<T>::get(cluster_id), None);
 	}
 
+	withdraw_unbonded {
+		prepare_benchmarks::<T>();
+		let alice: T::AccountId = get_account::<T>("ALICE");
+		
+		let stake_details = TeeStakingLedger::new(alice.clone(), true, Default::default());
+		StakingLedger::<T>::insert(alice.clone(), stake_details);
+		frame_system::Pallet::<T>::set_block_number(200u32.into());
+
+	}: _(RawOrigin::Signed(alice.clone()))
+	verify {
+		assert_eq!(StakingLedger::<T>::get(alice), None);
+	}
+
+	register_metrics_server {
+		prepare_benchmarks::<T>();
+		let alice: T::AccountId = get_account::<T>("ALICE");
+	
+		let metrics_server: MetricsServer<T::AccountId> = MetricsServer::new(alice.clone(), ClusterType::Public);
+
+	}: _(RawOrigin::Root, metrics_server.clone())
+	verify {
+		assert_eq!(MetricsServers::<T>::get(), vec![metrics_server]);
+	}
+	
+	submit_metrics_server_report {
+		prepare_benchmarks::<T>();
+		let alice: T::AccountId = get_account::<T>("ALICE");
+		let bob: T::AccountId = get_account::<T>("BOB");
+
+		let cluster_id: ClusterId = 0;
+		let slot_id: SlotId = 0;
+		let enclave_address: T::AccountId= get_account::<T>("ALICE_ENCLAVE");
+		let uri: BoundedVec<u8, T::MaxUriLen> = BoundedVec::try_from(vec![1; T::MaxUriLen::get() as usize]).unwrap();
+		let enclave = Enclave::new(enclave_address.clone(), uri.clone());
+
+		TEE::<T>::create_cluster(RawOrigin::Root.into(), ClusterType::Public).unwrap();
+		TEE::<T>::register_enclave(origin::<T>("ALICE").into(), enclave_address.clone(), uri.clone()).unwrap();
+		TEE::<T>::assign_enclave(RawOrigin::Root.into(), alice.clone(), cluster_id, slot_id).unwrap();
+
+		let metrics_server: MetricsServer<T::AccountId> = MetricsServer::new(alice.clone(), ClusterType::Public);
+		TEE::<T>::register_metrics_server(RawOrigin::Root.into(), metrics_server).unwrap();
+
+		let metrics_server_report: MetricsServerReport<T::AccountId> = MetricsServerReport {
+			param_1: 20,
+			param_2: 20,
+			param_3: 20,
+			param_4: 20,
+			param_5: 20,
+			submitted_by: bob,
+		};
+
+
+	}: _(origin::<T>("ALICE"), Some(3), alice.clone(), metrics_server_report.clone())
+	verify {
+		assert_eq!(MetricsReports::<T>::get(3, alice).unwrap(), vec![metrics_server_report]);
+	}
+
+	set_report_params_weightage {
+		let report_params_weightage = ReportParamsWeightage {
+			param_1_weightage: 20,
+			param_2_weightage: 20,
+			param_3_weightage: 20,
+			param_4_weightage: 20,
+			param_5_weightage: 20,
+		};
+	}: _(RawOrigin::Root, report_params_weightage.clone())
+	verify {
+		assert_eq!(ReportParamsWeightages::<T>::get(), report_params_weightage);
+	}
 }
 
 impl_benchmark_test_suite!(TEE, crate::tests::mock::new_test_ext(), crate::tests::mock::Test);
