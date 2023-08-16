@@ -78,24 +78,6 @@ pub mod pallet {
 		/// Weight information for pallet.
 		type TeeWeightInfo: WeightInfo;
 
-		// /// Currency type.
-		// type Currency: LockableCurrency<
-		// 	Self::AccountId,
-		// 	Moment = Self::BlockNumber,
-		// 	Balance = Self::CurrencyBalance,
-		// >;
-
-		// /// Just the `Currency::Balance` type; we have this item to allow us to constrain it to
-		// /// `From<u64>`.
-		// type CurrencyBalance: sp_runtime::traits::AtLeast32BitUnsigned
-		// 	+ parity_scale_codec::FullCodec
-		// 	+ Copy
-		// 	+ MaybeSerializeDeserialize
-		// 	+ sp_std::fmt::Debug
-		// 	+ Default
-		// 	+ From<u64>
-		// 	+ TypeInfo
-		// 	+ MaxEncodedLen;
 		// Constants
 		/// Size of a cluster
 		#[pallet::constant]
@@ -247,34 +229,6 @@ pub mod pallet {
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-		// #[cfg(feature = "try-runtime")]
-		// fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
-		// 	<migrations::v2::MigrationV2<T> as OnRuntimeUpgrade>::pre_upgrade()
-		// }
-
-		// fn on_initialize(now: T::BlockNumber) -> Weight {
-		// 	let sessions_per_era = T::SessionsPerEra::get();
-		// 	let mut weight = Weight::zero();
-
-		// 	let current_session_index = <frame_system::Pallet<T>>::block_number() %
-		// sessions_per_era.into();
-
-		// 	if current_session_index as u32 == sessions_per_era as u32 - 1 {
-		// 		let active_era = Self::get_active_era();
-
-		// 		match active_era {
-		// 			Ok(active_era) => {
-		// 				let era_reports = MetricsReports::<T>::iter_prefix_values(active_era);
-		// 			},
-		// 			Err(err) => {
-		// 				let error_event =
-		// 					Event::FailedToGetActiveEra { current_session_index };
-		// 				Self::deposit_event(error_event);
-		// 			}
-		// 		}
-		// 	}
-		// 	weight
-		// }
 
 		fn on_runtime_upgrade() -> frame_support::weights::Weight {
 			let mut weight = Weight::zero();
@@ -289,10 +243,6 @@ pub mod pallet {
 			weight
 		}
 
-		// #[cfg(feature = "try-runtime")]
-		// fn post_upgrade(v: Vec<u8>) -> Result<(), &'static str> {
-		// 	<migrations::v2::MigrationV2<T> as OnRuntimeUpgrade>::post_upgrade(v)
-		// }
 	}
 
 	#[pallet::event]
