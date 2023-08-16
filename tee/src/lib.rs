@@ -370,7 +370,8 @@ pub mod pallet {
 		FailedToGetActiveEra { session: SessionIndex },
 		/// Staking amount is set
 		StakingAmountIsSet { amount: BalanceOf<T> },
-
+		/// Reward amount is set
+		RewardAmountIsSet { amount: BalanceOf<T> },
 	}
 
 	#[pallet::error]
@@ -915,16 +916,16 @@ pub mod pallet {
 			for server in MetricsServers::<T>::get().iter() {
 				if server.metrics_server_address == who {
 					found_server = Some(server.clone());
-					break;
+					break
 				}
 			}
 
 			if let Some(server) = found_server {
 				if server.supported_cluster_type != ClusterType::Public {
-					return Err(Error::<T>::MetricsServerUnsupportedClusterType.into());
+					return Err(Error::<T>::MetricsServerUnsupportedClusterType.into())
 				}
 			} else {
-				return Err(Error::<T>::MetricsServerAddressNotFound.into());
+				return Err(Error::<T>::MetricsServerAddressNotFound.into())
 			}
 
 			EnclaveData::<T>::get(&operator_address)
@@ -995,7 +996,7 @@ pub mod pallet {
 		}
 
 		/// Set staking amount for operators by Technical Committee
-		#[pallet::weight(T::TeeWeightInfo::unregister_enclave())]
+		#[pallet::weight(T::TeeWeightInfo::set_staking_amount())]
 		pub fn set_staking_amount(
 			origin: OriginFor<T>,
 			staking_amount: BalanceOf<T>,
@@ -1004,14 +1005,26 @@ pub mod pallet {
 
 			StakingAmount::<T>::put(staking_amount);
 
-			Self::deposit_event(Event::StakingAmountIsSet {
-				amount: staking_amount,
-			});
+			Self::deposit_event(Event::StakingAmountIsSet { amount: staking_amount });
+			Ok(().into())
+		}
+
+		/// Set reward pool amount for operators by Technical Committee
+		#[pallet::weight(T::TeeWeightInfo::set_daily_reward_pool())]
+		pub fn set_daily_reward_pool(
+			origin: OriginFor<T>,
+			reward_amount: BalanceOf<T>,
+		) -> DispatchResultWithPostInfo {
+			ensure_root(origin)?;
+
+			DailyRewardPool::<T>::put(reward_amount);
+
+			Self::deposit_event(Event::RewardAmountIsSet { amount: reward_amount });
 			Ok(().into())
 		}
 
 		/// Claim rewards by Era
-		#[pallet::weight(T::TeeWeightInfo::unregister_enclave())]
+		#[pallet::weight(T::TeeWeightInfo::claim_rewards())]
 		pub fn claim_rewards(origin: OriginFor<T>, era: EraIndex) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 

@@ -33,7 +33,9 @@ pub trait WeightInfo {
 	fn register_metrics_server() -> Weight;
 	fn submit_metrics_server_report() -> Weight;
 	fn set_report_params_weightage() -> Weight;
-
+	fn set_staking_amount() -> Weight;
+	fn set_daily_reward_pool() -> Weight;
+	fn claim_rewards() -> Weight;
 }
 
 impl WeightInfo for () {
@@ -83,6 +85,15 @@ impl WeightInfo for () {
 		Weight::from_ref_time(10_000_000 as u64)
 	}
 	fn set_report_params_weightage() -> Weight {
+		Weight::from_ref_time(10_000_000 as u64)
+	}
+	fn set_staking_amount() -> Weight {
+		Weight::from_ref_time(10_000_000 as u64)
+	}
+	fn set_daily_reward_pool() -> Weight {
+		Weight::from_ref_time(10_000_000 as u64)
+	}
+	fn claim_rewards() -> Weight {
 		Weight::from_ref_time(10_000_000 as u64)
 	}
 }

@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Ternoa.  If not, see <http://www.gnu.org/licenses/>.
 
+use frame_election_provider_support::{onchain, SequentialPhragmen};
 use frame_support::{
 	parameter_types,
 	traits::{ConstU32, ConstU64, Contains},
@@ -21,12 +22,11 @@ use frame_support::{
 };
 use sp_core::H256;
 use sp_runtime::{
-	curve::PiecewiseLinear, 
+	curve::PiecewiseLinear,
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
 	Perbill,
 };
-use frame_election_provider_support::{onchain, SequentialPhragmen};
 use sp_staking::{EraIndex, SessionIndex};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
@@ -133,7 +133,6 @@ sp_runtime::impl_opaque_keys! {
 	}
 }
 
-
 pub struct TestSessionHandler;
 impl pallet_session::SessionHandler<AccountId> for TestSessionHandler {
 	const KEY_TYPE_IDS: &'static [sp_runtime::KeyTypeId] = &[];
@@ -167,7 +166,6 @@ impl pallet_session::Config for Test {
 	type Keys = SessionKeys;
 	type WeightInfo = ();
 }
-
 
 pallet_staking_reward_curve::build! {
 	const REWARD_CURVE: PiecewiseLinear<'static> = curve!(
