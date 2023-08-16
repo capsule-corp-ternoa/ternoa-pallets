@@ -229,7 +229,6 @@ pub mod pallet {
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-
 		fn on_runtime_upgrade() -> frame_support::weights::Weight {
 			let mut weight = Weight::zero();
 
@@ -242,7 +241,6 @@ pub mod pallet {
 
 			weight
 		}
-
 	}
 
 	#[pallet::event]
@@ -433,6 +431,7 @@ pub mod pallet {
 
 			let default_staking_amount = StakingAmount::<T>::get();
 			match EnclaveData::<T>::get(&who) {
+				Some(_) => {
 					let now = frame_system::Pallet::<T>::block_number();
 					let stake_details = TeeStakingLedger::new(who.clone(), true, now);
 					StakingLedger::<T>::insert(who.clone(), stake_details);
