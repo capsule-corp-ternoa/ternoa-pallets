@@ -433,13 +433,6 @@ pub mod pallet {
 
 			let default_staking_amount = StakingAmount::<T>::get();
 			match EnclaveData::<T>::get(&who) {
-				Some(_) => {
-					EnclaveUnregistrations::<T>::try_mutate(|x| -> DispatchResult {
-						ensure!(!x.contains(&who), Error::<T>::UnregistrationAlreadyExists);
-						x.try_push(who.clone())
-							.map_err(|_| Error::<T>::UnregistrationLimitReached)?;
-						Ok(())
-					})?;
 					let now = frame_system::Pallet::<T>::block_number();
 					let stake_details = TeeStakingLedger::new(who.clone(), true, now);
 					StakingLedger::<T>::insert(who.clone(), stake_details);
@@ -1097,14 +1090,6 @@ impl<T: Config> traits::TEEExt for Pallet<T> {
 	) -> DispatchResult {
 		EnclaveAccountOperator::<T>::insert(enclave_address, operator_address.clone());
 		EnclaveClusterId::<T>::insert(operator_address, cluster_id.unwrap_or(0u32));
-		Ok(())
-	}
-
-	fn fill_unregistration_list(address: Self::AccountId, number: u8) -> DispatchResult {
-		EnclaveUnregistrations::<T>::try_mutate(|x| -> DispatchResult {
-			*x = BoundedVec::try_from(vec![address.clone(); number as usize]).unwrap();
-			Ok(())
-		})?;
 		Ok(())
 	}
 }

@@ -17,7 +17,7 @@
 use super::{mock, mock::*};
 use crate::{
 	Cluster, ClusterData, ClusterType, Enclave, EnclaveAccountOperator, EnclaveClusterId,
-	EnclaveData, EnclaveRegistrations, EnclaveUnregistrations, EnclaveUpdates, Error,
+	EnclaveData, EnclaveRegistrations, EnclaveUpdates, Error,
 	Event as TEEEvent, TeeStakingLedger,
 };
 use frame_support::{assert_noop, assert_ok, error::BadOrigin, BoundedVec};
@@ -164,27 +164,6 @@ mod unregister_enclave {
 			})
 	}
 
-	#[test]
-	fn unregistration_limit_reached() {
-		ExtBuilder::default()
-			.tokens(vec![(ALICE, 1000), (CHARLIE, 100)])
-			.build()
-			.execute_with(|| {
-				let alice: mock::RuntimeOrigin = origin(ALICE);
-				let api_uri: BoundedVec<u8, MaxUriLen> = BoundedVec::default();
-
-				TEE::fill_unregistration_list(CHARLIE, 10).unwrap();
-
-				assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, api_uri.clone()));
-				assert_ok!(TEE::create_cluster(root(), ClusterType::Public));
-				assert_ok!(TEE::assign_enclave(root(), ALICE, 0, 0));
-
-				assert_noop!(
-					TEE::unregister_enclave(alice.clone()),
-					Error::<Test>::UnregistrationLimitReached
-				);
-			})
-	}
 
 	#[test]
 	fn unregister_enclave_assigned() {
@@ -214,27 +193,6 @@ mod unregister_enclave {
 				let err = TEE::unregister_enclave(alice);
 
 				assert_noop!(err, Error::<Test>::RegistrationNotFound);
-			})
-	}
-
-	#[test]
-	fn unregistration_already_exists() {
-		ExtBuilder::default()
-			.tokens(vec![(ALICE, 1000), (CHARLIE, 100)])
-			.build()
-			.execute_with(|| {
-				let alice: mock::RuntimeOrigin = origin(ALICE);
-				let api_uri: BoundedVec<u8, MaxUriLen> = BoundedVec::default();
-
-				assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, api_uri.clone()));
-				assert_ok!(TEE::create_cluster(root(), ClusterType::Public));
-				assert_ok!(TEE::assign_enclave(root(), ALICE, 0, 0));
-
-				assert_ok!(TEE::unregister_enclave(alice.clone()));
-				assert_noop!(
-					TEE::unregister_enclave(alice.clone()),
-					Error::<Test>::UnregistrationAlreadyExists
-				);
 			})
 	}
 }
@@ -365,6 +323,7 @@ mod cancel_update {
 				assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, BoundedVec::default()));
 				assert_ok!(TEE::assign_enclave(root(), ALICE, 0, 0));
 				assert_ok!(TEE::update_enclave(alice.clone(), CHARLIE, BoundedVec::default()));
+
 				assert_ok!(TEE::cancel_update(alice.clone()));
 
 				assert!(EnclaveUpdates::<Test>::get(ALICE).is_none());
