@@ -106,6 +106,10 @@ pub mod pallet {
 		/// Default staking amount for TEE.
 		#[pallet::constant]
 		type InitalDailyRewardPool: Get<BalanceOf<Self>>;
+
+		/// Number of eras to keep in history for the metrics report.
+		#[pallet::constant]
+		type TeeHistoryDepth: Get<u32>;
 	}
 
 	/// Mapping of operator addresses who want to be registered as enclaves
@@ -956,7 +960,7 @@ pub mod pallet {
 			let current_active_era = Staking::<T>::active_era()
 				.map(|e| e.index)
 				.ok_or(Error::<T>::FailedToGetActiveEra)?;
-			ensure!(era < current_active_era, Error::<T>::InvalidEraToClaimRewards);
+			ensure!(era < current_active_era.saturating_sub(2) && era > current_active_era.saturating_sub(T::TeeHistoryDepth::get()), Error::<T>::InvalidEraToClaimRewards);
 
 			EnclaveData::<T>::get(&who).ok_or(Error::<T>::EnclaveNotFoundForTheOperator)?;
 
