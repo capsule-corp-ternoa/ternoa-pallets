@@ -230,7 +230,7 @@ parameter_types! {
 	pub const InitialStakingAmount: Balance = 20;
 	pub const InitalDailyRewardPool: Balance = 2000;
 	pub const TeePalletId: PalletId = PalletId(*b"tern/tee");
-
+	pub const TeeHistoryDepth: u32 = 50;
 }
 
 impl Config for Test {
@@ -245,6 +245,7 @@ impl Config for Test {
 	type InitialStakingAmount = InitialStakingAmount;
 	type InitalDailyRewardPool = InitalDailyRewardPool;
 	type PalletId = TeePalletId;
+	type TeeHistoryDepth = TeeHistoryDepth;
 }
 
 // Do not use the `0` account id since this would be the default value

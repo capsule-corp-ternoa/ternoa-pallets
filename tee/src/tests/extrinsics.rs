@@ -549,11 +549,11 @@ mod remove_update {
 	}
 }
 
-mod remove_enclave {
+mod force_remove_enclave {
 	use super::*;
 
 	#[test]
-	fn remove_enclave() {
+	fn force_remove_enclave() {
 		ExtBuilder::default()
 			.tokens(vec![(ALICE, 1000), (CHARLIE, 100)])
 			.build()
@@ -576,7 +576,7 @@ mod remove_enclave {
 				assert!(EnclaveUpdates::<Test>::get(ALICE).is_some());
 				assert!(EnclaveData::<Test>::get(ALICE).is_some());
 
-				assert_ok!(TEE::remove_enclave(root(), ALICE));
+				assert_ok!(TEE::force_remove_enclave(root(), ALICE));
 
 				assert!(EnclaveData::<Test>::get(ALICE).is_none());
 				assert!(EnclaveAccountOperator::<Test>::get(CHARLIE).is_none());
@@ -591,7 +591,7 @@ mod remove_enclave {
 	#[test]
 	fn bad_origin() {
 		ExtBuilder::default().tokens(vec![(ALICE, 1000)]).build().execute_with(|| {
-			assert_noop!(TEE::remove_enclave(origin(ALICE), ALICE), BadOrigin);
+			assert_noop!(TEE::force_remove_enclave(origin(ALICE), ALICE), BadOrigin);
 		})
 	}
 
@@ -608,8 +608,11 @@ mod remove_enclave {
 				assert_ok!(TEE::create_cluster(root(), ClusterType::Public));
 				assert_ok!(TEE::assign_enclave(root(), ALICE, 0, 0));
 
-				assert_ok!(TEE::remove_enclave(root(), ALICE));
-				assert_noop!(TEE::remove_enclave(root(), ALICE), Error::<Test>::EnclaveNotFound);
+				assert_ok!(TEE::force_remove_enclave(root(), ALICE));
+				assert_noop!(
+					TEE::force_remove_enclave(root(), ALICE),
+					Error::<Test>::EnclaveNotFound
+				);
 			})
 	}
 
@@ -628,7 +631,10 @@ mod remove_enclave {
 
 				EnclaveClusterId::<Test>::remove(ALICE);
 
-				assert_noop!(TEE::remove_enclave(root(), ALICE), Error::<Test>::ClusterIdNotFound);
+				assert_noop!(
+					TEE::force_remove_enclave(root(), ALICE),
+					Error::<Test>::ClusterIdNotFound
+				);
 			})
 	}
 }

@@ -171,7 +171,7 @@ benchmarks! {
 		assert_eq!(EnclaveUpdates::<T>::get(alice), None);
 	}
 
-	remove_enclave {
+	force_remove_enclave {
 		prepare_benchmarks::<T>();
 		let alice: T::AccountId = get_account::<T>("ALICE");
 		let cluster_id: ClusterId = 0;
@@ -277,6 +277,10 @@ benchmarks! {
 		let uri: BoundedVec<u8, T::MaxUriLen> = BoundedVec::try_from(vec![1; T::MaxUriLen::get() as usize]).unwrap();
 		let enclave = Enclave::new(enclave_address.clone(), uri.clone());
 
+		let raw = (4 as sp_staking::EraIndex, Some(10u64)).encode();
+		let info = pallet_staking::ActiveEraInfo::decode(&mut &raw[..]).unwrap();
+		pallet_staking::ActiveEra::<T>::put(&info);
+
 		TEE::<T>::create_cluster(RawOrigin::Root.into(), ClusterType::Public).unwrap();
 		TEE::<T>::register_enclave(origin::<T>("ALICE").into(), enclave_address.clone(), uri.clone()).unwrap();
 		TEE::<T>::assign_enclave(RawOrigin::Root.into(), alice.clone(), cluster_id, slot_id).unwrap();
@@ -294,7 +298,7 @@ benchmarks! {
 		};
 
 
-	}: _(origin::<T>("ALICE"), Some(3), alice.clone(), metrics_server_report.clone())
+	}: _(origin::<T>("ALICE"), alice.clone(), metrics_server_report.clone())
 	verify {
 		assert_eq!(MetricsReports::<T>::get(3, alice).unwrap(), vec![metrics_server_report]);
 	}
@@ -328,7 +332,7 @@ benchmarks! {
 
 	claim_rewards {
 		prepare_benchmarks::<T>();
-		let raw = (4 as sp_staking::EraIndex, Some(10u64)).encode();
+		let raw = (10 as sp_staking::EraIndex, Some(10u64)).encode();
 		let info = pallet_staking::ActiveEraInfo::decode(&mut &raw[..]).unwrap();
 		pallet_staking::ActiveEra::<T>::put(&info);
 
@@ -365,7 +369,7 @@ benchmarks! {
 			param_5: 20,
 			submitted_by: alice.clone(),
 		};
-		TEE::<T>::submit_metrics_server_report(origin::<T>("ALICE").into(), Some(3), alice.clone(), metrics_server_report).unwrap();
+		TEE::<T>::submit_metrics_server_report(origin::<T>("ALICE").into(), alice.clone(), metrics_server_report).unwrap();
 
 	}: _(origin::<T>("ALICE"), 2)
 }
