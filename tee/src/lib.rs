@@ -390,6 +390,8 @@ pub mod pallet {
 		InvalidEraToClaimRewards,
 		/// Rewards already claimed for the era
 		RewardsAlreadyClaimedForEra,
+		/// Insuffience Balance to Bond
+		InsufficientBalanceToBond,
 	}
 
 	#[pallet::call]
@@ -416,6 +418,11 @@ pub mod pallet {
 			);
 
 			let default_staking_amount = StakingAmount::<T>::get();
+
+			if T::Currency::free_balance(&who) < default_staking_amount {
+				return Err(Error::<T>::InsufficientBalanceToBond.into())
+			}
+
 			let stake_details = TeeStakingLedger::new(who.clone(), false, Default::default());
 			StakingLedger::<T>::insert(who.clone(), stake_details);
 			T::Currency::set_lock(
@@ -798,13 +805,14 @@ pub mod pallet {
 		pub fn approve_update_enclave(
 			origin: OriginFor<T>,
 			operator_address: T::AccountId,
-			new_enclave_address: T::AccountId,
-			new_api_uri: BoundedVec<u8, T::MaxUriLen>,
 		) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
 
 			EnclaveUpdates::<T>::try_mutate(&operator_address, |maybe_update| -> DispatchResult {
-				let _update = maybe_update.as_mut().ok_or(Error::<T>::UpdateRequestNotFound)?;
+				let enclave_update =
+					maybe_update.as_mut().ok_or(Error::<T>::UpdateRequestNotFound)?;
+				let new_enclave_address = enclave_update.enclave_address.clone();
+				let new_api_uri = enclave_update.api_uri.clone();
 				ensure!(!new_api_uri.is_empty(), Error::<T>::ApiUriIsEmpty);
 				ensure!(
 					operator_address != new_enclave_address,
@@ -835,14 +843,15 @@ pub mod pallet {
 
 				*maybe_update = None;
 
+				Self::deposit_event(Event::EnclaveUpdated {
+					operator_address: operator_address.clone(),
+					new_enclave_address,
+					new_api_uri,
+				});
+
 				Ok(())
 			})?;
 
-			Self::deposit_event(Event::EnclaveUpdated {
-				operator_address,
-				new_enclave_address,
-				new_api_uri,
-			});
 			Ok(().into())
 		}
 
@@ -1037,15 +1046,15 @@ pub mod pallet {
 				}
 
 				MetricsReports::<T>::insert(&era_index, &operator_address, existing_reports);
+			} else {
+				let mut reports =
+					BoundedVec::<MetricsServerReport<T::AccountId>, T::ListSizeLimit>::default();
+				reports
+					.try_push(metrics_server_report.clone())
+					.map_err(|_| Error::<T>::MetricsReportsLimitReached)?;
+
+				MetricsReports::<T>::insert(&era_index, &operator_address, reports);
 			}
-
-			let mut reports =
-				BoundedVec::<MetricsServerReport<T::AccountId>, T::ListSizeLimit>::default();
-			reports
-				.try_push(metrics_server_report.clone())
-				.map_err(|_| Error::<T>::MetricsReportsLimitReached)?;
-
-			MetricsReports::<T>::insert(&era_index, &operator_address, reports);
 
 			// // Emit an event for the successful submission
 			Self::deposit_event(Event::MetricsServerReportSubmitted {
