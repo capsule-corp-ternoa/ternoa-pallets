@@ -40,7 +40,7 @@ use sp_std::vec;
 
 use primitives::tee::{ClusterId, SlotId};
 use sp_runtime::{
-	traits::{AccountIdConversion, SaturatedConversion},
+	traits::{AccountIdConversion, CheckedSub, SaturatedConversion},
 	Perbill, Percent,
 };
 use ternoa_common::traits;
@@ -419,9 +419,18 @@ pub mod pallet {
 
 			let default_staking_amount = StakingAmount::<T>::get();
 
-			if T::Currency::free_balance(&who) < default_staking_amount {
-				return Err(Error::<T>::InsufficientBalanceToBond.into())
-			}
+			// Ensure parent bounty has enough balance after adding child-bounty.
+			let operator_balance = T::Currency::free_balance(&who);
+			let new_operator_balance = operator_balance
+				.checked_sub(&default_staking_amount)
+				.ok_or(Error::<T>::InsufficientBalanceToBond)?;
+
+			T::Currency::ensure_can_withdraw(
+				&who,
+				default_staking_amount.clone(),
+				WithdrawReasons::all(),
+				new_operator_balance,
+			)?;
 
 			let stake_details = TeeStakingLedger::new(who.clone(), false, Default::default());
 			StakingLedger::<T>::insert(who.clone(), stake_details);
@@ -1136,10 +1145,10 @@ pub mod pallet {
 			EnclaveData::<T>::get(&who).ok_or(Error::<T>::EnclaveNotFoundForTheOperator)?;
 
 			let total_operators = EnclaveData::<T>::iter_keys().count();
-			let share_percentage = Perbill::from_rational(total_operators as u32, 100);
+			let share_fraction = Perbill::from_rational(1, total_operators as u32);
 			let reward_pool = Self::daily_reward_pool();
 
-			let reward_per_operator: BalanceOf<T> = share_percentage * reward_pool;
+			let reward_per_operator: BalanceOf<T> = share_fraction * reward_pool;
 
 			let submitted_metrics_report = MetricsReports::<T>::get(&era, &who);
 
