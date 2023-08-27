@@ -49,7 +49,7 @@ pub use weights::WeightInfo;
 const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
 const TEE_STAKING_ID: LockIdentifier = *b"teestake";
 use pallet_staking::Pallet as Staking;
-use sp_staking::{EraIndex, SessionIndex};
+use sp_staking::EraIndex;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -251,6 +251,35 @@ pub mod pallet {
 
 			weight
 		}
+
+		fn on_initialize(now: T::BlockNumber) -> frame_support::weights::Weight {
+			let mut read = 0u64;
+			let write = 0u64;
+
+			if Self::is_last_session_of_era(now) {
+				read += 1;
+				let current_active_era: Option<EraIndex> = match Staking::<T>::active_era() {
+					Some(era) => Some(era.index),
+					None => {
+						let error_event = Event::FailedToGetActiveEra { block_number: now };
+						Self::deposit_event(error_event);
+						None
+					},
+				};
+
+				read += 1;
+				if let Some(current_active_era) = current_active_era {
+					if let Some(old_era) =
+						current_active_era.checked_sub(T::HistoryDepth::get() + 1)
+					{
+						Self::clear_old_era(old_era);
+						read += 1;
+					}
+				}
+			}
+
+			T::DbWeight::get().reads_writes(read, write)
+		}
 	}
 
 	#[pallet::event]
@@ -319,7 +348,7 @@ pub mod pallet {
 		/// Rewards claimed by operator
 		RewardsClaimed { era: EraIndex, operator_address: T::AccountId, amount: BalanceOf<T> },
 		/// Fetching active era during the last session in an era
-		FailedToGetActiveEra { session: SessionIndex },
+		FailedToGetActiveEra { block_number: T::BlockNumber },
 		/// Staking amount is set
 		StakingAmountIsSet { amount: BalanceOf<T> },
 		/// Reward amount is set
@@ -1247,6 +1276,23 @@ impl<T: Config> Pallet<T> {
 				.saturating_div(100);
 
 		weighted_sum
+	}
+
+	fn is_last_session_of_era(current_block_number: T::BlockNumber) -> bool {
+		let current_block_number = current_block_number.saturated_into::<u64>();
+		let sessions_per_era = T::SessionsPerEra::get().saturated_into::<u64>();
+
+		let current_session = current_block_number % sessions_per_era;
+
+		return current_session == sessions_per_era - 1
+	}
+
+	fn clear_old_era(old_era: EraIndex) {
+		#[allow(deprecated)]
+		ClaimedRewards::<T>::remove_prefix(old_era, None);
+
+		#[allow(deprecated)]
+		MetricsReports::<T>::remove_prefix(old_era, None);
 	}
 }
 
