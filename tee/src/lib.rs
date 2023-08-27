@@ -256,7 +256,7 @@ pub mod pallet {
 			let mut read = 0u64;
 			let write = 0u64;
 
-			if Self::is_last_session_of_era(now) {
+			// if Self::is_last_session_of_era(now) {
 				read += 1;
 				let current_active_era: Option<EraIndex> = match Staking::<T>::active_era() {
 					Some(era) => Some(era.index),
@@ -276,7 +276,7 @@ pub mod pallet {
 						read += 1;
 					}
 				}
-			}
+			// }
 
 			T::DbWeight::get().reads_writes(read, write)
 		}
