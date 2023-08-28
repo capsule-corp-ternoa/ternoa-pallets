@@ -1161,7 +1161,6 @@ pub mod pallet {
 			ensure_root(origin)?;
 
 			Self::clear_old_era(era);
-			Self::deposit_event(Event::RewardAmountIsSet { amount: reward_amount });
 			Ok(().into())
 		}
 
