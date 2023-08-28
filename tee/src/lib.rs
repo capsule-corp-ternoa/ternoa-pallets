@@ -252,7 +252,33 @@ pub mod pallet {
 			weight
 		}
 
-		
+		fn on_initialize(now: T::BlockNumber) -> frame_support::weights::Weight {
+			let mut read = 0u64;
+			let write = 0u64;
+
+			// if Self::is_last_session_of_era(now) {
+				read += 1;
+				let current_active_era: Option<EraIndex> = match Staking::<T>::active_era() {
+					Some(era) => Some(era.index),
+					None => {
+						let error_event = Event::FailedToGetActiveEra { block_number: now };
+						Self::deposit_event(error_event);
+						None
+					},
+				};
+
+				read += 1;
+				if let Some(current_active_era) = current_active_era {
+					let error_event = Event::FetchedEra { current_active_era };
+						Self::deposit_event(error_event);
+
+						let old_era = current_active_era.saturating_sub(T::HistoryDepth::get() + 1);
+						Self::clear_old_era(old_era);
+				}
+			// }
+
+			T::DbWeight::get().reads_writes(read, write)
+		}
 	}
 
 	#[pallet::event]
