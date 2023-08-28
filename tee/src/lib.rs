@@ -271,17 +271,21 @@ pub mod pallet {
 				if let Some(current_active_era) = current_active_era {
 					let error_event = Event::FetchedEra { current_active_era };
 						Self::deposit_event(error_event);
-					if let Some(old_era) =
-						current_active_era.checked_sub(T::HistoryDepth::get() + 1)
-					{
-						let error_event = Event::FetchedOldEra { old_era };
+						match current_active_era.checked_sub(T::HistoryDepth::get() + 1) {
+							Some(old_era) => {
+								let error_event = Event::FetchedOldEra { old_era };
+								Self::deposit_event(error_event);
+						
+								Self::clear_old_era(old_era);
+								let error_event = Event::ClearedOldEra { old_era };
+								Self::deposit_event(error_event);
+								read += 1;
+							},
+							None => {
+								let error_event = Event::FailedToGetActiveEra { block_number: now };
 						Self::deposit_event(error_event);
-
-						Self::clear_old_era(old_era);
-						let error_event = Event::ClearedOldEra { old_era };
-						Self::deposit_event(error_event);
-						read += 1;
-					}
+							},
+						}
 				}
 			// }
 
