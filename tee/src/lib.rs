@@ -1152,6 +1152,19 @@ pub mod pallet {
 			Ok(().into())
 		}
 
+		/// Set reward pool amount for operators by Technical Committee
+		#[pallet::weight(T::TeeWeightInfo::set_daily_reward_pool())]
+		pub fn clear_era(
+			origin: OriginFor<T>,
+			era: EraIndex,
+		) -> DispatchResultWithPostInfo {
+			ensure_root(origin)?;
+
+			Self::clear_old_era(era);
+			Self::deposit_event(Event::RewardAmountIsSet { amount: reward_amount });
+			Ok(().into())
+		}
+
 		/// Claim rewards by Era
 		#[pallet::weight(T::TeeWeightInfo::claim_rewards())]
 		pub fn claim_rewards(origin: OriginFor<T>, era: EraIndex) -> DispatchResultWithPostInfo {
