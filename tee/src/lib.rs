@@ -269,10 +269,17 @@ pub mod pallet {
 
 				read += 1;
 				if let Some(current_active_era) = current_active_era {
+					let error_event = Event::FetchedEra { current_active_era };
+						Self::deposit_event(error_event);
 					if let Some(old_era) =
 						current_active_era.checked_sub(T::HistoryDepth::get() + 1)
 					{
+						let error_event = Event::FetchedOldEra { old_era };
+						Self::deposit_event(error_event);
+
 						Self::clear_old_era(old_era);
+						let error_event = Event::ClearedOldEra { old_era };
+						Self::deposit_event(error_event);
 						read += 1;
 					}
 				}
@@ -353,6 +360,10 @@ pub mod pallet {
 		StakingAmountIsSet { amount: BalanceOf<T> },
 		/// Reward amount is set
 		RewardAmountIsSet { amount: BalanceOf<T> },
+		/// Fetching active era during the last session in an era
+		FetchedEra { current_active_era: EraIndex },
+		FetchedOldEra { old_era: EraIndex },
+		ClearedOldEra { old_era: EraIndex },
 	}
 
 	#[pallet::error]
