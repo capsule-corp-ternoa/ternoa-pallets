@@ -256,28 +256,29 @@ pub mod pallet {
 			let mut read = 0u64;
 			let write = 0u64;
 
-				let current_active_era: Option<EraIndex> = match Staking::<T>::active_era() {
-					Some(era) => Some(era.index),
-					None => {
-						let error_event = Event::FailedToGetActiveEra { block_number: now };
-						Self::deposit_event(error_event);
-						None
-					},
-				};
+			let current_active_era: Option<EraIndex> = match Staking::<T>::active_era() {
+				Some(era) => {
+					read += 1;
+					Some(era.index)
+				},
+				None => {
+					let error_event = Event::FailedToGetActiveEra { block_number: now };
+					Self::deposit_event(error_event);
+					None
+				},
+			};
 
-				read += 1;
-				if let Some(current_active_era) = current_active_era {
-					let error_event = Event::FetchedEra { current_active_era };
-						Self::deposit_event(error_event);
-					// Clean old era information.
-					if let Some(old_era) = current_active_era.checked_sub(T::TeeHistoryDepth::get()) {
-						Self::clear_old_era(old_era);
+			if let Some(current_active_era) = current_active_era {
+				let fetch_event = Event::FetchedEra { current_active_era };
+				Self::deposit_event(fetch_event);
+				// Clean old era information.
+				if let Some(old_era) = current_active_era.checked_sub(T::TeeHistoryDepth::get()) {
+					Self::clear_old_era(old_era);
 
-						let error_event = Event::ClearedOldEra { old_era };
-						Self::deposit_event(error_event);
-}
-
+					let success_event = Event::ClearedOldEra { old_era };
+					Self::deposit_event(success_event);
 				}
+			}
 			T::DbWeight::get().reads_writes(read, write)
 		}
 	}
@@ -292,17 +293,30 @@ pub mod pallet {
 			api_uri: BoundedVec<u8, T::MaxUriLen>,
 		},
 		/// An enclave got unregistered
-		RegistrationRemoved { operator_address: T::AccountId },
+		RegistrationRemoved {
+			operator_address: T::AccountId,
+		},
 		/// An enclave update request was cancelled by operator
-		UpdateRequestCancelled { operator_address: T::AccountId },
+		UpdateRequestCancelled {
+			operator_address: T::AccountId,
+		},
 		/// An enclave update request was removed
-		UpdateRequestRemoved { operator_address: T::AccountId },
+		UpdateRequestRemoved {
+			operator_address: T::AccountId,
+		},
 		/// An enclave moved for unregistration to a queue
-		MovedForUnregistration { operator_address: T::AccountId },
+		MovedForUnregistration {
+			operator_address: T::AccountId,
+		},
 		/// An enclave got assigned to a cluster
-		EnclaveAssigned { operator_address: T::AccountId, cluster_id: ClusterId },
+		EnclaveAssigned {
+			operator_address: T::AccountId,
+			cluster_id: ClusterId,
+		},
 		/// An enclave got removed
-		EnclaveRemoved { operator_address: T::AccountId },
+		EnclaveRemoved {
+			operator_address: T::AccountId,
+		},
 		/// An enclave was added to the update list
 		MovedForUpdate {
 			operator_address: T::AccountId,
@@ -316,21 +330,51 @@ pub mod pallet {
 			new_api_uri: BoundedVec<u8, T::MaxUriLen>,
 		},
 		/// New cluster got added
-		ClusterAdded { cluster_id: ClusterId, cluster_type: ClusterType },
+		ClusterAdded {
+			cluster_id: ClusterId,
+			cluster_type: ClusterType,
+		},
 		///Cluster got update
-		ClusterUpdated { cluster_id: ClusterId, cluster_type: ClusterType },
+		ClusterUpdated {
+			cluster_id: ClusterId,
+			cluster_type: ClusterType,
+		},
 		/// Cluster got removed
-		ClusterRemoved { cluster_id: ClusterId },
+		ClusterRemoved {
+			cluster_id: ClusterId,
+		},
 		/// Staking amount changed.
-		StakingAmountSet { staking_amount: BalanceOf<T> },
+		StakingAmountSet {
+			staking_amount: BalanceOf<T>,
+		},
 		/// Bonded while enclave registration
-		Bonded { operator_address: T::AccountId, amount: BalanceOf<T> },
+		Bonded {
+			operator_address: T::AccountId,
+			amount: BalanceOf<T>,
+		},
 		/// An account has unbonded this amount.
-		Unbonded { operator_address: T::AccountId, amount: BalanceOf<T> },
+		Unbonded {
+			operator_address: T::AccountId,
+			amount: BalanceOf<T>,
+		},
 		/// Withdrawn the bonded amount
-		Withdrawn { operator_address: T::AccountId, amount: BalanceOf<T> },
+		Withdrawn {
+			operator_address: T::AccountId,
+			amount: BalanceOf<T>,
+		},
 		/// New metrics server got added
-		MetricsServerAdded { metrics_server: MetricsServer<T::AccountId> },
+		MetricsServerAdded {
+			metrics_server: MetricsServer<T::AccountId>,
+		},
+		/// Updated metrics server cluster type
+		MetricsServerTypeUpdated {
+			metrics_server_address: T::AccountId,
+			new_supported_cluster_type: ClusterType,
+		},
+		/// Removed a metrics server
+		MetricsServerRemoved {
+			metrics_server_address: T::AccountId,
+		},
 		/// Metrics server report submitted
 		MetricsServerReportSubmitted {
 			era: EraIndex,
@@ -346,18 +390,36 @@ pub mod pallet {
 			param_5_weightage: u8,
 		},
 		/// Rewards claimed by operator
-		RewardsClaimed { era: EraIndex, operator_address: T::AccountId, amount: BalanceOf<T> },
+		RewardsClaimed {
+			era: EraIndex,
+			operator_address: T::AccountId,
+			amount: BalanceOf<T>,
+		},
 		/// Fetching active era during the last session in an era
-		FailedToGetActiveEra { block_number: T::BlockNumber },
+		FailedToGetActiveEra {
+			block_number: T::BlockNumber,
+		},
 		/// Staking amount is set
-		StakingAmountIsSet { amount: BalanceOf<T> },
+		StakingAmountIsSet {
+			amount: BalanceOf<T>,
+		},
 		/// Reward amount is set
-		RewardAmountIsSet { amount: BalanceOf<T> },
+		RewardAmountIsSet {
+			amount: BalanceOf<T>,
+		},
 		/// Fetching active era during the last session in an era
-		FetchedEra { current_active_era: EraIndex },
-		FetchedOldEra { old_era: EraIndex },
-		ClearedOldEra { old_era: EraIndex },
-		HistoryDepth { history_depth: u32 },
+		FetchedEra {
+			current_active_era: EraIndex,
+		},
+		FetchedOldEra {
+			old_era: EraIndex,
+		},
+		ClearedOldEra {
+			old_era: EraIndex,
+		},
+		HistoryDepth {
+			history_depth: u32,
+		},
 	}
 
 	#[pallet::error]
@@ -406,6 +468,8 @@ pub mod pallet {
 		WithdrawProhibited,
 		/// Metrics server already registered
 		MetricsServerAlreadyExists,
+		/// Metrics server not found
+		MetricsServerNotFound,
 		/// Metrics server limit reached
 		MetricsServerLimitReached,
 		/// Metrics server address not found
@@ -453,7 +517,6 @@ pub mod pallet {
 
 			let default_staking_amount = StakingAmount::<T>::get();
 
-			// Ensure parent bounty has enough balance after adding child-bounty.
 			let operator_balance = T::Currency::free_balance(&who);
 			let new_operator_balance = operator_balance
 				.checked_sub(&default_staking_amount)
@@ -1043,6 +1106,60 @@ pub mod pallet {
 			Ok(().into())
 		}
 
+		#[pallet::weight(T::TeeWeightInfo::unregister_metrics_server())]
+		pub fn unregister_metrics_server(
+			origin: OriginFor<T>,
+			metrics_server_address: T::AccountId,
+		) -> DispatchResultWithPostInfo {
+			ensure_root(origin)?;
+
+			MetricsServers::<T>::try_mutate(|metrics_servers| -> DispatchResult {
+				if let Some(index) = metrics_servers
+					.iter()
+					.position(|server| server.metrics_server_address == metrics_server_address)
+				{
+					// Remove the metrics server registration at the found index
+					metrics_servers.swap_remove(index);
+					Self::deposit_event(Event::MetricsServerRemoved { metrics_server_address });
+				} else {
+					return Err(Error::<T>::MetricsServerNotFound.into())
+				}
+
+				Ok(())
+			})?;
+
+			Ok(().into())
+		}
+
+		#[pallet::weight(T::TeeWeightInfo::force_update_metrics_server_type())]
+		pub fn force_update_metrics_server_type(
+			origin: OriginFor<T>,
+			metrics_server_address: T::AccountId,
+			new_supported_cluster_type: ClusterType,
+		) -> DispatchResultWithPostInfo {
+			ensure_root(origin)?;
+
+			MetricsServers::<T>::try_mutate(|metrics_servers| -> DispatchResult {
+				if let Some(server) = metrics_servers
+					.iter_mut()
+					.find(|s| s.metrics_server_address == metrics_server_address)
+				{
+					// Update the supported_cluster_type for the metrics server
+					server.supported_cluster_type = new_supported_cluster_type.clone();
+					Self::deposit_event(Event::MetricsServerTypeUpdated {
+						metrics_server_address,
+						new_supported_cluster_type,
+					});
+				} else {
+					return Err(Error::<T>::MetricsServerNotFound.into())
+				}
+
+				Ok(())
+			})?;
+
+			Ok(().into())
+		}
+
 		#[pallet::weight(T::TeeWeightInfo::submit_metrics_server_report())]
 		pub fn submit_metrics_server_report(
 			origin: OriginFor<T>,
@@ -1283,28 +1400,12 @@ impl<T: Config> Pallet<T> {
 		weighted_sum
 	}
 
-	fn is_last_session_of_era(current_block_number: T::BlockNumber) -> bool {
-		let current_block_number = current_block_number.saturated_into::<u64>();
-		let sessions_per_era = T::SessionsPerEra::get().saturated_into::<u64>();
-
-		let current_session = current_block_number % sessions_per_era;
-
-		return current_session == sessions_per_era - 1
-	}
-
 	fn clear_old_era(old_era: EraIndex) {
-
 		let mut cursor = ClaimedRewards::<T>::clear_prefix(old_era, u32::MAX, None);
 		debug_assert!(cursor.maybe_cursor.is_none());
 
-		let mut cursor = MetricsReports::<T>::clear_prefix(old_era, u32::MAX, None);
+		cursor = MetricsReports::<T>::clear_prefix(old_era, u32::MAX, None);
 		debug_assert!(cursor.maybe_cursor.is_none());
-
-		// #[allow(deprecated)]
-		// ClaimedRewards::<T>::remove_prefix(old_era, None);
-
-		// #[allow(deprecated)]
-		// MetricsReports::<T>::remove_prefix(old_era, None);
 	}
 }
 

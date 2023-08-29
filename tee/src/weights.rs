@@ -31,6 +31,8 @@ pub trait WeightInfo {
 	fn remove_cluster() -> Weight;
 	fn withdraw_unbonded() -> Weight;
 	fn register_metrics_server() -> Weight;
+	fn unregister_metrics_server() -> Weight;
+	fn force_update_metrics_server_type() -> Weight;
 	fn submit_metrics_server_report() -> Weight;
 	fn set_report_params_weightage() -> Weight;
 	fn set_staking_amount() -> Weight;
@@ -79,6 +81,12 @@ impl WeightInfo for () {
 		Weight::from_ref_time(10_000_000 as u64)
 	}
 	fn register_metrics_server() -> Weight {
+		Weight::from_ref_time(10_000_000 as u64)
+	}
+	fn unregister_metrics_server() -> Weight {
+		Weight::from_ref_time(10_000_000 as u64)
+	}
+	fn force_update_metrics_server_type() -> Weight {
 		Weight::from_ref_time(10_000_000 as u64)
 	}
 	fn submit_metrics_server_report() -> Weight {

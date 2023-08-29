@@ -119,7 +119,7 @@ mod register_enclave {
 	#[test]
 	fn enclave_address_already_exists() {
 		ExtBuilder::default()
-			.tokens(vec![(ALICE, 1000), (CHARLIE, 100)])
+			.tokens(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 100)])
 			.build()
 			.execute_with(|| {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
@@ -285,7 +285,7 @@ mod update_enclave {
 	#[test]
 	fn enclave_address_already_exists() {
 		ExtBuilder::default()
-			.tokens(vec![(ALICE, 1000), (CHARLIE, 100)])
+			.tokens(vec![(ALICE, 1000), (EVE, 1000), (CHARLIE, 100)])
 			.build()
 			.execute_with(|| {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
@@ -388,7 +388,7 @@ mod assign_enclave {
 	#[test]
 	fn enclave_address_already_exists() {
 		ExtBuilder::default()
-			.tokens(vec![(ALICE, 1000), (CHARLIE, 100)])
+			.tokens(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 100)])
 			.build()
 			.execute_with(|| {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
@@ -432,7 +432,7 @@ mod assign_enclave {
 	#[test]
 	fn cluster_is_full() {
 		ExtBuilder::default()
-			.tokens(vec![(ALICE, 1000), (BOB, 1000)])
+			.tokens(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)])
 			.build()
 			.execute_with(|| {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
@@ -684,7 +684,7 @@ mod force_update_enclave {
 	#[test]
 	fn enclave_address_already_exists() {
 		ExtBuilder::default()
-			.tokens(vec![(ALICE, 1000), (CHARLIE, 100)])
+			.tokens(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 100)])
 			.build()
 			.execute_with(|| {
 				let alice: mock::RuntimeOrigin = origin(ALICE);

@@ -272,6 +272,8 @@ pub mod pallet {
 		SubscriptionDataNotFound,
 		/// The provided new terms does not match the contract new terms
 		ContractTermsDoNotMatch,
+		/// Cannot rent running contract
+		CannotRentRunningContract,
 	}
 
 	#[pallet::hooks]
@@ -641,6 +643,10 @@ pub mod pallet {
 				contract.creation_block == signed_creation_block,
 				Error::<T>::ContractDoesNotMatch
 			);
+			ensure!(
+				contract.start_block.is_none(),
+				Error::<T>::CannotRentRunningContract
+			);
 			ensure!(contract.renter != who, Error::<T>::CannotRentOwnContract);
 			ensure!(contract.is_manual_acceptance(), Error::<T>::ContractDoesNotSupportOffers);
 			if let Some(list) = contract.acceptance_type.get_allow_list() {
@@ -685,7 +691,11 @@ pub mod pallet {
 					*x = Some(BoundedVec::default());
 				}
 				let offers = x.as_mut().ok_or(Error::<T>::NoOffersForThisContract)?; // This should never happen.
-				offers.try_push(who.clone()).map_err(|_| Error::<T>::MaximumOffersReached)?;
+				
+				// Check if `who` already exists in the list
+				if !offers.iter().any(|offer| offer == &who) {
+					offers.try_push(who.clone()).map_err(|_| Error::<T>::MaximumOffersReached)?;
+				}
 
 				Ok(())
 			})?;

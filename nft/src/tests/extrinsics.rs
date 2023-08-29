@@ -1863,7 +1863,7 @@ mod add_secret_shard {
 
 	#[test]
 	fn nft_not_found() {
-		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(|| {
 			prepare_tests();
 			prepare_tee_for_tests();
 			let alice_enclave: mock::RuntimeOrigin = origin(ALICE_ENCLAVE);
@@ -2703,7 +2703,7 @@ mod add_capsule_shard {
 
 	#[test]
 	fn nft_not_found() {
-		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(|| {
 			prepare_tests();
 			prepare_tee_for_tests();
 			let alice_enclave: mock::RuntimeOrigin = origin(ALICE_ENCLAVE);

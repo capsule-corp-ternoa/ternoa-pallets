@@ -29,7 +29,7 @@ fn root() -> mock::RuntimeOrigin {
 #[test]
 fn ensure_enclave() {
 	ExtBuilder::default()
-		.tokens(vec![(ALICE, 10), (BOB, 10)])
+		.tokens(vec![(ALICE, 1000), (BOB, 1000)])
 		.build()
 		.execute_with(|| {
 			let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();

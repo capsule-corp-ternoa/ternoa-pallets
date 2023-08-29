@@ -137,6 +137,7 @@ benchmarks! {
 	}
 
 	remove_registration {
+		prepare_benchmarks::<T>();
 		let alice: T::AccountId = get_account::<T>("ALICE");
 		let enclave_address: T::AccountId= get_account::<T>("ALICE_ENCLAVE");
 		let uri: BoundedVec<u8, T::MaxUriLen> = BoundedVec::try_from(vec![1; T::MaxUriLen::get() as usize]).unwrap();
@@ -264,6 +265,52 @@ benchmarks! {
 	}: _(RawOrigin::Root, metrics_server.clone())
 	verify {
 		assert_eq!(MetricsServers::<T>::get(), vec![metrics_server]);
+	}
+
+	unregister_metrics_server {
+		prepare_benchmarks::<T>();
+		let alice: T::AccountId = get_account::<T>("ALICE");
+		let bob: T::AccountId = get_account::<T>("BOB");
+
+		let cluster_id: ClusterId = 0;
+		let slot_id: SlotId = 0;
+		let enclave_address: T::AccountId= get_account::<T>("ALICE_ENCLAVE");
+		let uri: BoundedVec<u8, T::MaxUriLen> = BoundedVec::try_from(vec![1; T::MaxUriLen::get() as usize]).unwrap();
+
+		TEE::<T>::create_cluster(RawOrigin::Root.into(), ClusterType::Public).unwrap();
+		TEE::<T>::register_enclave(origin::<T>("ALICE").into(), enclave_address.clone(), uri.clone()).unwrap();
+		TEE::<T>::assign_enclave(RawOrigin::Root.into(), alice.clone(), cluster_id, slot_id).unwrap();
+
+		let metrics_server: MetricsServer<T::AccountId> = MetricsServer::new(alice.clone(), ClusterType::Public);
+		TEE::<T>::register_metrics_server(RawOrigin::Root.into(), metrics_server).unwrap();
+
+	}: _(RawOrigin::Root, alice.clone())
+	verify {
+		assert_eq!(MetricsServers::<T>::get(), vec![]);
+	}
+
+	force_update_metrics_server_type {
+		prepare_benchmarks::<T>();
+		let alice: T::AccountId = get_account::<T>("ALICE");
+		let bob: T::AccountId = get_account::<T>("BOB");
+
+		let cluster_id: ClusterId = 0;
+		let slot_id: SlotId = 0;
+		let enclave_address: T::AccountId= get_account::<T>("ALICE_ENCLAVE");
+		let uri: BoundedVec<u8, T::MaxUriLen> = BoundedVec::try_from(vec![1; T::MaxUriLen::get() as usize]).unwrap();
+
+		TEE::<T>::create_cluster(RawOrigin::Root.into(), ClusterType::Public).unwrap();
+		TEE::<T>::register_enclave(origin::<T>("ALICE").into(), enclave_address.clone(), uri.clone()).unwrap();
+		TEE::<T>::assign_enclave(RawOrigin::Root.into(), alice.clone(), cluster_id, slot_id).unwrap();
+
+		let metrics_server: MetricsServer<T::AccountId> = MetricsServer::new(alice.clone(), ClusterType::Public);
+		TEE::<T>::register_metrics_server(RawOrigin::Root.into(), metrics_server).unwrap();
+		let updated_metrics_server: MetricsServer<T::AccountId> = MetricsServer::new(alice.clone(), ClusterType::Private);
+
+
+	}: _(RawOrigin::Root, alice.clone(), ClusterType::Private)
+	verify {
+		assert_eq!(MetricsServers::<T>::get(), vec![updated_metrics_server]);
 	}
 
 	submit_metrics_server_report {
