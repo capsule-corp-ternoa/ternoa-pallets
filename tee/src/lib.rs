@@ -256,8 +256,6 @@ pub mod pallet {
 			let mut read = 0u64;
 			let write = 0u64;
 
-			// if Self::is_last_session_of_era(now) {
-				read += 1;
 				let current_active_era: Option<EraIndex> = match Staking::<T>::active_era() {
 					Some(era) => Some(era.index),
 					None => {
@@ -271,18 +269,15 @@ pub mod pallet {
 				if let Some(current_active_era) = current_active_era {
 					let error_event = Event::FetchedEra { current_active_era };
 						Self::deposit_event(error_event);
-
-						let history_depth = T::TeeHistoryDepth::get();
-						let error_event = Event::HistoryDepth { history_depth };
-						Self::deposit_event(error_event);
-						let old_era = current_active_era.saturating_sub(T::TeeHistoryDepth::get());
+					// Clean old era information.
+					if let Some(old_era) = current_active_era.checked_sub(T::TeeHistoryDepth::get()) {
 						Self::clear_old_era(old_era);
 
 						let error_event = Event::ClearedOldEra { old_era };
 						Self::deposit_event(error_event);
-				}
-			// }
+}
 
+				}
 			T::DbWeight::get().reads_writes(read, write)
 		}
 	}
@@ -1162,18 +1157,6 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		/// Set reward pool amount for operators by Technical Committee
-		#[pallet::weight(T::TeeWeightInfo::set_daily_reward_pool())]
-		pub fn clear_era(
-			origin: OriginFor<T>,
-			era: EraIndex,
-		) -> DispatchResultWithPostInfo {
-			ensure_root(origin)?;
-
-			Self::clear_old_era(era);
-			Ok(().into())
-		}
-
 		/// Claim rewards by Era
 		#[pallet::weight(T::TeeWeightInfo::claim_rewards())]
 		pub fn claim_rewards(origin: OriginFor<T>, era: EraIndex) -> DispatchResultWithPostInfo {
@@ -1310,11 +1293,18 @@ impl<T: Config> Pallet<T> {
 	}
 
 	fn clear_old_era(old_era: EraIndex) {
-		#[allow(deprecated)]
-		ClaimedRewards::<T>::remove_prefix(old_era, None);
 
-		#[allow(deprecated)]
-		MetricsReports::<T>::remove_prefix(old_era, None);
+		let mut cursor = ClaimedRewards::<T>::clear_prefix(old_era, u32::MAX, None);
+		debug_assert!(cursor.maybe_cursor.is_none());
+
+		let mut cursor = MetricsReports::<T>::clear_prefix(old_era, u32::MAX, None);
+		debug_assert!(cursor.maybe_cursor.is_none());
+
+		// #[allow(deprecated)]
+		// ClaimedRewards::<T>::remove_prefix(old_era, None);
+
+		// #[allow(deprecated)]
+		// MetricsReports::<T>::remove_prefix(old_era, None);
 	}
 }
 
