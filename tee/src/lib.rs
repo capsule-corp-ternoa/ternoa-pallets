@@ -272,6 +272,9 @@ pub mod pallet {
 					let error_event = Event::FetchedEra { current_active_era };
 						Self::deposit_event(error_event);
 
+						let history_depth = T::HistoryDepth::get();
+						let error_event = Event::HistoryDepth { history_depth };
+						Self::deposit_event(error_event);
 						let old_era = current_active_era.saturating_sub(T::HistoryDepth::get());
 						Self::clear_old_era(old_era);
 
@@ -359,6 +362,7 @@ pub mod pallet {
 		FetchedEra { current_active_era: EraIndex },
 		FetchedOldEra { old_era: EraIndex },
 		ClearedOldEra { old_era: EraIndex },
+		HistoryDepth { history_depth: u32 },
 	}
 
 	#[pallet::error]
