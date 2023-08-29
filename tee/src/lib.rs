@@ -272,7 +272,7 @@ pub mod pallet {
 					let error_event = Event::FetchedEra { current_active_era };
 						Self::deposit_event(error_event);
 
-						let old_era = current_active_era.saturating_sub(T::HistoryDepth::get() + 1);
+						let old_era = current_active_era.saturating_sub(T::HistoryDepth::get());
 						Self::clear_old_era(old_era);
 
 						let error_event = Event::ClearedOldEra { old_era };
