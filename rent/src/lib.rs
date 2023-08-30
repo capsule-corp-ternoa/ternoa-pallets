@@ -272,8 +272,10 @@ pub mod pallet {
 		SubscriptionDataNotFound,
 		/// The provided new terms does not match the contract new terms
 		ContractTermsDoNotMatch,
-		/// Cannot rent running contract
-		CannotRentRunningContract,
+		/// Cannot make offer on running contract
+		CannotMakeOfferOnRunningContract,
+		/// Offer from an account ID already exists
+		OfferAlreadyExists,
 	}
 
 	#[pallet::hooks]
@@ -634,68 +636,73 @@ pub mod pallet {
 			signed_creation_block: T::BlockNumber,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
-			let contract = Contracts::<T>::get(nft_id).ok_or(Error::<T>::ContractNotFound)?;
-			let rent_fee = &contract.rent_fee;
-			let cancellation_fee = &contract.rentee_cancellation_fee;
 
-			// Checks ✅
-			ensure!(
-				contract.creation_block == signed_creation_block,
-				Error::<T>::ContractDoesNotMatch
-			);
-			ensure!(
-				contract.start_block.is_none(),
-				Error::<T>::CannotRentRunningContract
-			);
-			ensure!(contract.renter != who, Error::<T>::CannotRentOwnContract);
-			ensure!(contract.is_manual_acceptance(), Error::<T>::ContractDoesNotSupportOffers);
-			if let Some(list) = contract.acceptance_type.get_allow_list() {
-				ensure!(list.contains(&who), Error::<T>::NotWhitelisted);
-			}
-
-			let rent_balance = rent_fee.get_balance().unwrap_or(0u32.into());
-			let cancel_balance = cancellation_fee.get_balance().unwrap_or(0u32.into());
-			ensure!(Self::balance_check(&who, rent_balance), Error::<T>::NotEnoughFundsForRentFee);
-			ensure!(
-				Self::balance_check(&who, cancel_balance),
-				Error::<T>::NotEnoughFundsForCancellationFee
-			);
-			ensure!(
-				Self::balance_check(&who, rent_balance + cancel_balance),
-				Error::<T>::NotEnoughFundsForFees
-			);
-
-			let maybe_rent_nft = rent_fee.get_nft();
-			let maybe_cancel_nft = cancellation_fee.get_nft();
-			if let Some(nft_id) = &maybe_rent_nft {
-				let nft = T::NFTExt::get_nft(*nft_id).ok_or(Error::<T>::RentNFTNotFound)?;
-				ensure!(nft.owner == who, Error::<T>::CallerDoesNotOwnRentNFT);
-				ensure!(
-					nft.not_in_state(&Self::invalid_state()).is_ok(),
-					Error::<T>::RentNFTNotInValidState
-				);
-			}
-			if let Some(nft_id) = &maybe_cancel_nft {
-				let nft = T::NFTExt::get_nft(*nft_id).ok_or(Error::<T>::CancellationNFTNotFound)?;
-				ensure!(nft.owner == who, Error::<T>::CallerDoesNotOwnCancellationNFT);
-				ensure!(
-					nft.not_in_state(&Self::invalid_state()).is_ok(),
-					Error::<T>::CancellationNFTNotInValidState
-				);
-			}
-
-			// Storage Activity 📦
-			// 1. Add Offer to Offer list
 			Offers::<T>::try_mutate(nft_id, |x| -> DispatchResult {
 				if x.is_none() {
 					*x = Some(BoundedVec::default());
 				}
-				let offers = x.as_mut().ok_or(Error::<T>::NoOffersForThisContract)?; // This should never happen.
-				
-				// Check if `who` already exists in the list
-				if !offers.iter().any(|offer| offer == &who) {
-					offers.try_push(who.clone()).map_err(|_| Error::<T>::MaximumOffersReached)?;
+
+				let offers = x.as_mut().ok_or(Error::<T>::NoOffersForThisContract)?;
+
+				if offers.iter().any(|offer| offer == &who) {
+					return Err(Error::<T>::OfferAlreadyExists.into())
 				}
+
+				let contract = Contracts::<T>::get(nft_id).ok_or(Error::<T>::ContractNotFound)?;
+				let rent_fee = &contract.rent_fee;
+				let cancellation_fee = &contract.rentee_cancellation_fee;
+
+				// Checks ✅
+				ensure!(
+					contract.creation_block == signed_creation_block,
+					Error::<T>::ContractDoesNotMatch
+				);
+				ensure!(
+					contract.start_block.is_none(),
+					Error::<T>::CannotMakeOfferOnRunningContract
+				);
+				ensure!(contract.renter != who, Error::<T>::CannotRentOwnContract);
+				ensure!(contract.is_manual_acceptance(), Error::<T>::ContractDoesNotSupportOffers);
+				if let Some(list) = contract.acceptance_type.get_allow_list() {
+					ensure!(list.contains(&who), Error::<T>::NotWhitelisted);
+				}
+
+				let rent_balance = rent_fee.get_balance().unwrap_or(0u32.into());
+				let cancel_balance = cancellation_fee.get_balance().unwrap_or(0u32.into());
+				ensure!(
+					Self::balance_check(&who, rent_balance),
+					Error::<T>::NotEnoughFundsForRentFee
+				);
+				ensure!(
+					Self::balance_check(&who, cancel_balance),
+					Error::<T>::NotEnoughFundsForCancellationFee
+				);
+				ensure!(
+					Self::balance_check(&who, rent_balance + cancel_balance),
+					Error::<T>::NotEnoughFundsForFees
+				);
+
+				let maybe_rent_nft = rent_fee.get_nft();
+				let maybe_cancel_nft = cancellation_fee.get_nft();
+				if let Some(nft_id) = &maybe_rent_nft {
+					let nft = T::NFTExt::get_nft(*nft_id).ok_or(Error::<T>::RentNFTNotFound)?;
+					ensure!(nft.owner == who, Error::<T>::CallerDoesNotOwnRentNFT);
+					ensure!(
+						nft.not_in_state(&Self::invalid_state()).is_ok(),
+						Error::<T>::RentNFTNotInValidState
+					);
+				}
+				if let Some(nft_id) = &maybe_cancel_nft {
+					let nft =
+						T::NFTExt::get_nft(*nft_id).ok_or(Error::<T>::CancellationNFTNotFound)?;
+					ensure!(nft.owner == who, Error::<T>::CallerDoesNotOwnCancellationNFT);
+					ensure!(
+						nft.not_in_state(&Self::invalid_state()).is_ok(),
+						Error::<T>::CancellationNFTNotInValidState
+					);
+				}
+
+				offers.try_push(who.clone()).map_err(|_| Error::<T>::MaximumOffersReached)?;
 
 				Ok(())
 			})?;

@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Ternoa.  If not, see <http://www.gnu.org/licenses/>.
 
+use frame_election_provider_support::{onchain, SequentialPhragmen};
 use frame_support::{
 	parameter_types,
 	traits::{ConstU32, ConstU64, Contains, Currency, Hooks},
@@ -21,13 +22,12 @@ use frame_support::{
 };
 use sp_core::H256;
 use sp_runtime::{
-	curve::PiecewiseLinear, 
+	curve::PiecewiseLinear,
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
 	Perbill,
 };
 use sp_staking::{EraIndex, SessionIndex};
-use frame_election_provider_support::{onchain, SequentialPhragmen};
 
 use crate::{self as ternoa_rent, Config, NegativeImbalanceOf};
 
@@ -128,7 +128,6 @@ impl pallet_balances::Config for Test {
 	type MaxLocks = MaxLocks;
 }
 
-
 impl pallet_timestamp::Config for Test {
 	type Moment = u64;
 	type OnTimestampSet = ();
@@ -146,7 +145,6 @@ sp_runtime::impl_opaque_keys! {
 		pub foo: sp_runtime::testing::UintAuthorityId,
 	}
 }
-
 
 pub struct TestSessionHandler;
 impl pallet_session::SessionHandler<AccountId> for TestSessionHandler {
@@ -181,7 +179,6 @@ impl pallet_session::Config for Test {
 	type Keys = SessionKeys;
 	type WeightInfo = ();
 }
-
 
 pallet_staking_reward_curve::build! {
 	const REWARD_CURVE: PiecewiseLinear<'static> = curve!(
@@ -248,7 +245,7 @@ parameter_types! {
 	pub const InitalDailyRewardPool: Balance = 2000;
 	pub const TeePalletId: PalletId = PalletId(*b"tern/tee");
 	pub const TeeHistoryDepth: u32 = 50;
-	
+
 }
 
 impl ternoa_tee::Config for Test {
