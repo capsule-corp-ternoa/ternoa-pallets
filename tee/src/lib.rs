@@ -1305,15 +1305,15 @@ pub mod pallet {
 
 			if let Some(submitted_metrics_report) = submitted_metrics_report {	
 				let variance = Self::calculate_highest_params(&submitted_metrics_report);
-				println!("======================================variance {:?}",variance);
+				log::info!("======================================variance {:?}",variance);
 
 				let report_params_weightage = Self::report_params_weightages();
 				let weighted_sum =
 					Self::calculate_weighted_sum(&variance, &report_params_weightage);
-					println!("======================================weighted_sum {:?}",weighted_sum);
+					log::info!("======================================weighted_sum {:?}",weighted_sum);
 				let weighted_reward_amount =
 					Percent::from_percent(weighted_sum) * reward_per_operator;
-					println!("==============================weighted_reward_amount {:?}",weighted_reward_amount);
+					log::info!("==============================weighted_reward_amount {:?}",weighted_reward_amount);
 
 				T::Currency::transfer(
 					&Self::account_id(),
