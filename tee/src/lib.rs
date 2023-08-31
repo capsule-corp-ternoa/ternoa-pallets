@@ -1303,13 +1303,18 @@ pub mod pallet {
 
 			let submitted_metrics_report = MetricsReports::<T>::get(&era, &who);
 
-			if let Some(submitted_metrics_report) = submitted_metrics_report {
+			if let Some(submitted_metrics_report) = submitted_metrics_report {	
 				let variance = Self::calculate_highest_params(&submitted_metrics_report);
+				println!("======================================variance {:?}",variance);
+
 				let report_params_weightage = Self::report_params_weightages();
 				let weighted_sum =
 					Self::calculate_weighted_sum(&variance, &report_params_weightage);
+					println!("======================================weighted_sum {:?}",weighted_sum);
 				let weighted_reward_amount =
 					Percent::from_percent(weighted_sum) * reward_per_operator;
+					println!("==============================weighted_reward_amount {:?}",weighted_reward_amount);
+
 				T::Currency::transfer(
 					&Self::account_id(),
 					&who,
@@ -1323,6 +1328,8 @@ pub mod pallet {
 					amount: weighted_reward_amount,
 				});
 			} else {
+				println!("no reports for era=================================================");
+
 				T::Currency::transfer(&Self::account_id(), &who, reward_per_operator, AllowDeath)?;
 				ClaimedRewards::<T>::insert(era, who.clone(), reward_per_operator.clone());
 				Self::deposit_event(Event::RewardsClaimed {

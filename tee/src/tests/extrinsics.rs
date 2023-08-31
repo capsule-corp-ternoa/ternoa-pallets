@@ -549,6 +549,47 @@ mod remove_update {
 	}
 }
 
+mod approve_enclave_unregistration {
+	use super::*;
+
+	#[test]
+	fn approve_enclave_unregistration(){
+		ExtBuilder::default()
+			.tokens(vec![(ALICE, 1000), (CHARLIE, 1000)])
+			.build()
+			.execute_with(|| {
+				let alice: mock::RuntimeOrigin = origin(ALICE);
+				let api_uri: BoundedVec<u8, MaxUriLen> = b"test".to_vec().try_into().unwrap();
+				let new_api_uri: BoundedVec<u8, MaxUriLen> =
+					"new_api_uri".as_bytes().to_vec().try_into().unwrap();
+				assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, api_uri.clone()));
+				assert_ok!(TEE::create_cluster(root(), ClusterType::Public));
+				assert_ok!(TEE::assign_enclave(root(), ALICE, 0, 0));
+
+				assert!(EnclaveAccountOperator::<Test>::get(CHARLIE).is_some());
+				assert!(EnclaveClusterId::<Test>::get(ALICE).is_some());
+				assert!(ClusterData::<Test>::get(0).unwrap().enclaves.get(0).is_some());
+
+				assert_ok!(TEE::update_enclave(alice.clone(), BOB, new_api_uri.clone()));
+				assert_ok!(TEE::unregister_enclave(alice.clone()));
+
+				assert!(EnclaveUpdates::<Test>::get(ALICE).is_some());
+				assert!(EnclaveData::<Test>::get(ALICE).is_some());
+
+				assert_ok!(TEE::force_remove_enclave(root(), ALICE));
+
+				assert!(EnclaveData::<Test>::get(ALICE).is_none());
+				assert!(EnclaveAccountOperator::<Test>::get(CHARLIE).is_none());
+				assert!(EnclaveClusterId::<Test>::get(ALICE).is_none());
+				assert!(EnclaveUpdates::<Test>::get(ALICE).is_none());
+				assert!(ClusterData::<Test>::get(0).unwrap().enclaves.get(0).is_none());
+
+				let event = RuntimeEvent::TEE(TEEEvent::EnclaveRemoved { operator_address: ALICE });
+				System::assert_last_event(event);
+			})
+	}
+}
+
 mod force_remove_enclave {
 	use super::*;
 
@@ -862,3 +903,5 @@ mod remove_cluster {
 			})
 	}
 }
+
+
