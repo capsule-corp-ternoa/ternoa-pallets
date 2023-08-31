@@ -1328,7 +1328,7 @@ pub mod pallet {
 					amount: weighted_reward_amount,
 				});
 			} else {
-				println!("no reports for era=================================================");
+				log::info!("no reports for era=================================================");
 
 				T::Currency::transfer(&Self::account_id(), &who, reward_per_operator, AllowDeath)?;
 				ClaimedRewards::<T>::insert(era, who.clone(), reward_per_operator.clone());
