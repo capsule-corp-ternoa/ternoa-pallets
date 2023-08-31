@@ -1303,26 +1303,16 @@ pub mod pallet {
 
 			let submitted_metrics_report = MetricsReports::<T>::get(&era, &who);
 
-			if let Some(submitted_metrics_report) = submitted_metrics_report {	
+			if let Some(submitted_metrics_report) = submitted_metrics_report {
 				let variance = Self::calculate_highest_params(&submitted_metrics_report);
-				log::info!("======================================variance0 {:?}",variance.param_1);
-				log::info!("======================================variance1 {:?}",variance.param_2);
-				log::info!("======================================variance2 {:?}",variance.param_3);
-				log::info!("======================================variance3 {:?}",variance.param_4);
-				log::info!("======================================variance4 {:?}",variance.param_5);
 
 				let report_params_weightage = Self::report_params_weightages();
-				log::info!("======================================report_params_weightage {:?}",report_params_weightage);
 
 				let weighted_sum =
 					Self::calculate_weighted_sum(&variance, &report_params_weightage);
-					log::info!("======================================weighted_sum {:?}",weighted_sum);
-					let percent = Percent::from_percent(weighted_sum);
-					log::info!("======================================weighted_sum {:?}",percent);
+				let percent = Percent::from_percent(weighted_sum);
 
-				let weighted_reward_amount =
-				percent * reward_per_operator;
-					log::info!("==============================weighted_reward_amount {:?}",weighted_reward_amount);
+				let weighted_reward_amount = percent * reward_per_operator;
 
 				T::Currency::transfer(
 					&Self::account_id(),
@@ -1337,8 +1327,6 @@ pub mod pallet {
 					amount: weighted_reward_amount,
 				});
 			} else {
-				log::info!("no reports for era=================================================");
-
 				T::Currency::transfer(&Self::account_id(), &who, reward_per_operator, AllowDeath)?;
 				ClaimedRewards::<T>::insert(era, who.clone(), reward_per_operator.clone());
 				Self::deposit_event(Event::RewardsClaimed {
@@ -1392,28 +1380,23 @@ impl<T: Config> Pallet<T> {
 		weightages: &ReportParamsWeightage,
 	) -> u8 {
 		// Calculate the weighted sum for each index
-		let weighted_sum: u8 = variances
-			.param_1
-			.saturating_mul(weightages.param_1_weightage)
+		let weighted_sum: u32 = (variances.param_1 as u32)
+			.saturating_mul(weightages.param_1_weightage as u32)
 			.saturating_div(100) +
-			variances
-				.param_2
-				.saturating_mul(weightages.param_2_weightage)
+			(variances.param_2 as u32)
+				.saturating_mul(weightages.param_2_weightage as u32)
 				.saturating_div(100) +
-			variances
-				.param_3
-				.saturating_mul(weightages.param_3_weightage)
+			(variances.param_3 as u32)
+				.saturating_mul(weightages.param_3_weightage as u32)
 				.saturating_div(100) +
-			variances
-				.param_4
-				.saturating_mul(weightages.param_4_weightage)
+			(variances.param_4 as u32)
+				.saturating_mul(weightages.param_4_weightage as u32)
 				.saturating_div(100) +
-			variances
-				.param_5
-				.saturating_mul(weightages.param_5_weightage)
+			(variances.param_5 as u32)
+				.saturating_mul(weightages.param_5_weightage as u32)
 				.saturating_div(100);
 
-		weighted_sum
+		weighted_sum as u8
 	}
 
 	fn clear_old_era(old_era: EraIndex) {

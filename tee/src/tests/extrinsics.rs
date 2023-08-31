@@ -553,7 +553,7 @@ mod approve_enclave_unregistration {
 	use super::*;
 
 	#[test]
-	fn approve_enclave_unregistration(){
+	fn approve_enclave_unregistration() {
 		ExtBuilder::default()
 			.tokens(vec![(ALICE, 1000), (CHARLIE, 1000)])
 			.build()
@@ -903,5 +903,3 @@ mod remove_cluster {
 			})
 	}
 }
-
-
