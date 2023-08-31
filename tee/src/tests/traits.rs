@@ -29,19 +29,19 @@ fn root() -> mock::RuntimeOrigin {
 #[test]
 fn ensure_enclave() {
 	ExtBuilder::default()
-		.tokens(vec![(ALICE, 10), (BOB, 10)])
+		.tokens(vec![(ALICE, 1000), (BOB, 1000)])
 		.build()
 		.execute_with(|| {
 			let alice: mock::RuntimeOrigin = RawOrigin::Signed(ALICE).into();
 			let bob: mock::RuntimeOrigin = RawOrigin::Signed(BOB).into();
 			let cluster_id: ClusterId = 0;
-			let api_uri: BoundedVec<u8, MaxUriLen>= b"test".to_vec().try_into().unwrap();
+			let api_uri: BoundedVec<u8, MaxUriLen> = b"test".to_vec().try_into().unwrap();
 
-			assert_ok!(TEE::create_cluster(root()));
+			assert_ok!(TEE::create_cluster(root(), crate::ClusterType::Public));
 			assert_ok!(TEE::register_enclave(alice.clone(), ALICE_ENCLAVE, api_uri.clone()));
-			assert_ok!(TEE::register_enclave(bob.clone(), BOB_ENCLAVE, api_uri));
-			assert_ok!(TEE::assign_enclave(root(), ALICE, cluster_id));
-			assert_ok!(TEE::assign_enclave(root(), BOB, cluster_id));
+			assert_ok!(TEE::register_enclave(bob.clone(), BOB_ENCLAVE, api_uri.clone()));
+			assert_ok!(TEE::assign_enclave(root(), ALICE, cluster_id, 0));
+			assert_ok!(TEE::assign_enclave(root(), BOB, cluster_id, 1));
 
 			let res = TEE::ensure_enclave(BOB_ENCLAVE);
 			assert!(res.is_some());

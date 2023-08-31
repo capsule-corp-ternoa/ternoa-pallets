@@ -16,8 +16,8 @@
 
 use super::{mock, mock::*};
 use crate::{
-	Cluster, ClusterData, Enclave, EnclaveAccountOperator, EnclaveClusterId, EnclaveData,
-	EnclaveRegistrations, EnclaveUpdates, Error, Event as TEEEvent,
+	Cluster, ClusterData, ClusterType, Enclave, EnclaveAccountOperator, EnclaveClusterId,
+	EnclaveData, EnclaveRegistrations, EnclaveUpdates, Error, Event as TEEEvent, TeeStakingLedger,
 };
 use frame_support::{assert_noop, assert_ok, error::BadOrigin, BoundedVec};
 use frame_system::RawOrigin;
@@ -39,7 +39,7 @@ mod register_enclave {
 			.build()
 			.execute_with(|| {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
-				let api_uri: BoundedVec<u8, MaxUriLen>= b"test".to_vec().try_into().unwrap();
+				let api_uri: BoundedVec<u8, MaxUriLen> = b"test".to_vec().try_into().unwrap();
 
 				assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, api_uri.clone()));
 
@@ -48,10 +48,15 @@ mod register_enclave {
 				assert!(EnclaveData::<Test>::get(ALICE).is_none());
 				assert!(EnclaveAccountOperator::<Test>::get(ALICE).is_none());
 
-				let event = RuntimeEvent::TEE(TEEEvent::EnclaveAddedForRegistration {
+				let expected_stake_details =
+					TeeStakingLedger::new(ALICE, false, Default::default());
+				let actual_stake_details = TEE::tee_staking_ledger(ALICE).unwrap();
+				assert_eq!(expected_stake_details, actual_stake_details);
+
+				let staking_amount: u64 = 20;
+				let event = RuntimeEvent::TEE(TEEEvent::Bonded {
 					operator_address: ALICE,
-					enclave_address: CHARLIE,
-					api_uri,
+					amount: staking_amount,
 				});
 				System::assert_last_event(event);
 			})
@@ -64,7 +69,7 @@ mod register_enclave {
 			.build()
 			.execute_with(|| {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
-				let api_uri: BoundedVec<u8, MaxUriLen>= b"test".to_vec().try_into().unwrap();
+				let api_uri: BoundedVec<u8, MaxUriLen> = b"test".to_vec().try_into().unwrap();
 
 				assert_noop!(
 					TEE::register_enclave(alice.clone(), ALICE, api_uri),
@@ -80,7 +85,7 @@ mod register_enclave {
 			.build()
 			.execute_with(|| {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
-				let api_uri: BoundedVec<u8, MaxUriLen>= b"test".to_vec().try_into().unwrap();
+				let api_uri: BoundedVec<u8, MaxUriLen> = b"test".to_vec().try_into().unwrap();
 
 				assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, api_uri.clone()));
 
@@ -98,11 +103,11 @@ mod register_enclave {
 			.build()
 			.execute_with(|| {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
-				let api_uri: BoundedVec<u8, MaxUriLen>= b"test".to_vec().try_into().unwrap();
+				let api_uri: BoundedVec<u8, MaxUriLen> = b"test".to_vec().try_into().unwrap();
 
 				assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, api_uri.clone()));
-				assert_ok!(TEE::create_cluster(root()));
-				assert_ok!(TEE::assign_enclave(root(), ALICE, 0));
+				assert_ok!(TEE::create_cluster(root(), ClusterType::Public));
+				assert_ok!(TEE::assign_enclave(root(), ALICE, 0, 0));
 
 				assert_noop!(
 					TEE::register_enclave(alice.clone(), CHARLIE, api_uri.clone()),
@@ -114,21 +119,21 @@ mod register_enclave {
 	#[test]
 	fn enclave_address_already_exists() {
 		ExtBuilder::default()
-			.tokens(vec![(ALICE, 1000), (CHARLIE, 100)])
+			.tokens(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 100)])
 			.build()
 			.execute_with(|| {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
 				let bob: mock::RuntimeOrigin = origin(BOB);
-				let api_uri: BoundedVec<u8, MaxUriLen>= b"test".to_vec().try_into().unwrap();
+				let api_uri: BoundedVec<u8, MaxUriLen> = b"test".to_vec().try_into().unwrap();
 
-				assert_ok!(TEE::create_cluster(root()));
+				assert_ok!(TEE::create_cluster(root(), ClusterType::Public));
 
 				assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, api_uri.clone()));
 				assert_ok!(TEE::register_enclave(bob.clone(), CHARLIE, api_uri.clone()));
 
-				assert_ok!(TEE::assign_enclave(root(), ALICE, 0));
+				assert_ok!(TEE::assign_enclave(root(), ALICE, 0, 0));
 				assert_noop!(
-					TEE::assign_enclave(root(), BOB, 0),
+					TEE::assign_enclave(root(), BOB, 0, 0),
 					Error::<Test>::EnclaveAddressAlreadyExists
 				);
 			})
@@ -145,7 +150,7 @@ mod unregister_enclave {
 			.build()
 			.execute_with(|| {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
-				let api_uri: BoundedVec<u8, MaxUriLen>= b"test".to_vec().try_into().unwrap();
+				let api_uri: BoundedVec<u8, MaxUriLen> = b"test".to_vec().try_into().unwrap();
 
 				assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, api_uri.clone()));
 				assert_ok!(TEE::unregister_enclave(alice.clone()));
@@ -153,7 +158,7 @@ mod unregister_enclave {
 				assert!(EnclaveRegistrations::<Test>::get(ALICE).is_none());
 
 				let event =
-					RuntimeEvent::TEE(TEEEvent::RegistrationRemoved { operator_address: ALICE });
+					RuntimeEvent::TEE(TEEEvent::Withdrawn { operator_address: ALICE, amount: 20 });
 				System::assert_last_event(event);
 			})
 	}
@@ -165,11 +170,11 @@ mod unregister_enclave {
 			.build()
 			.execute_with(|| {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
-				let api_uri: BoundedVec<u8, MaxUriLen>= b"test".to_vec().try_into().unwrap();
+				let api_uri: BoundedVec<u8, MaxUriLen> = b"test".to_vec().try_into().unwrap();
 
 				assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, api_uri.clone()));
-				assert_ok!(TEE::create_cluster(root()));
-				assert_ok!(TEE::assign_enclave(root(), ALICE.clone(), 0));
+				assert_ok!(TEE::create_cluster(root(), ClusterType::Public));
+				assert_ok!(TEE::assign_enclave(root(), ALICE.clone(), 0, 0));
 
 				assert_ok!(TEE::unregister_enclave(alice.clone()));
 			})
@@ -200,13 +205,13 @@ mod update_enclave {
 			.build()
 			.execute_with(|| {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
-				let api_uri: BoundedVec<u8, MaxUriLen>= b"test".to_vec().try_into().unwrap();
+				let api_uri: BoundedVec<u8, MaxUriLen> = b"test".to_vec().try_into().unwrap();
 				let new_api_uri: BoundedVec<u8, MaxUriLen> =
 					"new_api_uri".as_bytes().to_vec().try_into().unwrap();
 
 				assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, api_uri.clone()));
-				assert_ok!(TEE::create_cluster(root()));
-				assert_ok!(TEE::assign_enclave(root(), ALICE, 0));
+				assert_ok!(TEE::create_cluster(root(), ClusterType::Public));
+				assert_ok!(TEE::assign_enclave(root(), ALICE, 0, 0));
 
 				assert_ok!(TEE::update_enclave(alice.clone(), BOB, new_api_uri.clone()));
 
@@ -247,13 +252,15 @@ mod update_enclave {
 			.build()
 			.execute_with(|| {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
-				let api_uri: BoundedVec<u8, MaxUriLen>= b"test".to_vec().try_into().unwrap();
-				assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, api_uri.clone()));
-				assert_ok!(TEE::create_cluster(root()));
-				assert_ok!(TEE::assign_enclave(root(), ALICE, 0));
-				assert_ok!(TEE::update_enclave(alice.clone(), BOB, api_uri.clone()));
+				let new_api_uri: BoundedVec<u8, MaxUriLen> =
+					"new_api_uri".as_bytes().to_vec().try_into().unwrap();
 
-				let err = TEE::update_enclave(alice.clone(), BOB, api_uri);
+				assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, new_api_uri.clone()));
+				assert_ok!(TEE::create_cluster(root(), ClusterType::Public));
+				assert_ok!(TEE::assign_enclave(root(), ALICE, 0, 0));
+				assert_ok!(TEE::update_enclave(alice.clone(), BOB, new_api_uri.clone()));
+
+				let err = TEE::update_enclave(alice.clone(), BOB, new_api_uri);
 				assert_noop!(err, Error::<Test>::UpdateRequestAlreadyExists);
 			})
 	}
@@ -278,20 +285,20 @@ mod update_enclave {
 	#[test]
 	fn enclave_address_already_exists() {
 		ExtBuilder::default()
-			.tokens(vec![(ALICE, 1000), (CHARLIE, 100)])
+			.tokens(vec![(ALICE, 1000), (EVE, 1000), (CHARLIE, 100)])
 			.build()
 			.execute_with(|| {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
 				let eve: mock::RuntimeOrigin = origin(EVE);
-				let api_uri: BoundedVec<u8, MaxUriLen>= b"test".to_vec().try_into().unwrap();
+				let api_uri: BoundedVec<u8, MaxUriLen> = b"test".to_vec().try_into().unwrap();
 
-				assert_ok!(TEE::create_cluster(root()));
+				assert_ok!(TEE::create_cluster(root(), ClusterType::Public));
 
 				assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, api_uri.clone()));
 				assert_ok!(TEE::register_enclave(eve.clone(), DAVE, api_uri.clone()));
 
-				assert_ok!(TEE::assign_enclave(root(), ALICE, 0));
-				assert_ok!(TEE::assign_enclave(root(), EVE.clone(), 0));
+				assert_ok!(TEE::assign_enclave(root(), ALICE, 0, 0));
+				assert_ok!(TEE::assign_enclave(root(), EVE.clone(), 0, 0));
 
 				assert_noop!(
 					TEE::update_enclave(alice.clone(), DAVE, api_uri.clone()),
@@ -311,12 +318,13 @@ mod cancel_update {
 			.build()
 			.execute_with(|| {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
-				let api_uri: BoundedVec<u8, MaxUriLen>= b"test".to_vec().try_into().unwrap();
+				let api_uri: BoundedVec<u8, MaxUriLen> = b"test".to_vec().try_into().unwrap();
 
-				assert_ok!(TEE::create_cluster(root()));
+				assert_ok!(TEE::create_cluster(root(), ClusterType::Public));
 				assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, api_uri.clone()));
-				assert_ok!(TEE::assign_enclave(root(), ALICE, 0));
+				assert_ok!(TEE::assign_enclave(root(), ALICE, 0, 0));
 				assert_ok!(TEE::update_enclave(alice.clone(), CHARLIE, api_uri));
+
 				assert_ok!(TEE::cancel_update(alice.clone()));
 
 				assert!(EnclaveUpdates::<Test>::get(ALICE).is_none());
@@ -350,12 +358,12 @@ mod assign_enclave {
 			.build()
 			.execute_with(|| {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
-				let api_uri: BoundedVec<u8, MaxUriLen>= b"test".to_vec().try_into().unwrap();
+				let api_uri: BoundedVec<u8, MaxUriLen> = b"test".to_vec().try_into().unwrap();
 				let cluster_id = 0u32;
 
 				assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, api_uri.clone()));
-				assert_ok!(TEE::create_cluster(root()));
-				assert_ok!(TEE::assign_enclave(root(), ALICE, cluster_id));
+				assert_ok!(TEE::create_cluster(root(), ClusterType::Public));
+				assert_ok!(TEE::assign_enclave(root(), ALICE, cluster_id, 0));
 
 				let enclave_data = Enclave::new(CHARLIE, api_uri);
 				assert_eq!(EnclaveData::<Test>::get(ALICE), Some(enclave_data));
@@ -373,26 +381,26 @@ mod assign_enclave {
 	#[test]
 	fn bad_origin() {
 		ExtBuilder::default().tokens(vec![(ALICE, 1000)]).build().execute_with(|| {
-			assert_noop!(TEE::assign_enclave(origin(ALICE), ALICE, 0), BadOrigin);
+			assert_noop!(TEE::assign_enclave(origin(ALICE), ALICE, 0, 0), BadOrigin);
 		})
 	}
 
 	#[test]
 	fn enclave_address_already_exists() {
 		ExtBuilder::default()
-			.tokens(vec![(ALICE, 1000), (CHARLIE, 100)])
+			.tokens(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 100)])
 			.build()
 			.execute_with(|| {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
 				let bob: mock::RuntimeOrigin = origin(BOB);
-				let api_uri: BoundedVec<u8, MaxUriLen>= b"test".to_vec().try_into().unwrap();
+				let api_uri: BoundedVec<u8, MaxUriLen> = b"test".to_vec().try_into().unwrap();
 
 				assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, api_uri.clone()));
 				assert_ok!(TEE::register_enclave(bob.clone(), CHARLIE, api_uri.clone()));
-				assert_ok!(TEE::create_cluster(root()));
-				assert_ok!(TEE::assign_enclave(root(), ALICE, 0));
+				assert_ok!(TEE::create_cluster(root(), ClusterType::Public));
+				assert_ok!(TEE::assign_enclave(root(), ALICE, 0, 0));
 				assert_noop!(
-					TEE::assign_enclave(root(), BOB, 0),
+					TEE::assign_enclave(root(), BOB, 0, 0),
 					Error::<Test>::EnclaveAddressAlreadyExists
 				);
 			})
@@ -402,7 +410,7 @@ mod assign_enclave {
 	fn registration_not_found() {
 		ExtBuilder::default().tokens(vec![(ALICE, 1000)]).build().execute_with(|| {
 			assert_noop!(
-				TEE::assign_enclave(root(), ALICE, 0),
+				TEE::assign_enclave(root(), ALICE, 0, 0),
 				Error::<Test>::RegistrationNotFound
 			);
 		})
@@ -413,39 +421,35 @@ mod assign_enclave {
 		ExtBuilder::default().tokens(vec![(ALICE, 1000)]).build().execute_with(|| {
 			let alice: mock::RuntimeOrigin = origin(ALICE);
 			let api_uri_data = b"test".to_vec();
-			let api_uri: BoundedVec<u8, _> = BoundedVec::<u8, _>::try_from(api_uri_data).expect("API URI exceeds maximum length");
+			let api_uri: BoundedVec<u8, _> = BoundedVec::<u8, _>::try_from(api_uri_data)
+				.expect("API URI exceeds maximum length");
 
 			assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, api_uri.clone()));
-			assert_noop!(TEE::assign_enclave(root(), ALICE, 0), Error::<Test>::ClusterNotFound);
+			assert_noop!(TEE::assign_enclave(root(), ALICE, 0, 0), Error::<Test>::ClusterNotFound);
 		})
 	}
 
 	#[test]
 	fn cluster_is_full() {
 		ExtBuilder::default()
-			.tokens(vec![(ALICE, 1000), (BOB, 1000)])
+			.tokens(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)])
 			.build()
 			.execute_with(|| {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
 				let bob: mock::RuntimeOrigin = origin(BOB);
 				let charlie: mock::RuntimeOrigin = origin(CHARLIE);
-				let api_uri: BoundedVec<u8, MaxUriLen>= b"test".to_vec().try_into().unwrap();
+				let api_uri: BoundedVec<u8, MaxUriLen> = b"test".to_vec().try_into().unwrap();
 
-				assert_ok!(TEE::register_enclave(
-					alice.clone(),
-					ALICE_ENCLAVE,
-					api_uri.clone()
-				));
+				assert_ok!(TEE::register_enclave(alice.clone(), ALICE_ENCLAVE, api_uri.clone()));
 				assert_ok!(TEE::register_enclave(bob.clone(), BOB_ENCLAVE, api_uri.clone()));
-				assert_ok!(TEE::register_enclave(
-					charlie.clone(),
-					CHARLIE_ENCLAVE,
-					api_uri
-				));
-				assert_ok!(TEE::create_cluster(root()));
-				assert_ok!(TEE::assign_enclave(root(), ALICE, 0));
-				assert_ok!(TEE::assign_enclave(root(), BOB, 0));
-				assert_noop!(TEE::assign_enclave(root(), CHARLIE, 0), Error::<Test>::ClusterIsFull);
+				assert_ok!(TEE::register_enclave(charlie.clone(), CHARLIE_ENCLAVE, api_uri));
+				assert_ok!(TEE::create_cluster(root(), ClusterType::Public));
+				assert_ok!(TEE::assign_enclave(root(), ALICE, 0, 0));
+				assert_ok!(TEE::assign_enclave(root(), BOB, 0, 1));
+				assert_noop!(
+					TEE::assign_enclave(root(), CHARLIE, 0, 2),
+					Error::<Test>::ClusterIsFull
+				);
 			})
 	}
 }
@@ -460,7 +464,7 @@ mod remove_registration {
 			.build()
 			.execute_with(|| {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
-				let api_uri: BoundedVec<u8, MaxUriLen>= b"test".to_vec().try_into().unwrap();
+				let api_uri: BoundedVec<u8, MaxUriLen> = b"test".to_vec().try_into().unwrap();
 				assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, api_uri.clone()));
 				assert!(EnclaveRegistrations::<Test>::get(ALICE).is_some());
 				assert_ok!(TEE::remove_registration(root(), ALICE));
@@ -489,13 +493,13 @@ mod remove_update {
 			.build()
 			.execute_with(|| {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
-				let api_uri: BoundedVec<u8, MaxUriLen>= b"test".to_vec().try_into().unwrap();
+				let api_uri: BoundedVec<u8, MaxUriLen> = b"test".to_vec().try_into().unwrap();
 				let new_api_uri: BoundedVec<u8, MaxUriLen> =
 					"new_api_uri".as_bytes().to_vec().try_into().unwrap();
 
 				assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, api_uri.clone()));
-				assert_ok!(TEE::create_cluster(root()));
-				assert_ok!(TEE::assign_enclave(root(), ALICE, 0));
+				assert_ok!(TEE::create_cluster(root(), ClusterType::Public));
+				assert_ok!(TEE::assign_enclave(root(), ALICE, 0, 0));
 
 				assert_ok!(TEE::update_enclave(alice.clone(), BOB, new_api_uri.clone()));
 
@@ -522,42 +526,45 @@ mod remove_update {
 			.build()
 			.execute_with(|| {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
-				let api_uri: BoundedVec<u8, MaxUriLen>= b"test".to_vec().try_into().unwrap();
+				let api_uri: BoundedVec<u8, MaxUriLen> = b"test".to_vec().try_into().unwrap();
 				let new_api_uri: BoundedVec<u8, MaxUriLen> =
 					"new_api_uri".as_bytes().to_vec().try_into().unwrap();
 
 				assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, api_uri.clone()));
-				assert_ok!(TEE::create_cluster(root()));
-				assert_ok!(TEE::assign_enclave(root(), ALICE, 0));
+				assert_ok!(TEE::create_cluster(root(), ClusterType::Public));
+				assert_ok!(TEE::assign_enclave(root(), ALICE, 0, 0));
 
 				assert_ok!(TEE::update_enclave(alice.clone(), BOB, new_api_uri.clone()));
 
 				assert_noop!(TEE::remove_update(root(), BOB), Error::<Test>::UpdateRequestNotFound);
 				assert!(EnclaveUpdates::<Test>::get(ALICE).is_some());
 
-				let event =
-					RuntimeEvent::TEE(TEEEvent::MovedForUpdate { operator_address: ALICE, new_enclave_address: BOB, new_api_uri });
+				let event = RuntimeEvent::TEE(TEEEvent::MovedForUpdate {
+					operator_address: ALICE,
+					new_enclave_address: BOB,
+					new_api_uri,
+				});
 				System::assert_last_event(event);
 			})
 	}
 }
 
-mod remove_enclave {
+mod approve_enclave_unregistration {
 	use super::*;
 
 	#[test]
-	fn remove_enclave() {
+	fn approve_enclave_unregistration() {
 		ExtBuilder::default()
-			.tokens(vec![(ALICE, 1000), (CHARLIE, 100)])
+			.tokens(vec![(ALICE, 1000), (CHARLIE, 1000)])
 			.build()
 			.execute_with(|| {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
-				let api_uri: BoundedVec<u8, MaxUriLen>= b"test".to_vec().try_into().unwrap();
+				let api_uri: BoundedVec<u8, MaxUriLen> = b"test".to_vec().try_into().unwrap();
 				let new_api_uri: BoundedVec<u8, MaxUriLen> =
 					"new_api_uri".as_bytes().to_vec().try_into().unwrap();
 				assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, api_uri.clone()));
-				assert_ok!(TEE::create_cluster(root()));
-				assert_ok!(TEE::assign_enclave(root(), ALICE, 0));
+				assert_ok!(TEE::create_cluster(root(), ClusterType::Public));
+				assert_ok!(TEE::assign_enclave(root(), ALICE, 0, 0));
 
 				assert!(EnclaveAccountOperator::<Test>::get(CHARLIE).is_some());
 				assert!(EnclaveClusterId::<Test>::get(ALICE).is_some());
@@ -569,7 +576,48 @@ mod remove_enclave {
 				assert!(EnclaveUpdates::<Test>::get(ALICE).is_some());
 				assert!(EnclaveData::<Test>::get(ALICE).is_some());
 
-				assert_ok!(TEE::remove_enclave(root(), ALICE));
+				assert_ok!(TEE::force_remove_enclave(root(), ALICE));
+
+				assert!(EnclaveData::<Test>::get(ALICE).is_none());
+				assert!(EnclaveAccountOperator::<Test>::get(CHARLIE).is_none());
+				assert!(EnclaveClusterId::<Test>::get(ALICE).is_none());
+				assert!(EnclaveUpdates::<Test>::get(ALICE).is_none());
+				assert!(ClusterData::<Test>::get(0).unwrap().enclaves.get(0).is_none());
+
+				let event = RuntimeEvent::TEE(TEEEvent::EnclaveRemoved { operator_address: ALICE });
+				System::assert_last_event(event);
+			})
+	}
+}
+
+mod force_remove_enclave {
+	use super::*;
+
+	#[test]
+	fn force_remove_enclave() {
+		ExtBuilder::default()
+			.tokens(vec![(ALICE, 1000), (CHARLIE, 100)])
+			.build()
+			.execute_with(|| {
+				let alice: mock::RuntimeOrigin = origin(ALICE);
+				let api_uri: BoundedVec<u8, MaxUriLen> = b"test".to_vec().try_into().unwrap();
+				let new_api_uri: BoundedVec<u8, MaxUriLen> =
+					"new_api_uri".as_bytes().to_vec().try_into().unwrap();
+				assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, api_uri.clone()));
+				assert_ok!(TEE::create_cluster(root(), ClusterType::Public));
+				assert_ok!(TEE::assign_enclave(root(), ALICE, 0, 0));
+
+				assert!(EnclaveAccountOperator::<Test>::get(CHARLIE).is_some());
+				assert!(EnclaveClusterId::<Test>::get(ALICE).is_some());
+				assert!(ClusterData::<Test>::get(0).unwrap().enclaves.get(0).is_some());
+
+				assert_ok!(TEE::update_enclave(alice.clone(), BOB, new_api_uri.clone()));
+				assert_ok!(TEE::unregister_enclave(alice.clone()));
+
+				assert!(EnclaveUpdates::<Test>::get(ALICE).is_some());
+				assert!(EnclaveData::<Test>::get(ALICE).is_some());
+
+				assert_ok!(TEE::force_remove_enclave(root(), ALICE));
 
 				assert!(EnclaveData::<Test>::get(ALICE).is_none());
 				assert!(EnclaveAccountOperator::<Test>::get(CHARLIE).is_none());
@@ -584,7 +632,7 @@ mod remove_enclave {
 	#[test]
 	fn bad_origin() {
 		ExtBuilder::default().tokens(vec![(ALICE, 1000)]).build().execute_with(|| {
-			assert_noop!(TEE::remove_enclave(origin(ALICE), ALICE), BadOrigin);
+			assert_noop!(TEE::force_remove_enclave(origin(ALICE), ALICE), BadOrigin);
 		})
 	}
 
@@ -595,14 +643,17 @@ mod remove_enclave {
 			.build()
 			.execute_with(|| {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
-				let api_uri: BoundedVec<u8, MaxUriLen>= b"test".to_vec().try_into().unwrap();
+				let api_uri: BoundedVec<u8, MaxUriLen> = b"test".to_vec().try_into().unwrap();
 
 				assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, api_uri.clone()));
-				assert_ok!(TEE::create_cluster(root()));
-				assert_ok!(TEE::assign_enclave(root(), ALICE, 0));
+				assert_ok!(TEE::create_cluster(root(), ClusterType::Public));
+				assert_ok!(TEE::assign_enclave(root(), ALICE, 0, 0));
 
-				assert_ok!(TEE::remove_enclave(root(), ALICE));
-				assert_noop!(TEE::remove_enclave(root(), ALICE), Error::<Test>::EnclaveNotFound);
+				assert_ok!(TEE::force_remove_enclave(root(), ALICE));
+				assert_noop!(
+					TEE::force_remove_enclave(root(), ALICE),
+					Error::<Test>::EnclaveNotFound
+				);
 			})
 	}
 
@@ -613,15 +664,18 @@ mod remove_enclave {
 			.build()
 			.execute_with(|| {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
-				let api_uri: BoundedVec<u8, MaxUriLen>= b"test".to_vec().try_into().unwrap();
+				let api_uri: BoundedVec<u8, MaxUriLen> = b"test".to_vec().try_into().unwrap();
 
 				assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, api_uri.clone()));
-				assert_ok!(TEE::create_cluster(root()));
-				assert_ok!(TEE::assign_enclave(root(), ALICE, 0));
+				assert_ok!(TEE::create_cluster(root(), ClusterType::Public));
+				assert_ok!(TEE::assign_enclave(root(), ALICE, 0, 0));
 
 				EnclaveClusterId::<Test>::remove(ALICE);
 
-				assert_noop!(TEE::remove_enclave(root(), ALICE), Error::<Test>::ClusterIdNotFound);
+				assert_noop!(
+					TEE::force_remove_enclave(root(), ALICE),
+					Error::<Test>::ClusterIdNotFound
+				);
 			})
 	}
 }
@@ -636,13 +690,13 @@ mod force_update_enclave {
 			.build()
 			.execute_with(|| {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
-				let api_uri: BoundedVec<u8, MaxUriLen>= b"test".to_vec().try_into().unwrap();
+				let api_uri: BoundedVec<u8, MaxUriLen> = b"test".to_vec().try_into().unwrap();
 				let new_api_uri: BoundedVec<u8, MaxUriLen> =
 					"new_api_uri".as_bytes().to_vec().try_into().unwrap();
 
 				assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, api_uri.clone()));
-				assert_ok!(TEE::create_cluster(root()));
-				assert_ok!(TEE::assign_enclave(root(), ALICE, 0));
+				assert_ok!(TEE::create_cluster(root(), ClusterType::Public));
+				assert_ok!(TEE::assign_enclave(root(), ALICE, 0, 0));
 				assert_ok!(TEE::update_enclave(alice.clone(), BOB, new_api_uri.clone()));
 				assert!(EnclaveUpdates::<Test>::get(ALICE).is_some());
 				assert_ok!(TEE::force_update_enclave(root(), ALICE, BOB, new_api_uri.clone()));
@@ -662,32 +716,29 @@ mod force_update_enclave {
 
 	#[test]
 	fn bad_origin() {
-		let api_uri: BoundedVec<u8, MaxUriLen>= b"test".to_vec().try_into().unwrap();
+		let api_uri: BoundedVec<u8, MaxUriLen> = b"test".to_vec().try_into().unwrap();
 		ExtBuilder::default().tokens(vec![(ALICE, 1000)]).build().execute_with(|| {
-			assert_noop!(
-				TEE::force_update_enclave(origin(ALICE), ALICE, BOB, api_uri),
-				BadOrigin
-			);
+			assert_noop!(TEE::force_update_enclave(origin(ALICE), ALICE, BOB, api_uri), BadOrigin);
 		})
 	}
 
 	#[test]
 	fn enclave_address_already_exists() {
 		ExtBuilder::default()
-			.tokens(vec![(ALICE, 1000), (CHARLIE, 100)])
+			.tokens(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 100)])
 			.build()
 			.execute_with(|| {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
 				let bob: mock::RuntimeOrigin = origin(BOB);
-				let api_uri: BoundedVec<u8, MaxUriLen>= b"test".to_vec().try_into().unwrap();
+				let api_uri: BoundedVec<u8, MaxUriLen> = b"test".to_vec().try_into().unwrap();
 
-				assert_ok!(TEE::create_cluster(root()));
+				assert_ok!(TEE::create_cluster(root(), ClusterType::Public));
 
 				assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, api_uri.clone()));
 				assert_ok!(TEE::register_enclave(bob.clone(), EVE, api_uri.clone()));
 
-				assert_ok!(TEE::assign_enclave(root(), ALICE, 0));
-				assert_ok!(TEE::assign_enclave(root(), BOB, 0));
+				assert_ok!(TEE::assign_enclave(root(), ALICE, 0, 0));
+				assert_ok!(TEE::assign_enclave(root(), BOB, 0, 1));
 
 				assert_noop!(
 					TEE::force_update_enclave(root(), BOB, CHARLIE, api_uri.clone()),
@@ -703,13 +754,13 @@ mod force_update_enclave {
 			.build()
 			.execute_with(|| {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
-				let api_uri: BoundedVec<u8, MaxUriLen>= b"test".to_vec().try_into().unwrap();
+				let api_uri: BoundedVec<u8, MaxUriLen> = b"test".to_vec().try_into().unwrap();
 				let new_api_uri: BoundedVec<u8, MaxUriLen> =
 					"new_api_uri".as_bytes().to_vec().try_into().unwrap();
 
 				assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, api_uri.clone()));
-				assert_ok!(TEE::create_cluster(root()));
-				assert_ok!(TEE::assign_enclave(root(), ALICE, 0));
+				assert_ok!(TEE::create_cluster(root(), ClusterType::Public));
+				assert_ok!(TEE::assign_enclave(root(), ALICE, 0, 0));
 
 				assert_noop!(
 					TEE::force_update_enclave(root(), ALICE, ALICE, new_api_uri.clone(),),
@@ -725,13 +776,13 @@ mod force_update_enclave {
 			.build()
 			.execute_with(|| {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
-				let api_uri: BoundedVec<u8, MaxUriLen>= b"test".to_vec().try_into().unwrap();
+				let api_uri: BoundedVec<u8, MaxUriLen> = b"test".to_vec().try_into().unwrap();
 				let new_api_uri: BoundedVec<u8, MaxUriLen> =
 					"new_api_uri".as_bytes().to_vec().try_into().unwrap();
 
 				assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, api_uri.clone()));
-				assert_ok!(TEE::create_cluster(root()));
-				assert_ok!(TEE::assign_enclave(root(), ALICE, 0));
+				assert_ok!(TEE::create_cluster(root(), ClusterType::Public));
+				assert_ok!(TEE::assign_enclave(root(), ALICE, 0, 0));
 
 				assert_noop!(
 					TEE::force_update_enclave(root(), CHARLIE, BOB, new_api_uri.clone(),),
@@ -747,11 +798,14 @@ mod create_cluster {
 	#[test]
 	fn create_cluster() {
 		ExtBuilder::default().build().execute_with(|| {
-			assert_ok!(TEE::create_cluster(root()));
-			let cluster = Cluster::new(Default::default());
+			assert_ok!(TEE::create_cluster(root(), ClusterType::Public));
+			let cluster = Cluster::new(Default::default(), ClusterType::Public);
 			assert_eq!(ClusterData::<Test>::get(0), Some(cluster));
 
-			let event = RuntimeEvent::TEE(TEEEvent::ClusterAdded { cluster_id: 0 });
+			let event = RuntimeEvent::TEE(TEEEvent::ClusterAdded {
+				cluster_id: 0,
+				cluster_type: ClusterType::Public,
+			});
 			System::assert_last_event(event);
 		})
 	}
@@ -759,7 +813,45 @@ mod create_cluster {
 	#[test]
 	fn bad_origin() {
 		ExtBuilder::default().tokens(vec![(ALICE, 1000)]).build().execute_with(|| {
-			assert_noop!(TEE::create_cluster(origin(ALICE)), BadOrigin);
+			assert_noop!(TEE::create_cluster(origin(ALICE), ClusterType::Public), BadOrigin);
+		})
+	}
+}
+
+mod update_cluster {
+	use super::*;
+
+	#[test]
+	fn update_cluster() {
+		ExtBuilder::default().build().execute_with(|| {
+			ClusterData::<Test>::insert(0, Cluster::new(Default::default(), ClusterType::Private));
+
+			assert_ok!(TEE::update_cluster(root(), 0, ClusterType::Public));
+			let cluster = Cluster::new(Default::default(), ClusterType::Public);
+			assert_eq!(ClusterData::<Test>::get(0), Some(cluster));
+
+			let event = RuntimeEvent::TEE(TEEEvent::ClusterUpdated {
+				cluster_id: 0,
+				cluster_type: ClusterType::Public,
+			});
+			System::assert_last_event(event);
+		})
+	}
+
+	#[test]
+	fn bad_origin() {
+		ExtBuilder::default().build().execute_with(|| {
+			assert_noop!(TEE::update_cluster(origin(ALICE), 0, ClusterType::Public), BadOrigin);
+		})
+	}
+
+	#[test]
+	fn cluster_not_found() {
+		ExtBuilder::default().build().execute_with(|| {
+			assert_noop!(
+				TEE::update_cluster(root(), 0, ClusterType::Public),
+				Error::<Test>::ClusterNotFound
+			);
 		})
 	}
 }
@@ -770,7 +862,7 @@ mod remove_cluster {
 	#[test]
 	fn remove_cluster() {
 		ExtBuilder::default().build().execute_with(|| {
-			assert_ok!(TEE::create_cluster(root()));
+			assert_ok!(TEE::create_cluster(root(), ClusterType::Public));
 			assert_ok!(TEE::remove_cluster(root(), 0u32));
 			assert!(ClusterData::<Test>::get(0).is_none());
 
@@ -801,11 +893,11 @@ mod remove_cluster {
 			.build()
 			.execute_with(|| {
 				let alice: mock::RuntimeOrigin = origin(ALICE);
-				let api_uri: BoundedVec<u8, MaxUriLen>= b"test".to_vec().try_into().unwrap();
+				let api_uri: BoundedVec<u8, MaxUriLen> = b"test".to_vec().try_into().unwrap();
 
 				assert_ok!(TEE::register_enclave(alice.clone(), CHARLIE, api_uri.clone()));
-				assert_ok!(TEE::create_cluster(root()));
-				assert_ok!(TEE::assign_enclave(root(), ALICE, 0));
+				assert_ok!(TEE::create_cluster(root(), ClusterType::Public));
+				assert_ok!(TEE::assign_enclave(root(), ALICE, 0, 0));
 
 				assert_noop!(TEE::remove_cluster(root(), 0u32), Error::<Test>::ClusterIsNotEmpty);
 			})

@@ -1,6 +1,6 @@
 [package]
 name = "ternoa-rent"
-version = "1.0.2"
+version = "1.0.3"
 authors = ["Ternoa"]
 edition = "2021"
 license = "GPL-3.0-only"
@@ -38,6 +38,13 @@ ternoa-tee = { default-features = false, path = "../tee" }
 pallet-balances = { workspace = true }
 sp-core = { workspace = true, default-features = false }
 sp-io = { workspace = true, default-features = false }
+frame-election-provider-support = { workspace = true, default-features = false }
+pallet-timestamp = { workspace = true, default-features = false }
+pallet-staking = { workspace = true, default-features = false }
+pallet-staking-reward-curve = { workspace = true, default-features = false }
+pallet-session = { workspace = true, default-features = false }
+sp-staking = { workspace = true, default-features = false }
+
 
 [features]
 default = ["std"]

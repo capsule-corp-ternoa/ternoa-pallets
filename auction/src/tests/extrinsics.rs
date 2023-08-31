@@ -476,7 +476,7 @@ pub mod create_auction {
 			)
 			.unwrap();
 
-			let ok = AuctionBuilder::new().price(price - 1).execute();
+			let ok = AuctionBuilder::new().price(101 - 1).execute();
 			assert_noop!(ok, Error::<Test>::PriceCannotCoverMarketplaceFee);
 		})
 	}

@@ -22,6 +22,7 @@ use pallet_balances::Error as BalanceError;
 use primitives::{nfts::NFTState, tee::ClusterId};
 use sp_arithmetic::per_things::Permill;
 use ternoa_common::traits::NFTExt;
+use ternoa_tee::ClusterType;
 
 const ALICE_NFT_ID: NFTId = 0;
 const BOB_NFT_ID: NFTId = 1;
@@ -76,12 +77,12 @@ fn prepare_tee_for_tests() {
 
 	let cluster_id: ClusterId = 0;
 	let second_cluster_id: ClusterId = 1;
-	assert_ok!(TEE::create_cluster(root()));
-	assert_ok!(TEE::create_cluster(root()));
+	assert_ok!(TEE::create_cluster(root(), ClusterType::Public));
+	assert_ok!(TEE::create_cluster(root(), ClusterType::Public));
 
-	assert_ok!(TEE::assign_enclave(root(), ALICE, cluster_id));
-	assert_ok!(TEE::assign_enclave(root(), BOB, cluster_id));
-	assert_ok!(TEE::assign_enclave(root(), CHARLIE, second_cluster_id));
+	assert_ok!(TEE::assign_enclave(root(), ALICE, cluster_id, 0));
+	assert_ok!(TEE::assign_enclave(root(), BOB, cluster_id, 1));
+	assert_ok!(TEE::assign_enclave(root(), CHARLIE, second_cluster_id, 2));
 }
 
 mod create_nft {
@@ -1862,7 +1863,7 @@ mod add_secret_shard {
 
 	#[test]
 	fn nft_not_found() {
-		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(|| {
 			prepare_tests();
 			prepare_tee_for_tests();
 			let alice_enclave: mock::RuntimeOrigin = origin(ALICE_ENCLAVE);
@@ -2702,7 +2703,7 @@ mod add_capsule_shard {
 
 	#[test]
 	fn nft_not_found() {
-		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000)]).execute_with(|| {
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(|| {
 			prepare_tests();
 			prepare_tee_for_tests();
 			let alice_enclave: mock::RuntimeOrigin = origin(ALICE_ENCLAVE);

@@ -1,6 +1,6 @@
 [package]
 name = "ternoa-tee"
-version = "1.0.0"
+version = "1.0.2"
 authors = ["Ternoa"]
 edition = "2021"
 license = "GPL-3.0-only"
@@ -16,10 +16,14 @@ targets = ["x86_64-unknown-linux-gnu"]
 frame-benchmarking = { workspace = true, default-features = false, optional = true }
 frame-support = { workspace = true, default-features = false }
 frame-system = { workspace = true, default-features = false }
+pallet-staking = { workspace = true, default-features = false }
 
 # Sp
 sp-runtime = { workspace = true, default-features = false }
 sp-std = { workspace = true, default-features = false }
+sp-arithmetic = { workspace = true, default-features = false }
+sp-staking = { workspace = true, default-features = false }
+
 
 # Rest
 parity-scale-codec = { default-features = false, features = ["derive", "max-encoded-len"], workspace = true }
@@ -36,6 +40,12 @@ ternoa-nft = { default-features = false, path = "../nft" }
 pallet-balances = { workspace = true }
 sp-core = { workspace = true, default-features = false }
 sp-io = { workspace = true, default-features = false }
+frame-election-provider-support = { workspace = true, default-features = false }
+pallet-timestamp = { workspace = true, default-features = false }
+pallet-staking-reward-curve = { workspace = true, default-features = false }
+pallet-session = { workspace = true, default-features = false }
+pallet-staking = { workspace = true, default-features = false }
+
 
 [features]
 default = ["std"]
@@ -49,6 +59,7 @@ std = [
     "ternoa-common/std",
     "primitives/std",
     "scale-info/std",
+    "pallet-staking/std",
 ]
 runtime-benchmarks = [
     "frame-benchmarking",

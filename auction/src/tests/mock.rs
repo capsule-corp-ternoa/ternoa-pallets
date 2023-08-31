@@ -16,14 +16,18 @@
 
 use frame_support::{
 	parameter_types,
-	traits::{ConstU32, Contains, OnFinalize, OnInitialize},
+	traits::{ConstU32, Contains, ConstU64, OnFinalize, OnInitialize},
 	PalletId,
 };
 use sp_core::H256;
 use sp_runtime::{
+	curve::PiecewiseLinear, 
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
+	Perbill,
 };
+use sp_staking::{EraIndex, SessionIndex};
+use frame_election_provider_support::{onchain, SequentialPhragmen};
 
 use crate::{self as ternoa_auction, Config};
 
@@ -31,7 +35,7 @@ type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 pub type BlockNumber = u64;
 pub type AccountId = u64;
-pub type Balance = u64;
+pub type Balance = u128;
 
 pub const ALICE: u64 = 1;
 pub const BOB: u64 = 2;
@@ -62,6 +66,9 @@ frame_support::construct_runtime!(
 		Auction: ternoa_auction,
 		Marketplace: ternoa_marketplace,
 		TEE: ternoa_tee,
+		Staking: pallet_staking,
+		Timestamp: pallet_timestamp,
+		Session: pallet_session,
 	}
 );
 
@@ -129,19 +136,139 @@ impl pallet_balances::Config for Test {
 	type MaxLocks = MaxLocks;
 }
 
+
+impl pallet_timestamp::Config for Test {
+	type Moment = u64;
+	type OnTimestampSet = ();
+	type MinimumPeriod = ConstU64<1>;
+	type WeightInfo = ();
+}
+
+impl pallet_session::historical::Config for Test {
+	type FullIdentification = pallet_staking::Exposure<AccountId, Balance>;
+	type FullIdentificationOf = pallet_staking::ExposureOf<Test>;
+}
+
+sp_runtime::impl_opaque_keys! {
+	pub struct SessionKeys {
+		pub foo: sp_runtime::testing::UintAuthorityId,
+	}
+}
+
+
+pub struct TestSessionHandler;
+impl pallet_session::SessionHandler<AccountId> for TestSessionHandler {
+	const KEY_TYPE_IDS: &'static [sp_runtime::KeyTypeId] = &[];
+
+	fn on_genesis_session<Ks: sp_runtime::traits::OpaqueKeys>(_validators: &[(AccountId, Ks)]) {}
+
+	fn on_new_session<Ks: sp_runtime::traits::OpaqueKeys>(
+		_: bool,
+		_: &[(AccountId, Ks)],
+		_: &[(AccountId, Ks)],
+	) {
+	}
+
+	fn on_disabled(_: u32) {}
+}
+
 parameter_types! {
-	pub const ClusterSize: u32 = 5;
+	pub const Period: u64 = 1;
+	pub const Offset: u64 = 0;
+}
+
+/// Custom `SessionHandler` since we use `TestSessionKeys` as `Keys`.
+impl pallet_session::Config for Test {
+	type RuntimeEvent = RuntimeEvent;
+	type ValidatorId = u64;
+	type ValidatorIdOf = pallet_staking::StashOf<Self>;
+	type ShouldEndSession = pallet_session::PeriodicSessions<ConstU64<1>, ConstU64<0>>;
+	type NextSessionRotation = pallet_session::PeriodicSessions<ConstU64<1>, ConstU64<0>>;
+	type SessionManager = pallet_session::historical::NoteHistoricalRoot<Test, Staking>;
+	type SessionHandler = TestSessionHandler;
+	type Keys = SessionKeys;
+	type WeightInfo = ();
+}
+
+
+pallet_staking_reward_curve::build! {
+	const REWARD_CURVE: PiecewiseLinear<'static> = curve!(
+		min_inflation: 0_025_000u64,
+		max_inflation: 0_100_000,
+		ideal_stake: 0_500_000,
+		falloff: 0_050_000,
+		max_piece_count: 40,
+		test_precision: 0_005_000,
+	);
+}
+
+parameter_types! {
+	pub const SessionsPerEra: SessionIndex = 3;
+	pub const BondingDuration: EraIndex = 3;
+	pub const RewardCurve: &'static PiecewiseLinear<'static> = &REWARD_CURVE;
+	pub const OffendingValidatorsThreshold: Perbill = Perbill::from_percent(17);
+}
+
+pub struct OnChainSeqPhragmen;
+impl onchain::Config for OnChainSeqPhragmen {
+	type System = Test;
+	type Solver = SequentialPhragmen<u64, Perbill>;
+	type DataProvider = Staking;
+	type WeightInfo = ();
+}
+
+impl pallet_staking::Config for Test {
+	type MaxNominations = ConstU32<16>;
+	type RewardRemainder = ();
+	type CurrencyToVote = frame_support::traits::SaturatingCurrencyToVote;
+	type RuntimeEvent = RuntimeEvent;
+	type Currency = Balances;
+	type CurrencyBalance = <Self as pallet_balances::Config>::Balance;
+	type Slash = ();
+	type Reward = ();
+	type SessionsPerEra = SessionsPerEra;
+	type BondingDuration = BondingDuration;
+	type SlashDeferDuration = ();
+	type SlashCancelOrigin = frame_system::EnsureRoot<Self::AccountId>;
+	type SessionInterface = Self;
+	type UnixTime = pallet_timestamp::Pallet<Test>;
+	type EraPayout = pallet_staking::ConvertCurve<RewardCurve>;
+	type MaxNominatorRewardedPerValidator = ConstU32<64>;
+	type OffendingValidatorsThreshold = OffendingValidatorsThreshold;
+	type NextNewSession = Session;
+	type ElectionProvider = onchain::UnboundedExecution<OnChainSeqPhragmen>;
+	type GenesisElectionProvider = Self::ElectionProvider;
+	type VoterList = pallet_staking::UseNominatorsAndValidatorsMap<Self>;
+	type TargetList = pallet_staking::UseValidatorsMap<Self>;
+	type MaxUnlockingChunks = ConstU32<32>;
+	type HistoryDepth = ConstU32<84>;
+	type OnStakerSlash = ();
+	type BenchmarkingConfig = pallet_staking::TestBenchmarkingConfig;
+	type WeightInfo = ();
+}
+
+parameter_types! {
+	pub const ClusterSize: u32 = 2;
 	pub const MaxUriLen: u32 = 12;
 	pub const ListSizeLimit: u32 = 10;
+	pub const TeeBondingDuration: u32 = 10;
+	pub const InitialStakingAmount: Balance = 20;
+	pub const InitalDailyRewardPool: Balance = 2000;
+	pub const TeePalletId: PalletId = PalletId(*b"tern/tee");
+	pub const TeeHistoryDepth: u32 = 50;
 }
 
 impl ternoa_tee::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
-	type WeightInfo = ();
-	type Currency = Balances;
+	type TeeWeightInfo = ();
 	type ClusterSize = ClusterSize;
 	type MaxUriLen = MaxUriLen;
 	type ListSizeLimit = ListSizeLimit;
+	type TeeBondingDuration = TeeBondingDuration;
+	type InitialStakingAmount = InitialStakingAmount;
+	type InitalDailyRewardPool = InitalDailyRewardPool;
+	type PalletId = TeePalletId;
+	type TeeHistoryDepth = TeeHistoryDepth;
 }
 
 parameter_types! {
