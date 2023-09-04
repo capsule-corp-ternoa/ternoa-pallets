@@ -42,28 +42,30 @@ pub mod v2 {
 			let mut write = 0u64;
 
 			ClusterData::<T>::translate(
-				|_id, old: OldClusterData<T::AccountId, T::ClusterSize>| {
+				|id, old: OldClusterData<T::AccountId, T::ClusterSize>| {
 					let mut new_enclaves: BoundedVec<(T::AccountId, SlotId), T::ClusterSize> =
 						BoundedVec::default();
 					let mut slot_id_counter = 0;
 
-					for account_id in old.enclaves.into_iter() {
-						let slot_id: SlotId = slot_id_counter;
-						slot_id_counter += 1;
-
-						let push_result = new_enclaves.try_push((account_id, slot_id));
-						match push_result {
-							Ok(_) => {
-								read += 1;
-								write += 1;
-							},
-							Err(_) => {
-								// Handle the error case if the `BoundedVec` is already full
-								break // Stop adding elements if the desired size is reached
-							},
+					if id == 0 {
+						for account_id in old.enclaves.into_iter() {
+							let slot_id: SlotId = slot_id_counter;
+							slot_id_counter += 1;
+	
+							let push_result = new_enclaves.try_push((account_id, slot_id));
+							match push_result {
+								Ok(_) => {
+									read += 1;
+									write += 1;
+								},
+								Err(_) => {
+									// Handle the error case if the `BoundedVec` is already full
+									break // Stop adding elements if the desired size is reached
+								},
+							}
 						}
-						break;
 					}
+				
 					let new_cluster_data = Cluster::new(new_enclaves, ClusterType::Public);
 					read += 1;
 					write += 1;
