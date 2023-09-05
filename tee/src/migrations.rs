@@ -75,20 +75,127 @@ pub mod v2 {
 				},
 			);
 			
-			let cluster_type = ClusterType::Public; // Replace with your desired cluster type
+			let cluster1_type = ClusterType::Admin; // Replace with your desired cluster type
 
-			// let cluster = Cluster::new(enclaves, cluster_type);
-			let default_pdot_address = "5C4hrfjw9DjXZTzV3MwzrrAr9P1MJhSrvWGWqi1eSuyUpnhM";
-			let default_address = <crate::Pallet<T>>::convert_str_to_valid_account_id(default_pdot_address).unwrap();
-			let enclaves: BoundedVec<(T::AccountId, SlotId), T::ClusterSize> = BoundedVec::try_from(vec![
+			let cluster_1_enclave_1 = "5HQH3eTQuDSgutg7bgARbcKcoLksqDSvwvytwnKbwt7d3vC7";
+			let cluster_1_enclave_1 = <crate::Pallet<T>>::convert_str_to_valid_account_id(cluster_1_enclave_1).unwrap();
+			let cluster_1_enclave_2 = "5G6QNaow6wFSUt468H4Sqasr3m9iz5oErzpHuLuAJcrwS83W";
+			let cluster_1_enclave_2 = <crate::Pallet<T>>::convert_str_to_valid_account_id(cluster_1_enclave_2).unwrap();
+			let cluster_1_enclave_3 = "5HmZna5KRdXvZ9GrAtZNbU9UfQoPGjfyPYtzopnMTvSDbPVn";
+			let cluster_1_enclave_3 = <crate::Pallet<T>>::convert_str_to_valid_account_id(cluster_1_enclave_3).unwrap();
+			let cluster_1_enclave_4 = "5FeRQfUDo7JzvVvtsudP6jRaFHG9nhNLLdHyTDPS3swv9nGE";
+			let cluster_1_enclave_4 = <crate::Pallet<T>>::convert_str_to_valid_account_id(cluster_1_enclave_4).unwrap();
+			let cluster_1_enclave_5 = "5Eecn3sD5bjbHi4rMyJevDViuCNeS2AgAV9KivZxb8XvpSQe";
+			let cluster_1_enclave_5 = <crate::Pallet<T>>::convert_str_to_valid_account_id(cluster_1_enclave_5).unwrap();
+			
+			let cluster_1_enclaves: BoundedVec<(T::AccountId, SlotId), T::ClusterSize> = BoundedVec::try_from(vec![
 				(
-					default_address, // Replace with your actual AccountId values
+					cluster_1_enclave_1, // Replace with your actual AccountId values
 					0,
 				),
+				(
+					cluster_1_enclave_2, // Replace with your actual AccountId values
+					1,
+				),
+				(
+					cluster_1_enclave_3, // Replace with your actual AccountId values
+					2,
+				),
+				(
+					cluster_1_enclave_4, // Replace with your actual AccountId values
+					3,
+				),
+				(
+					cluster_1_enclave_5, // Replace with your actual AccountId values
+					4,
+				),
 			]).unwrap();
-			let cluster_1 = Cluster::new(enclaves, cluster_type.clone());
+
+			let cluster_1 = Cluster::new(cluster_1_enclaves, cluster1_type.clone());
 
 			ClusterData::<T>::insert(1, cluster_1);
+
+			let cluster2_type = ClusterType::Public; // Replace with your desired cluster type
+
+			let cluster_2_enclave_1 = "5CcqaTBwWvbB2MvmeteSDLVujL3oaFHtdf24pPVT3Xf8v7tC";
+			let cluster_2_enclave_1 = <crate::Pallet<T>>::convert_str_to_valid_account_id(cluster_2_enclave_1).unwrap();
+			let cluster_2_enclave_2 = "5EjxzNQPeb7dHVVSugG54ghNFzwENxh7GA6VCn7kfBfE2FNg";
+			let cluster_2_enclave_2 = <crate::Pallet<T>>::convert_str_to_valid_account_id(cluster_2_enclave_2).unwrap();
+			let cluster_2_enclave_3 = "5GP1ddEfzCqSeTfs13BoC1GkiFQUPPUYqomBDAFsMU2bBnny";
+			let cluster_2_enclave_3 = <crate::Pallet<T>>::convert_str_to_valid_account_id(cluster_2_enclave_3).unwrap();
+			let cluster_2_enclave_4 = "5C5PJTfrmaZ3gF9tPWeQMQ63akmwkNXDmerTmVLbTZWEtcBd";
+			let cluster_2_enclave_4 = <crate::Pallet<T>>::convert_str_to_valid_account_id(cluster_2_enclave_4).unwrap();
+			let cluster_2_enclave_5 = "5C4zzH1ejwptMaeqi97A65J63jB8kqtm63oNPiVVCx2eoWMB";
+			let cluster_2_enclave_5 = <crate::Pallet<T>>::convert_str_to_valid_account_id(cluster_2_enclave_5).unwrap();
+			
+			let cluster_2_enclaves: BoundedVec<(T::AccountId, SlotId), T::ClusterSize> = BoundedVec::try_from(vec![
+				(
+					cluster_2_enclave_1, // Replace with your actual AccountId values
+					0,
+				),
+				(
+					cluster_2_enclave_2, // Replace with your actual AccountId values
+					1,
+				),
+				(
+					cluster_2_enclave_3, // Replace with your actual AccountId values
+					2,
+				),
+				(
+					cluster_2_enclave_4, // Replace with your actual AccountId values
+					3,
+				),
+				(
+					cluster_2_enclave_5, // Replace with your actual AccountId values
+					4,
+				),
+			]).unwrap();
+
+			let cluster_2 = Cluster::new(cluster_2_enclaves, cluster2_type.clone());
+
+			ClusterData::<T>::insert(2, cluster_2);
+
+			let cluster3_type = ClusterType::Public; // Replace with your desired cluster type
+
+			let cluster_3_enclave_1 = "5G1AGcU2D8832LcRefKrPm8Zrob63vf6uQSzKGmhyV9DrzFs";
+			let cluster_3_enclave_1 = <crate::Pallet<T>>::convert_str_to_valid_account_id(cluster_3_enclave_1).unwrap();
+			let cluster_3_enclave_2 = "5C8Y5FU5bf4mAJaaTUH2hr8dz2bLrpijppzqxErqYNWgjCzK";
+			let cluster_3_enclave_2 = <crate::Pallet<T>>::convert_str_to_valid_account_id(cluster_3_enclave_2).unwrap();
+			let cluster_3_enclave_3 = "5CzNerUQtWgRX3AyWUtBgRmLHxZAg74EoTBXqefbuDHJA8tL";
+			let cluster_3_enclave_3 = <crate::Pallet<T>>::convert_str_to_valid_account_id(cluster_3_enclave_3).unwrap();
+			let cluster_3_enclave_4 = "5CqHgc11S3zUBtnM1vJchiMpGBFnQ3sQJeKcvszKmjuycUR4";
+			let cluster_3_enclave_4 = <crate::Pallet<T>>::convert_str_to_valid_account_id(cluster_3_enclave_4).unwrap();
+			let cluster_3_enclave_5 = "5F1ieotWMiq4QVkV6vahCGaqundt4JQWAjp4a3rkSGkvbpoJ";
+			let cluster_3_enclave_5 = <crate::Pallet<T>>::convert_str_to_valid_account_id(cluster_3_enclave_5).unwrap();
+			
+			let cluster_3_enclaves: BoundedVec<(T::AccountId, SlotId), T::ClusterSize> = BoundedVec::try_from(vec![
+				(
+					cluster_3_enclave_1, // Replace with your actual AccountId values
+					0,
+				),
+				(
+					cluster_3_enclave_2, // Replace with your actual AccountId values
+					1,
+				),
+				(
+					cluster_3_enclave_3, // Replace with your actual AccountId values
+					2,
+				),
+				(
+					cluster_3_enclave_4, // Replace with your actual AccountId values
+					3,
+				),
+				(
+					cluster_3_enclave_5, // Replace with your actual AccountId values
+					4,
+				),
+			]).unwrap();
+
+			let cluster_3 = Cluster::new(cluster_3_enclaves, cluster3_type.clone());
+
+			ClusterData::<T>::insert(3, cluster_3);
+
+			write+=3;
 
 			T::DbWeight::get().reads_writes(read, write)
 		}
