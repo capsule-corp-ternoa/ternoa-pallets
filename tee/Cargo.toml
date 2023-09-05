@@ -30,7 +30,7 @@ sp-core = { workspace = true, default-features = false }
 parity-scale-codec = { default-features = false, features = ["derive", "max-encoded-len"], workspace = true }
 scale-info = { workspace = true, default-features = false, features = ["derive"] }
 log = { default-features = false, workspace = true }
-bs58 = { default-features = false, workspace = true }
+bs58 = { version = "0.4.0", default-features = false }
 
 # Ternoa
 ternoa-common = { default-features = false, path = "../common" }
