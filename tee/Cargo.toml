@@ -23,12 +23,14 @@ sp-runtime = { workspace = true, default-features = false }
 sp-std = { workspace = true, default-features = false }
 sp-arithmetic = { workspace = true, default-features = false }
 sp-staking = { workspace = true, default-features = false }
+sp-core = { workspace = true, default-features = false }
 
 
 # Rest
 parity-scale-codec = { default-features = false, features = ["derive", "max-encoded-len"], workspace = true }
 scale-info = { workspace = true, default-features = false, features = ["derive"] }
 log = { default-features = false, workspace = true }
+bs58 = { default-features = false, workspace = true }
 
 # Ternoa
 ternoa-common = { default-features = false, path = "../common" }
@@ -60,6 +62,7 @@ std = [
     "primitives/std",
     "scale-info/std",
     "pallet-staking/std",
+    "bs58/std",
 ]
 runtime-benchmarks = [
     "frame-benchmarking",

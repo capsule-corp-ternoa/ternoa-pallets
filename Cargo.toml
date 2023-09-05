@@ -40,3 +40,4 @@ parity-scale-codec = { default-features = false, features = ["derive", "max-enco
 log = { default-features = false, version = "0.4.17" }
 scale-info = { version = "2.1.2", default-features = false, features = ["derive"] }
 serde = { version = "1.0.137" }
+bs58 = { version = "0.4.0", default-features = false }
