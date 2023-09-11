@@ -149,7 +149,7 @@ benchmarks! {
 		assert_eq!(EnclaveRegistrations::<T>::get(alice), None);
 	}
 
-	remove_update {
+	reject_update {
 		prepare_benchmarks::<T>();
 		let alice: T::AccountId = get_account::<T>("ALICE");
 		let cluster_id: ClusterId = 0;
@@ -211,7 +211,7 @@ benchmarks! {
 		let new_enclave = Enclave::new(new_enclave_address.clone(), new_uri.clone());
 		TEE::<T>::update_enclave(origin::<T>("ALICE").into(), new_enclave_address.clone(), new_uri.clone()).unwrap();
 
-	}: _(RawOrigin::Root, alice.clone(), new_enclave_address.clone(), new_uri)
+	}: _(RawOrigin::Root, alice.clone(), Some(new_enclave_address.clone()), Some(new_uri))
 	verify {
 		assert_eq!(EnclaveData::<T>::get(alice.clone()), Some(new_enclave));
 		assert_eq!(EnclaveUpdates::<T>::get(alice), None);
@@ -247,7 +247,9 @@ benchmarks! {
 		prepare_benchmarks::<T>();
 		let alice: T::AccountId = get_account::<T>("ALICE");
 
-		let stake_details = TeeStakingLedger::new(alice.clone(), true, Default::default());
+		let staked_amount: BalanceOf<T> = 20u32.into();
+
+		let stake_details = TeeStakingLedger::new(alice.clone(), staked_amount, true, Default::default());
 		StakingLedger::<T>::insert(alice.clone(), stake_details);
 		frame_system::Pallet::<T>::set_block_number(200u32.into());
 
@@ -419,6 +421,81 @@ benchmarks! {
 		TEE::<T>::submit_metrics_server_report(origin::<T>("ALICE").into(), alice.clone(), metrics_server_report).unwrap();
 
 	}: _(origin::<T>("ALICE"), 2)
+
+	update_operator_assigned_era {
+		prepare_benchmarks::<T>();
+		let raw = (10 as sp_staking::EraIndex, Some(10u64)).encode();
+		let info = pallet_staking::ActiveEraInfo::decode(&mut &raw[..]).unwrap();
+		pallet_staking::ActiveEra::<T>::put(&info);
+
+		let alice: T::AccountId = get_account::<T>("ALICE");
+		let bob: T::AccountId = get_account::<T>("BOB");
+
+		let cluster_id: ClusterId = 0;
+		let slot_id: SlotId = 0;
+		let enclave_address: T::AccountId= get_account::<T>("ALICE_ENCLAVE");
+		let uri: BoundedVec<u8, T::MaxUriLen> = BoundedVec::try_from(vec![1; T::MaxUriLen::get() as usize]).unwrap();
+		let enclave = Enclave::new(enclave_address.clone(), uri.clone());
+
+		TEE::<T>::create_cluster(RawOrigin::Root.into(), ClusterType::Public).unwrap();
+		TEE::<T>::register_enclave(origin::<T>("ALICE").into(), enclave_address.clone(), uri.clone()).unwrap();
+		TEE::<T>::assign_enclave(RawOrigin::Root.into(), alice.clone(), cluster_id, slot_id).unwrap();
+	}: _(RawOrigin::Root, alice.clone(), 11)
+	verify {
+		assert_eq!(OperatorAssignedEra::<T>::get(alice).unwrap(), 11);
+	}
+
+	bond_extra {
+		prepare_benchmarks::<T>();
+		let raw = (10 as sp_staking::EraIndex, Some(10u64)).encode();
+		let info = pallet_staking::ActiveEraInfo::decode(&mut &raw[..]).unwrap();
+		pallet_staking::ActiveEra::<T>::put(&info);
+
+		let alice: T::AccountId = get_account::<T>("ALICE");
+		let bob: T::AccountId = get_account::<T>("BOB");
+
+		let cluster_id: ClusterId = 0;
+		let slot_id: SlotId = 0;
+		let enclave_address: T::AccountId= get_account::<T>("ALICE_ENCLAVE");
+		let uri: BoundedVec<u8, T::MaxUriLen> = BoundedVec::try_from(vec![1; T::MaxUriLen::get() as usize]).unwrap();
+		let enclave = Enclave::new(enclave_address.clone(), uri.clone());
+
+		TEE::<T>::create_cluster(RawOrigin::Root.into(), ClusterType::Public).unwrap();
+		TEE::<T>::register_enclave(origin::<T>("ALICE").into(), enclave_address.clone(), uri.clone()).unwrap();
+		TEE::<T>::assign_enclave(RawOrigin::Root.into(), alice.clone(), cluster_id, slot_id).unwrap();
+		let stake_amount: BalanceOf<T> = 30u32.into();
+
+		TEE::<T>::set_staking_amount(RawOrigin::Root.into(), stake_amount).unwrap();
+	}: _(origin::<T>("ALICE"))
+	verify {
+		assert_eq!(OperatorAssignedEra::<T>::get(alice).unwrap(), 11);
+	}
+
+	refund_excess {
+		prepare_benchmarks::<T>();
+		let raw = (10 as sp_staking::EraIndex, Some(10u64)).encode();
+		let info = pallet_staking::ActiveEraInfo::decode(&mut &raw[..]).unwrap();
+		pallet_staking::ActiveEra::<T>::put(&info);
+
+		let alice: T::AccountId = get_account::<T>("ALICE");
+		let bob: T::AccountId = get_account::<T>("BOB");
+
+		let cluster_id: ClusterId = 0;
+		let slot_id: SlotId = 0;
+		let enclave_address: T::AccountId= get_account::<T>("ALICE_ENCLAVE");
+		let uri: BoundedVec<u8, T::MaxUriLen> = BoundedVec::try_from(vec![1; T::MaxUriLen::get() as usize]).unwrap();
+		let enclave = Enclave::new(enclave_address.clone(), uri.clone());
+
+		TEE::<T>::create_cluster(RawOrigin::Root.into(), ClusterType::Public).unwrap();
+		TEE::<T>::register_enclave(origin::<T>("ALICE").into(), enclave_address.clone(), uri.clone()).unwrap();
+		TEE::<T>::assign_enclave(RawOrigin::Root.into(), alice.clone(), cluster_id, slot_id).unwrap();
+		let stake_amount: BalanceOf<T> = 10u32.into();
+
+		TEE::<T>::set_staking_amount(RawOrigin::Root.into(), stake_amount).unwrap();
+	}: _(origin::<T>("ALICE"))
+	verify {
+		assert_eq!(OperatorAssignedEra::<T>::get(alice).unwrap(), 11);
+	}
 }
 
 impl_benchmark_test_suite!(TEE, crate::tests::mock::new_test_ext(), crate::tests::mock::Test);

@@ -85,27 +85,36 @@ where
 #[derive(
 	PartialEqNoBound, CloneNoBound, Encode, Decode, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen,
 )]
-#[codec(mel_bound(AccountId: MaxEncodedLen, BlockNumber: MaxEncodedLen))]
-pub struct TeeStakingLedger<AccountId, BlockNumber>
+#[codec(mel_bound(AccountId: MaxEncodedLen, BlockNumber: MaxEncodedLen, Balance: MaxEncodedLen))]
+pub struct TeeStakingLedger<AccountId, BlockNumber, Balance>
 where
 	AccountId: Clone + PartialEq + Debug,
 	BlockNumber: Clone + PartialEq + Debug + sp_std::cmp::PartialOrd + AtLeast32BitUnsigned + Copy,
+	Balance: Clone + PartialEq + Debug + sp_std::cmp::PartialOrd,
 {
 	/// The operator account whose balance is actually locked and at stake.
 	pub operator: AccountId,
+	/// The total staked amount
+	pub staked_amount: Balance,
 	/// State variable to know whether the staked amount is unbonded
 	pub is_unlocking: bool,
 	/// Block Number of when unbonded happened
 	pub unbonded_at: BlockNumber,
 }
 
-impl<AccountId, BlockNumber> TeeStakingLedger<AccountId, BlockNumber>
+impl<AccountId, BlockNumber, Balance> TeeStakingLedger<AccountId, BlockNumber, Balance>
 where
 	AccountId: Clone + PartialEq + Debug,
 	BlockNumber: Clone + PartialEq + Debug + sp_std::cmp::PartialOrd + AtLeast32BitUnsigned + Copy,
+	Balance: Clone + PartialEq + Debug + sp_std::cmp::PartialOrd,
 {
-	pub fn new(operator: AccountId, is_unlocking: bool, unbonded_at: BlockNumber) -> Self {
-		Self { operator, is_unlocking, unbonded_at }
+	pub fn new(
+		operator: AccountId,
+		staked_amount: Balance,
+		is_unlocking: bool,
+		unbonded_at: BlockNumber,
+	) -> Self {
+		Self { operator, staked_amount, is_unlocking, unbonded_at }
 	}
 }
 // #[derive(Clone, Eq, PartialEq, Encode, Decode, Default, RuntimeDebug, TypeInfo, MaxEncodedLen)]

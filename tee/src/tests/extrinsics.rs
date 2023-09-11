@@ -49,7 +49,7 @@ mod register_enclave {
 				assert!(EnclaveAccountOperator::<Test>::get(ALICE).is_none());
 
 				let expected_stake_details =
-					TeeStakingLedger::new(ALICE, false, Default::default());
+					TeeStakingLedger::new(ALICE, 20, false, Default::default());
 				let actual_stake_details = TEE::tee_staking_ledger(ALICE).unwrap();
 				assert_eq!(expected_stake_details, actual_stake_details);
 
@@ -483,11 +483,11 @@ mod remove_registration {
 	}
 }
 
-mod remove_update {
+mod reject_update {
 	use super::*;
 
 	#[test]
-	fn remove_update() {
+	fn reject_update() {
 		ExtBuilder::default()
 			.tokens(vec![(ALICE, 1000), (CHARLIE, 100)])
 			.build()
@@ -503,7 +503,7 @@ mod remove_update {
 
 				assert_ok!(TEE::update_enclave(alice.clone(), BOB, new_api_uri.clone()));
 
-				assert_ok!(TEE::remove_update(root(), ALICE));
+				assert_ok!(TEE::reject_update(root(), ALICE));
 				assert!(EnclaveUpdates::<Test>::get(ALICE).is_none());
 
 				let event =
@@ -515,12 +515,12 @@ mod remove_update {
 	#[test]
 	fn bad_origin() {
 		ExtBuilder::default().tokens(vec![(ALICE, 1000)]).build().execute_with(|| {
-			assert_noop!(TEE::remove_update(origin(ALICE), ALICE), BadOrigin);
+			assert_noop!(TEE::reject_update(origin(ALICE), ALICE), BadOrigin);
 		})
 	}
 
 	#[test]
-	fn remove_update_with_invalid_operator() {
+	fn reject_update_with_invalid_operator() {
 		ExtBuilder::default()
 			.tokens(vec![(ALICE, 1000), (CHARLIE, 100)])
 			.build()
@@ -536,7 +536,7 @@ mod remove_update {
 
 				assert_ok!(TEE::update_enclave(alice.clone(), BOB, new_api_uri.clone()));
 
-				assert_noop!(TEE::remove_update(root(), BOB), Error::<Test>::UpdateRequestNotFound);
+				assert_noop!(TEE::reject_update(root(), BOB), Error::<Test>::UpdateRequestNotFound);
 				assert!(EnclaveUpdates::<Test>::get(ALICE).is_some());
 
 				let event = RuntimeEvent::TEE(TEEEvent::MovedForUpdate {
