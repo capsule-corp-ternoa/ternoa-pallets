@@ -253,7 +253,7 @@ pub mod pallet {
 
 				weight = <migrations::v2::MigrationV2<T> as OnRuntimeUpgrade>::on_runtime_upgrade();
 
-				StorageVersion::put::<Pallet<T>>(&StorageVersion::new(2));
+				StorageVersion::put::<Pallet<T>>(&StorageVersion::new(3));
 			}
 
 			weight
