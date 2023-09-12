@@ -41,7 +41,7 @@ use sp_std::vec;
 use primitives::tee::{ClusterId, SlotId};
 use sp_runtime::{
 	traits::{AccountIdConversion, CheckedSub, SaturatedConversion},
-	Perbill, Percent,
+	Perbill, Percent, Saturating,
 };
 use ternoa_common::traits;
 pub use weights::WeightInfo;
@@ -198,7 +198,7 @@ pub mod pallet {
 		_,
 		Blake2_128Concat,
 		T::AccountId,
-		TeeStakingLedger<T::AccountId, T::BlockNumber>,
+		TeeStakingLedger<T::AccountId, T::BlockNumber, BalanceOf<T>>,
 		OptionQuery,
 	>;
 
@@ -237,13 +237,18 @@ pub mod pallet {
 		OptionQuery,
 	>;
 
+	#[pallet::storage]
+	#[pallet::getter(fn operator_assigned_block_number)]
+	pub type OperatorAssignedEra<T: Config> =
+		StorageMap<_, Blake2_128Concat, T::AccountId, EraIndex, OptionQuery>;
+
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
 		fn on_runtime_upgrade() -> frame_support::weights::Weight {
 			let mut weight = Weight::zero();
 
 			let version = StorageVersion::get::<Pallet<T>>();
-			if version == StorageVersion::new(1) {
+			if version == StorageVersion::new(1) || version == StorageVersion::new(2) {
 				weight = <migrations::v2::MigrationV2<T> as OnRuntimeUpgrade>::on_runtime_upgrade();
 
 				StorageVersion::put::<Pallet<T>>(&StorageVersion::new(2));
@@ -269,14 +274,9 @@ pub mod pallet {
 			};
 
 			if let Some(current_active_era) = current_active_era {
-				let fetch_event = Event::FetchedEra { current_active_era };
-				Self::deposit_event(fetch_event);
 				// Clean old era information.
 				if let Some(old_era) = current_active_era.checked_sub(T::TeeHistoryDepth::get()) {
 					Self::clear_old_era(old_era);
-
-					let success_event = Event::ClearedOldEra { old_era };
-					Self::deposit_event(success_event);
 				}
 			}
 			T::DbWeight::get().reads_writes(read, write)
@@ -293,30 +293,17 @@ pub mod pallet {
 			api_uri: BoundedVec<u8, T::MaxUriLen>,
 		},
 		/// An enclave got unregistered
-		RegistrationRemoved {
-			operator_address: T::AccountId,
-		},
+		RegistrationRemoved { operator_address: T::AccountId },
 		/// An enclave update request was cancelled by operator
-		UpdateRequestCancelled {
-			operator_address: T::AccountId,
-		},
+		UpdateRequestCancelled { operator_address: T::AccountId },
 		/// An enclave update request was removed
-		UpdateRequestRemoved {
-			operator_address: T::AccountId,
-		},
+		UpdateRequestRemoved { operator_address: T::AccountId },
 		/// An enclave moved for unregistration to a queue
-		MovedForUnregistration {
-			operator_address: T::AccountId,
-		},
+		MovedForUnregistration { operator_address: T::AccountId },
 		/// An enclave got assigned to a cluster
-		EnclaveAssigned {
-			operator_address: T::AccountId,
-			cluster_id: ClusterId,
-		},
+		EnclaveAssigned { operator_address: T::AccountId, cluster_id: ClusterId },
 		/// An enclave got removed
-		EnclaveRemoved {
-			operator_address: T::AccountId,
-		},
+		EnclaveRemoved { operator_address: T::AccountId },
 		/// An enclave was added to the update list
 		MovedForUpdate {
 			operator_address: T::AccountId,
@@ -329,52 +316,35 @@ pub mod pallet {
 			new_enclave_address: T::AccountId,
 			new_api_uri: BoundedVec<u8, T::MaxUriLen>,
 		},
+		/// Enclave updated
+		EnclaveForceUpdated {
+			operator_address: T::AccountId,
+			new_enclave_address: Option<T::AccountId>,
+			new_api_uri: Option<BoundedVec<u8, T::MaxUriLen>>,
+		},
 		/// New cluster got added
-		ClusterAdded {
-			cluster_id: ClusterId,
-			cluster_type: ClusterType,
-		},
+		ClusterAdded { cluster_id: ClusterId, cluster_type: ClusterType },
 		///Cluster got update
-		ClusterUpdated {
-			cluster_id: ClusterId,
-			cluster_type: ClusterType,
-		},
+		ClusterUpdated { cluster_id: ClusterId, cluster_type: ClusterType },
 		/// Cluster got removed
-		ClusterRemoved {
-			cluster_id: ClusterId,
-		},
+		ClusterRemoved { cluster_id: ClusterId },
 		/// Staking amount changed.
-		StakingAmountSet {
-			staking_amount: BalanceOf<T>,
-		},
+		StakingAmountSet { staking_amount: BalanceOf<T> },
 		/// Bonded while enclave registration
-		Bonded {
-			operator_address: T::AccountId,
-			amount: BalanceOf<T>,
-		},
+		Bonded { operator_address: T::AccountId, amount: BalanceOf<T> },
 		/// An account has unbonded this amount.
-		Unbonded {
-			operator_address: T::AccountId,
-			amount: BalanceOf<T>,
-		},
+		Unbonded { operator_address: T::AccountId, amount: BalanceOf<T> },
 		/// Withdrawn the bonded amount
-		Withdrawn {
-			operator_address: T::AccountId,
-			amount: BalanceOf<T>,
-		},
+		Withdrawn { operator_address: T::AccountId, amount: BalanceOf<T> },
 		/// New metrics server got added
-		MetricsServerAdded {
-			metrics_server: MetricsServer<T::AccountId>,
-		},
+		MetricsServerAdded { metrics_server: MetricsServer<T::AccountId> },
 		/// Updated metrics server cluster type
 		MetricsServerTypeUpdated {
 			metrics_server_address: T::AccountId,
 			new_supported_cluster_type: ClusterType,
 		},
 		/// Removed a metrics server
-		MetricsServerRemoved {
-			metrics_server_address: T::AccountId,
-		},
+		MetricsServerRemoved { metrics_server_address: T::AccountId },
 		/// Metrics server report submitted
 		MetricsServerReportSubmitted {
 			era: EraIndex,
@@ -390,36 +360,19 @@ pub mod pallet {
 			param_5_weightage: u8,
 		},
 		/// Rewards claimed by operator
-		RewardsClaimed {
-			era: EraIndex,
-			operator_address: T::AccountId,
-			amount: BalanceOf<T>,
-		},
+		RewardsClaimed { era: EraIndex, operator_address: T::AccountId, amount: BalanceOf<T> },
 		/// Fetching active era during the last session in an era
-		FailedToGetActiveEra {
-			block_number: T::BlockNumber,
-		},
+		FailedToGetActiveEra { block_number: T::BlockNumber },
 		/// Staking amount is set
-		StakingAmountIsSet {
-			amount: BalanceOf<T>,
-		},
+		StakingAmountIsSet { amount: BalanceOf<T> },
 		/// Reward amount is set
-		RewardAmountIsSet {
-			amount: BalanceOf<T>,
-		},
-		/// Fetching active era during the last session in an era
-		FetchedEra {
-			current_active_era: EraIndex,
-		},
-		FetchedOldEra {
-			old_era: EraIndex,
-		},
-		ClearedOldEra {
-			old_era: EraIndex,
-		},
-		HistoryDepth {
-			history_depth: u32,
-		},
+		RewardAmountIsSet { amount: BalanceOf<T> },
+		/// Cluster got update
+		OperatorAssignedEraUpdated { operator_address: T::AccountId, new_era: EraIndex },
+		/// Bonded extra to match default staking amount
+		BondedExtra { operator_address: T::AccountId, amount: BalanceOf<T> },
+		/// Bonded extra to match default staking amount
+		RefundedExcess { operator_address: T::AccountId, amount: BalanceOf<T> },
 	}
 
 	#[pallet::error]
@@ -490,6 +443,16 @@ pub mod pallet {
 		RewardsAlreadyClaimedForEra,
 		/// Insuffience Balance to Bond
 		InsufficientBalanceToBond,
+		/// Operator assigned era not found
+		OperatorAssignedEraNotFound,
+		/// Bond extra not allowed since the current staked amount of operator is not less than
+		/// default staking amount
+		BondExtraNotAllowed,
+		/// Refund excess not allowed since the current staked amount of operator is not higher
+		/// than the default staking amount
+		RefundExcessNotAllowed,
+		/// Force update should have either new enclave address or new api uri to be updated
+		NoUpdatesProvided,
 	}
 
 	#[pallet::call]
@@ -529,7 +492,12 @@ pub mod pallet {
 				new_operator_balance,
 			)?;
 
-			let stake_details = TeeStakingLedger::new(who.clone(), false, Default::default());
+			let stake_details = TeeStakingLedger::new(
+				who.clone(),
+				default_staking_amount.clone(),
+				false,
+				Default::default(),
+			);
 			StakingLedger::<T>::insert(who.clone(), stake_details);
 			T::Currency::set_lock(
 				TEE_STAKING_ID,
@@ -570,15 +538,27 @@ pub mod pallet {
 						Ok(())
 					})?;
 					let now = frame_system::Pallet::<T>::block_number();
-					let stake_details = TeeStakingLedger::new(who.clone(), true, now);
-					StakingLedger::<T>::insert(who.clone(), stake_details);
-					Self::deposit_event(Event::MovedForUnregistration {
-						operator_address: who.clone(),
-					});
-					Self::deposit_event(Event::Unbonded {
-						operator_address: who,
-						amount: default_staking_amount,
-					});
+
+					StakingLedger::<T>::try_mutate(
+						&who,
+						|maybe_stake_details| -> DispatchResult {
+							let stake_details =
+								maybe_stake_details.as_mut().ok_or(Error::<T>::StakingNotFound)?;
+
+							stake_details.is_unlocking = true;
+							stake_details.unbonded_at = now;
+
+							Self::deposit_event(Event::MovedForUnregistration {
+								operator_address: who.clone(),
+							});
+							Self::deposit_event(Event::Unbonded {
+								operator_address: who.clone(),
+								amount: stake_details.staked_amount,
+							});
+
+							Ok(())
+						},
+					)?;
 				},
 				None => {
 					EnclaveRegistrations::<T>::try_mutate(
@@ -593,6 +573,7 @@ pub mod pallet {
 					)?;
 					StakingLedger::<T>::remove(who.clone());
 					T::Currency::remove_lock(TEE_STAKING_ID, &who);
+
 					Self::deposit_event(Event::RegistrationRemoved {
 						operator_address: who.clone(),
 					});
@@ -703,6 +684,15 @@ pub mod pallet {
 						// Add enclave to cluster id
 						EnclaveClusterId::<T>::insert(operator_address.clone(), cluster_id);
 
+						let current_active_era = Staking::<T>::active_era()
+							.map(|e| e.index)
+							.ok_or(Error::<T>::FailedToGetActiveEra)?;
+
+						OperatorAssignedEra::<T>::insert(
+							operator_address.clone(),
+							current_active_era,
+						);
+
 						// Add enclave operator to cluster
 						cluster
 							.enclaves
@@ -734,6 +724,7 @@ pub mod pallet {
 				|maybe_registration| -> DispatchResult {
 					let _ = maybe_registration.as_mut().ok_or(Error::<T>::RegistrationNotFound)?;
 					*maybe_registration = None;
+					T::Currency::remove_lock(TEE_STAKING_ID, &operator_address);
 					Ok(())
 				},
 			)?;
@@ -743,8 +734,8 @@ pub mod pallet {
 		}
 
 		/// Remove an enclave update request from storage
-		#[pallet::weight(T::TeeWeightInfo::remove_update())]
-		pub fn remove_update(
+		#[pallet::weight(T::TeeWeightInfo::reject_update())]
+		pub fn reject_update(
 			origin: OriginFor<T>,
 			operator_address: T::AccountId,
 		) -> DispatchResultWithPostInfo {
@@ -814,6 +805,9 @@ pub mod pallet {
 
 								// Remove the mapping between operator to cluster id
 								EnclaveClusterId::<T>::remove(&operator_address);
+
+								// Remove the mapping between operator to assigned block number
+								OperatorAssignedEra::<T>::remove(&operator_address);
 
 								// Remove the mapping between enclave address to operator address
 								EnclaveAccountOperator::<T>::remove(&enclave.enclave_address);
@@ -891,11 +885,32 @@ pub mod pallet {
 					// Remove the mapping between operator to cluster id
 					EnclaveClusterId::<T>::remove(&operator_address);
 
+					// Remove the mapping between operator to assigned block number
+					OperatorAssignedEra::<T>::remove(&operator_address);
+
 					// Remove the mapping between enclave address to operator address
 					EnclaveAccountOperator::<T>::remove(&enclave.enclave_address);
 
 					Ok(())
 				})?;
+
+				let now = frame_system::Pallet::<T>::block_number();
+				StakingLedger::<T>::try_mutate(
+					&operator_address,
+					|maybe_stake_details| -> DispatchResult {
+						let stake_details =
+							maybe_stake_details.as_mut().ok_or(Error::<T>::StakingNotFound)?;
+						stake_details.is_unlocking = true;
+						stake_details.unbonded_at = now;
+
+						Self::deposit_event(Event::Unbonded {
+							operator_address: operator_address.clone(),
+							amount: stake_details.staked_amount,
+						});
+
+						Ok(())
+					},
+				)?;
 
 				// Remove the enclave data
 				*maybe_enclave = None;
@@ -966,32 +981,47 @@ pub mod pallet {
 		pub fn force_update_enclave(
 			origin: OriginFor<T>,
 			operator_address: T::AccountId,
-			new_enclave_address: T::AccountId,
-			new_api_uri: BoundedVec<u8, T::MaxUriLen>,
+			new_enclave_address: Option<T::AccountId>,
+			new_api_uri: Option<BoundedVec<u8, T::MaxUriLen>>,
 		) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
 
-			ensure!(!new_api_uri.is_empty(), Error::<T>::ApiUriIsEmpty);
-			ensure!(operator_address != new_enclave_address, Error::<T>::OperatorAndEnclaveAreSame);
+			// Ensure at least one of the optional parameters is provided
+			ensure!(
+				new_enclave_address.is_some() || new_api_uri.is_some(),
+				Error::<T>::NoUpdatesProvided
+			);
 
 			EnclaveData::<T>::try_mutate(&operator_address, |maybe_enclave| -> DispatchResult {
 				let enclave = maybe_enclave.as_mut().ok_or(Error::<T>::EnclaveNotFound)?;
 
-				if enclave.enclave_address != new_enclave_address {
-					ensure!(
-						EnclaveAccountOperator::<T>::get(&new_enclave_address).is_none(),
-						Error::<T>::EnclaveAddressAlreadyExists
-					);
-					EnclaveAccountOperator::<T>::insert(
-						new_enclave_address.clone(),
-						operator_address.clone(),
-					);
+				// Update enclave address if provided
+				if let Some(address) = new_enclave_address.clone() {
+					ensure!(operator_address != address, Error::<T>::OperatorAndEnclaveAreSame);
+
+					if enclave.enclave_address != address {
+						ensure!(
+							EnclaveAccountOperator::<T>::get(&address).is_none(),
+							Error::<T>::EnclaveAddressAlreadyExists
+						);
+						EnclaveAccountOperator::<T>::insert(
+							address.clone(),
+							operator_address.clone(),
+						);
+					}
+
+					enclave.enclave_address = address.clone();
 				}
 
-				enclave.enclave_address = new_enclave_address.clone();
-				enclave.api_uri = new_api_uri.clone();
+				// Update API URI if provided
+				if let Some(uri) = new_api_uri.clone() {
+					ensure!(!uri.is_empty(), Error::<T>::ApiUriIsEmpty);
+					enclave.api_uri = uri.clone();
+				}
+
 				Ok(())
 			})?;
+
 			EnclaveUpdates::<T>::try_mutate(&operator_address, |maybe_update| -> DispatchResult {
 				if maybe_update.is_some() {
 					*maybe_update = None;
@@ -999,7 +1029,7 @@ pub mod pallet {
 				Ok(())
 			})?;
 
-			Self::deposit_event(Event::EnclaveUpdated {
+			Self::deposit_event(Event::EnclaveForceUpdated {
 				operator_address,
 				new_enclave_address,
 				new_api_uri,
@@ -1032,9 +1062,9 @@ pub mod pallet {
 			ClusterData::<T>::try_mutate(cluster_id, |maybe_cluster| -> DispatchResult {
 				let cluster = maybe_cluster.as_mut().ok_or(Error::<T>::ClusterNotFound)?;
 				cluster.cluster_type = cluster_type.clone();
+				Self::deposit_event(Event::ClusterUpdated { cluster_id, cluster_type });
 				Ok(())
 			})?;
-			Self::deposit_event(Event::ClusterUpdated { cluster_id, cluster_type });
 			Ok(().into())
 		}
 
@@ -1287,9 +1317,14 @@ pub mod pallet {
 			let current_active_era = Staking::<T>::active_era()
 				.map(|e| e.index)
 				.ok_or(Error::<T>::FailedToGetActiveEra)?;
+
+			let operator_assigned_era = OperatorAssignedEra::<T>::get(&who)
+				.ok_or(Error::<T>::OperatorAssignedEraNotFound)?;
+
 			ensure!(
 				era < current_active_era.saturating_sub(2) &&
-					era > current_active_era.saturating_sub(T::TeeHistoryDepth::get()),
+					era > current_active_era.saturating_sub(T::TeeHistoryDepth::get()) &&
+					era >= operator_assigned_era,
 				Error::<T>::InvalidEraToClaimRewards
 			);
 
@@ -1335,6 +1370,119 @@ pub mod pallet {
 					amount: reward_per_operator,
 				});
 			}
+			Ok(().into())
+		}
+
+		// Updates assigned era for an operator
+		#[pallet::weight(T::TeeWeightInfo::update_operator_assigned_era())]
+		pub fn update_operator_assigned_era(
+			origin: OriginFor<T>,
+			operator_address: T::AccountId,
+			new_era: EraIndex,
+		) -> DispatchResultWithPostInfo {
+			ensure_root(origin)?;
+			OperatorAssignedEra::<T>::try_mutate(
+				operator_address.clone(),
+				|maybe_operator| -> DispatchResult {
+					let operator_assigned_era =
+						maybe_operator.as_mut().ok_or(Error::<T>::OperatorAssignedEraNotFound)?;
+					*operator_assigned_era = new_era.clone();
+					Self::deposit_event(Event::OperatorAssignedEraUpdated {
+						operator_address,
+						new_era,
+					});
+					Ok(())
+				},
+			)?;
+			Ok(().into())
+		}
+
+		// Bond extra if the default staking amount is increased
+		#[pallet::weight(T::TeeWeightInfo::bond_extra())]
+		pub fn bond_extra(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+			let who = ensure_signed(origin)?;
+
+			let default_staking_amount = StakingAmount::<T>::get();
+
+			StakingLedger::<T>::try_mutate(&who, |maybe_stake_details| -> DispatchResult {
+				let stake_details =
+					maybe_stake_details.as_mut().ok_or(Error::<T>::StakingNotFound)?;
+
+				ensure!(
+					stake_details.staked_amount < default_staking_amount,
+					Error::<T>::BondExtraNotAllowed
+				);
+
+				let extra_bond_required =
+					default_staking_amount.saturating_sub(stake_details.staked_amount);
+
+				let operator_balance = T::Currency::free_balance(&who);
+				let new_operator_balance = operator_balance
+					.checked_sub(&extra_bond_required)
+					.ok_or(Error::<T>::InsufficientBalanceToBond)?;
+
+				T::Currency::ensure_can_withdraw(
+					&who,
+					extra_bond_required.clone(),
+					WithdrawReasons::all(),
+					new_operator_balance,
+				)?;
+
+				stake_details.staked_amount = default_staking_amount.clone();
+
+				T::Currency::set_lock(
+					TEE_STAKING_ID,
+					&who,
+					default_staking_amount.clone(),
+					WithdrawReasons::all(),
+				);
+
+				Self::deposit_event(Event::BondedExtra {
+					operator_address: who.clone(),
+					amount: extra_bond_required,
+				});
+
+				Ok(())
+			})?;
+			Ok(().into())
+		}
+
+		// Bond extra if the default staking amount is increased
+		#[pallet::weight(T::TeeWeightInfo::refund_excess())]
+		pub fn refund_excess(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+			let who = ensure_signed(origin)?;
+
+			let default_staking_amount = StakingAmount::<T>::get();
+
+			StakingLedger::<T>::try_mutate(&who, |maybe_stake_details| -> DispatchResult {
+				let stake_details =
+					maybe_stake_details.as_mut().ok_or(Error::<T>::StakingNotFound)?;
+
+				ensure!(
+					stake_details.staked_amount > default_staking_amount,
+					Error::<T>::RefundExcessNotAllowed
+				);
+
+				let extra_bond_to_be_refunded =
+					stake_details.staked_amount.saturating_sub(default_staking_amount);
+
+
+				stake_details.staked_amount = default_staking_amount.clone();
+
+				T::Currency::set_lock(
+					TEE_STAKING_ID,
+					&who,
+					default_staking_amount.clone(),
+					WithdrawReasons::all(),
+				);
+
+				Self::deposit_event(Event::RefundedExcess {
+					operator_address: who.clone(),
+					amount: extra_bond_to_be_refunded,
+				});
+
+				Ok(())
+			})?;
 			Ok(().into())
 		}
 	}

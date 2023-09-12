@@ -36,6 +36,7 @@ fn ensure_enclave() {
 			let bob: mock::RuntimeOrigin = RawOrigin::Signed(BOB).into();
 			let cluster_id: ClusterId = 0;
 			let api_uri: BoundedVec<u8, MaxUriLen> = b"test".to_vec().try_into().unwrap();
+			start_active_era(1);
 
 			assert_ok!(TEE::create_cluster(root(), crate::ClusterType::Public));
 			assert_ok!(TEE::register_enclave(alice.clone(), ALICE_ENCLAVE, api_uri.clone()));

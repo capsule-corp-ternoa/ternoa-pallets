@@ -24,7 +24,7 @@ pub trait WeightInfo {
 	fn assign_enclave() -> Weight;
 	fn remove_enclave() -> Weight;
 	fn remove_registration() -> Weight;
-	fn remove_update() -> Weight;
+	fn reject_update() -> Weight;
 	fn force_update_enclave() -> Weight;
 	fn create_cluster() -> Weight;
 	fn update_cluster() -> Weight;
@@ -38,6 +38,9 @@ pub trait WeightInfo {
 	fn set_staking_amount() -> Weight;
 	fn set_daily_reward_pool() -> Weight;
 	fn claim_rewards() -> Weight;
+	fn update_operator_assigned_era() -> Weight;
+	fn bond_extra() -> Weight;
+	fn refund_excess() -> Weight;
 }
 
 impl WeightInfo for () {
@@ -74,7 +77,7 @@ impl WeightInfo for () {
 	fn remove_cluster() -> Weight {
 		Weight::from_ref_time(10_000_000 as u64)
 	}
-	fn remove_update() -> Weight {
+	fn reject_update() -> Weight {
 		Weight::from_ref_time(10_000_000 as u64)
 	}
 	fn withdraw_unbonded() -> Weight {
@@ -102,6 +105,15 @@ impl WeightInfo for () {
 		Weight::from_ref_time(10_000_000 as u64)
 	}
 	fn claim_rewards() -> Weight {
+		Weight::from_ref_time(10_000_000 as u64)
+	}
+	fn update_operator_assigned_era() -> Weight {
+		Weight::from_ref_time(10_000_000 as u64)
+	}
+	fn bond_extra() -> Weight {
+		Weight::from_ref_time(10_000_000 as u64)
+	}
+	fn refund_excess() -> Weight {
 		Weight::from_ref_time(10_000_000 as u64)
 	}
 }

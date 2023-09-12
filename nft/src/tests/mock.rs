@@ -14,26 +14,28 @@
 // You should have received a copy of the GNU General Public License
 // along with Ternoa.  If not, see <http://www.gnu.org/licenses/>.
 
+use frame_election_provider_support::{onchain, SequentialPhragmen};
 use frame_support::{
 	parameter_types,
-	traits::{ConstU32, ConstU64, Contains, Currency},
+	traits::{ConstU32, ConstU64, Contains, Currency, Get, Hooks},
 	PalletId,
 };
 use sp_core::H256;
 use sp_runtime::{
-	curve::PiecewiseLinear, 
+	curve::PiecewiseLinear,
 	testing::Header,
-	traits::{BlakeTwo256, IdentityLookup},
+	traits::{BlakeTwo256, IdentityLookup, Zero},
 	Perbill,
 };
 use sp_staking::{EraIndex, SessionIndex};
-use frame_election_provider_support::{onchain, SequentialPhragmen};
 
 use crate::{self as ternoa_nft, Config, NegativeImbalanceOf};
-
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 type AccountId = u64;
+
+pub const INIT_TIMESTAMP: u64 = 30_000;
+pub const BLOCK_TIME: u64 = 1000;
 
 // Do not use the `0` account id since this would be the default value
 // for our account id. This would mess with some tests.
@@ -58,9 +60,10 @@ frame_support::construct_runtime!(
 		Balances: pallet_balances,
 		NFT: ternoa_nft,
 		TEE: ternoa_tee,
-		Staking: pallet_staking,
 		Timestamp: pallet_timestamp,
+		Staking: pallet_staking,
 		Session: pallet_session,
+		Historical: pallet_session::historical,
 	}
 );
 
@@ -130,7 +133,6 @@ impl pallet_balances::Config for Test {
 	type WeightInfo = ();
 }
 
-
 impl pallet_timestamp::Config for Test {
 	type Moment = u64;
 	type OnTimestampSet = ();
@@ -149,7 +151,6 @@ sp_runtime::impl_opaque_keys! {
 	}
 }
 
-
 pub struct TestSessionHandler;
 impl pallet_session::SessionHandler<AccountId> for TestSessionHandler {
 	const KEY_TYPE_IDS: &'static [sp_runtime::KeyTypeId] = &[];
@@ -167,7 +168,7 @@ impl pallet_session::SessionHandler<AccountId> for TestSessionHandler {
 }
 
 parameter_types! {
-	pub const Period: u64 = 1;
+	pub const Period: u64 = 5;
 	pub const Offset: u64 = 0;
 }
 
@@ -183,7 +184,6 @@ impl pallet_session::Config for Test {
 	type Keys = SessionKeys;
 	type WeightInfo = ();
 }
-
 
 pallet_staking_reward_curve::build! {
 	const REWARD_CURVE: PiecewiseLinear<'static> = curve!(
@@ -334,4 +334,52 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 	let t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
 	t.into()
+}
+
+/// Progress until the given era.
+pub(crate) fn start_active_era(era_index: EraIndex) {
+	start_session((era_index * <SessionsPerEra as Get<u32>>::get()).into());
+	// assert_eq!(Staking::active_era().unwrap().index, era_index);
+	// One way or another, current_era must have changed before the active era, so they must match
+	// at this point.
+	// assert_eq!(Staking::current_era().unwrap(), Staking::active_era().unwrap().index);
+}
+
+/// Progresses from the current block number (whatever that may be) to the `P * session_index + 1`.
+pub(crate) fn start_session(session_index: SessionIndex) {
+	let end: u64 = if Offset::get().is_zero() {
+		(session_index as u64) * Period::get()
+	} else {
+		Offset::get() + (session_index.saturating_sub(1) as u64) * Period::get()
+	};
+	run_to_block(end);
+	// session must have progressed properly.
+	// assert_eq!(
+	// 	Session::current_index(),
+	// 	session_index,
+	// 	"current session index = {}, expected = {}",
+	// 	Session::current_index(),
+	// 	session_index,
+	// );
+}
+
+pub fn run_to_block(n: u64) {
+	// while System::block_number() < n {
+	// 	Staking::on_finalize(System::block_number());
+	// 	System::on_finalize(System::block_number());
+	// 	System::set_block_number(System::block_number() + 1);
+	// 	System::on_initialize(System::block_number());
+	// 	Staking::on_initialize(System::block_number());
+	// 	Staking::on_finalize(System::block_number());
+	// }
+	Staking::on_finalize(System::block_number());
+	for b in (System::block_number() + 1)..=n {
+		System::set_block_number(b);
+		Session::on_initialize(b);
+		<Staking as Hooks<u64>>::on_initialize(b);
+		Timestamp::set_timestamp(System::block_number() * BLOCK_TIME + INIT_TIMESTAMP);
+		if b != n {
+			Staking::on_finalize(System::block_number());
+		}
+	}
 }
