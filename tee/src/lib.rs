@@ -754,7 +754,7 @@ pub mod pallet {
 		}
 
 		/// Unassign an enclave from a cluster and remove all information
-		#[pallet::weight(T::TeeWeightInfo::remove_enclave())]
+		#[pallet::weight(T::TeeWeightInfo::force_remove_enclave())]
 		pub fn approve_enclave_unregistration(
 			origin: OriginFor<T>,
 			operator_address: T::AccountId,
@@ -836,7 +836,7 @@ pub mod pallet {
 		}
 
 		/// Unassign an enclave from a cluster and remove all information
-		#[pallet::weight(T::TeeWeightInfo::remove_enclave())]
+		#[pallet::weight(T::TeeWeightInfo::force_remove_enclave())]
 		pub fn force_remove_enclave(
 			origin: OriginFor<T>,
 			operator_address: T::AccountId,
