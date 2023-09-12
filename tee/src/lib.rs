@@ -248,7 +248,7 @@ pub mod pallet {
 			let mut weight = Weight::zero();
 
 			let version = StorageVersion::get::<Pallet<T>>();
-			if version == StorageVersion::new(1) {
+			if version == StorageVersion::new(1) || version == StorageVersion::new(2) {
 				weight = <migrations::v2::MigrationV2<T> as OnRuntimeUpgrade>::on_runtime_upgrade();
 
 				StorageVersion::put::<Pallet<T>>(&StorageVersion::new(2));
@@ -1416,6 +1416,18 @@ pub mod pallet {
 				let extra_bond_required =
 					default_staking_amount.saturating_sub(stake_details.staked_amount);
 
+				let operator_balance = T::Currency::free_balance(&who);
+				let new_operator_balance = operator_balance
+					.checked_sub(&extra_bond_required)
+					.ok_or(Error::<T>::InsufficientBalanceToBond)?;
+
+				T::Currency::ensure_can_withdraw(
+					&who,
+					extra_bond_required.clone(),
+					WithdrawReasons::all(),
+					new_operator_balance,
+				)?;
+
 				stake_details.staked_amount = default_staking_amount.clone();
 
 				T::Currency::set_lock(
@@ -1453,6 +1465,18 @@ pub mod pallet {
 
 				let extra_bond_to_be_refunded =
 					stake_details.staked_amount.saturating_sub(default_staking_amount);
+
+				let operator_balance = T::Currency::free_balance(&who);
+				let new_operator_balance = operator_balance
+					.checked_sub(&extra_bond_to_be_refunded)
+					.ok_or(Error::<T>::InsufficientBalanceToBond)?;
+
+				T::Currency::ensure_can_withdraw(
+					&who,
+					extra_bond_to_be_refunded.clone(),
+					WithdrawReasons::all(),
+					new_operator_balance,
+				)?;
 
 				stake_details.staked_amount = default_staking_amount.clone();
 

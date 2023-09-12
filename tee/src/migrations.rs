@@ -7,26 +7,25 @@ pub mod v2 {
 	};
 	use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 	use scale_info::TypeInfo;
+	use sp_arithmetic::traits::AtLeast32BitUnsigned;
 	use sp_std::fmt::Debug;
 
 	#[derive(
-		Encode,
-		Decode,
-		CloneNoBound,
-		PartialEqNoBound,
-		Eq,
-		RuntimeDebugNoBound,
-		TypeInfo,
-		MaxEncodedLen,
+		PartialEqNoBound, CloneNoBound, Encode, Decode, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen,
 	)]
-	#[scale_info(skip_type_params(ClusterSize))]
-	#[codec(mel_bound(AccountId: MaxEncodedLen))]
-	pub struct OldClusterData<AccountId, ClusterSize>
+	#[codec(mel_bound(AccountId: MaxEncodedLen, BlockNumber: MaxEncodedLen))]
+	pub struct OldTeeStakingLedger<AccountId, BlockNumber>
 	where
 		AccountId: Clone + PartialEq + Debug,
-		ClusterSize: Get<u32>,
+		BlockNumber:
+			Clone + PartialEq + Debug + sp_std::cmp::PartialOrd + AtLeast32BitUnsigned + Copy,
 	{
-		pub enclaves: BoundedVec<AccountId, ClusterSize>,
+		/// The operator account whose balance is actually locked and at stake.
+		pub operator: AccountId,
+		/// State variable to know whether the staked amount is unbonded
+		pub is_unlocking: bool,
+		/// Block Number of when unbonded happened
+		pub unbonded_at: BlockNumber,
 	}
 
 	pub struct MigrationV2<T>(sp_std::marker::PhantomData<T>);
@@ -41,33 +40,21 @@ pub mod v2 {
 			let mut read = 0u64;
 			let mut write = 0u64;
 
-			let mut slot_id_counter = 0;
-			ClusterData::<T>::translate(
-				|_id, old: OldClusterData<T::AccountId, T::ClusterSize>| {
-					let mut new_enclaves: BoundedVec<(T::AccountId, SlotId), T::ClusterSize> =
-						BoundedVec::default();
-
-					for account_id in old.enclaves.into_iter() {
-						let slot_id: SlotId = slot_id_counter;
-						slot_id_counter += 1;
-
-						let push_result = new_enclaves.try_push((account_id, slot_id));
-						match push_result {
-							Ok(_) => {
-								read += 1;
-								write += 1;
-							},
-							Err(_) => {
-								// Handle the error case if the `BoundedVec` is already full
-								break // Stop adding elements if the desired size is reached
-							},
-						}
-					}
-					let new_cluster_data = Cluster::new(new_enclaves, ClusterType::Public);
+			// Translate the old StakingLedger storage to the new format
+			StakingLedger::<T>::translate(
+				|_id, old: OldTeeStakingLedger<T::AccountId, T::BlockNumber>| {
+					let new_staking_ledger =
+						TeeStakingLedger::<T::AccountId, T::BlockNumber, BalanceOf<T>> {
+							operator: old.operator.clone(),
+							staked_amount: BalanceOf::<T>::default(), /* Initialize with default
+							                                           * value */
+							is_unlocking: old.is_unlocking,
+							unbonded_at: old.unbonded_at,
+						};
 					read += 1;
 					write += 1;
-
-					Some(new_cluster_data)
+					OperatorAssignedEra::<T>::insert(old.operator, 1190);
+					Some(new_staking_ledger)
 				},
 			);
 
