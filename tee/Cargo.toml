@@ -43,7 +43,8 @@ sp-io = { workspace = true, default-features = false }
 frame-election-provider-support = { workspace = true, default-features = false }
 pallet-timestamp = { workspace = true, default-features = false }
 pallet-staking-reward-curve = { workspace = true, default-features = false }
-pallet-session = { workspace = true, default-features = false }
+pallet-session = { workspace = true, default-features = false, features = [
+	"historical" ]}
 pallet-staking = { workspace = true, default-features = false }
 
 

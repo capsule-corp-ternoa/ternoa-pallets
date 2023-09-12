@@ -69,7 +69,8 @@ fn prepare_tee_for_tests() {
 	let bob: mock::RuntimeOrigin = origin(BOB);
 	let charlie: mock::RuntimeOrigin = origin(CHARLIE);
 
-	let api_uri: BoundedVec<u8, MaxUriLen>= b"test".to_vec().try_into().unwrap();
+	let api_uri: BoundedVec<u8, MaxUriLen> = b"test".to_vec().try_into().unwrap();
+	start_active_era(1);
 
 	assert_ok!(TEE::register_enclave(alice.clone(), ALICE_ENCLAVE, api_uri.clone()));
 	assert_ok!(TEE::register_enclave(bob.clone(), BOB_ENCLAVE, api_uri.clone()));
@@ -83,6 +84,11 @@ fn prepare_tee_for_tests() {
 	assert_ok!(TEE::assign_enclave(root(), ALICE, cluster_id, 0));
 	assert_ok!(TEE::assign_enclave(root(), BOB, cluster_id, 1));
 	assert_ok!(TEE::assign_enclave(root(), CHARLIE, second_cluster_id, 2));
+
+	// let raw = (4 as sp_staking::EraIndex, Some(10u64)).encode();
+	// let info = pallet_staking::ActiveEraInfo::decode(&mut &raw[..]).unwrap();
+	// pallet_staking::ActiveEra::<T>::put(&info);
+	// Change current block.
 }
 
 mod create_nft {
@@ -1863,13 +1869,15 @@ mod add_secret_shard {
 
 	#[test]
 	fn nft_not_found() {
-		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(|| {
-			prepare_tests();
-			prepare_tee_for_tests();
-			let alice_enclave: mock::RuntimeOrigin = origin(ALICE_ENCLAVE);
-			let err = NFT::add_secret_shard(alice_enclave, INVALID_ID);
-			assert_noop!(err, Error::<Test>::NFTNotFound);
-		})
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
+			|| {
+				prepare_tests();
+				prepare_tee_for_tests();
+				let alice_enclave: mock::RuntimeOrigin = origin(ALICE_ENCLAVE);
+				let err = NFT::add_secret_shard(alice_enclave, INVALID_ID);
+				assert_noop!(err, Error::<Test>::NFTNotFound);
+			},
+		)
 	}
 
 	#[test]
@@ -2703,13 +2711,15 @@ mod add_capsule_shard {
 
 	#[test]
 	fn nft_not_found() {
-		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(|| {
-			prepare_tests();
-			prepare_tee_for_tests();
-			let alice_enclave: mock::RuntimeOrigin = origin(ALICE_ENCLAVE);
-			let err = NFT::add_capsule_shard(alice_enclave, INVALID_ID);
-			assert_noop!(err, Error::<Test>::NFTNotFound);
-		})
+		ExtBuilder::new_build(vec![(ALICE, 1000), (BOB, 1000), (CHARLIE, 1000)]).execute_with(
+			|| {
+				prepare_tests();
+				prepare_tee_for_tests();
+				let alice_enclave: mock::RuntimeOrigin = origin(ALICE_ENCLAVE);
+				let err = NFT::add_capsule_shard(alice_enclave, INVALID_ID);
+				assert_noop!(err, Error::<Test>::NFTNotFound);
+			},
+		)
 	}
 
 	#[test]
