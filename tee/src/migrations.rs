@@ -43,7 +43,8 @@ pub mod v2 {
 			let current_active_era = Staking::<T>::active_era()
 			.map(|e| e.index).unwrap();
 
-			let stake_amount: BalanceOf<T> = 250_000_000_000_000_000_000_000u128.into();
+			let stake_amount: u128 = 250_000_000_000_000_000_000_000u128;
+			let stake_amount: BalanceOf<T> = stake_amount.saturated_into::<BalanceOf<T>>();
 
 		
 			// Translate the old StakingLedger storage to the new format
