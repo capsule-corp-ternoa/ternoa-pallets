@@ -1466,17 +1466,6 @@ pub mod pallet {
 				let extra_bond_to_be_refunded =
 					stake_details.staked_amount.saturating_sub(default_staking_amount);
 
-				let operator_balance = T::Currency::free_balance(&who);
-				let new_operator_balance = operator_balance
-					.checked_sub(&extra_bond_to_be_refunded)
-					.ok_or(Error::<T>::InsufficientBalanceToBond)?;
-
-				T::Currency::ensure_can_withdraw(
-					&who,
-					extra_bond_to_be_refunded.clone(),
-					WithdrawReasons::all(),
-					new_operator_balance,
-				)?;
 
 				stake_details.staked_amount = default_staking_amount.clone();
 
