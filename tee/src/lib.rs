@@ -249,6 +249,8 @@ pub mod pallet {
 
 			let version = StorageVersion::get::<Pallet<T>>();
 			if version == StorageVersion::new(1) || version == StorageVersion::new(2) {
+				
+
 				weight = <migrations::v2::MigrationV2<T> as OnRuntimeUpgrade>::on_runtime_upgrade();
 
 				StorageVersion::put::<Pallet<T>>(&StorageVersion::new(2));
