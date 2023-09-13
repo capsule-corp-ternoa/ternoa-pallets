@@ -41,7 +41,7 @@ use sp_std::vec;
 use primitives::tee::{ClusterId, SlotId};
 use sp_runtime::{
 	traits::{AccountIdConversion, CheckedSub, SaturatedConversion},
-	Perbill, Percent, Saturating,
+	Perbill, Saturating,
 };
 use ternoa_common::traits;
 pub use weights::WeightInfo;
@@ -1347,7 +1347,7 @@ pub mod pallet {
 
 				let weighted_sum =
 					Self::calculate_weighted_sum(&variance, &report_params_weightage);
-				let percent = Percent::from_percent(weighted_sum);
+				let percent = Perbill::from_rational(weighted_sum, 10000 as u32);
 
 				let weighted_reward_amount = percent * reward_per_operator;
 
@@ -1527,25 +1527,16 @@ impl<T: Config> Pallet<T> {
 	pub fn calculate_weighted_sum(
 		variances: &HighestParamsResponse,
 		weightages: &ReportParamsWeightage,
-	) -> u8 {
+	) -> u32 {
 		// Calculate the weighted sum for each index
 		let weighted_sum: u32 = (variances.param_1 as u32)
-			.saturating_mul(weightages.param_1_weightage as u32)
-			.saturating_div(100) +
-			(variances.param_2 as u32)
-				.saturating_mul(weightages.param_2_weightage as u32)
-				.saturating_div(100) +
-			(variances.param_3 as u32)
-				.saturating_mul(weightages.param_3_weightage as u32)
-				.saturating_div(100) +
-			(variances.param_4 as u32)
-				.saturating_mul(weightages.param_4_weightage as u32)
-				.saturating_div(100) +
-			(variances.param_5 as u32)
-				.saturating_mul(weightages.param_5_weightage as u32)
-				.saturating_div(100);
+			.saturating_mul(weightages.param_1_weightage as u32) +
+			(variances.param_2 as u32).saturating_mul(weightages.param_2_weightage as u32) +
+			(variances.param_3 as u32).saturating_mul(weightages.param_3_weightage as u32) +
+			(variances.param_4 as u32).saturating_mul(weightages.param_4_weightage as u32) +
+			(variances.param_5 as u32).saturating_mul(weightages.param_5_weightage as u32);
 
-		weighted_sum as u8
+		weighted_sum
 	}
 
 	fn clear_old_era(old_era: EraIndex) {
