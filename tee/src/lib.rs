@@ -1006,6 +1006,9 @@ pub mod pallet {
 							EnclaveAccountOperator::<T>::get(&address).is_none(),
 							Error::<T>::EnclaveAddressAlreadyExists
 						);
+						// Remove the mapping between enclave address to operator address
+						EnclaveAccountOperator::<T>::remove(&enclave.enclave_address);
+
 						EnclaveAccountOperator::<T>::insert(
 							address.clone(),
 							operator_address.clone(),
