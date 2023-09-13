@@ -22,7 +22,7 @@ pub trait WeightInfo {
 	fn update_enclave() -> Weight;
 	fn cancel_update() -> Weight;
 	fn assign_enclave() -> Weight;
-	fn remove_enclave() -> Weight;
+	fn force_remove_enclave() -> Weight;
 	fn remove_registration() -> Weight;
 	fn reject_update() -> Weight;
 	fn force_update_enclave() -> Weight;
@@ -59,7 +59,7 @@ impl WeightInfo for () {
 	fn assign_enclave() -> Weight {
 		Weight::from_ref_time(10_000_000 as u64)
 	}
-	fn remove_enclave() -> Weight {
+	fn force_remove_enclave() -> Weight {
 		Weight::from_ref_time(10_000_000 as u64)
 	}
 	fn force_update_enclave() -> Weight {

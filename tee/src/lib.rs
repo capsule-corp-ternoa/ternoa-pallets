@@ -41,7 +41,7 @@ use sp_std::vec;
 use primitives::tee::{ClusterId, SlotId};
 use sp_runtime::{
 	traits::{AccountIdConversion, CheckedSub, SaturatedConversion},
-	Perbill, Percent, Saturating,
+	Perbill, Saturating,
 };
 use ternoa_common::traits;
 pub use weights::WeightInfo;
@@ -251,7 +251,7 @@ pub mod pallet {
 			if version == StorageVersion::new(1) || version == StorageVersion::new(2) {
 				weight = <migrations::v2::MigrationV2<T> as OnRuntimeUpgrade>::on_runtime_upgrade();
 
-				StorageVersion::put::<Pallet<T>>(&StorageVersion::new(2));
+				StorageVersion::put::<Pallet<T>>(&StorageVersion::new(3));
 			}
 
 			weight
@@ -453,6 +453,8 @@ pub mod pallet {
 		RefundExcessNotAllowed,
 		/// Force update should have either new enclave address or new api uri to be updated
 		NoUpdatesProvided,
+		/// Registration not allowed while unbonding period
+		UnbondingPeriod,
 	}
 
 	#[pallet::call]
@@ -477,7 +479,7 @@ pub mod pallet {
 				EnclaveAccountOperator::<T>::get(&enclave_address).is_none(),
 				Error::<T>::EnclaveAddressAlreadyExists
 			);
-
+			ensure!(StakingLedger::<T>::get(&who).is_none(), Error::<T>::UnbondingPeriod);
 			let default_staking_amount = StakingAmount::<T>::get();
 
 			let operator_balance = T::Currency::free_balance(&who);
@@ -752,7 +754,7 @@ pub mod pallet {
 		}
 
 		/// Unassign an enclave from a cluster and remove all information
-		#[pallet::weight(T::TeeWeightInfo::remove_enclave())]
+		#[pallet::weight(T::TeeWeightInfo::force_remove_enclave())]
 		pub fn approve_enclave_unregistration(
 			origin: OriginFor<T>,
 			operator_address: T::AccountId,
@@ -834,7 +836,7 @@ pub mod pallet {
 		}
 
 		/// Unassign an enclave from a cluster and remove all information
-		#[pallet::weight(T::TeeWeightInfo::remove_enclave())]
+		#[pallet::weight(T::TeeWeightInfo::force_remove_enclave())]
 		pub fn force_remove_enclave(
 			origin: OriginFor<T>,
 			operator_address: T::AccountId,
@@ -1345,7 +1347,7 @@ pub mod pallet {
 
 				let weighted_sum =
 					Self::calculate_weighted_sum(&variance, &report_params_weightage);
-				let percent = Percent::from_percent(weighted_sum);
+				let percent = Perbill::from_rational(weighted_sum, 10000 as u32);
 
 				let weighted_reward_amount = percent * reward_per_operator;
 
@@ -1466,7 +1468,6 @@ pub mod pallet {
 				let extra_bond_to_be_refunded =
 					stake_details.staked_amount.saturating_sub(default_staking_amount);
 
-
 				stake_details.staked_amount = default_staking_amount.clone();
 
 				T::Currency::set_lock(
@@ -1526,25 +1527,16 @@ impl<T: Config> Pallet<T> {
 	pub fn calculate_weighted_sum(
 		variances: &HighestParamsResponse,
 		weightages: &ReportParamsWeightage,
-	) -> u8 {
+	) -> u32 {
 		// Calculate the weighted sum for each index
 		let weighted_sum: u32 = (variances.param_1 as u32)
-			.saturating_mul(weightages.param_1_weightage as u32)
-			.saturating_div(100) +
-			(variances.param_2 as u32)
-				.saturating_mul(weightages.param_2_weightage as u32)
-				.saturating_div(100) +
-			(variances.param_3 as u32)
-				.saturating_mul(weightages.param_3_weightage as u32)
-				.saturating_div(100) +
-			(variances.param_4 as u32)
-				.saturating_mul(weightages.param_4_weightage as u32)
-				.saturating_div(100) +
-			(variances.param_5 as u32)
-				.saturating_mul(weightages.param_5_weightage as u32)
-				.saturating_div(100);
+			.saturating_mul(weightages.param_1_weightage as u32) +
+			(variances.param_2 as u32).saturating_mul(weightages.param_2_weightage as u32) +
+			(variances.param_3 as u32).saturating_mul(weightages.param_3_weightage as u32) +
+			(variances.param_4 as u32).saturating_mul(weightages.param_4_weightage as u32) +
+			(variances.param_5 as u32).saturating_mul(weightages.param_5_weightage as u32);
 
-		weighted_sum as u8
+		weighted_sum
 	}
 
 	fn clear_old_era(old_era: EraIndex) {

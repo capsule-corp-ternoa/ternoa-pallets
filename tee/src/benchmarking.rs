@@ -500,11 +500,13 @@ benchmarks! {
 		let enclave_address: T::AccountId= get_account::<T>("ALICE_ENCLAVE");
 		let uri: BoundedVec<u8, T::MaxUriLen> = BoundedVec::try_from(vec![1; T::MaxUriLen::get() as usize]).unwrap();
 		let enclave = Enclave::new(enclave_address.clone(), uri.clone());
+		let stake_amount: BalanceOf<T> = 30u32.into();
 
+		TEE::<T>::set_staking_amount(RawOrigin::Root.into(), stake_amount).unwrap();
 		TEE::<T>::create_cluster(RawOrigin::Root.into(), ClusterType::Public).unwrap();
 		TEE::<T>::register_enclave(origin::<T>("ALICE").into(), enclave_address.clone(), uri.clone()).unwrap();
 		TEE::<T>::assign_enclave(RawOrigin::Root.into(), alice.clone(), cluster_id, slot_id).unwrap();
-		let stake_amount: BalanceOf<T> = 30u32.into();
+		let stake_amount: BalanceOf<T> = 60u32.into();
 
 		TEE::<T>::set_staking_amount(RawOrigin::Root.into(), stake_amount).unwrap();
 	}: _(origin::<T>("ALICE"))
@@ -526,6 +528,10 @@ benchmarks! {
 		let enclave_address: T::AccountId= get_account::<T>("ALICE_ENCLAVE");
 		let uri: BoundedVec<u8, T::MaxUriLen> = BoundedVec::try_from(vec![1; T::MaxUriLen::get() as usize]).unwrap();
 		let enclave = Enclave::new(enclave_address.clone(), uri.clone());
+
+		let stake_amount: BalanceOf<T> = 30u32.into();
+
+		TEE::<T>::set_staking_amount(RawOrigin::Root.into(), stake_amount).unwrap();
 
 		TEE::<T>::create_cluster(RawOrigin::Root.into(), ClusterType::Public).unwrap();
 		TEE::<T>::register_enclave(origin::<T>("ALICE").into(), enclave_address.clone(), uri.clone()).unwrap();

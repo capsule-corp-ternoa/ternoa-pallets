@@ -40,20 +40,24 @@ pub mod v2 {
 			let mut read = 0u64;
 			let mut write = 0u64;
 
+			let current_active_era = Staking::<T>::active_era().map(|e| e.index).unwrap();
+
+			let stake_amount: u128 = 250_000_000_000_000_000_000_000u128;
+			let stake_amount: BalanceOf<T> = stake_amount.saturated_into::<BalanceOf<T>>();
+
 			// Translate the old StakingLedger storage to the new format
 			StakingLedger::<T>::translate(
 				|_id, old: OldTeeStakingLedger<T::AccountId, T::BlockNumber>| {
 					let new_staking_ledger =
 						TeeStakingLedger::<T::AccountId, T::BlockNumber, BalanceOf<T>> {
 							operator: old.operator.clone(),
-							staked_amount: BalanceOf::<T>::default(), /* Initialize with default
-							                                           * value */
+							staked_amount: stake_amount, /* Initialize with default value */
 							is_unlocking: old.is_unlocking,
 							unbonded_at: old.unbonded_at,
 						};
 					read += 1;
 					write += 1;
-					OperatorAssignedEra::<T>::insert(old.operator, 1190);
+					OperatorAssignedEra::<T>::insert(old.operator, current_active_era);
 					Some(new_staking_ledger)
 				},
 			);
