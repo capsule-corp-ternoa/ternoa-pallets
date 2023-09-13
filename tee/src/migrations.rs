@@ -7,25 +7,26 @@ pub mod v2 {
 	};
 	use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 	use scale_info::TypeInfo;
-	use sp_arithmetic::traits::AtLeast32BitUnsigned;
 	use sp_std::fmt::Debug;
 
 	#[derive(
-		PartialEqNoBound, CloneNoBound, Encode, Decode, RuntimeDebugNoBound, TypeInfo, MaxEncodedLen,
+		Encode,
+		Decode,
+		CloneNoBound,
+		PartialEqNoBound,
+		Eq,
+		RuntimeDebugNoBound,
+		TypeInfo,
+		MaxEncodedLen,
 	)]
-	#[codec(mel_bound(AccountId: MaxEncodedLen, BlockNumber: MaxEncodedLen))]
-	pub struct OldTeeStakingLedger<AccountId, BlockNumber>
+	#[scale_info(skip_type_params(ClusterSize))]
+	#[codec(mel_bound(AccountId: MaxEncodedLen))]
+	pub struct OldClusterData<AccountId, ClusterSize>
 	where
 		AccountId: Clone + PartialEq + Debug,
-		BlockNumber:
-			Clone + PartialEq + Debug + sp_std::cmp::PartialOrd + AtLeast32BitUnsigned + Copy,
+		ClusterSize: Get<u32>,
 	{
-		/// The operator account whose balance is actually locked and at stake.
-		pub operator: AccountId,
-		/// State variable to know whether the staked amount is unbonded
-		pub is_unlocking: bool,
-		/// Block Number of when unbonded happened
-		pub unbonded_at: BlockNumber,
+		pub enclaves: BoundedVec<AccountId, ClusterSize>,
 	}
 
 	pub struct MigrationV2<T>(sp_std::marker::PhantomData<T>);
@@ -41,24 +42,44 @@ pub mod v2 {
 			let mut write = 0u64;
 
 			let current_active_era = Staking::<T>::active_era().map(|e| e.index).unwrap();
+			read += 1;
 
-			let stake_amount: u128 = 250_000_000_000_000_000_000_000u128;
-			let stake_amount: BalanceOf<T> = stake_amount.saturated_into::<BalanceOf<T>>();
+			ClusterData::<T>::translate(
+				|_id, old: OldClusterData<T::AccountId, T::ClusterSize>| {
+					let mut new_enclaves: BoundedVec<(T::AccountId, SlotId), T::ClusterSize> =
+						BoundedVec::default();
+					
+					let mut slot_id_counter = 0;
 
-			// Translate the old StakingLedger storage to the new format
-			StakingLedger::<T>::translate(
-				|_id, old: OldTeeStakingLedger<T::AccountId, T::BlockNumber>| {
-					let new_staking_ledger =
-						TeeStakingLedger::<T::AccountId, T::BlockNumber, BalanceOf<T>> {
-							operator: old.operator.clone(),
-							staked_amount: stake_amount, /* Initialize with default value */
-							is_unlocking: old.is_unlocking,
-							unbonded_at: old.unbonded_at,
-						};
+					for account_id in old.enclaves.into_iter() {
+						let slot_id: SlotId = slot_id_counter;
+						slot_id_counter += 1;
+
+						let push_result = new_enclaves.try_push((account_id.clone(), slot_id));
+						match push_result {
+							Ok(_) => {
+								read += 1;
+								write += 1;
+							},
+							Err(_) => {
+								// Handle the error case if the `BoundedVec` is already full
+								break // Stop adding elements if the desired size is reached
+							},
+						}
+						OperatorAssignedEra::<T>::insert(account_id.clone(), current_active_era);
+						write += 1;
+
+						let new_staking_ledger =
+						TeeStakingLedger::new(account_id.clone(), BalanceOf::<T>::default(), false, Default::default());
+						StakingLedger::<T>::insert(account_id.clone(), new_staking_ledger);
+						write += 1;
+
+					}
+					let new_cluster_data = Cluster::new(new_enclaves, ClusterType::Public);
 					read += 1;
 					write += 1;
-					OperatorAssignedEra::<T>::insert(old.operator, current_active_era);
-					Some(new_staking_ledger)
+
+					Some(new_cluster_data)
 				},
 			);
 
