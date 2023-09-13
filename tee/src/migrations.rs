@@ -39,14 +39,12 @@ pub mod v2 {
 		fn on_runtime_upgrade() -> frame_support::weights::Weight {
 			let mut read = 0u64;
 			let mut write = 0u64;
-			
-			let current_active_era = Staking::<T>::active_era()
-			.map(|e| e.index).unwrap();
+
+			let current_active_era = Staking::<T>::active_era().map(|e| e.index).unwrap();
 
 			let stake_amount: u128 = 250_000_000_000_000_000_000_000u128;
 			let stake_amount: BalanceOf<T> = stake_amount.saturated_into::<BalanceOf<T>>();
 
-		
 			// Translate the old StakingLedger storage to the new format
 			StakingLedger::<T>::translate(
 				|_id, old: OldTeeStakingLedger<T::AccountId, T::BlockNumber>| {

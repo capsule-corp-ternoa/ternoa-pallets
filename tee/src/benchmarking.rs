@@ -532,7 +532,7 @@ benchmarks! {
 		let stake_amount: BalanceOf<T> = 30u32.into();
 
 		TEE::<T>::set_staking_amount(RawOrigin::Root.into(), stake_amount).unwrap();
-		
+
 		TEE::<T>::create_cluster(RawOrigin::Root.into(), ClusterType::Public).unwrap();
 		TEE::<T>::register_enclave(origin::<T>("ALICE").into(), enclave_address.clone(), uri.clone()).unwrap();
 		TEE::<T>::assign_enclave(RawOrigin::Root.into(), alice.clone(), cluster_id, slot_id).unwrap();

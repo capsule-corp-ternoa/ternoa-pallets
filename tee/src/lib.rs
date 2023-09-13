@@ -249,8 +249,6 @@ pub mod pallet {
 
 			let version = StorageVersion::get::<Pallet<T>>();
 			if version == StorageVersion::new(1) || version == StorageVersion::new(2) {
-				
-
 				weight = <migrations::v2::MigrationV2<T> as OnRuntimeUpgrade>::on_runtime_upgrade();
 
 				StorageVersion::put::<Pallet<T>>(&StorageVersion::new(3));
@@ -455,6 +453,8 @@ pub mod pallet {
 		RefundExcessNotAllowed,
 		/// Force update should have either new enclave address or new api uri to be updated
 		NoUpdatesProvided,
+		/// Registration not allowed while unbonding period
+		UnbondingPeriod,
 	}
 
 	#[pallet::call]
@@ -479,7 +479,7 @@ pub mod pallet {
 				EnclaveAccountOperator::<T>::get(&enclave_address).is_none(),
 				Error::<T>::EnclaveAddressAlreadyExists
 			);
-
+			ensure!(StakingLedger::<T>::get(&who).is_none(), Error::<T>::UnbondingPeriod);
 			let default_staking_amount = StakingAmount::<T>::get();
 
 			let operator_balance = T::Currency::free_balance(&who);
@@ -1467,7 +1467,6 @@ pub mod pallet {
 
 				let extra_bond_to_be_refunded =
 					stake_details.staked_amount.saturating_sub(default_staking_amount);
-
 
 				stake_details.staked_amount = default_staking_amount.clone();
 
