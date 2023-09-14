@@ -726,6 +726,7 @@ pub mod pallet {
 				|maybe_registration| -> DispatchResult {
 					let _ = maybe_registration.as_mut().ok_or(Error::<T>::RegistrationNotFound)?;
 					*maybe_registration = None;
+					StakingLedger::<T>::remove(&operator_address);
 					T::Currency::remove_lock(TEE_STAKING_ID, &operator_address);
 					Ok(())
 				},
