@@ -357,7 +357,10 @@ where
 		let index = self.0.iter().position(|x| x.1 > block_number);
 		let index = index.unwrap_or_else(|| self.0.len());
 
-		self.0.try_insert(index, (nft_id, block_number))
+		match self.0.try_insert(index, (nft_id, block_number)) {
+			Ok(_) => Ok(()), 
+			Err(_) => Err(()), 
+		}
 	}
 
 	pub fn remove(&mut self, nft_id: NFTId) -> bool {
