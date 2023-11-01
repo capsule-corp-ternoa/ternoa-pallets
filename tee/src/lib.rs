@@ -251,12 +251,12 @@ pub mod pallet {
 		fn on_runtime_upgrade() -> frame_support::weights::Weight {
 			let mut weight = Weight::zero();
 
-			// let version = StorageVersion::get::<Pallet<T>>();
-			// if version == StorageVersion::new(1) {
-			// 	weight = <migrations::v2::MigrationV2<T> as OnRuntimeUpgrade>::on_runtime_upgrade();
+			let version = StorageVersion::get::<Pallet<T>>();
+			if version == StorageVersion::new(1) {
+				weight = <migrations::v2::MigrationV2<T> as OnRuntimeUpgrade>::on_runtime_upgrade();
 
-			// 	StorageVersion::put::<Pallet<T>>(&StorageVersion::new(2));
-			// }
+				StorageVersion::put::<Pallet<T>>(&StorageVersion::new(2));
+			}
 
 			weight
 		}
