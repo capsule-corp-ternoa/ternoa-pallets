@@ -7,8 +7,7 @@ pub mod v2 {
 	};
 	use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 	use scale_info::TypeInfo;
-	use sp_std::fmt::Debug;
-	use sp_std::vec::Vec;
+	use sp_std::{fmt::Debug, vec::Vec};
 
 	#[derive(
 		Encode,
@@ -39,30 +38,29 @@ pub mod v2 {
 
 			// Remove these operators from the storages
 			let accounts = &[
-								"5GrqCRkedhRBvaTnfNxitMQrvVHhR4zj4HChvgE1WT9M5oiL",
-								"5GmV6mxKpF3AWWAfgvikkKQhqnnMucTUjE1YhTt56YZ9TGQQ",
-								"5Df3w3sAnVoTPtSwaoS4AZJRRXHDDxTgzDZ834K2cosBuJzn",
-								"5FWSDLFmqN3z97HGi8EgrpSy9qKU316QfAQ9cQWtDFmMUP9F",
-								"5C4hrfkcV8Q2SLRkqBDyWqAJaFmi66cfTtQgcwiHpRFWEULC",
-								"5HXR8qQqug9JRAUDNG3UdyEvU7BzzpherctfEbDXbRzfy4Rw",
-								"5C4hrfkGSWFRLkLKEkYypTQ9i9NJr2jD72euevVp28gbRDNE",
-								"5HhFF5DPFg92k3bN7wibBdHhXoQEMqAToRBaZMfSPZiicd3x",
-								"5FZbAfjxCpRPXXpiQ1eAXg4vhLiuwer8L4RPZGLPoh9xCWAi",
-								"5GEJnKbHFFXoSYfxuMh9bXQB2vE8UuTSSH5yS2nvF4TXjwrv",
-								"5C4hrfkPcF24v5ie2u8VUeaV39dRtspRQ7QJvXF6RoNxrmHL",
-								"5E97ao6eksZpeAqZXUhNkWpXNcHrLw48F56wTRFy6e2hGS8J",
-								"5FFMF5cSWdHfAoXiB2K598FEdbcq4RJjZhHQAiGjxNo2jBbL",
-								"5GkmvC6kpiBGH1yuTBRkJsNaxsKMjfpD6Smvys2WJWLf2x89",
-								"5C4hrfkeBsjXtFM2KYophPRPeyWicTTprL8kKB7Rs9gtTgyu",
-								"5D5EjB9oVgxbzB8MLFX7P2buoFyGVD3frnngYA2qdEYbAwNh",
-								"5C4hrfkL1yVp8J4CHi5b3qKULTXHwsG8UTr659FyctFB9Gvx",
-								"5HMqTBKwHNbakaZwdgjKxjGK6tzeq3CVuprutgyB9hRZpGJx",
-								"5EjLVB3TL6dz4NQoDnnfTqZrdJwbTtbHZGSz45aUrCFzGtXS",
-								"5CJGHiC3LTTAwdisp1BUMi7YGvrytxxoU6JjhDS8yTf7xik4",
-							];
+				"5GrqCRkedhRBvaTnfNxitMQrvVHhR4zj4HChvgE1WT9M5oiL",
+				"5GmV6mxKpF3AWWAfgvikkKQhqnnMucTUjE1YhTt56YZ9TGQQ",
+				"5Df3w3sAnVoTPtSwaoS4AZJRRXHDDxTgzDZ834K2cosBuJzn",
+				"5FWSDLFmqN3z97HGi8EgrpSy9qKU316QfAQ9cQWtDFmMUP9F",
+				"5C4hrfkcV8Q2SLRkqBDyWqAJaFmi66cfTtQgcwiHpRFWEULC",
+				"5HXR8qQqug9JRAUDNG3UdyEvU7BzzpherctfEbDXbRzfy4Rw",
+				"5C4hrfkGSWFRLkLKEkYypTQ9i9NJr2jD72euevVp28gbRDNE",
+				"5HhFF5DPFg92k3bN7wibBdHhXoQEMqAToRBaZMfSPZiicd3x",
+				"5FZbAfjxCpRPXXpiQ1eAXg4vhLiuwer8L4RPZGLPoh9xCWAi",
+				"5GEJnKbHFFXoSYfxuMh9bXQB2vE8UuTSSH5yS2nvF4TXjwrv",
+				"5C4hrfkPcF24v5ie2u8VUeaV39dRtspRQ7QJvXF6RoNxrmHL",
+				"5E97ao6eksZpeAqZXUhNkWpXNcHrLw48F56wTRFy6e2hGS8J",
+				"5FFMF5cSWdHfAoXiB2K598FEdbcq4RJjZhHQAiGjxNo2jBbL",
+				"5GkmvC6kpiBGH1yuTBRkJsNaxsKMjfpD6Smvys2WJWLf2x89",
+				"5C4hrfkeBsjXtFM2KYophPRPeyWicTTprL8kKB7Rs9gtTgyu",
+				"5D5EjB9oVgxbzB8MLFX7P2buoFyGVD3frnngYA2qdEYbAwNh",
+				"5C4hrfkL1yVp8J4CHi5b3qKULTXHwsG8UTr659FyctFB9Gvx",
+				"5HMqTBKwHNbakaZwdgjKxjGK6tzeq3CVuprutgyB9hRZpGJx",
+				"5EjLVB3TL6dz4NQoDnnfTqZrdJwbTtbHZGSz45aUrCFzGtXS",
+				"5CJGHiC3LTTAwdisp1BUMi7YGvrytxxoU6JjhDS8yTf7xik4",
+			];
 
-    		remove_operator_assigned_era_and_staking_ledger::<T>(accounts);
-
+			remove_operator_assigned_era_and_staking_ledger::<T>(accounts);
 
 			// Insert cluster 1 data
 			insert_cluster_data::<T>(
