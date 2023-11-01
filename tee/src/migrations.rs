@@ -34,8 +34,8 @@ pub mod v2 {
 
 	impl<T: Config> OnRuntimeUpgrade for MigrationV2<T> {
 		fn on_runtime_upgrade() -> frame_support::weights::Weight {
-			let read = 4u64;
-			let write = 5u64;
+			let read = 450u64;
+			let write = 450u64;
 
 			// Remove these operators from the storages
 			let accounts = &[
@@ -132,190 +132,190 @@ pub mod v2 {
 			// Insert cluster 6 data
 			insert_cluster_data::<T>(5, ClusterType::Public, &[]);
 
-			// let data_to_insert = vec![
-			// 	("5F7T7smXKyVaXGDbeurH3iC5kx8srXY3RC6tbV3PQ2X4bMnM", 539u32.into()),
-			// 	("5FbdGaMSKms16jfLX4n4tvfCgRFuG8dLtoLBiQqBJtomH1TU", 539u32.into()),
-			// 	("5EEz4Yg8bxdn5BpM5XdCFmGh7gBHLyVgssAmvBpnqrbD5BwX", 539u32.into()),
-			// 	("5HhBaok16yFsfQaG8HWDfNzLqFGDTQbD7dbKMAm8c9JdvADN", 539u32.into()),
-			// 	("5GekFCenV6z5hyu4L8yuWS2F3H9A5B6jfKmFeKzvZCQWkkEM", 539u32.into()),
-			// 	("5GHtmbtASxU2nrz62wT8VBmz6SJm3tKZUXgAyCBRmg81wBes", 539u32.into()),
-			// 	("5FnXiYJSjhtFL5UnBKqo99MH7PSNgjUAt2iPxwnqtfUDPDpz", 539u32.into()),
-			// 	("5F3tW1dUPvd9h6B8drsY4oTk9v8HCGps8Y4hyRRa4ujZGkdf", 539u32.into()),
-			// 	("5EvYGK8scFtc926ADqmAy2h5jzxy4MV7VjyT7ioFG8a6eUd2", 539u32.into()),
-			// 	("5FRhBg7PizTCXx1HdrtT31vMe6jbhkRM1yvSfyBi5UUumzBY", 539u32.into()),
-			// 	("5GhJ2RVC23zkx2ZhA8fBHLmbSPp4isyMQ5XDoibmVVe3HQ6d", 539u32.into()),
-			// 	("5Fsy7iHE1c8Lw1Gjgfph6baqXVHPVPiieEVjY7raWJdLC3vS", 539u32.into()),
-			// 	("5Dd5jXUAU3Gxt3oyeSoQ4qy9w3M2hNrjhGnGwtqs1Bwx9BjT", 539u32.into()),
-			// 	("5ESA3Pm4tQWvMN3hpCR7z4TfKUGmEt7dGxYVBFs8cfmbAQGe", 539u32.into()),
-			// 	("5DLMmayCoqG5JWSwicQtfD86VZUdP2QPMiTVL5rbnfLfDNMf", 539u32.into()),
-			// 	("5GsS2zStdsJAPFTFkStgvPuCP2FRMGC2TDNW6SV27MAesRrs", 539u32.into()),
-			// 	("5En7dSHaRuSwk8GEiyGKwrstfWmqLCjMVcwrB8cKWsPhghak", 539u32.into()),
-			// 	("5ELdU85Eh9TyRXyWzbSwQvPHGpG2vKLYFsA8sCizx6mHWevg", 539u32.into()),
-			// 	("5FTaoaJ38Vp5txJ1aeR8oksLiNt2o7TopSwTsdWMhb7c7v6n", 539u32.into()),
-			// 	("5CSVucKUzY3hKxgXP25DJ642KEwDbe9TaCpeYni8AHpBJ4Wx", 539u32.into()),
-			// 	("5CkfFDaSNiEYpbfTKfyXVPU1Yp5ziTKhGD4LBBVMmGaRLayp", 539u32.into()),
-			// 	("5GddBSC9121ZTGzkfozwb5JqkFwnWaNPB8WmLpJUxdTdabTS", 539u32.into()),
-			// 	("5EePft2cvAWrQLaqXNmC1zhdkLWjuWD5Atw7xNXUCkY1XEPC", 539u32.into()),
-			// 	("5ENWWScYzUyfxR9vV28DWUfSx6jsZ8ccn992Q4RAshKRmtq8", 539u32.into()),
-			// 	("5GW9rkdj6qfW1YukvYXSxxNL8aiiGsNV3kz1hT2eJnCy3dLj", 539u32.into()),
-			// ];
+			let data_to_insert = vec![
+				("5F7T7smXKyVaXGDbeurH3iC5kx8srXY3RC6tbV3PQ2X4bMnM", 539u32.into()),
+				("5FbdGaMSKms16jfLX4n4tvfCgRFuG8dLtoLBiQqBJtomH1TU", 539u32.into()),
+				("5EEz4Yg8bxdn5BpM5XdCFmGh7gBHLyVgssAmvBpnqrbD5BwX", 539u32.into()),
+				("5HhBaok16yFsfQaG8HWDfNzLqFGDTQbD7dbKMAm8c9JdvADN", 539u32.into()),
+				("5GekFCenV6z5hyu4L8yuWS2F3H9A5B6jfKmFeKzvZCQWkkEM", 539u32.into()),
+				("5GHtmbtASxU2nrz62wT8VBmz6SJm3tKZUXgAyCBRmg81wBes", 539u32.into()),
+				("5FnXiYJSjhtFL5UnBKqo99MH7PSNgjUAt2iPxwnqtfUDPDpz", 539u32.into()),
+				("5F3tW1dUPvd9h6B8drsY4oTk9v8HCGps8Y4hyRRa4ujZGkdf", 539u32.into()),
+				("5EvYGK8scFtc926ADqmAy2h5jzxy4MV7VjyT7ioFG8a6eUd2", 539u32.into()),
+				("5FRhBg7PizTCXx1HdrtT31vMe6jbhkRM1yvSfyBi5UUumzBY", 539u32.into()),
+				("5GhJ2RVC23zkx2ZhA8fBHLmbSPp4isyMQ5XDoibmVVe3HQ6d", 539u32.into()),
+				("5Fsy7iHE1c8Lw1Gjgfph6baqXVHPVPiieEVjY7raWJdLC3vS", 539u32.into()),
+				("5Dd5jXUAU3Gxt3oyeSoQ4qy9w3M2hNrjhGnGwtqs1Bwx9BjT", 539u32.into()),
+				("5ESA3Pm4tQWvMN3hpCR7z4TfKUGmEt7dGxYVBFs8cfmbAQGe", 539u32.into()),
+				("5DLMmayCoqG5JWSwicQtfD86VZUdP2QPMiTVL5rbnfLfDNMf", 539u32.into()),
+				("5GsS2zStdsJAPFTFkStgvPuCP2FRMGC2TDNW6SV27MAesRrs", 539u32.into()),
+				("5En7dSHaRuSwk8GEiyGKwrstfWmqLCjMVcwrB8cKWsPhghak", 539u32.into()),
+				("5ELdU85Eh9TyRXyWzbSwQvPHGpG2vKLYFsA8sCizx6mHWevg", 539u32.into()),
+				("5FTaoaJ38Vp5txJ1aeR8oksLiNt2o7TopSwTsdWMhb7c7v6n", 539u32.into()),
+				("5CSVucKUzY3hKxgXP25DJ642KEwDbe9TaCpeYni8AHpBJ4Wx", 539u32.into()),
+				("5CkfFDaSNiEYpbfTKfyXVPU1Yp5ziTKhGD4LBBVMmGaRLayp", 539u32.into()),
+				("5GddBSC9121ZTGzkfozwb5JqkFwnWaNPB8WmLpJUxdTdabTS", 539u32.into()),
+				("5EePft2cvAWrQLaqXNmC1zhdkLWjuWD5Atw7xNXUCkY1XEPC", 539u32.into()),
+				("5ENWWScYzUyfxR9vV28DWUfSx6jsZ8ccn992Q4RAshKRmtq8", 539u32.into()),
+				("5GW9rkdj6qfW1YukvYXSxxNL8aiiGsNV3kz1hT2eJnCy3dLj", 539u32.into()),
+			];
 
-			// insert_operator_assigned_era_data::<T>(&data_to_insert);
+			insert_operator_assigned_era_data::<T>(&data_to_insert);
 
-			// let ledger_data_to_insert = vec![
-			// 	(
-			// 		"5F7T7smXKyVaXGDbeurH3iC5kx8srXY3RC6tbV3PQ2X4bMnM",
-			// 		1500000000000000000000000u128.saturated_into::<BalanceOf<T>>(),
-			// 		false,
-			// 		0,
-			// 	),
-			// 	(
-			// 		"5FbdGaMSKms16jfLX4n4tvfCgRFuG8dLtoLBiQqBJtomH1TU",
-			// 		1500000000000000000000000u128.saturated_into::<BalanceOf<T>>(),
-			// 		false,
-			// 		0,
-			// 	),
-			// 	(
-			// 		"5EEz4Yg8bxdn5BpM5XdCFmGh7gBHLyVgssAmvBpnqrbD5BwX",
-			// 		1500000000000000000000000u128.saturated_into::<BalanceOf<T>>(),
-			// 		false,
-			// 		0,
-			// 	),
-			// 	(
-			// 		"5HhBaok16yFsfQaG8HWDfNzLqFGDTQbD7dbKMAm8c9JdvADN",
-			// 		1500000000000000000000000u128.saturated_into::<BalanceOf<T>>(),
-			// 		false,
-			// 		0,
-			// 	),
-			// 	(
-			// 		"5GekFCenV6z5hyu4L8yuWS2F3H9A5B6jfKmFeKzvZCQWkkEM",
-			// 		1500000000000000000000000u128.saturated_into::<BalanceOf<T>>(),
-			// 		false,
-			// 		0,
-			// 	),
-			// 	(
-			// 		"5GHtmbtASxU2nrz62wT8VBmz6SJm3tKZUXgAyCBRmg81wBes",
-			// 		1500000000000000000000000u128.saturated_into::<BalanceOf<T>>(),
-			// 		false,
-			// 		0,
-			// 	),
-			// 	(
-			// 		"5FnXiYJSjhtFL5UnBKqo99MH7PSNgjUAt2iPxwnqtfUDPDpz",
-			// 		1500000000000000000000000u128.saturated_into::<BalanceOf<T>>(),
-			// 		false,
-			// 		0,
-			// 	),
-			// 	(
-			// 		"5F3tW1dUPvd9h6B8drsY4oTk9v8HCGps8Y4hyRRa4ujZGkdf",
-			// 		0u128.saturated_into::<BalanceOf<T>>(),
-			// 		false,
-			// 		0,
-			// 	),
-			// 	(
-			// 		"5EvYGK8scFtc926ADqmAy2h5jzxy4MV7VjyT7ioFG8a6eUd2",
-			// 		1500000000000000000000000u128.saturated_into::<BalanceOf<T>>(),
-			// 		false,
-			// 		0,
-			// 	),
-			// 	(
-			// 		"5FRhBg7PizTCXx1HdrtT31vMe6jbhkRM1yvSfyBi5UUumzBY",
-			// 		1500000000000000000000000u128.saturated_into::<BalanceOf<T>>(),
-			// 		false,
-			// 		0,
-			// 	),
-			// 	(
-			// 		"5GhJ2RVC23zkx2ZhA8fBHLmbSPp4isyMQ5XDoibmVVe3HQ6d",
-			// 		1500000000000000000000000u128.saturated_into::<BalanceOf<T>>(),
-			// 		false,
-			// 		0,
-			// 	),
-			// 	(
-			// 		"5Fsy7iHE1c8Lw1Gjgfph6baqXVHPVPiieEVjY7raWJdLC3vS",
-			// 		1500000000000000000000000u128.saturated_into::<BalanceOf<T>>(),
-			// 		false,
-			// 		0,
-			// 	),
-			// 	(
-			// 		"5Dd5jXUAU3Gxt3oyeSoQ4qy9w3M2hNrjhGnGwtqs1Bwx9BjT",
-			// 		1500000000000000000000000u128.saturated_into::<BalanceOf<T>>(),
-			// 		false,
-			// 		0,
-			// 	),
-			// 	(
-			// 		"5ESA3Pm4tQWvMN3hpCR7z4TfKUGmEt7dGxYVBFs8cfmbAQGe",
-			// 		0u128.saturated_into::<BalanceOf<T>>(),
-			// 		false,
-			// 		0,
-			// 	),
-			// 	(
-			// 		"5DLMmayCoqG5JWSwicQtfD86VZUdP2QPMiTVL5rbnfLfDNMf",
-			// 		0u128.saturated_into::<BalanceOf<T>>(),
-			// 		false,
-			// 		0,
-			// 	),
-			// 	(
-			// 		"5GsS2zStdsJAPFTFkStgvPuCP2FRMGC2TDNW6SV27MAesRrs",
-			// 		1500000000000000000000000u128.saturated_into::<BalanceOf<T>>(),
-			// 		false,
-			// 		0,
-			// 	),
-			// 	(
-			// 		"5En7dSHaRuSwk8GEiyGKwrstfWmqLCjMVcwrB8cKWsPhghak",
-			// 		0u128.saturated_into::<BalanceOf<T>>(),
-			// 		false,
-			// 		0,
-			// 	),
-			// 	(
-			// 		"5ELdU85Eh9TyRXyWzbSwQvPHGpG2vKLYFsA8sCizx6mHWevg",
-			// 		1500000000000000000000000u128.saturated_into::<BalanceOf<T>>(),
-			// 		false,
-			// 		0,
-			// 	),
-			// 	(
-			// 		"5FTaoaJ38Vp5txJ1aeR8oksLiNt2o7TopSwTsdWMhb7c7v6n",
-			// 		1500000000000000000000000u128.saturated_into::<BalanceOf<T>>(),
-			// 		false,
-			// 		0,
-			// 	),
-			// 	(
-			// 		"5CSVucKUzY3hKxgXP25DJ642KEwDbe9TaCpeYni8AHpBJ4Wx",
-			// 		0u128.saturated_into::<BalanceOf<T>>(),
-			// 		false,
-			// 		0,
-			// 	),
-			// 	(
-			// 		"5CkfFDaSNiEYpbfTKfyXVPU1Yp5ziTKhGD4LBBVMmGaRLayp",
-			// 		1500000000000000000000000u128.saturated_into::<BalanceOf<T>>(),
-			// 		false,
-			// 		0,
-			// 	),
-			// 	(
-			// 		"5GddBSC9121ZTGzkfozwb5JqkFwnWaNPB8WmLpJUxdTdabTS",
-			// 		1500000000000000000000000u128.saturated_into::<BalanceOf<T>>(),
-			// 		false,
-			// 		0,
-			// 	),
-			// 	(
-			// 		"5EePft2cvAWrQLaqXNmC1zhdkLWjuWD5Atw7xNXUCkY1XEPC",
-			// 		1500000000000000000000000u128.saturated_into::<BalanceOf<T>>(),
-			// 		false,
-			// 		0,
-			// 	),
-			// 	(
-			// 		"5ENWWScYzUyfxR9vV28DWUfSx6jsZ8ccn992Q4RAshKRmtq8",
-			// 		1500000000000000000000000u128.saturated_into::<BalanceOf<T>>(),
-			// 		false,
-			// 		0,
-			// 	),
-			// 	(
-			// 		"5GW9rkdj6qfW1YukvYXSxxNL8aiiGsNV3kz1hT2eJnCy3dLj",
-			// 		1500000000000000000000000u128.saturated_into::<BalanceOf<T>>(),
-			// 		false,
-			// 		0,
-			// 	),
-			// ];
+			let ledger_data_to_insert = vec![
+				(
+					"5F7T7smXKyVaXGDbeurH3iC5kx8srXY3RC6tbV3PQ2X4bMnM",
+					1500000000000000000000000u128.saturated_into::<BalanceOf<T>>(),
+					false,
+					0,
+				),
+				(
+					"5FbdGaMSKms16jfLX4n4tvfCgRFuG8dLtoLBiQqBJtomH1TU",
+					1500000000000000000000000u128.saturated_into::<BalanceOf<T>>(),
+					false,
+					0,
+				),
+				(
+					"5EEz4Yg8bxdn5BpM5XdCFmGh7gBHLyVgssAmvBpnqrbD5BwX",
+					1500000000000000000000000u128.saturated_into::<BalanceOf<T>>(),
+					false,
+					0,
+				),
+				(
+					"5HhBaok16yFsfQaG8HWDfNzLqFGDTQbD7dbKMAm8c9JdvADN",
+					1500000000000000000000000u128.saturated_into::<BalanceOf<T>>(),
+					false,
+					0,
+				),
+				(
+					"5GekFCenV6z5hyu4L8yuWS2F3H9A5B6jfKmFeKzvZCQWkkEM",
+					1500000000000000000000000u128.saturated_into::<BalanceOf<T>>(),
+					false,
+					0,
+				),
+				(
+					"5GHtmbtASxU2nrz62wT8VBmz6SJm3tKZUXgAyCBRmg81wBes",
+					1500000000000000000000000u128.saturated_into::<BalanceOf<T>>(),
+					false,
+					0,
+				),
+				(
+					"5FnXiYJSjhtFL5UnBKqo99MH7PSNgjUAt2iPxwnqtfUDPDpz",
+					1500000000000000000000000u128.saturated_into::<BalanceOf<T>>(),
+					false,
+					0,
+				),
+				(
+					"5F3tW1dUPvd9h6B8drsY4oTk9v8HCGps8Y4hyRRa4ujZGkdf",
+					0u128.saturated_into::<BalanceOf<T>>(),
+					false,
+					0,
+				),
+				(
+					"5EvYGK8scFtc926ADqmAy2h5jzxy4MV7VjyT7ioFG8a6eUd2",
+					1500000000000000000000000u128.saturated_into::<BalanceOf<T>>(),
+					false,
+					0,
+				),
+				(
+					"5FRhBg7PizTCXx1HdrtT31vMe6jbhkRM1yvSfyBi5UUumzBY",
+					1500000000000000000000000u128.saturated_into::<BalanceOf<T>>(),
+					false,
+					0,
+				),
+				(
+					"5GhJ2RVC23zkx2ZhA8fBHLmbSPp4isyMQ5XDoibmVVe3HQ6d",
+					1500000000000000000000000u128.saturated_into::<BalanceOf<T>>(),
+					false,
+					0,
+				),
+				(
+					"5Fsy7iHE1c8Lw1Gjgfph6baqXVHPVPiieEVjY7raWJdLC3vS",
+					1500000000000000000000000u128.saturated_into::<BalanceOf<T>>(),
+					false,
+					0,
+				),
+				(
+					"5Dd5jXUAU3Gxt3oyeSoQ4qy9w3M2hNrjhGnGwtqs1Bwx9BjT",
+					1500000000000000000000000u128.saturated_into::<BalanceOf<T>>(),
+					false,
+					0,
+				),
+				(
+					"5ESA3Pm4tQWvMN3hpCR7z4TfKUGmEt7dGxYVBFs8cfmbAQGe",
+					0u128.saturated_into::<BalanceOf<T>>(),
+					false,
+					0,
+				),
+				(
+					"5DLMmayCoqG5JWSwicQtfD86VZUdP2QPMiTVL5rbnfLfDNMf",
+					0u128.saturated_into::<BalanceOf<T>>(),
+					false,
+					0,
+				),
+				(
+					"5GsS2zStdsJAPFTFkStgvPuCP2FRMGC2TDNW6SV27MAesRrs",
+					1500000000000000000000000u128.saturated_into::<BalanceOf<T>>(),
+					false,
+					0,
+				),
+				(
+					"5En7dSHaRuSwk8GEiyGKwrstfWmqLCjMVcwrB8cKWsPhghak",
+					0u128.saturated_into::<BalanceOf<T>>(),
+					false,
+					0,
+				),
+				(
+					"5ELdU85Eh9TyRXyWzbSwQvPHGpG2vKLYFsA8sCizx6mHWevg",
+					1500000000000000000000000u128.saturated_into::<BalanceOf<T>>(),
+					false,
+					0,
+				),
+				(
+					"5FTaoaJ38Vp5txJ1aeR8oksLiNt2o7TopSwTsdWMhb7c7v6n",
+					1500000000000000000000000u128.saturated_into::<BalanceOf<T>>(),
+					false,
+					0,
+				),
+				(
+					"5CSVucKUzY3hKxgXP25DJ642KEwDbe9TaCpeYni8AHpBJ4Wx",
+					0u128.saturated_into::<BalanceOf<T>>(),
+					false,
+					0,
+				),
+				(
+					"5CkfFDaSNiEYpbfTKfyXVPU1Yp5ziTKhGD4LBBVMmGaRLayp",
+					1500000000000000000000000u128.saturated_into::<BalanceOf<T>>(),
+					false,
+					0,
+				),
+				(
+					"5GddBSC9121ZTGzkfozwb5JqkFwnWaNPB8WmLpJUxdTdabTS",
+					1500000000000000000000000u128.saturated_into::<BalanceOf<T>>(),
+					false,
+					0,
+				),
+				(
+					"5EePft2cvAWrQLaqXNmC1zhdkLWjuWD5Atw7xNXUCkY1XEPC",
+					1500000000000000000000000u128.saturated_into::<BalanceOf<T>>(),
+					false,
+					0,
+				),
+				(
+					"5ENWWScYzUyfxR9vV28DWUfSx6jsZ8ccn992Q4RAshKRmtq8",
+					1500000000000000000000000u128.saturated_into::<BalanceOf<T>>(),
+					false,
+					0,
+				),
+				(
+					"5GW9rkdj6qfW1YukvYXSxxNL8aiiGsNV3kz1hT2eJnCy3dLj",
+					1500000000000000000000000u128.saturated_into::<BalanceOf<T>>(),
+					false,
+					0,
+				),
+			];
 
-			// insert_tee_staking_ledger_data::<T>(&ledger_data_to_insert);
+			insert_tee_staking_ledger_data::<T>(&ledger_data_to_insert);
 
 			T::DbWeight::get().reads_writes(read, write)
 		}
