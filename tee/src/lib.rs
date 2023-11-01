@@ -51,6 +51,9 @@ const TEE_STAKING_ID: LockIdentifier = *b"teestake";
 use pallet_staking::Pallet as Staking;
 use sp_staking::EraIndex;
 
+use parity_scale_codec::Decode;
+use sp_core::crypto::AccountId32;
+
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
@@ -248,10 +251,10 @@ pub mod pallet {
 			let mut weight = Weight::zero();
 
 			let version = StorageVersion::get::<Pallet<T>>();
-			if version == StorageVersion::new(0) || version == StorageVersion::new(1) {
+			if version == StorageVersion::new(1) {
 				weight = <migrations::v2::MigrationV2<T> as OnRuntimeUpgrade>::on_runtime_upgrade();
 
-				StorageVersion::put::<Pallet<T>>(&StorageVersion::new(1));
+				StorageVersion::put::<Pallet<T>>(&StorageVersion::new(2));
 			}
 
 			weight
@@ -1549,6 +1552,23 @@ impl<T: Config> Pallet<T> {
 
 		cursor = MetricsReports::<T>::clear_prefix(old_era, u32::MAX, None);
 		debug_assert!(cursor.maybe_cursor.is_none());
+	}
+
+	///fn convert_str_to_valid_account_id(account_address: &str) -> Result<T::AccountId, Error<T>>
+	///This function is to convert given string of SS58 address to AccountId type.
+	pub fn convert_str_to_valid_account_id(
+		account_address: &str,
+	) -> Result<T::AccountId, Error<T>>
+//where <T as frame_system::Config>::AccountId: sp_std::default::Default
+	{
+		let mut output = [0xFF; 48];
+		let checksum_len = 2; //for substrate address
+		let decoded = bs58::decode(account_address).into(&mut output).unwrap();
+		let address_32: sp_core::crypto::AccountId32 =
+			AccountId32::try_from(&output[1..decoded - checksum_len]).unwrap();
+		let account_id: T::AccountId =
+			T::AccountId::decode(&mut AccountId32::as_ref(&address_32)).unwrap();
+		Ok(account_id)
 	}
 }
 
