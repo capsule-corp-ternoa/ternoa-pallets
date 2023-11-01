@@ -34,8 +34,8 @@ pub mod v2 {
 
 	impl<T: Config> OnRuntimeUpgrade for MigrationV2<T> {
 		fn on_runtime_upgrade() -> frame_support::weights::Weight {
-			let read = 40u64;
-			let write = 55u64;
+			let read = 4u64;
+			let write = 5u64;
 
 			// Remove these operators from the storages
 			let accounts = &[
