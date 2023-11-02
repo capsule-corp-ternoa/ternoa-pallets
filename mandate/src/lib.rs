@@ -72,6 +72,33 @@ pub mod pallet {
 			// Free action :)
 			Ok(Pays::No.into())
 		}
+
+		/// Authenticates the sudo key and dispatches a function call with `Root` origin.
+		/// This function does not check the weight of the call, and instead allows the
+		/// Sudo user to specify the weight of the call.
+		///
+		/// The dispatch origin for this call must be _Signed_.
+		///
+		/// # <weight>
+		/// - O(1).
+		/// - The weight of this call is defined by the caller.
+		/// # </weight>
+		#[pallet::weight((*_weight, call.get_dispatch_info().class))]
+		pub fn sudo_unchecked_weight(
+			origin: OriginFor<T>,
+			call: Box<<T as Config>::RuntimeCall>,
+			_weight: Weight,
+		) -> DispatchResultWithPostInfo {
+			// This is a public call, so we ensure that the origin is some signed account.
+			T::ExternalOrigin::ensure_origin(origin)?;
+
+			let res = call.dispatch_bypass_filter(frame_system::RawOrigin::Root.into());
+			let result = res.map(|_| ()).map_err(|e| e.error);
+
+			Self::deposit_event(Event::RootOp { result });
+			// Sudo user does not pay a fee.
+			Ok(Pays::No.into())
+		}
 	}
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
