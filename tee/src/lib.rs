@@ -35,7 +35,7 @@ use frame_support::{
 pub use pallet::*;
 pub use types::*;
 
-use frame_support::traits::{Get, LockIdentifier, OnRuntimeUpgrade, StorageVersion};
+use frame_support::traits::{Get, LockIdentifier, StorageVersion};
 use sp_std::vec;
 use sp_std::vec::Vec;
 
@@ -248,18 +248,18 @@ pub mod pallet {
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-		fn on_runtime_upgrade() -> frame_support::weights::Weight {
-			let mut weight = Weight::zero();
+		// fn on_runtime_upgrade() -> frame_support::weights::Weight {
+		// 	let mut weight = Weight::zero();
 
-			// let version = StorageVersion::get::<Pallet<T>>();
-			// if version == StorageVersion::new(1) {
-			// 	weight = <migrations::v2::MigrationV2<T> as OnRuntimeUpgrade>::on_runtime_upgrade();
+		// 	// let version = StorageVersion::get::<Pallet<T>>();
+		// 	// if version == StorageVersion::new(1) {
+		// 	// 	weight = <migrations::v2::MigrationV2<T> as OnRuntimeUpgrade>::on_runtime_upgrade();
 
-			// 	StorageVersion::put::<Pallet<T>>(&StorageVersion::new(2));
-			// }
+		// 	// 	StorageVersion::put::<Pallet<T>>(&StorageVersion::new(2));
+		// 	// }
 
-			weight
-		}
+		// 	weight
+		// }
 
 		fn on_initialize(now: T::BlockNumber) -> frame_support::weights::Weight {
 			let mut read = 0u64;
