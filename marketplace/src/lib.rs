@@ -64,7 +64,6 @@ pub mod pallet {
 	use frame_support::pallet_prelude::*;
 
 	#[pallet::pallet]
-	#[pallet::generate_store(pub(super) trait Store)]
 	#[pallet::storage_version(STORAGE_VERSION)]
 	pub struct Pallet<T>(PhantomData<T>);
 
@@ -230,6 +229,7 @@ pub mod pallet {
 		/// Create a new marketplace with the provided details. An ID will be auto
 		/// generated and logged as an event, The caller of this function
 		/// will become the owner of the new marketplace.
+		#[pallet::call_index(0)]
 		#[pallet::weight(T::WeightInfo::create_marketplace())]
 		pub fn create_marketplace(
 			origin: OriginFor<T>,
@@ -254,6 +254,7 @@ pub mod pallet {
 
 		/// Transfer the ownership of the marketplace to the recipient. Must be called by the
 		/// owner of the marketplace.
+		#[pallet::call_index(1)]
 		#[pallet::weight(T::WeightInfo::set_marketplace_owner())]
 		pub fn set_marketplace_owner(
 			origin: OriginFor<T>,
@@ -283,6 +284,7 @@ pub mod pallet {
 
 		/// Change the kind of the marketplace, can be private or public.
 		/// Must be called by the owner of the marketplace.
+		#[pallet::call_index(2)]
 		#[pallet::weight(T::WeightInfo::set_marketplace_kind())]
 		pub fn set_marketplace_kind(
 			origin: OriginFor<T>,
@@ -309,6 +311,7 @@ pub mod pallet {
 
 		/// Set the configuration parameters of the marketplace (eg. commission_fee, listing_fee,
 		/// account_list, offchain_data). Must be called by the owner of the marketplace.
+		#[pallet::call_index(3)]
 		#[pallet::weight(T::WeightInfo::set_marketplace_configuration())]
 		pub fn set_marketplace_configuration(
 			origin: OriginFor<T>,
@@ -350,6 +353,7 @@ pub mod pallet {
 		}
 
 		/// Sets the marketplace mint fee. Can only be called by Root.
+		#[pallet::call_index(4)]
 		#[pallet::weight(T::WeightInfo::set_marketplace_mint_fee())]
 		pub fn set_marketplace_mint_fee(
 			origin: OriginFor<T>,
@@ -363,6 +367,7 @@ pub mod pallet {
 		}
 
 		/// Put an NFT on sale on a marketplace.
+		#[pallet::call_index(5)]
 		#[pallet::weight(T::WeightInfo::list_nft())]
 		pub fn list_nft(
 			origin: OriginFor<T>,
@@ -421,6 +426,7 @@ pub mod pallet {
 		}
 
 		/// Remove an NFT from sale.
+		#[pallet::call_index(6)]
 		#[pallet::weight(T::WeightInfo::unlist_nft())]
 		pub fn unlist_nft(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
@@ -440,6 +446,7 @@ pub mod pallet {
 		}
 
 		/// Buy a listed nft
+		#[pallet::call_index(7)]
 		#[pallet::weight(T::WeightInfo::buy_nft())]
 		pub fn buy_nft(
 			origin: OriginFor<T>,

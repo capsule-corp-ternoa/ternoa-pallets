@@ -46,69 +46,69 @@ pub trait WeightInfo {
 pub struct TernoaWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for TernoaWeight<T> {
 	fn create_nft(_s: u32) -> Weight {
-		Weight::from_ref_time(10_000_000 as u64)
+		Weight::from_parts(10_000_000, 0)
 	}
 	fn burn_nft(_s: u32) -> Weight {
-		Weight::from_ref_time(10_000_000 as u64)
+		Weight::from_parts(10_000_000, 0)
 	}
 	fn transfer_nft() -> Weight {
-		Weight::from_ref_time(10_000_000 as u64)
+		Weight::from_parts(10_000_000, 0)
 	}
 	fn delegate_nft() -> Weight {
-		Weight::from_ref_time(10_000_000 as u64)
+		Weight::from_parts(10_000_000, 0)
 	}
 	fn set_royalty() -> Weight {
-		Weight::from_ref_time(10_000_000 as u64)
+		Weight::from_parts(10_000_000, 0)
 	}
 	fn set_nft_mint_fee() -> Weight {
-		Weight::from_ref_time(10_000_000 as u64)
+		Weight::from_parts(10_000_000, 0)
 	}
 	fn create_collection() -> Weight {
-		Weight::from_ref_time(10_000_000 as u64)
+		Weight::from_parts(10_000_000, 0)
 	}
 	fn burn_collection() -> Weight {
-		Weight::from_ref_time(10_000_000 as u64)
+		Weight::from_parts(10_000_000, 0)
 	}
 	fn close_collection() -> Weight {
-		Weight::from_ref_time(10_000_000 as u64)
+		Weight::from_parts(10_000_000, 0)
 	}
 	fn limit_collection() -> Weight {
-		Weight::from_ref_time(10_000_000 as u64)
+		Weight::from_parts(10_000_000, 0)
 	}
 	fn add_nft_to_collection(_s: u32) -> Weight {
-		Weight::from_ref_time(10_000_000 as u64)
+		Weight::from_parts(10_000_000, 0)
 	}
 	fn create_secret_nft(_s: u32) -> Weight {
-		Weight::from_ref_time(10_000_000 as u64)
+		Weight::from_parts(10_000_000, 0)
 	}
 	fn add_secret() -> Weight {
-		Weight::from_ref_time(10_000_000 as u64)
+		Weight::from_parts(10_000_000, 0)
 	}
 	fn add_secret_shard() -> Weight {
-		Weight::from_ref_time(10_000_000 as u64)
+		Weight::from_parts(10_000_000, 0)
 	}
 	fn set_secret_nft_mint_fee() -> Weight {
-		Weight::from_ref_time(10_000_000 as u64)
+		Weight::from_parts(10_000_000, 0)
 	}
 	fn create_capsule(_s: u32) -> Weight {
-		Weight::from_ref_time(10_000_000 as u64)
+		Weight::from_parts(10_000_000, 0)
 	}
 	fn convert_to_capsule() -> Weight {
-		Weight::from_ref_time(10_000_000 as u64)
+		Weight::from_parts(10_000_000, 0)
 	}
 	fn set_capsule_offchaindata() -> Weight {
-		Weight::from_ref_time(10_000_000 as u64)
+		Weight::from_parts(10_000_000, 0)
 	}
 	fn set_capsule_mint_fee() -> Weight {
-		Weight::from_ref_time(10_000_000 as u64)
+		Weight::from_parts(10_000_000, 0)
 	}
 	fn add_capsule_shard() -> Weight {
-		Weight::from_ref_time(10_000_000 as u64)
+		Weight::from_parts(10_000_000, 0)
 	}
 	fn notify_enclave_key_update() -> Weight {
-		Weight::from_ref_time(10_000_000 as u64)
+		Weight::from_parts(10_000_000, 0)
 	}
 	fn set_collection_offchaindata() -> Weight {
-		Weight::from_ref_time(10_000_000 as u64)
+		Weight::from_parts(10_000_000, 0)
 	}
 }

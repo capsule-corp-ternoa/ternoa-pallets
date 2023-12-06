@@ -37,7 +37,6 @@ pub use types::*;
 
 use frame_support::traits::{Get, LockIdentifier, StorageVersion};
 use sp_std::vec;
-use sp_std::vec::Vec;
 
 use primitives::tee::{ClusterId, SlotId};
 use sp_runtime::{
@@ -52,8 +51,6 @@ const TEE_STAKING_ID: LockIdentifier = *b"teestake";
 use pallet_staking::Pallet as Staking;
 use sp_staking::EraIndex;
 
-use parity_scale_codec::Decode;
-use sp_core::crypto::AccountId32;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -66,7 +63,6 @@ pub mod pallet {
 	};
 
 	#[pallet::pallet]
-	#[pallet::generate_store(pub(super) trait Store)]
 	#[pallet::storage_version(STORAGE_VERSION)]
 	pub struct Pallet<T>(_);
 
@@ -464,6 +460,7 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		/// Ask for an enclave registration
+		#[pallet::call_index(0)]
 		#[pallet::weight(T::TeeWeightInfo::register_enclave())]
 		pub fn register_enclave(
 			origin: OriginFor<T>,
@@ -530,6 +527,7 @@ pub mod pallet {
 
 		/// Ask for an enclave to be removed.
 		/// No need for approval if the enclave registration was not approved yet.
+		#[pallet::call_index(1)]
 		#[pallet::weight(T::TeeWeightInfo::unregister_enclave())]
 		pub fn unregister_enclave(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
@@ -594,6 +592,7 @@ pub mod pallet {
 		}
 
 		/// Ask for enclave update
+		#[pallet::call_index(2)]
 		#[pallet::weight(T::TeeWeightInfo::update_enclave())]
 		pub fn update_enclave(
 			origin: OriginFor<T>,
@@ -630,6 +629,7 @@ pub mod pallet {
 		}
 
 		/// Remove the operator update request
+		#[pallet::call_index(3)]
 		#[pallet::weight(T::TeeWeightInfo::cancel_update())]
 		pub fn cancel_update(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
@@ -645,6 +645,7 @@ pub mod pallet {
 		}
 
 		/// Assign an enclave to a cluster
+		#[pallet::call_index(4)]
 		#[pallet::weight(T::TeeWeightInfo::assign_enclave())]
 		pub fn assign_enclave(
 			origin: OriginFor<T>,
@@ -718,6 +719,7 @@ pub mod pallet {
 		}
 
 		/// Remove a registration from storage
+		#[pallet::call_index(5)]
 		#[pallet::weight(T::TeeWeightInfo::remove_registration())]
 		pub fn remove_registration(
 			origin: OriginFor<T>,
@@ -741,6 +743,7 @@ pub mod pallet {
 		}
 
 		/// Remove an enclave update request from storage
+		#[pallet::call_index(6)]
 		#[pallet::weight(T::TeeWeightInfo::reject_update())]
 		pub fn reject_update(
 			origin: OriginFor<T>,
@@ -759,6 +762,7 @@ pub mod pallet {
 		}
 
 		/// Unassign an enclave from a cluster and remove all information
+		#[pallet::call_index(7)]
 		#[pallet::weight(T::TeeWeightInfo::force_remove_enclave())]
 		pub fn approve_enclave_unregistration(
 			origin: OriginFor<T>,
@@ -841,6 +845,7 @@ pub mod pallet {
 		}
 
 		/// Unassign an enclave from a cluster and remove all information
+		#[pallet::call_index(8)]
 		#[pallet::weight(T::TeeWeightInfo::force_remove_enclave())]
 		pub fn force_remove_enclave(
 			origin: OriginFor<T>,
@@ -929,6 +934,7 @@ pub mod pallet {
 		}
 
 		/// Update an enclave and clean the enclaves to update if needed
+		#[pallet::call_index(9)]
 		#[pallet::weight(T::TeeWeightInfo::force_update_enclave())]
 		pub fn approve_update_enclave(
 			origin: OriginFor<T>,
@@ -984,6 +990,7 @@ pub mod pallet {
 		}
 
 		/// Update an enclave and clean the enclaves to update if needed
+		#[pallet::call_index(10)]
 		#[pallet::weight(T::TeeWeightInfo::force_update_enclave())]
 		pub fn force_update_enclave(
 			origin: OriginFor<T>,
@@ -1048,6 +1055,7 @@ pub mod pallet {
 		}
 
 		// Creates an empty Cluster
+		#[pallet::call_index(11)]
 		#[pallet::weight(T::TeeWeightInfo::create_cluster())]
 		pub fn create_cluster(
 			origin: OriginFor<T>,
@@ -1062,6 +1070,7 @@ pub mod pallet {
 		}
 
 		// Updates the cluster type
+		#[pallet::call_index(12)]
 		#[pallet::weight(T::TeeWeightInfo::update_cluster())]
 		pub fn update_cluster(
 			origin: OriginFor<T>,
@@ -1079,6 +1088,7 @@ pub mod pallet {
 		}
 
 		/// Removes an empty cluster
+		#[pallet::call_index(13)]
 		#[pallet::weight(T::TeeWeightInfo::remove_cluster())]
 		pub fn remove_cluster(
 			origin: OriginFor<T>,
@@ -1098,6 +1108,7 @@ pub mod pallet {
 		}
 
 		/// Withdraw the unbonded amount
+		#[pallet::call_index(14)]
 		#[pallet::weight(T::TeeWeightInfo::withdraw_unbonded())]
 		pub fn withdraw_unbonded(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
@@ -1125,6 +1136,7 @@ pub mod pallet {
 		}
 
 		/// Metrics server registration by Technical Committee.
+		#[pallet::call_index(15)]
 		#[pallet::weight(T::TeeWeightInfo::register_metrics_server())]
 		pub fn register_metrics_server(
 			origin: OriginFor<T>,
@@ -1146,6 +1158,7 @@ pub mod pallet {
 			Ok(().into())
 		}
 
+		#[pallet::call_index(16)]
 		#[pallet::weight(T::TeeWeightInfo::unregister_metrics_server())]
 		pub fn unregister_metrics_server(
 			origin: OriginFor<T>,
@@ -1171,6 +1184,7 @@ pub mod pallet {
 			Ok(().into())
 		}
 
+		#[pallet::call_index(17)]
 		#[pallet::weight(T::TeeWeightInfo::force_update_metrics_server_type())]
 		pub fn force_update_metrics_server_type(
 			origin: OriginFor<T>,
@@ -1200,6 +1214,7 @@ pub mod pallet {
 			Ok(().into())
 		}
 
+		#[pallet::call_index(18)]
 		#[pallet::weight(T::TeeWeightInfo::submit_metrics_server_report())]
 		pub fn submit_metrics_server_report(
 			origin: OriginFor<T>,
@@ -1266,6 +1281,7 @@ pub mod pallet {
 			Ok(().into())
 		}
 
+		#[pallet::call_index(19)]
 		/// Report parameters weightage modification which can be done by Technical Committee.
 		#[pallet::weight(T::TeeWeightInfo::set_report_params_weightage())]
 		pub fn set_report_params_weightage(
@@ -1287,6 +1303,7 @@ pub mod pallet {
 		}
 
 		/// Set staking amount for operators by Technical Committee
+		#[pallet::call_index(20)]
 		#[pallet::weight(T::TeeWeightInfo::set_staking_amount())]
 		pub fn set_staking_amount(
 			origin: OriginFor<T>,
@@ -1301,6 +1318,7 @@ pub mod pallet {
 		}
 
 		/// Set reward pool amount for operators by Technical Committee
+		#[pallet::call_index(21)]
 		#[pallet::weight(T::TeeWeightInfo::set_daily_reward_pool())]
 		pub fn set_daily_reward_pool(
 			origin: OriginFor<T>,
@@ -1315,6 +1333,7 @@ pub mod pallet {
 		}
 
 		/// Claim rewards by Era
+		#[pallet::call_index(22)]
 		#[pallet::weight(T::TeeWeightInfo::claim_rewards())]
 		pub fn claim_rewards(origin: OriginFor<T>, era: EraIndex) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
@@ -1384,6 +1403,7 @@ pub mod pallet {
 		}
 
 		// Updates assigned era for an operator
+		#[pallet::call_index(23)]
 		#[pallet::weight(T::TeeWeightInfo::update_operator_assigned_era())]
 		pub fn update_operator_assigned_era(
 			origin: OriginFor<T>,
@@ -1408,6 +1428,7 @@ pub mod pallet {
 		}
 
 		// Bond extra if the default staking amount is increased
+		#[pallet::call_index(24)]
 		#[pallet::weight(T::TeeWeightInfo::bond_extra())]
 		pub fn bond_extra(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
@@ -1458,6 +1479,7 @@ pub mod pallet {
 		}
 
 		// Bond extra if the default staking amount is increased
+		#[pallet::call_index(25)]
 		#[pallet::weight(T::TeeWeightInfo::refund_excess())]
 		pub fn refund_excess(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
