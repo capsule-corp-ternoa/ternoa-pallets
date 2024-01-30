@@ -30,24 +30,24 @@ pub trait WeightInfo {
 pub struct TernoaWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for TernoaWeight<T> {
 	fn set_threshold() -> Weight {
-		Weight::from_ref_time(10_000_000 as u64)
+		Weight::from_parts(10_000_000, 0)
 	}
 	fn add_chain() -> Weight {
-		Weight::from_ref_time(10_000_000 as u64)
+		Weight::from_parts(10_000_000, 0)
 	}
 	fn set_relayers() -> Weight {
-		Weight::from_ref_time(10_000_000 as u64)
+		Weight::from_parts(10_000_000, 0)
 	}
 	fn vote_for_proposal() -> Weight {
-		Weight::from_ref_time(10_000_000 as u64)
+		Weight::from_parts(10_000_000, 0)
 	}
 	fn deposit() -> Weight {
-		Weight::from_ref_time(10_000_000 as u64)
+		Weight::from_parts(10_000_000, 0)
 	}
 	fn set_bridge_fee() -> Weight {
-		Weight::from_ref_time(10_000_000 as u64)
+		Weight::from_parts(10_000_000, 0)
 	}
 	fn set_deposit_nonce() -> Weight {
-		Weight::from_ref_time(10_000_000 as u64)
+		Weight::from_parts(10_000_000, 0)
 	}
 }

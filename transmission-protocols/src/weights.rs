@@ -26,18 +26,18 @@ pub trait WeightInfo {
 
 impl WeightInfo for () {
 	fn set_transmission_protocol(_s: u32) -> Weight {
-		Weight::from_ref_time(10_000_000 as u64)
+		Weight::from_parts(10_000_000, 0)
 	}
 	fn remove_transmission_protocol(_s: u32) -> Weight {
-		Weight::from_ref_time(10_000_000 as u64)
+		Weight::from_parts(10_000_000, 0)
 	}
 	fn reset_timer(_s: u32) -> Weight {
-		Weight::from_ref_time(10_000_000 as u64)
+		Weight::from_parts(10_000_000, 0)
 	}
 	fn add_consent(_s: u32) -> Weight {
-		Weight::from_ref_time(10_000_000 as u64)
+		Weight::from_parts(10_000_000, 0)
 	}
 	fn set_protocol_fee() -> Weight {
-		Weight::from_ref_time(10_000_000 as u64)
+		Weight::from_parts(10_000_000, 0)
 	}
 }

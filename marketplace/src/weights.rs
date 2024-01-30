@@ -29,27 +29,27 @@ pub trait WeightInfo {
 
 impl WeightInfo for () {
 	fn create_marketplace() -> Weight {
-		Weight::from_ref_time(10_000_000 as u64)
+		Weight::from_parts(10_000_000, 0)
 	}
 	fn set_marketplace_owner() -> Weight {
-		Weight::from_ref_time(10_000_000 as u64)
+		Weight::from_parts(10_000_000, 0)
 	}
 	fn set_marketplace_kind() -> Weight {
-		Weight::from_ref_time(10_000_000 as u64)
+		Weight::from_parts(10_000_000, 0)
 	}
 	fn set_marketplace_configuration() -> Weight {
-		Weight::from_ref_time(10_000_000 as u64)
+		Weight::from_parts(10_000_000, 0)
 	}
 	fn set_marketplace_mint_fee() -> Weight {
-		Weight::from_ref_time(10_000_000 as u64)
+		Weight::from_parts(10_000_000, 0)
 	}
 	fn list_nft() -> Weight {
-		Weight::from_ref_time(10_000_000 as u64)
+		Weight::from_parts(10_000_000, 0)
 	}
 	fn unlist_nft() -> Weight {
-		Weight::from_ref_time(10_000_000 as u64)
+		Weight::from_parts(10_000_000, 0)
 	}
 	fn buy_nft() -> Weight {
-		Weight::from_ref_time(10_000_000 as u64)
+		Weight::from_parts(10_000_000, 0)
 	}
 }

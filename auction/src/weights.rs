@@ -29,24 +29,24 @@ pub trait WeightInfo {
 /// Weight functions for `ternoa_auctions`.
 impl WeightInfo for () {
 	fn create_auction(_s: u32) -> Weight {
-		Weight::from_ref_time(10_000_000 as u64)
+		Weight::from_parts(10_000_000, 0)
 	}
 	fn cancel_auction(_s: u32) -> Weight {
-		Weight::from_ref_time(10_000_000 as u64)
+		Weight::from_parts(10_000_000, 0)
 	}
 	fn end_auction(_s: u32) -> Weight {
-		Weight::from_ref_time(10_000_000 as u64)
+		Weight::from_parts(10_000_000, 0)
 	}
 	fn add_bid(_s: u32) -> Weight {
-		Weight::from_ref_time(10_000_000 as u64)
+		Weight::from_parts(10_000_000, 0)
 	}
 	fn remove_bid(_s: u32) -> Weight {
-		Weight::from_ref_time(10_000_000 as u64)
+		Weight::from_parts(10_000_000, 0)
 	}
 	fn buy_it_now(_s: u32) -> Weight {
-		Weight::from_ref_time(10_000_000 as u64)
+		Weight::from_parts(10_000_000, 0)
 	}
 	fn claim() -> Weight {
-		Weight::from_ref_time(10_000_000 as u64)
+		Weight::from_parts(10_000_000, 0)
 	}
 }

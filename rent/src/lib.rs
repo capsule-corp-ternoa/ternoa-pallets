@@ -70,7 +70,6 @@ pub mod pallet {
 	use frame_support::pallet_prelude::*;
 
 	#[pallet::pallet]
-	#[pallet::generate_store(pub(super) trait Store)]
 	#[pallet::storage_version(STORAGE_VERSION)]
 	pub struct Pallet<T>(PhantomData<T>);
 
@@ -351,6 +350,7 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		/// Create a new rent contract with the provided details.
+		#[pallet::call_index(0)]
 		#[pallet::weight(T::WeightInfo::create_contract(Queues::<T>::get().size() as u32))]
 		pub fn create_contract(
 			origin: OriginFor<T>,
@@ -479,6 +479,7 @@ pub mod pallet {
 		}
 
 		/// Cancel a contract that is not running.
+		#[pallet::call_index(1)]
 		#[pallet::weight(T::WeightInfo::cancel_contract(Queues::<T>::get().size() as u32))]
 		pub fn cancel_contract(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
@@ -508,6 +509,7 @@ pub mod pallet {
 		}
 
 		/// Revoke a running contract.
+		#[pallet::call_index(2)]
 		#[pallet::weight(T::WeightInfo::revoke_contract(Queues::<T>::get().size() as u32))]
 		pub fn revoke_contract(origin: OriginFor<T>, nft_id: NFTId) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
@@ -567,6 +569,7 @@ pub mod pallet {
 		}
 
 		/// Rent an NFT.
+		#[pallet::call_index(3)]
 		#[pallet::weight(T::WeightInfo::rent(Queues::<T>::get().size() as u32))]
 		pub fn rent(
 			origin: OriginFor<T>,
@@ -629,6 +632,7 @@ pub mod pallet {
 		}
 
 		/// Make a offer.
+		#[pallet::call_index(4)]
 		#[pallet::weight(T::WeightInfo::make_rent_offer(Queues::<T>::get().size() as u32))]
 		pub fn make_rent_offer(
 			origin: OriginFor<T>,
@@ -715,6 +719,7 @@ pub mod pallet {
 		}
 
 		/// Accept a rent offer for manual acceptance contract.
+		#[pallet::call_index(5)]
 		#[pallet::weight(T::WeightInfo::accept_rent_offer(Queues::<T>::get().size() as u32))]
 		pub fn accept_rent_offer(
 			origin: OriginFor<T>,
@@ -767,6 +772,7 @@ pub mod pallet {
 		}
 
 		/// Retract a rent offer for manual acceptance contract.
+		#[pallet::call_index(6)]
 		#[pallet::weight(T::WeightInfo::retract_rent_offer(Offers::<T>::get(nft_id).map_or_else(|| 0, |o| o.len()) as u32))]
 		pub fn retract_rent_offer(
 			origin: OriginFor<T>,
@@ -794,6 +800,7 @@ pub mod pallet {
 		}
 
 		/// Change the subscription terms for subscription contracts.
+		#[pallet::call_index(7)]
 		#[pallet::weight(T::WeightInfo::change_subscription_terms(Queues::<T>::get().size() as u32))]
 		pub fn change_subscription_terms(
 			origin: OriginFor<T>,
@@ -854,6 +861,7 @@ pub mod pallet {
 		}
 
 		/// Accept the new contract terms.
+		#[pallet::call_index(8)]
 		#[pallet::weight(T::WeightInfo::accept_subscription_terms(Queues::<T>::get().size() as u32))]
 		pub fn accept_subscription_terms(
 			origin: OriginFor<T>,
