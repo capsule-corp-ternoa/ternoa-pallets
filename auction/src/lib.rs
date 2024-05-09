@@ -144,7 +144,7 @@ pub mod pallet {
 				let highest_bid = auction.pop_highest_bid();
 				if let Some((new_owner, paid)) = highest_bid {
 					// Pay the fee
-					let cut = match Self::pay_for_nft(&Self::account_id(), paid, &nft, &auction) {
+					let cut = match Self::pay_for_nft(nft_id, &Self::account_id(), paid, &nft, &auction) {
 						Ok(x) => x,
 						Err(_x) => continue,
 					};
@@ -192,6 +192,17 @@ pub mod pallet {
 		Blake2_128Concat,
 		NFTId,
 		AuctionData<T::AccountId, T::BlockNumber, BalanceOf<T>, T::BidderListLengthLimit>,
+		OptionQuery,
+	>;
+
+	/// Data related to auction commission fee
+	#[pallet::storage]
+	#[pallet::getter(fn auction_commission_fee)]
+	pub type AuctionCommissionFee<T: Config> = StorageMap<
+		_,
+		Blake2_128Concat,
+		NFTId,
+		Option<CompoundFee<BalanceOf<T>>>,
 		OptionQuery,
 	>;
 
@@ -250,6 +261,8 @@ pub mod pallet {
 		AuctionNotStarted,
 		/// Operation not allowed because the auction does not exists.
 		AuctionDoesNotExist,
+		/// Auction Commission does not exist
+		AuctionCommissionDoesNotExist,
 		/// Buy-It-Now option is not available.
 		AuctionDoesNotSupportBuyItNow,
 		/// Auction start block cannot be lower than current block.
@@ -379,6 +392,10 @@ pub mod pallet {
 				.allowed_to_list(&who, nft.collection_id)
 				.ok_or(Error::<T>::NotAllowedToList)?;
 
+			let commission_fee_amount = marketplace.commission_fee;
+
+			AuctionCommissionFee::<T>::insert(&nft_id, commission_fee_amount);
+
 			// Check if the start price can cover the marketplace commission_fee if it exists.
 			if let Some(commission_fee) = &marketplace.commission_fee {
 				if let CompoundFee::Flat(flat_commission) = commission_fee {
@@ -468,7 +485,7 @@ pub mod pallet {
 			let (new_owner, paid) =
 				auction.pop_highest_bid().ok_or(Error::<T>::CannotEndAuctionWithoutBids)?;
 
-			let cut = Self::pay_for_nft(&Self::account_id(), paid, &nft, &auction)?;
+			let cut = Self::pay_for_nft(nft_id.clone(), &Self::account_id(), paid, &nft, &auction)?;
 			auction.for_each_bidder(&|(owner, amount)| Self::add_claim(owner, *amount));
 
 			// Change the owner
@@ -607,7 +624,7 @@ pub mod pallet {
 			}
 
 			// Pay for NFT
-			let cut = Self::pay_for_nft(&who, paid_amount, &nft, &auction)?;
+			let cut = Self::pay_for_nft(nft_id.clone(), &who, paid_amount, &nft, &auction)?;
 			// Handle Bidders
 			auction.for_each_bidder(&|(owner, amount)| Self::add_claim(owner, *amount));
 
@@ -647,6 +664,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	pub fn pay_for_nft(
+		nft_id: NFTId,
 		from: &T::AccountId,
 		amount: BalanceOf<T>,
 		nft: &NFTData<T::AccountId, <<T as Config>::NFTExt as NFTExt>::NFTOffchainDataLimit>,
@@ -660,7 +678,9 @@ impl<T: Config> Pallet<T> {
 		let marketplace = T::MarketplaceExt::get_marketplace(marketplace_id)
 			.ok_or(Error::<T>::MarketplaceNotFound)?;
 
-		let commission_fee_amount = marketplace.commission_fee.map_or_else(
+		let auction_commission_fee = AuctionCommissionFee::<T>::get(nft_id).ok_or(Error::<T>::AuctionCommissionDoesNotExist)?;
+
+		let commission_fee_amount = auction_commission_fee.map_or_else(
 			|| 0u32.into(),
 			|x| match x {
 				CompoundFee::Flat(x) => x,
