@@ -11,7 +11,8 @@ members = [
     'auction',
     'rent',
     'tee',
-    'transmission-protocols'
+    'transmission-protocols',
+    'contracts'
 ]
 
 [workspace.dependencies]
